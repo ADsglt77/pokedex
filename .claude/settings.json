@@ -1,0 +1,8 @@
+{
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "vue-pinia-best-practices@vue-skills": false,
+    "typescript-lsp@claude-plugins-official": true
+  }
+}
