@@ -129,7 +129,8 @@
     inset: auto 0 0;
     z-index: 50;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-auto-columns: 1fr;
+    grid-auto-flow: column;
     padding-bottom: env(safe-area-inset-bottom);
     border-top: 1px solid var(--camply-border);
     background: var(--camply-surface);

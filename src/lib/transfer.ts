@@ -96,7 +96,9 @@ function readOwnership(_key: string, value: unknown): CardOwnership | null {
   if (!status) return null
   // Une carte possédée sans date d'obtention prend celle de sa dernière modification.
   const acquiredAt = status === 'owned' ? (text(value.acquiredAt) ?? value.updatedAt) : null
-  return { status, updatedAt: value.updatedAt, acquiredAt }
+  const { paidPrice } = value
+  const paid = typeof paidPrice === 'number' && Number.isFinite(paidPrice) && paidPrice >= 0
+  return { status, updatedAt: value.updatedAt, acquiredAt, ...(paid && { paidPrice }) }
 }
 
 const readImageUrl = (_key: string, value: unknown) =>

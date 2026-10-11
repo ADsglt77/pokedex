@@ -6,6 +6,7 @@ import type { CardView } from '@/lib/candidates'
 import { setLabel, statusCaption } from '@/lib/format'
 import type { PokedexEntry } from '@/lib/pokedex'
 import { CardActions } from './CardActions'
+import { CardPrice } from './CardPrice'
 import styles from './CardSheet.module.css'
 
 /** Ce qu'on sait d'une carte, sans ligne vide. */
@@ -52,6 +53,7 @@ export function CardSheet({ candidate, entry }: { candidate: CardView; entry: Po
       </Stack>
 
       <CardFacts candidate={candidate} />
+      <CardPrice card={candidate.card} />
       <CardActions candidate={candidate} entry={entry} />
     </Stack>
   )

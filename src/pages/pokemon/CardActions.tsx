@@ -7,6 +7,7 @@ import type { CardView } from '@/lib/candidates'
 import type { PokedexEntry } from '@/lib/pokedex'
 import { useCollectionStore } from '@/store/collection'
 import type { CardStatus } from '@/types'
+import { PaidPriceField } from './PaidPriceField'
 import styles from './CardActions.module.css'
 
 const STATUS_BUTTONS: { status: CardStatus; label: string; done: string }[] = [
@@ -92,6 +93,12 @@ export function CardActions({ candidate, entry }: { candidate: CardView; entry: 
           )
         })}
       </ButtonGroup>
+
+      {(status === 'owned' || status === 'ordered') && (
+        <div className={styles.group}>
+          <PaidPriceField card={card} />
+        </div>
+      )}
     </Stack>
   )
 }

@@ -1,5 +1,5 @@
 import { Banner } from '@camply/ui'
-import { Database, Grid3x3, House } from '@camply/ui/icons'
+import { ChartLine, Database, Grid3x3, House } from '@camply/ui/icons'
 import { useEffect, useRef } from 'react'
 import { Link, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { cx } from '@/lib/cx'
@@ -14,6 +14,7 @@ const NAV = [
     icon: Grid3x3,
     match: (path: string) => path.startsWith('/pokedex') || path.startsWith('/pokemon'),
   },
+  { to: '/valeur', label: 'Valeur', icon: ChartLine, match: (path: string) => path === '/valeur' },
   {
     to: '/donnees',
     label: 'Données',
@@ -105,8 +106,8 @@ export function AppShell() {
       </main>
 
       <footer className={cx('container', styles.footer)}>
-        Données PokéAPI, TCGdex et TCGplayer. Projet personnel, sans lien avec Nintendo, Creatures,
-        Game Freak ou The Pokémon Company.
+        Données PokéAPI, TCGdex et TCGplayer, prix Cardmarket. Projet personnel, sans lien avec
+        Nintendo, Creatures, Game Freak ou The Pokémon Company.
       </footer>
 
       <nav aria-label="Navigation principale" className={styles.tabbar}>

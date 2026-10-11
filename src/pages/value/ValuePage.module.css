@@ -1,0 +1,31 @@
+.page {
+  margin-top: 1rem;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+  gap: 1rem;
+}
+
+.title {
+  font-size: 1.5rem;
+}
+
+.table {
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+}
+
+.up {
+  color: var(--camply-success);
+}
+
+.down {
+  color: var(--camply-danger);
+}

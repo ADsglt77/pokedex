@@ -19,10 +19,41 @@ export function formatDate(iso: string | null | undefined): string | null {
   return date && dateFormat.format(date)
 }
 
+const shortDateFormat = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
+
+/** « 11 oct. » */
+export function formatShortDate(iso: string | null | undefined): string | null {
+  const date = toDate(iso)
+  return date && shortDateFormat.format(date)
+}
+
 export function formatDateTime(iso: string | null | undefined): string | null {
   const date = toDate(iso)
   return date && dateTimeFormat.format(date)
 }
+
+const euroFormat = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' })
+const signedEuroFormat = new Intl.NumberFormat('fr-FR', {
+  style: 'currency',
+  currency: 'EUR',
+  signDisplay: 'exceptZero',
+})
+
+/** « 1 234,50 € » */
+export const formatEuro = (value: number) => euroFormat.format(value)
+
+/** « +12,00 € », « −3,50 € » : un gain ou une perte. */
+export const formatEuroChange = (value: number) => signedEuroFormat.format(value)
+
+/** Un montant saisi (« 12,50 », « 12.5 € ») ; `null` pour un champ vide, `undefined` s'il est illisible. */
+export function parseEuros(text: string): number | null | undefined {
+  const input = text.replace(/[\s€]/g, '').replace(',', '.')
+  if (input === '') return null
+  return /^\d+(\.\d{1,2})?$/.test(input) ? Number(input) : undefined
+}
+
+/** Un montant à éditer : « 12,50 ». */
+export const euroInput = (value: number) => value.toFixed(2).replace('.', ',')
 
 /** « 1 carte », « 3 cartes » ; « Pokémon » reste invariable. */
 export function plural(count: number, singular: string, pluralForm: string): string {

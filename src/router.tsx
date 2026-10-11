@@ -6,6 +6,7 @@ import { HomePage } from '@/pages/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PokedexPage } from '@/pages/pokedex/PokedexPage'
 import { PokemonPage } from '@/pages/pokemon/PokemonPage'
+import { ValuePage } from '@/pages/value/ValuePage'
 
 export const router = createBrowserRouter([
   {
@@ -15,6 +16,7 @@ export const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: 'pokedex', element: <PokedexPage /> },
       { path: 'pokemon/:id', element: <PokemonPage /> },
+      { path: 'valeur', element: <ValuePage /> },
       { path: 'donnees', element: <DataPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

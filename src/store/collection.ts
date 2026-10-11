@@ -70,6 +70,7 @@ interface CollectionStore {
   dismissStorageIssue: () => void
   setFavorite: (speciesId: number, card: PokemonCard | null) => void
   setCardStatus: (card: PokemonCard, status: CardStatus | null) => void
+  setPaidPrice: (card: PokemonCard, paidPrice: number | null) => void
   /** Remplace toute la collection (import, effacement, annulation). */
   replaceCollection: (collection: CollectionData) => void
   setRarityEnabled: (code: string, enabled: boolean) => void
@@ -94,6 +95,8 @@ export const useCollectionStore = create<CollectionStore>()((set, get) => {
       update((collection, at) => rules.setFavorite(collection, speciesId, card, at)),
     setCardStatus: (card, status) =>
       update((collection, at) => rules.setCardStatus(collection, card, status, at)),
+    setPaidPrice: (card, paidPrice) =>
+      update((collection, at) => rules.setPaidPrice(collection, card, paidPrice, at)),
     replaceCollection: (collection) => set({ collection }),
 
     setRarityEnabled: (code, enabled) => {

@@ -20,8 +20,8 @@ export function EraseSection() {
   return (
     <DataSection id="effacer" title="Effacer ma collection" apart>
       <p>
-        Supprime de ce navigateur tous vos statuts de carte et illustrations choisies. Les raretés
-        suivies sont conservées.
+        Supprime de ce navigateur tous vos statuts de carte, prix payés et illustrations choisies.
+        Les raretés suivies sont conservées.
       </p>
       <Button
         tone="danger"

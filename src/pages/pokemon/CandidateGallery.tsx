@@ -5,7 +5,9 @@ import { PossessionMark } from '@/components/PossessionMark'
 import { RarityTag } from '@/components/RarityTag'
 import { cx } from '@/lib/cx'
 import type { CardView } from '@/lib/candidates'
-import { statusLabel } from '@/lib/format'
+import { formatEuro, statusLabel } from '@/lib/format'
+import { priceOf } from '@/lib/prices'
+import { usePrices } from '@/store/prices'
 import styles from './CandidateGallery.module.css'
 
 interface CandidateGalleryProps {
@@ -23,6 +25,7 @@ export function CandidateGallery({
   viewedId,
   onView,
 }: CandidateGalleryProps) {
+  const prices = usePrices()
   return (
     <Stack as="section" gap={5} aria-labelledby="candidates-title">
       <header className={styles.header}>
@@ -36,6 +39,7 @@ export function CandidateGallery({
         {candidates.map((candidate) => {
           const { card, status } = candidate
           const viewed = card.id === viewedId
+          const price = priceOf(prices, card)
           return (
             <li key={card.id}>
               <button
@@ -67,7 +71,10 @@ export function CandidateGallery({
                       deduced={candidate.rarityDeduced}
                     />
                   </span>
-                  <span className="muted">{statusLabel(status)}</span>
+                  <span className="muted">
+                    {statusLabel(status)}
+                    {price && ` · ${formatEuro(price.price)}`}
+                  </span>
                   {candidate.isFavorite && (
                     <span className={styles.chosen}>Illustration choisie</span>
                   )}
