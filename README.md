@@ -17,10 +17,13 @@ bun run format   # Prettier
   partageables dans l'adresse.
 - **Fiche** : carte en grand, statut (possédée / commandée / souhaitée), illustration choisie,
   galerie des candidates, détails de l'espèce.
+- **Valeur** : prix Cardmarket du jour, valeur de la collection (et gain par rapport au prix
+  payé), commandes, souhaits, coût pour compléter le Pokédex, courbes de prix au fil des jours.
 - **Données** : export / import, raretés suivies, effacement.
 
-Tout est embarqué (index de cartes généré par `bun run data`) : aucun appel réseau à l'exécution
-hormis les images. La collection reste dans le navigateur (`localStorage`) : l'export est sa seule
+Tout est embarqué (index de cartes généré par `bun run data`) : aucune API externe appelée par le
+navigateur, hormis les images. Les prix sont des fichiers du site lui-même (`/prices/`), écrits
+chaque jour par `bun run prices` ; en développement, le lancer une fois pour avoir des prix. La collection reste dans le navigateur (`localStorage`) : l'export est sa seule
 sauvegarde.
 
 ## Déploiement (VPS + tunnel Cloudflare)
@@ -28,7 +31,9 @@ sauvegarde.
 Le site est statique. L'image Docker le construit avec Bun et le sert avec nginx
 (`deploy/nginx.conf` renvoie `index.html` pour les adresses du routage côté client).
 `compose.yaml` l'expose sur `127.0.0.1:8080` (variable `POKEDEX_PORT`), joignable seulement par le
-tunnel.
+tunnel. Le service `prices` du même fichier relit les prix Cardmarket toutes les 6 h et en garde
+l'historique dans le volume Docker `prices` : ne pas lancer `docker compose down -v`, qui
+l'effacerait.
 
 **Une fois, sur le VPS**
 

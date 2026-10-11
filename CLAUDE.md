@@ -16,7 +16,8 @@ bun lint               # ESLint
 bun run format         # Prettier sur src/ et scripts/ (les JSON de src/data sont exclus)
 bun run data           # régénère src/data (espèces puis cartes) ; `--refresh` ignore le cache
 bun run data:species   # PokéAPI → species.json, species-details.json
-bun run data:cards     # TCGdex → card-index.json
+bun run data:cards     # TCGdex → card-index.json (avec l'identifiant Cardmarket de chaque carte)
+bun run prices         # prix Cardmarket du jour → public/prices (sur le VPS : service `prices`)
 ```
 
 Les scripts de données gardent les réponses des API dans `scripts/.cache` (ignoré par git) : on peut
@@ -37,8 +38,10 @@ TCGplayer.
 
 VPS derrière un tunnel Cloudflare. `Dockerfile` : Bun construit `dist/`, nginx le sert
 (`deploy/nginx.conf` : toute route inconnue reçoit `index.html`, le routage étant côté client ;
-`/assets/` en cache un an). `compose.yaml` l'expose sur `127.0.0.1:${POKEDEX_PORT:-8080}`, que le
-tunnel publie. `.github/workflows/deploy.yml` : à chaque push sur `main`, SSH sur le VPS,
+`/assets/` en cache un an ; `/prices/` toujours revalidé). `compose.yaml` : le site sur
+`127.0.0.1:${POKEDEX_PORT:-8080}`, que le tunnel publie, et le service `prices` qui relance
+`scripts/prices.ts` toutes les 6 h dans le volume `prices` (l'historique y vit : ne pas supprimer
+le volume). `.github/workflows/deploy.yml` : à chaque push sur `main`, SSH sur le VPS,
 `git pull --ff-only` puis `docker compose up -d --build`. Marche à suivre complète : README.
 
 ## Principes
@@ -48,9 +51,9 @@ tunnel publie. `.github/workflows/deploy.yml` : à chaque push sur `main`, SSH s
 - UI : **`@camply/ui` d'abord** (skill `camply-ui`), thème camply par défaut (sombre, accent cyan).
   Un composant maison seulement s'il est métier ou absent de la lib.
 - TCGdex (scripts de données seulement) : skill `tcgdex-api`, gérer `image == null`.
-- Périmètre volontairement réduit : pas d'appel réseau à l'exécution (ni TCGdex en direct ni
-  TanStack Query), pas d'ajout de carte à la main, d'image personnelle, de comparaison ni de fusion
-  à l'import. Ne pas les réintroduire sans demande explicite.
+- Périmètre volontairement réduit : pas d'ajout de carte à la main, d'image personnelle, de
+  comparaison ni de fusion à l'import ; aucune API externe appelée par le navigateur. Seule exception :
+  les prix, fichiers du site lui-même (`/prices/`). Ne pas réintroduire le reste sans demande.
 - Textes en français (fr-FR pour nombres et dates), vouvoiement.
 - Prettier : pas de point-virgule, guillemets simples, 100 colonnes.
 
@@ -60,8 +63,8 @@ tunnel publie. `.github/workflows/deploy.yml` : à chaque push sur `main`, SSH s
 |---|---|
 | `src/config/` | Générations, types, classes de rareté, règles des cartes secrètes (configuration, pas de logique) |
 | `src/data/` | JSON générés par `bun run data` : espèces, détails, index des cartes classées |
-| `src/lib/` | Règles métier **pures** : `rarity` (classement), `candidates` (tri, représentante), `pokedex` (modèle + progression), `collection` (mises à jour immuables), `filters` (URL + recherche), `transfer` (lecture, export, import) |
-| `src/store/` | Zustand : collection + réglages, persistés dans `localStorage` |
+| `src/lib/` | Règles métier **pures** : `rarity` (classement), `candidates` (tri, représentante), `pokedex` (modèle + progression), `collection` (mises à jour immuables), `filters` (URL + recherche), `transfer` (lecture, export, import), `prices` (valeur, coût pour compléter, historique) |
+| `src/store/` | Zustand : `collection` (collection + réglages, `localStorage`) et `prices` (prix du jour et historique, lus sur `/prices/`) |
 | `src/hooks/` | `usePokedex` (modèle mémoïsé partagé, source de toutes les pages), `useNotify` (toasts + « Annuler »), `usePokedexFilters` |
 | `src/components/` | Composants métier partagés (carte, tuile, réglette…) ; tout le reste vient de `@camply/ui` |
 | `src/pages/` | Une page par route ; les sous-composants d'une page vivent dans son dossier |
@@ -69,6 +72,12 @@ tunnel publie. `.github/workflows/deploy.yml` : à chaque push sur `main`, SSH s
 
 Points à connaître :
 
+- Prix (`scripts/prices.ts`) : le guide des prix public de Cardmarket (un fichier par jour),
+  relié aux cartes par l'identifiant Cardmarket que donne TCGdex. Il écrit `latest.json` et
+  `history.json` (Cardmarket ne garde pas d'historique : chaque jour ajoute une colonne). Sans ces
+  fichiers (`bun dev` sans `bun run prices`), l'app marche, sans prix.
+- Le prix payé (`paidPrice`, facultatif) est rangé avec le statut de la carte et la suit d'un
+  statut à l'autre ; retirer le statut l'efface.
 - Stockage : clés `pokedex-collection.collection` et `.settings`. Ids de carte `tcgdex:ja:<id>` et
   `manual:<uuid>`. Ne pas changer ces formats : ce sont les données de l'utilisateur.
 - `customCards` et `imageOverrides` viennent d'anciennes versions : lus, affichés, exportés, mais

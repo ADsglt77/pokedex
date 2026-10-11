@@ -59,6 +59,8 @@ Every component accepts `className` and `style`; single-root components forward 
 ## Known gaps → workarounds
 
 - **Select with "no value"**: options are strings only → use `''` as the "all" value.
+- **`NumberInput` cannot be emptied** (it commits `0` on blur): an optional amount (prix payé) uses `Input` with `inputMode="decimal"` and `parseEuros` (`src/lib/format.ts`). Fix upstream when convenient.
+- **No chart component**: `src/components/PriceChart.tsx` is a small SVG line chart on camply tokens.
 - **Toast « Annuler »**: `useNotify()` / `useCollectionAction()` (`src/hooks/useNotify.ts`) wrap `toast({ action })` with the app's undo rule (refused if the collection changed since).
 - `Stack` gaps follow `--camply-space-*` (no 7, no 3rem): keep a CSS class for other spacings or grids.
 
