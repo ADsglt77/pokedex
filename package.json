@@ -11,7 +11,8 @@
     "format": "prettier --write src/ scripts/",
     "data:species": "bun scripts/species.ts",
     "data:cards": "bun scripts/cards.ts",
-    "data": "bun scripts/species.ts && bun scripts/cards.ts"
+    "data": "bun scripts/species.ts && bun scripts/cards.ts",
+    "prices": "bun scripts/prices.ts"
   },
   "dependencies": {
     "@camply/ui": "^0.2.0",

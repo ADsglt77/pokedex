@@ -90,6 +90,8 @@ export interface CardOwnership {
   status: CardStatus
   updatedAt: string
   acquiredAt: string | null
+  /** Prix payé, en euros ; absent s'il n'a pas été noté. */
+  paidPrice?: number
 }
 
 export interface CollectionData {
@@ -146,6 +148,8 @@ export interface CardIndexRow {
   /** Base d'image TCGdex ou TCGplayer (voir `cardImage`), `null` sans image. */
   image: string | null
   dexIds: number[]
+  /** Identifiant du produit Cardmarket, quand TCGdex le connaît (prix : `scripts/prices.ts`). */
+  cardmarket?: number
 }
 
 export interface CardIndexFile {
@@ -156,6 +160,32 @@ export interface CardIndexFile {
   rarities: string[]
   sets: Record<string, { name: string; serieId: string | null; releaseDate: string | null }>
   cards: CardIndexRow[]
+}
+
+/* Prix Cardmarket, écrits chaque jour par `scripts/prices.ts` dans `/prices/` (servis par le VPS) */
+
+export interface CardPrice {
+  /** Prix du marché : la tendance Cardmarket, sinon sa moyenne sur 30 jours. */
+  price: number
+  low: number | null
+  avg30: number | null
+}
+
+export interface PriceFile {
+  schemaVersion: 1
+  /** Jour du guide des prix Cardmarket (YYYY-MM-DD). */
+  date: string
+  /** Clé : id TCGdex de la carte (`SV2a-173`). */
+  cards: Record<string, CardPrice>
+}
+
+/** Un prix par carte et par jour : Cardmarket ne garde pas d'historique. */
+export interface PriceHistoryFile {
+  schemaVersion: 1
+  /** Jours, du plus ancien au plus récent (YYYY-MM-DD). */
+  days: string[]
+  /** Clé : id TCGdex ; une valeur par jour de `days`, `null` sans prix ce jour-là. */
+  cards: Record<string, (number | null)[]>
 }
 
 export interface CollectionExportFile {

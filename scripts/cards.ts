@@ -29,6 +29,10 @@ interface RawSet {
 
 type GraphqlCards = { data?: Record<'cards' | 'rarities', (TcgdexRawCard | null)[] | undefined> }
 
+interface CardWithPricing {
+  pricing?: { cardmarket?: { idProduct?: number } | null } | null
+}
+
 const fetchSet = (id: string) =>
   fetchJson<RawSet>(`${REST_URL}/sets/${encodeURIComponent(id)}`, 'tcgdex')
 
@@ -170,6 +174,22 @@ for (const row of stillMissing) row.image = tcgplayerImageOf(row.set, row.number
 const noImage = rows.filter((row) => row.image === null)
 console.log(`  ${stillMissing.length - noImage.length} trouvées chez TCGplayer`)
 if (noImage.length > 0) console.log(`  sans image : ${noImage.map((row) => row.id).join(', ')}`)
+
+// L'identifiant Cardmarket de chaque carte, pour ses prix (`scripts/prices.ts`). TCGdex ne le
+// donne que carte par carte, dans `pricing` (absent de GraphQL).
+console.log(`Lecture des identifiants Cardmarket de ${rows.length} cartes…`)
+await mapPool(rows, 8, async (row) => {
+  const card = await fetchJson<CardWithPricing>(
+    `${REST_URL}/cards/${encodeURIComponent(row.id)}`,
+    'tcgdex',
+  ).catch((error: unknown) => {
+    if (error instanceof NotFoundError) return null
+    throw error
+  })
+  const idProduct = card?.pricing?.cardmarket?.idProduct
+  if (Number.isInteger(idProduct)) row.cardmarket = idProduct
+})
+console.log(`  ${rows.filter((row) => row.cardmarket).length} cartes reliées à Cardmarket`)
 
 const releaseOf = (row: CardIndexRow) => setInfo.get(row.set)?.releaseDate ?? null
 // Extension la plus ancienne d'abord (dates inconnues à la fin), puis extension, numéro et id.

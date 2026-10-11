@@ -3,4 +3,5 @@
 node_modules
 dist
 scripts/.cache
+public/prices
 *.local
