@@ -1,0 +1,147 @@
+.hero {
+  padding-block: clamp(1rem, 0.5rem + 3vw, 3rem);
+}
+
+.title {
+  font-size: clamp(3rem, 2rem + 4.5vw, 5rem);
+  letter-spacing: -0.03em;
+}
+
+.sentence {
+  display: flex;
+  flex-direction: column;
+  font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
+  line-height: 1.35;
+}
+
+.progress {
+  margin-top: 2.5rem;
+}
+
+.regions {
+  display: none;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.region {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--camply-border-soft);
+  color: inherit;
+  font-size: 0.9375rem;
+  text-decoration: none;
+}
+
+.region:hover {
+  color: var(--camply-accent);
+}
+
+.section {
+  margin-top: clamp(2.5rem, 2rem + 2vw, 4rem);
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+}
+
+.recent,
+.teaser {
+  display: grid;
+  gap: 1.5rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recent {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.teaser {
+  grid-template-columns: repeat(5, minmax(0, 11rem));
+}
+
+.recentCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  color: inherit;
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.recentCard > :first-child {
+  margin-bottom: 0.5rem;
+  transition: transform 0.2s;
+}
+
+.recentCard:hover > :first-child {
+  transform: translateY(-3px);
+}
+
+.recentName {
+  font-family: var(--camply-font-display);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.recentDate {
+  color: var(--camply-text-muted-2);
+  font-size: 0.8125rem;
+}
+
+/* Les cartes sont « distribuées » une à une. */
+.dealt {
+  animation: deal 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+@keyframes deal {
+  from {
+    opacity: 0;
+    transform: translate(-1.25rem, -0.75rem) rotate(-4deg);
+  }
+}
+
+@media (max-width: 64rem) {
+  .ruler {
+    pointer-events: none;
+  }
+
+  .regions {
+    display: grid;
+  }
+
+  .recent {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .teaser {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .teaser > :nth-child(n + 4) {
+    display: none;
+  }
+}
+
+@media (min-width: 40rem) and (max-width: 64rem) {
+  .regions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 40rem) {
+  .cta {
+    width: 100%;
+  }
+
+  .recent {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

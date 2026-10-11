@@ -1,0 +1,40 @@
+.group + .group {
+  margin-top: 3rem;
+}
+
+.heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  margin-bottom: 1.25rem;
+  font-size: 1.5rem;
+}
+
+.numeral {
+  color: var(--camply-text-muted-2);
+  font-size: 1rem;
+}
+
+.count {
+  color: var(--camply-text-muted);
+  font-family: var(--camply-font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 1.5rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 40rem) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem 0.5rem;
+  }
+}

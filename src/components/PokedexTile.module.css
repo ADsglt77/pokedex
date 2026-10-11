@@ -1,0 +1,47 @@
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  /* La grille compte plus de 1 000 pochettes : le navigateur ne dessine que celles à l'écran. */
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 15rem;
+  scroll-margin-block: 9rem 2rem;
+}
+
+.art {
+  margin-bottom: 0.5rem;
+}
+
+.tile:hover .art,
+.tile:focus-visible .art {
+  transform: translateY(-3px);
+  filter: none;
+  opacity: 1;
+  box-shadow: var(--camply-shadow-md);
+}
+
+.tile:focus-visible {
+  outline: none;
+}
+
+.tile:focus-visible .art {
+  outline: 2px solid var(--camply-accent);
+  outline-offset: 3px;
+}
+
+.number {
+  color: var(--camply-text-muted-2);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.name {
+  overflow: hidden;
+  font-family: var(--camply-font-display);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

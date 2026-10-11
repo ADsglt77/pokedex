@@ -1,0 +1,92 @@
+.layout {
+  display: grid;
+  grid-template-areas: 'head' 'stage' 'body';
+  gap: 1.75rem clamp(1.5rem, 1rem + 2vw, 3rem);
+  margin-top: 1.5rem;
+}
+
+.head {
+  grid-area: head;
+}
+
+.name {
+  font-size: clamp(2.25rem, 1.6rem + 2.8vw, 3.5rem);
+}
+
+.identity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  color: var(--camply-text-muted);
+}
+
+.statement {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--camply-text-muted);
+}
+
+.statement strong {
+  color: var(--camply-text-strong);
+}
+
+/* La marque de possession, posée ici hors d'une carte. */
+.statementMark {
+  position: relative;
+  flex: none;
+  width: 1.625rem;
+  height: 1.625rem;
+}
+
+.statementMark > span {
+  inset: 0;
+}
+
+.stage {
+  grid-area: stage;
+  align-self: start;
+  scroll-margin-top: 1rem;
+}
+
+.body {
+  grid-area: body;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  min-width: 0;
+}
+
+.columns {
+  display: grid;
+  gap: 2.5rem;
+}
+
+@container (min-width: 46rem) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+  }
+}
+
+@media (min-width: 40rem) {
+  .layout {
+    grid-template-columns: clamp(14rem, 36vw, 20rem) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas: 'stage head' 'stage body';
+  }
+}
+
+@media (min-width: 64rem) {
+  .layout {
+    grid-template-columns: 22rem minmax(0, 1fr);
+  }
+}
+
+/* Assez haut pour que la carte reste à l'écran pendant qu'on parcourt la fiche. */
+@media (min-width: 40rem) and (min-height: 36rem) {
+  .stage {
+    position: sticky;
+    top: 1.5rem;
+  }
+}

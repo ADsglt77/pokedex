@@ -1,0 +1,165 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+}
+
+.skip {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 100;
+  padding: 0.5rem 1rem;
+  border-radius: var(--camply-radius-sm);
+  background: var(--camply-accent);
+  color: var(--camply-accent-contrast);
+  font-weight: 600;
+  transform: translateY(-200%);
+}
+
+.skip:focus {
+  transform: none;
+}
+
+.header {
+  border-bottom: 1px solid var(--camply-border-soft);
+}
+
+.headerInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  height: 4rem;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--camply-text-strong);
+  font-family: var(--camply-font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.emblem rect {
+  fill: var(--camply-fill-3);
+}
+
+.emblem .emblemFilled {
+  fill: var(--camply-accent);
+}
+
+.nav {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.navLink {
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--camply-radius-pill);
+  color: var(--camply-text-muted);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.navLink:hover {
+  background: var(--camply-fill-2);
+  color: var(--camply-text);
+}
+
+.navLink[aria-current='page'] {
+  background: var(--camply-accent-soft);
+  color: var(--camply-accent-hover);
+}
+
+.banner {
+  margin-top: 1rem;
+}
+
+.main {
+  flex: 1;
+  outline: none;
+  padding-block: clamp(1.5rem, 1rem + 2vw, 3rem) 4rem;
+}
+
+.page {
+  animation: arrive 0.2s ease-out;
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+  }
+}
+
+.footer {
+  padding-block: 1.5rem;
+  border-top: 1px solid var(--camply-border-soft);
+  color: var(--camply-text-muted-2);
+  font-size: 0.8125rem;
+}
+
+/* Sur téléphone, la navigation passe dans une barre d'onglets en bas de l'écran. */
+.tabbar {
+  display: none;
+}
+
+@media (max-width: 40rem) {
+  .nav {
+    display: none;
+  }
+
+  .headerInner {
+    height: 3.5rem;
+  }
+
+  .shell {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+
+  .tabbar {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 50;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding-bottom: env(safe-area-inset-bottom);
+    border-top: 1px solid var(--camply-border);
+    background: var(--camply-surface);
+  }
+
+  .tab {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    height: 4rem;
+    color: var(--camply-text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .tab[aria-current='page'] {
+    color: var(--camply-accent);
+  }
+
+  .tab[aria-current='page']::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 2rem;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--camply-accent);
+  }
+}

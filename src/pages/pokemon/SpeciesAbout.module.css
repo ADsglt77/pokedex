@@ -1,0 +1,26 @@
+.about {
+  min-width: 0;
+}
+
+.title {
+  font-size: 1.25rem;
+}
+
+.artwork {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--camply-text-muted-2);
+  font-size: 0.8125rem;
+}
+
+.artwork img {
+  width: min(100%, 16rem);
+  aspect-ratio: 1;
+}
+
+.description {
+  color: var(--camply-text-muted);
+  line-height: 1.65;
+}

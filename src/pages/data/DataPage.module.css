@@ -1,0 +1,47 @@
+.section {
+  padding-block: 2.5rem;
+  border-top: 1px solid var(--camply-border-soft);
+  scroll-margin-top: 1rem;
+}
+
+.section > p {
+  max-width: 62ch;
+  color: var(--camply-text-muted);
+}
+
+.title {
+  font-size: 1.5rem;
+}
+
+.apart {
+  margin-top: 2rem;
+}
+
+.apart .title {
+  font-size: 1.25rem;
+}
+
+/* Le registre : une ligne par type de donnée, le compte à droite. */
+.ledger {
+  width: 100%;
+  max-width: 30rem;
+}
+
+.ledger dd {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Le libellé prend la place, le compte se range à droite : pas de libellé coupé sur mobile.
+   Même spécificité que la grille de camply, déclarée après elle. */
+.ledger:global(.camply-descriptionlist__row) :global(.camply-descriptionlist__row) {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.group {
+  width: 100%;
+}
+
+.groupTitle {
+  font-size: 1rem;
+}

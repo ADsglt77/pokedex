@@ -1,0 +1,28 @@
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin: 0;
+  /* La carte tient toujours dans la hauteur de l'écran. */
+  max-width: min(100%, 22rem, calc((100svh - 6rem) * 63 / 88));
+  margin-inline: auto;
+}
+
+.card {
+  box-shadow: var(--camply-shadow-lg);
+  animation: drop 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes drop {
+  from {
+    opacity: 0;
+    transform: translateY(-0.75rem);
+  }
+}
+
+.caption {
+  color: var(--camply-text-muted);
+  font-size: 0.875rem;
+  text-align: center;
+}

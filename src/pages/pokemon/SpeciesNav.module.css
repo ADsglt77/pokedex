@@ -1,0 +1,61 @@
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.neighbours {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.neighbour,
+.edge {
+  display: flex;
+  flex-direction: column;
+  min-width: 6rem;
+  text-align: right;
+}
+
+.neighbours > :first-child {
+  text-align: left;
+}
+
+.neighbour {
+  color: inherit;
+  text-decoration: none;
+}
+
+.neighbour:hover .neighbourName {
+  color: var(--camply-accent);
+}
+
+.number {
+  color: var(--camply-text-muted-2);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.neighbourName {
+  font-family: var(--camply-font-display);
+  font-weight: 600;
+  transition: color 0.15s;
+}
+
+.edge {
+  justify-content: center;
+  color: var(--camply-text-disabled);
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 40rem) {
+  .neighbour,
+  .edge {
+    min-width: 0;
+  }
+
+  .edge {
+    display: none;
+  }
+}

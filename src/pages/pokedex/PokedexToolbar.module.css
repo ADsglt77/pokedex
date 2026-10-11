@@ -1,0 +1,88 @@
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin-bottom: 1.5rem;
+  margin-inline: calc(-1 * clamp(1rem, 0.4rem + 2.5vw, 2.5rem));
+  padding: 0.75rem clamp(1rem, 0.4rem + 2.5vw, 2.5rem) 0.5rem;
+  border-bottom: 1px solid var(--camply-border-soft);
+  background: color-mix(in srgb, var(--camply-bg) 88%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.search {
+  flex: 1 1 16rem;
+  max-width: 26rem;
+}
+
+.filtersToggle,
+.generationSelect {
+  display: none;
+}
+
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2rem;
+  color: var(--camply-text-muted);
+  font-size: 0.875rem;
+}
+
+.results {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--camply-text);
+}
+
+/* Écran tactile seul, sans souris ni pavé : probablement pas de clavier, le raccourci est inutile. */
+@media not (any-pointer: fine) {
+  .shortcut {
+    display: none;
+  }
+}
+
+/* Écran moyen : la réglette laisse place à une liste, et les filtres se replient. */
+@media (max-width: 64rem) {
+  .ruler {
+    display: none;
+  }
+
+  .filtersToggle,
+  .generationSelect {
+    display: inline-flex;
+  }
+
+  .filters {
+    display: none;
+    width: 100%;
+  }
+
+  .filters.open {
+    display: flex;
+    animation: unfold 0.2s ease-out;
+  }
+}
+
+@media (max-width: 40rem) {
+  .search {
+    max-width: none;
+  }
+}
+
+/* Écran peu haut : la barre ne colle pas, elle mangerait la grille. */
+@media (max-height: 30rem) {
+  .toolbar {
+    position: static;
+  }
+}
+
+@keyframes unfold {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+}

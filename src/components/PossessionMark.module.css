@@ -1,0 +1,36 @@
+.mark {
+  position: absolute;
+  right: 6%;
+  bottom: 4.5%;
+  display: grid;
+  place-items: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--camply-bg) 78%, transparent);
+  color: var(--camply-text-muted);
+  box-shadow: 0 0 0 1px var(--camply-border-strong);
+  backdrop-filter: blur(4px);
+  animation: stamp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.owned {
+  background: var(--camply-success);
+  color: var(--camply-success-contrast);
+  box-shadow: none;
+}
+
+.ordered {
+  color: var(--camply-info);
+}
+
+.wanted {
+  color: var(--camply-warn);
+}
+
+@keyframes stamp {
+  from {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}

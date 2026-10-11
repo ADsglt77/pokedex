@@ -1,0 +1,15 @@
+.sheet {
+  min-width: 0;
+}
+
+.title {
+  font-size: 1.625rem;
+}
+
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--camply-text-muted);
+}
