@@ -82,7 +82,7 @@ Set assets: `${set.logo}.webp`, `${set.symbol}.webp`.
 3. Rarity can be `"None"`, empty, or missing → treat all as "no rarity".
 4. Multi-species cards (TAG TEAM) have several `dexId` values.
 5. Some cards are filed under the wrong species upstream; this app keeps a small correction table (`S6K-017`, `S6K-072` → 883, `SV-P-132` → 569).
-6. Japanese secret cards (numbered above `cardCount.official`) often lack a rarity; the app ships a precomputed `rarityHint` for them in its static card index.
+6. Japanese secret cards (numbered above `cardCount.official`) often lack a rarity; the build deduces their class (`deduced: true` in the static card index).
 7. **`image: null` does not mean there is no image.** Many `ja` cards (whole sets like M4, M1S, SV5M, SV8, SV10) have their scan on the CDN at `https://assets.tcgdex.net/ja/<serieId>/<setId>/<localId>` although the API omits it. `bun run data:cards` probes that URL (HEAD on `low.webp`) and keeps it only when it answers 200. Don't probe from the browser: the CDN sends `Access-Control-Allow-Origin` on 200 only, so every 404 becomes a CORS error in the console. GraphQL `set { serie { id } }` fails on `ja` (serie declared non-null but null); get the serie from REST `/sets/{id}`.
 
 ## How this app uses it
@@ -90,6 +90,6 @@ Set assets: `${set.logo}.webp`, `${set.symbol}.webp`.
 - **Static index (build time):** `bun run data:cards` (`scripts/cards.ts`) crawls every `ja` Pokémon card through GraphQL (two-selection trick), deduces the class of secret cards for the sets of `SECRET_CARD_RULES` (`scripts/lib/deduceSecrets.ts`), keeps the classified ones (SAR/AR/CSR/CHR/BWR/SSR/UR/HR/SR/SEC) and writes `src/data/card-index.json` → the grid renders without any network call. Responses are cached in `scripts/.cache`; `--refresh` refetches.
 - **No runtime calls:** the browser never queries TCGdex; cards released after the index was built appear once `bun run data:cards` is rerun.
 - **Cardmarket link:** REST `GET /v2/ja/cards/{id}` has `pricing.cardmarket` (EUR prices + `idProduct`); GraphQL has no `pricing` field. `data:cards` stores `idProduct` as `cardmarket` in the index; `scripts/prices.ts` then reads Cardmarket's public daily price guide (`downloads.s3.cardmarket.com/productCatalog/priceGuide/price_guide_6.json`, keyed by `idProduct`).
-- Normalization (`src/lib/tcgdex.ts`) and classification (`src/lib/rarity.ts`) are shared by the app and the scripts.
+- Reading and classification live in the scripts (`scripts/lib/tcgdex.ts`, corrections in `scripts/lib/rules.ts`): each index row already carries its class code. The app only maps labels/codes to classes (`src/lib/rarity.ts`) and image bases to URLs (`src/lib/images.ts`).
 - **Missing images fallback:** cards still without image after probing the TCGdex CDN get the TCGplayer catalogue image (category 85 « Pokemon Japan », via tcgcsv.com daily export, matched by set abbreviation + number, variants `(… Pattern)` skipped, TCGdex `SM3p` = TCGplayer `SM3+`). The index stores the base `https://tcgplayer-cdn.tcgplayer.com/product/<productId>`; `cardImage()` turns it into `_in_1000x1000.jpg` (320 × 454). tcgcsv requires a custom User-Agent and ≤ 1 sync/day.
 - Prefer plain `fetch` + small typed helpers over the `@tcgdex/sdk` package (keeps the bundle and the abstraction small). Handle `image == null`.
