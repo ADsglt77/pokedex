@@ -6,3 +6,20 @@ services:
     # Seulement sur 127.0.0.1 : on n'y accède que par le tunnel, jamais directement.
     ports:
       - '127.0.0.1:${POKEDEX_PORT:-8080}:80'
+    volumes:
+      - prices:/usr/share/nginx/html/prices:ro
+
+  # Prix Cardmarket : relus toutes les 6 h (le guide change une fois par jour), écrits dans le
+  # volume que sert nginx. Le code vient du clone : un `git pull` suffit à le mettre à jour.
+  prices:
+    image: oven/bun:1-alpine
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./src/data:/app/src/data:ro
+      - prices:/prices
+    command: sh -c 'while true; do bun scripts/prices.ts /prices; sleep 21600; done'
+
+volumes:
+  prices:
