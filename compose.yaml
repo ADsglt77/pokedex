@@ -1,0 +1,8 @@
+# Le site, servi en local sur le VPS ; le tunnel Cloudflare l'expose sur le domaine.
+services:
+  pokedex:
+    build: .
+    restart: unless-stopped
+    # Seulement sur 127.0.0.1 : on n'y accède que par le tunnel, jamais directement.
+    ports:
+      - '127.0.0.1:${POKEDEX_PORT:-8080}:80'
