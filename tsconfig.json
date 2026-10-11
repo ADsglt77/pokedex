@@ -2,6 +2,9 @@
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
+    { "path": "./tsconfig.node.json" },
+    { "path": "./tsconfig.scripts.json" }
+  ],
+  // Lu par Bun pour les scripts de `scripts/`, qui importent du code de `src/`.
+  "compilerOptions": { "paths": { "@/*": ["./src/*"] } }
 }
