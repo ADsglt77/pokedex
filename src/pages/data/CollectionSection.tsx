@@ -8,6 +8,7 @@ import { useCollectionStore } from '@/store/collection'
 import { DataSection } from './DataSection'
 import { SummaryLedger } from './SummaryLedger'
 
+/** Où en est la collection, ou comment la commencer quand elle est vide. */
 export function CollectionSection() {
   const collection = useCollectionStore((state) => state.collection)
   const { progress } = usePokedex()

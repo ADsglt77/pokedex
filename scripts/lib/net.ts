@@ -13,7 +13,7 @@ const CACHE_ROOT = join(import.meta.dirname, '..', '.cache')
 /** `--refresh` : ignore le cache et redemande tout. */
 const refresh = process.argv.includes('--refresh')
 
-export class NotFoundError extends Error {}
+class NotFoundError extends Error {}
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 

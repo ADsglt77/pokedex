@@ -1,26 +1,29 @@
-import { GENERATIONS, TOTAL_SPECIES, type Generation } from '@/config/pokedex'
-import { buildCandidates, describeCard, pickRepresentative, type CardView } from '@/lib/candidates'
-import { getSpecies, indexCard, SPECIES } from '@/lib/catalog'
-import type { CardImage, CardStatus, CollectionData, PokemonSpecies } from '@/types'
+/**
+ * Le Pokédex tel que l'utilisateur le voit : pour chaque espèce, ses candidates, la carte qui la
+ * représente et ce qu'il en possède ; la progression, en tout et par génération.
+ */
 
-type StatusCounts = Record<CardStatus, number>
+import { GENERATIONS, type Generation } from '@/config/pokedex'
+import { buildCandidates, pickRepresentative, type CardView } from '@/lib/candidates'
+import { getSpecies, indexCard, SPECIES } from '@/lib/catalog'
+import type { CardStatus, CollectionData, PokemonCard, PokemonSpecies } from '@/types'
 
 export interface PokedexEntry {
   species: PokemonSpecies
   candidates: CardView[]
   /** `null` sans candidate : « illustration à rechercher ». */
   representative: CardView | null
-  image: CardImage | null
-  /** Débloqué : au moins une candidate possédée. Souhaitée, commandée ou favorite ne suffit pas. */
+  /** Débloqué : au moins une candidate possédée. Souhaitée ou commandée ne suffit pas. */
   unlocked: boolean
-  statusCounts: StatusCounts
+  /** Combien de candidates ont chaque statut. */
+  statusCounts: Record<CardStatus, number>
 }
 
 export interface Progress {
   total: number
   unlocked: number
   missing: number
-  /** Une décimale, jamais 100 avant la fin ni 0 dès qu'un Pokémon est débloqué. */
+  /** Une décimale : 0 % et 100 % seulement quand c'est vrai. */
   percent: number
 }
 
@@ -35,62 +38,55 @@ export interface Pokedex {
   generations: GenerationProgress[]
 }
 
-function computeProgress(unlocked: number, total: number): Progress {
-  let tenths = Math.round((unlocked * 1000) / total)
-  if (unlocked < total) tenths = Math.min(tenths, 999)
-  if (unlocked > 0) tenths = Math.max(tenths, 1)
-  return { total, unlocked, missing: total - unlocked, percent: tenths / 10 }
+function progressOf(entries: readonly PokedexEntry[]): Progress {
+  const total = entries.length
+  const unlocked = entries.filter((entry) => entry.unlocked).length
+  const tenths = Math.round((unlocked * 1000) / total)
+  const shown = unlocked === 0 || unlocked === total ? tenths : Math.min(Math.max(tenths, 1), 999)
+  return { total, unlocked, missing: total - unlocked, percent: shown / 10 }
 }
 
-/** L'entrée d'une espèce : ses candidates, sa représentante et ce que l'utilisateur en possède. */
 function buildEntry(
   species: PokemonSpecies,
   collection: CollectionData,
   enabledCodes: readonly string[],
 ): PokedexEntry {
   const candidates = buildCandidates(species.id, collection, enabledCodes)
-  const representative = pickRepresentative(candidates)
-  const statusCounts: StatusCounts = { owned: 0, ordered: 0, wanted: 0 }
-  for (const candidate of candidates) {
-    if (candidate.status) statusCounts[candidate.status]++
-  }
+  const statusCounts = { owned: 0, ordered: 0, wanted: 0 }
+  for (const { status } of candidates) if (status) statusCounts[status]++
   return {
     species,
     candidates,
-    representative,
-    image: representative?.image ?? null,
+    representative: pickRepresentative(candidates),
     unlocked: statusCounts.owned > 0,
     statusCounts,
   }
 }
 
-/** Statut affiché pour une espèce : possédée, sinon la carte suivie la plus avancée. */
-export function speciesStatus(entry: PokedexEntry): CardStatus | null {
-  if (entry.unlocked) return 'owned'
-  if (entry.statusCounts.ordered > 0) return 'ordered'
-  if (entry.statusCounts.wanted > 0) return 'wanted'
+/** Le statut affiché pour une espèce : possédée, sinon commandée, sinon souhaitée. */
+export function speciesStatus({ statusCounts }: PokedexEntry): CardStatus | null {
+  if (statusCounts.owned) return 'owned'
+  if (statusCounts.ordered) return 'ordered'
+  if (statusCounts.wanted) return 'wanted'
   return null
 }
 
-/** Le Pokédex tel que l'utilisateur le voit, dérivé de l'index, de la collection et des réglages. */
 export function buildPokedex(collection: CollectionData, enabledCodes: readonly string[]): Pokedex {
   const entries = SPECIES.map((species) => buildEntry(species, collection, enabledCodes))
-  const entryById = new Map(entries.map((entry) => [entry.species.id, entry]))
-  const isUnlocked = (id: number) => entryById.get(id)?.unlocked ?? false
-
   return {
     entries,
-    entryById,
-    progress: computeProgress(entries.filter((entry) => entry.unlocked).length, TOTAL_SPECIES),
-    generations: GENERATIONS.map((generation) => {
-      let unlocked = 0
-      for (let id = generation.first; id <= generation.last; id++) if (isUnlocked(id)) unlocked++
-      return { generation, ...computeProgress(unlocked, generation.last - generation.first + 1) }
-    }),
+    entryById: new Map(entries.map((entry) => [entry.species.id, entry])),
+    progress: progressOf(entries),
+    generations: GENERATIONS.map((generation) => ({
+      generation,
+      ...progressOf(entries.filter((entry) => entry.species.generation === generation.id)),
+    })),
   }
 }
 
-export interface RecentCard extends CardView {
+export interface RecentCard {
+  card: PokemonCard
+  /** Les Pokémon de la carte. */
   species: PokemonSpecies[]
   acquiredAt: string
 }
@@ -98,24 +94,13 @@ export interface RecentCard extends CardView {
 /** Les dernières cartes obtenues, la plus récente d'abord. */
 export function recentAcquisitions(collection: CollectionData, limit: number): RecentCard[] {
   return Object.entries(collection.cards)
-    .filter(([, ownership]) => ownership.status === 'owned' && ownership.acquiredAt)
-    .sort(
-      ([idA, a], [idB, b]) =>
-        Date.parse(b.acquiredAt ?? '') - Date.parse(a.acquiredAt ?? '') || (idA < idB ? -1 : 1),
-    )
-    .flatMap(([cardId, ownership]) => {
-      // La version de l'index est plus complète que la copie d'une collection ancienne.
-      const card = indexCard(cardId) ?? collection.customCards[cardId] ?? null
-      if (card === null) return []
-      const species = card.dexIds.flatMap((id) => getSpecies(id) ?? [])
-      const firstSpecies = species[0]?.id ?? 0
-      return [
-        {
-          ...describeCard(card, collection, firstSpecies),
-          species,
-          acquiredAt: ownership.acquiredAt ?? '',
-        },
-      ]
-    })
+    .filter(([, ownership]) => ownership.status === 'owned')
+    .sort(([, a], [, b]) => b.acquiredAt!.localeCompare(a.acquiredAt!))
     .slice(0, limit)
+    .flatMap(([cardId, ownership]) => {
+      const card = indexCard(cardId) ?? collection.customCards[cardId]
+      if (!card) return []
+      const species = card.dexIds.flatMap((id) => getSpecies(id) ?? [])
+      return [{ card, species, acquiredAt: ownership.acquiredAt! }]
+    })
 }

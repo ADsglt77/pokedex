@@ -1,9 +1,7 @@
-import { Banner } from '@camply/ui'
 import { ChartLine, Database, Grid3x3, House } from '@camply/ui/icons'
 import { useEffect, useRef } from 'react'
 import { Link, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { cx } from '@/lib/cx'
-import { useCollectionStore } from '@/store/collection'
 import styles from './AppShell.module.css'
 
 const NAV = [
@@ -41,12 +39,14 @@ function Emblem() {
   )
 }
 
+/**
+ * La coquille de toutes les pages : lien d'évitement, en-tête et navigation (barre d'onglets en bas
+ * sur téléphone), pied de page, focus et défilement à chaque changement de page.
+ */
 export function AppShell() {
   const { pathname } = useLocation()
   const main = useRef<HTMLElement>(null)
   const firstRender = useRef(true)
-  const storageIssue = useCollectionStore((state) => state.storageIssue)
-  const dismissStorageIssue = useCollectionStore((state) => state.dismissStorageIssue)
 
   // À chaque nouvelle page, le focus va au contenu (lecteurs d'écran, navigation au clavier).
   useEffect(() => {
@@ -84,19 +84,6 @@ export function AppShell() {
           </nav>
         </div>
       </header>
-
-      {storageIssue && (
-        <div className="container">
-          <Banner
-            tone="warn"
-            dismissible
-            onOpenChange={(open) => !open && dismissStorageIssue()}
-            className={styles.banner}
-          >
-            {storageIssue}
-          </Banner>
-        </div>
-      )}
 
       <main id="main" ref={main} tabIndex={-1} className={styles.main}>
         {/* Une clé par adresse : chaque page (et chaque fiche) repart d'un état neuf. */}

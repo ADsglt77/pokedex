@@ -45,11 +45,10 @@ export const formatEuro = (value: number) => euroFormat.format(value)
 /** « +12,00 € », « −3,50 € » : un gain ou une perte. */
 export const formatEuroChange = (value: number) => signedEuroFormat.format(value)
 
-/** Un montant saisi (« 12,50 », « 12.5 € ») ; `null` pour un champ vide, `undefined` s'il est illisible. */
-export function parseEuros(text: string): number | null | undefined {
+/** Un montant saisi (« 12,50 », « 12.5 € ») ; `null` s'il est illisible. */
+export function parseEuros(text: string): number | null {
   const input = text.replace(/[\s€]/g, '').replace(',', '.')
-  if (input === '') return null
-  return /^\d+(\.\d{1,2})?$/.test(input) ? Number(input) : undefined
+  return /^\d+(\.\d{1,2})?$/.test(input) ? Number(input) : null
 }
 
 /** Un montant à éditer : « 12,50 ». */

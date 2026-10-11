@@ -1,7 +1,5 @@
 {
-  "schemaVersion": 1,
-  "generatedAt": "2026-10-09T13:14:46.893Z",
-  "source": "https://pokeapi.co/api/v2",
+  "generatedAt": "2026-10-11T12:42:30.864Z",
   "details": [
     {"id":1,"genus":"Pokémon Graine","description":"Quand il est jeune, il absorbe les nutriments conservés dans son dos pour grandir et se développer.","heightM":0.7,"weightKg":6.9,"isBaby":false,"isLegendary":false,"isMythical":false},
     {"id":2,"genus":"Pokémon Graine","description":"La lumière du soleil le rend plus fort et vigoureux. Le bulbe sur son dos grossit en conséquence.","heightM":1,"weightKg":13,"isBaby":false,"isLegendary":false,"isMythical":false},

@@ -3,6 +3,7 @@ import { Download } from '@camply/ui/icons'
 import { DataSection } from './DataSection'
 import { useExportCollection } from './useExportCollection'
 
+/** Télécharger la collection : la seule sauvegarde, la collection ne vivant que dans ce navigateur. */
 export function ExportSection() {
   const exportCollection = useExportCollection()
   return (

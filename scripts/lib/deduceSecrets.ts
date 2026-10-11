@@ -4,11 +4,11 @@
  * carte existe bel et bien dans TCGdex.
  */
 
-import { SECRET_CARD_RULES } from '@/config/rarities'
-import { usableRarity } from '@/lib/rarity'
+import { SECRET_CARD_RULES } from './rules'
+import { usableRarity } from './tcgdex'
 
 /** Ce que la déduction lit d'une carte. Toutes les cartes de l'extension, Dresseurs compris. */
-export interface SetCard {
+interface SetCard {
   id: string
   number: string
   name: string | null
@@ -39,7 +39,7 @@ function isRuleBox(name: string | null) {
  */
 export function deduceSecrets(
   setId: string,
-  officialCount: number | null,
+  officialCount: number,
   cards: readonly SetCard[],
 ): Map<string, string> {
   const hints = new Map<string, string>()

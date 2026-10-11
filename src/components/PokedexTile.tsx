@@ -22,7 +22,7 @@ export function PokedexTile({ entry, eager }: { entry: PokedexEntry; eager?: boo
   return (
     <Link to={`/pokemon/${species.id}`} className={styles.tile} aria-label={label}>
       <CardArt
-        image={entry.image}
+        image={representative?.card.image ?? null}
         hasCard={representative !== null}
         speciesId={species.id}
         reference={representative?.card.reference}

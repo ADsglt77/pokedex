@@ -8,6 +8,7 @@ import { PokedexPage } from '@/pages/pokedex/PokedexPage'
 import { PokemonPage } from '@/pages/pokemon/PokemonPage'
 import { ValuePage } from '@/pages/value/ValuePage'
 
+/** Les pages, toutes dans la coquille commune (en-tête, navigation) ; erreur et 404 comprises. */
 export const router = createBrowserRouter([
   {
     element: <AppShell />,

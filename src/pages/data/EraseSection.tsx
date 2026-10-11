@@ -9,6 +9,7 @@ import { DataSection } from './DataSection'
 import { SummaryLedger } from './SummaryLedger'
 import { useExportCollection } from './useExportCollection'
 
+/** Tout effacer, après confirmation (et une dernière chance d'exporter). */
 export function EraseSection() {
   const act = useCollectionAction()
   const exportCollection = useExportCollection()

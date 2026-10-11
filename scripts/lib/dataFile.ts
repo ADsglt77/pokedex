@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 
-export const DATA_DIR = join(import.meta.dirname, '..', '..', 'src', 'data')
+const DATA_DIR = join(import.meta.dirname, '..', '..', 'src', 'data')
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)

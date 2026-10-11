@@ -4,30 +4,17 @@ import { Link } from 'react-router'
 import { RarityTag } from '@/components/RarityTag'
 import type { CardView } from '@/lib/candidates'
 import { setLabel, statusCaption } from '@/lib/format'
-import type { PokedexEntry } from '@/lib/pokedex'
+import type { PokemonCard, PokemonSpecies } from '@/types'
 import { CardActions } from './CardActions'
 import { CardPrice } from './CardPrice'
 import styles from './CardSheet.module.css'
 
 /** Ce qu'on sait d'une carte, sans ligne vide. */
-function CardFacts({ candidate }: { candidate: CardView }) {
-  const { card } = candidate
+function CardFacts({ card }: { card: PokemonCard }) {
   const set = setLabel(card)
   const items: DescriptionItem[] = []
   if (set) items.push({ term: 'Extension', description: <span lang="ja">{set}</span> })
-  if (candidate.rarityClass || card.rarity) {
-    items.push({
-      term: 'Rareté',
-      description: (
-        <RarityTag
-          card={card}
-          rarityClass={candidate.rarityClass}
-          deduced={candidate.rarityDeduced}
-          withLabel
-        />
-      ),
-    })
-  }
+  if (card.rarity) items.push({ term: 'Rareté', description: <RarityTag card={card} withLabel /> })
   if (card.illustrator) items.push({ term: 'Illustrateur', description: card.illustrator })
   if (card.name)
     items.push({ term: 'Nom imprimé', description: <span lang="ja">{card.name}</span> })
@@ -35,7 +22,13 @@ function CardFacts({ candidate }: { candidate: CardView }) {
 }
 
 /** La fiche de la carte affichée : ce qu'elle est, et ce que l'utilisateur en fait. */
-export function CardSheet({ candidate, entry }: { candidate: CardView; entry: PokedexEntry }) {
+export function CardSheet({
+  candidate,
+  species,
+}: {
+  candidate: CardView
+  species: PokemonSpecies
+}) {
   return (
     <Stack as="section" gap={6} className={styles.sheet} aria-labelledby="sheet-title">
       <Stack as="header" gap={2} align="start">
@@ -52,9 +45,9 @@ export function CardSheet({ candidate, entry }: { candidate: CardView; entry: Po
         </p>
       </Stack>
 
-      <CardFacts candidate={candidate} />
+      <CardFacts card={candidate.card} />
       <CardPrice card={candidate.card} />
-      <CardActions candidate={candidate} entry={entry} />
+      <CardActions candidate={candidate} species={species} />
     </Stack>
   )
 }

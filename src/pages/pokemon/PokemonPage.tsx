@@ -5,7 +5,7 @@ import { PossessionMark } from '@/components/PossessionMark'
 import { TypeChip } from '@/components/TypeChip'
 import { usePokedex } from '@/hooks/usePokedex'
 import { getSpecies } from '@/lib/catalog'
-import { formatDexNumber, formatInteger, pageTitle, plural } from '@/lib/format'
+import { formatDexNumber, pageTitle, plural } from '@/lib/format'
 import { speciesStatus, type PokedexEntry } from '@/lib/pokedex'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { CandidateGallery } from './CandidateGallery'
@@ -15,6 +15,7 @@ import { SpeciesAbout } from './SpeciesAbout'
 import { SpeciesNav } from './SpeciesNav'
 import styles from './PokemonPage.module.css'
 
+/** La fiche d'un Pokémon (`/pokemon/:id`) ; un numéro inconnu mène à la page introuvable. */
 export function PokemonPage() {
   const { id = '' } = useParams()
   const entry = usePokedex().entryById.get(Number(id))
@@ -65,7 +66,7 @@ function SpeciesPage({ entry }: { entry: PokedexEntry }) {
 
         <div className={styles.body}>
           <div className={styles.columns}>
-            {viewed ? <CardSheet candidate={viewed} entry={entry} /> : <EmptySheet />}
+            {viewed ? <CardSheet candidate={viewed} species={species} /> : <EmptySheet />}
             <SpeciesAbout species={species} showArtwork={viewed === null} />
           </div>
 
@@ -83,14 +84,13 @@ function SpeciesPage({ entry }: { entry: PokedexEntry }) {
   )
 }
 
+/** « Débloqué : 1 carte possédée, 2 souhaitées. » */
 function PossessionStatement({ entry }: { entry: PokedexEntry }) {
   const { owned, ordered, wanted } = entry.statusCounts
-  const tracking = [
-    ordered > 0 && plural(ordered, 'carte est commandée', 'cartes sont commandées'),
-    wanted > 0 &&
-      (ordered > 0
-        ? `${formatInteger(wanted)} ${wanted > 1 ? 'sont souhaitées' : 'est souhaitée'}`
-        : plural(wanted, 'carte est souhaitée', 'cartes sont souhaitées')),
+  const counts = [
+    owned ? plural(owned, 'carte possédée', 'cartes possédées') : 'aucune carte possédée',
+    ordered > 0 && plural(ordered, 'commandée', 'commandées'),
+    wanted > 0 && plural(wanted, 'souhaitée', 'souhaitées'),
   ].filter(Boolean)
 
   return (
@@ -99,17 +99,7 @@ function PossessionStatement({ entry }: { entry: PokedexEntry }) {
         <PossessionMark status={speciesStatus(entry)} />
       </span>
       <span>
-        {entry.unlocked ? (
-          <>
-            <strong>Débloqué</strong> : vous possédez {plural(owned, 'carte', 'cartes')} de ce
-            Pokémon.
-          </>
-        ) : (
-          <>
-            <strong>À débloquer</strong> : vous ne possédez encore aucune carte de ce Pokémon.
-          </>
-        )}
-        {tracking.length > 0 && ` ${tracking.join(' et ')}.`}
+        <strong>{entry.unlocked ? 'Débloqué' : 'À débloquer'}</strong> : {counts.join(', ')}.
       </span>
     </p>
   )

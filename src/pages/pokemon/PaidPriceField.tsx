@@ -5,38 +5,42 @@ import { euroInput, formatEuro, parseEuros } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'
 import type { PokemonCard } from '@/types'
 
-/** Le prix payé d'une carte possédée ou commandée, enregistré en quittant le champ. */
-export function PaidPriceField({ card }: { card: PokemonCard }) {
+/** Le prix payé d'une carte possédée ou commandée, enregistré en quittant le champ (ou Entrée). */
+export function PaidPriceField({ card, className }: { card: PokemonCard; className?: string }) {
+  const paid = useCollectionStore((state) => state.collection.cards[card.id]?.paidPrice)
+  // Une clé par valeur enregistrée : le champ repart d'elle après une annulation ou un autre onglet.
+  return <Field key={paid ?? ''} card={card} paid={paid} className={className} />
+}
+
+function Field({
+  card,
+  paid,
+  className,
+}: {
+  card: PokemonCard
+  paid?: number
+  className?: string
+}) {
   const act = useCollectionAction()
-  const paid = useCollectionStore((state) => state.collection.cards[card.id]?.paidPrice ?? null)
-  const [draft, setDraft] = useState(paid === null ? '' : euroInput(paid))
-  const [error, setError] = useState<string | null>(null)
+  const [draft, setDraft] = useState(paid === undefined ? '' : euroInput(paid))
+  const [error, setError] = useState<string>()
 
-  // Le prix a changé ailleurs (annulation, autre onglet) : le champ le suit.
-  const [shown, setShown] = useState(paid)
-  if (paid !== shown) {
-    setShown(paid)
-    setDraft(paid === null ? '' : euroInput(paid))
-  }
-
-  const commit = () => {
-    const amount = parseEuros(draft)
-    if (amount === undefined) {
-      setError('Indiquez un montant en euros, par exemple 12,50.')
-      return
-    }
-    setError(null)
+  const save = () => {
+    const amount = draft.trim() === '' ? undefined : parseEuros(draft)
+    if (amount === null) return setError('Indiquez un montant en euros, par exemple 12,50.')
+    setError(undefined)
     act(
       () => useCollectionStore.getState().setPaidPrice(card, amount),
-      amount === null
+      amount === undefined
         ? `Prix payé retiré de la carte ${card.reference}.`
         : `Carte ${card.reference} payée ${formatEuro(amount)}.`,
-      amount === null ? 'info' : 'success',
+      amount === undefined ? 'info' : 'success',
     )
   }
 
   return (
     <Input
+      className={className}
       label="Prix payé"
       hint="Pour suivre ce que la carte vous a coûté, et ce qu’elle vaut depuis."
       inputMode="decimal"
@@ -44,10 +48,10 @@ export function PaidPriceField({ card }: { card: PokemonCard }) {
       placeholder="0,00"
       value={draft}
       onChange={(event) => setDraft(event.target.value)}
-      onBlur={commit}
-      onKeyDown={(event) => event.key === 'Enter' && commit()}
+      onBlur={save}
+      onKeyDown={(event) => event.key === 'Enter' && save()}
       rightIcon={<span aria-hidden="true">€</span>}
-      error={error ?? undefined}
+      error={error}
     />
   )
 }

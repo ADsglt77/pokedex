@@ -79,10 +79,6 @@
   color: var(--camply-accent-hover);
 }
 
-.banner {
-  margin-top: 1rem;
-}
-
 .main {
   flex: 1;
   outline: none;

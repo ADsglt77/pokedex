@@ -7,6 +7,7 @@ import { ExportSection } from './ExportSection'
 import { ImportSection } from './ImportSection'
 import { ReferenceSection } from './ReferenceSection'
 
+/** Données : la collection, sa sauvegarde (export, import), les raretés suivies, les sources. */
 export function DataPage() {
   return (
     <div className="container container--narrow">

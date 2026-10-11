@@ -3,6 +3,7 @@ import { CARD_INDEX_INFO } from '@/lib/catalog'
 import { formatDate, formatInteger } from '@/lib/format'
 import { DataSection } from './DataSection'
 
+/** D'où viennent les données, et de quand date l'index des cartes. */
 export function ReferenceSection() {
   return (
     <DataSection id="reference" title="Données de référence">

@@ -1,14 +1,16 @@
-/** Filtres de la page Pokédex : lecture/écriture de l'adresse et recherche. */
+/** Les filtres de la page Pokédex : leur place dans l'adresse, et la recherche par nom ou numéro. */
 
 import { GENERATIONS, generationById, type Generation } from '@/config/pokedex'
 import { SPECIES } from '@/lib/catalog'
 import type { PokedexEntry } from '@/lib/pokedex'
-import type { GenerationId } from '@/types'
+import type { GenerationId, PokemonSpecies } from '@/types'
 
-export type PossessionFilter = 'all' | 'owned' | 'missing'
+const POSSESSIONS = ['all', 'owned', 'missing'] as const
+export type PossessionFilter = (typeof POSSESSIONS)[number]
 
-/** Une espèce a une carte candidate, ou son illustration reste à rechercher. */
-export type IllustrationFilter = 'card' | 'no-card'
+/** Avec une carte candidate, ou illustration à rechercher. */
+const ILLUSTRATIONS = ['card', 'no-card'] as const
+export type IllustrationFilter = (typeof ILLUSTRATIONS)[number]
 
 export interface PokedexFilters {
   search: string
@@ -18,65 +20,50 @@ export interface PokedexFilters {
   descending: boolean
 }
 
-const MAX_SEARCH_LENGTH = 60
+export const DEFAULT_FILTERS: PokedexFilters = {
+  search: '',
+  generation: null,
+  possession: 'all',
+  illustration: null,
+  descending: false,
+}
 
-/** Une recherche plus longue ne peut correspondre à aucun nom ; coupée par caractère, pas par unité UTF-16. */
-const cleanSearch = (text: string) =>
-  Array.from(text.trim()).slice(0, MAX_SEARCH_LENGTH).join('').trim()
+const oneOf = <T extends string>(values: readonly T[], value: string | null) =>
+  values.find((known) => known === value)
 
-// Valeur de l'adresse ↔ valeur du filtre.
-const POSSESSION_PARAMS = new Map<string, PossessionFilter>([
-  ['possedes', 'owned'],
-  ['manquants', 'missing'],
-])
-
-const ILLUSTRATION_PARAMS = new Map<string, IllustrationFilter>([
-  ['avec-carte', 'card'],
-  ['a-rechercher', 'no-card'],
-])
-
-const paramOf = <T>(params: Map<string, T>, value: T) =>
-  [...params].find(([, candidate]) => candidate === value)?.[0]
-
-/** Tolérant : une valeur inconnue veut dire « par défaut ». */
+/** L'adresse → les filtres. Une valeur inconnue (adresse tapée à la main) vaut le défaut. */
 export function parseFilters(params: URLSearchParams): PokedexFilters {
   return {
-    search: cleanSearch(params.get('q') ?? ''),
+    search: params.get('q') ?? '',
     generation: generationById(Number(params.get('generation')))?.id ?? null,
-    possession: POSSESSION_PARAMS.get(params.get('possession') ?? '') ?? 'all',
-    illustration: ILLUSTRATION_PARAMS.get(params.get('illustration') ?? '') ?? null,
-    descending: params.get('ordre') === 'desc',
+    possession: oneOf(POSSESSIONS, params.get('possession')) ?? 'all',
+    illustration: oneOf(ILLUSTRATIONS, params.get('illustration')) ?? null,
+    descending: params.get('order') === 'desc',
   }
 }
 
-/** N'écrit que ce qui diffère du défaut : `/pokedex?generation=5&possession=manquants`. */
+/** Les filtres → l'adresse, sans les valeurs par défaut : `/pokedex?generation=5&possession=missing`. */
 export function serializeFilters(filters: PokedexFilters): URLSearchParams {
-  const entries = {
-    q: cleanSearch(filters.search),
-    generation: filters.generation ? String(filters.generation) : undefined,
-    possession: paramOf(POSSESSION_PARAMS, filters.possession),
-    illustration: paramOf(ILLUSTRATION_PARAMS, filters.illustration),
-    ordre: filters.descending ? 'desc' : undefined,
-  }
-  return new URLSearchParams(
-    Object.entries(entries).filter((entry): entry is [string, string] => Boolean(entry[1])),
-  )
+  const params = new URLSearchParams()
+  if (filters.search) params.set('q', filters.search)
+  if (filters.generation) params.set('generation', String(filters.generation))
+  if (filters.possession !== 'all') params.set('possession', filters.possession)
+  if (filters.illustration) params.set('illustration', filters.illustration)
+  if (filters.descending) params.set('order', 'desc')
+  return params
 }
 
-/** Filtres qui masquent des espèces, hors recherche. */
-export function activeFilterCount(filters: PokedexFilters): number {
-  return (
-    Number(filters.generation !== null) +
-    Number(filters.possession !== 'all') +
-    Number(filters.illustration !== null)
-  )
-}
+/** Les filtres actifs, recherche exclue (le compteur du bouton « Filtres »). */
+export const activeFilterCount = (filters: PokedexFilters) =>
+  Number(filters.generation !== null) +
+  Number(filters.possession !== 'all') +
+  Number(filters.illustration !== null)
 
 /**
- * Forme de comparaison des noms : sans casse, accent, ligature, ponctuation ni espace, et une
- * seule écriture des kana. « M. Mime » = « mmime », « Nœunœuf » = « noeunoeuf », ぴかちゅう = ピカチュウ.
+ * Un nom sous sa forme de recherche : sans casse, accent, ligature, ponctuation ni espace, et les
+ * hiragana écrits en katakana. « M. Mime » → « mmime », « Nœunœuf » → « noeunoeuf », ぴかちゅう → ピカチュウ.
  */
-function normalizeSearchText(text: string): string {
+function searchForm(text: string): string {
   return text
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -84,62 +71,42 @@ function normalizeSearchText(text: string): string {
     .toLowerCase()
     .replace(/œ/g, 'oe')
     .replace(/æ/g, 'ae')
-    .replace(/ß/g, 'ss')
     .replace(/[\u3041-\u3096]/g, (kana) => String.fromCharCode(kana.charCodeAt(0) + 0x60))
     .replace(/[^\p{L}\p{N}]/gu, '')
 }
 
-type SearchMatcher =
-  { kind: 'all' } | { kind: 'number'; digits: string } | { kind: 'name'; needle: string }
-
-/**
- * « 25 », « 025 », « #25 », « n°25 » cherchent les numéros qui commencent par ces chiffres
- * (« 025 » trouve 25 puis 250 à 259) ; le reste cherche dans les noms fr, en et ja.
- */
-function parseSearch(text: string): SearchMatcher {
-  const typed = text.normalize('NFKC').trim()
-  if (typed === '' || /^(#|n\s*°)$/i.test(typed)) return { kind: 'all' }
-
-  const digits = /^(?:#|n\s*°|n[o.]?)?\s*(\d+)$/i.exec(typed)?.[1]
-  if (digits !== undefined) {
-    const significant = digits.replace(/^0+/, '')
-    return significant ? { kind: 'number', digits: significant } : { kind: 'all' }
-  }
-  const needle = normalizeSearchText(typed)
-  return needle ? { kind: 'name', needle } : { kind: 'all' }
-}
-
-// Une ligne par nom : une recherche ne contient jamais de saut de ligne, donc ne chevauche pas deux noms.
+// Les noms fr, en et ja de chaque espèce, une ligne chacun : une recherche ne déborde pas d'un nom
+// sur le suivant.
 const SEARCH_NAMES = new Map(
   SPECIES.map(({ id, names }) => [
     id,
-    [names.fr, names.en, names.ja ?? ''].map(normalizeSearchText).join('\n'),
+    [names.fr, names.en, names.ja ?? ''].map(searchForm).join('\n'),
   ]),
 )
 
+/** « 25 », « #25 », « n°25 » : les numéros qui commencent par 25. Sinon : les noms. */
+function searchMatcher(search: string): (species: PokemonSpecies) => boolean {
+  const digits = /^(?:#|n°)?\s*(\d+)$/i.exec(search.trim())?.[1]
+  if (digits) return (species) => String(species.id).startsWith(String(Number(digits)))
+  const needle = searchForm(search)
+  return (species) => SEARCH_NAMES.get(species.id)!.includes(needle)
+}
+
 export function filterEntries(entries: PokedexEntry[], filters: PokedexFilters): PokedexEntry[] {
-  const matcher = parseSearch(filters.search)
-  const kept = entries.filter(({ species, unlocked, representative }) => {
-    if (filters.generation && species.generation !== filters.generation) return false
-    if (filters.possession === 'owned' && !unlocked) return false
-    if (filters.possession === 'missing' && unlocked) return false
-    if (filters.illustration && (representative !== null) !== (filters.illustration === 'card'))
-      return false
-    if (matcher.kind === 'number') return String(species.id).startsWith(matcher.digits)
-    if (matcher.kind === 'name') return SEARCH_NAMES.get(species.id)?.includes(matcher.needle)
-    return true
-  })
+  const matches = searchMatcher(filters.search)
+  const kept = entries.filter(
+    ({ species, unlocked, representative }) =>
+      (!filters.generation || species.generation === filters.generation) &&
+      (filters.possession === 'all' || unlocked === (filters.possession === 'owned')) &&
+      (!filters.illustration || (representative !== null) === (filters.illustration === 'card')) &&
+      matches(species),
+  )
   return filters.descending ? kept.reverse() : kept
 }
 
-interface GenerationGroup {
-  generation: Generation
-  entries: PokedexEntry[]
-}
-
-/** Découpe une liste triée par numéro en un groupe par génération, dans l'ordre de la liste. */
-export function groupByGeneration(entries: PokedexEntry[]): GenerationGroup[] {
-  const groups: GenerationGroup[] = []
+/** Une liste triée par numéro, découpée en un groupe par génération. */
+export function groupByGeneration(entries: PokedexEntry[]) {
+  const groups: { generation: Generation; entries: PokedexEntry[] }[] = []
   for (const entry of entries) {
     const last = groups.at(-1)
     if (last?.generation.id === entry.species.generation) last.entries.push(entry)

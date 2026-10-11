@@ -13,6 +13,7 @@ import '@camply/ui/styles.css'
 import './styles/global.css'
 import { router } from './router'
 
+// Point d'entrée : polices, styles camply puis ceux de l'app, notifications et routeur.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ToastProvider position="bottom-left">

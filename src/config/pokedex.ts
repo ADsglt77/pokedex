@@ -1,5 +1,7 @@
 import type { GenerationId, PokemonTypeId } from '@/types'
 
+/** Le Pokédex national : générations, couleurs des types, illustrations officielles (PokéAPI). */
+
 export const TOTAL_SPECIES = 1025
 
 export interface Generation {

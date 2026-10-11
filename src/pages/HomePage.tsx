@@ -44,6 +44,7 @@ function trackingSentence(ordered: number, wanted: number): string | null {
   return null
 }
 
+/** L'accueil : la progression en une phrase et par génération, puis les dernières cartes obtenues. */
 export function HomePage() {
   const pokedex = usePokedex()
   const collection = useCollectionStore((state) => state.collection)
@@ -113,7 +114,7 @@ function RecentCards({ cards }: { cards: RecentCard[] }) {
             >
               <Link to={`/pokemon/${speciesId}`} className={styles.recentCard}>
                 <CardArt
-                  image={recent.image}
+                  image={recent.card.image}
                   hasCard
                   speciesId={speciesId}
                   reference={recent.card.reference}
@@ -135,7 +136,7 @@ function RecentCards({ cards }: { cards: RecentCard[] }) {
 function FirstCards() {
   const pokedex = usePokedex()
   const teaser = TEASER_SPECIES.flatMap((id) => pokedex.entryById.get(id) ?? [])
-    .filter((entry) => entry.image !== null && !entry.unlocked)
+    .filter((entry) => entry.representative?.card.image && !entry.unlocked)
     .slice(0, 5)
     .sort((a, b) => a.species.id - b.species.id)
 

@@ -26,7 +26,7 @@ export function CardStage({
       {/* Une clé par carte : changer de carte rejoue l'arrivée. */}
       <CardArt
         key={card.id}
-        image={candidate.image}
+        image={card.image}
         hasCard
         speciesId={species.id}
         reference={card.reference}

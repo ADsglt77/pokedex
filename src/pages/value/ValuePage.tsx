@@ -34,6 +34,10 @@ function tallyHint(tally: Tally, withPaid: boolean): string {
 const gainPercent = ({ paid, paidCardsValue }: Tally) =>
   paid > 0 ? Math.round(((paidCardsValue - paid) / paid) * 100) : undefined
 
+/**
+ * Valeur : ce que vaut la collection au prix Cardmarket du jour, ce qu'elle a coûté, ce que
+ * coûterait de la compléter, et son évolution.
+ */
 export function ValuePage() {
   const prices = usePrices()
   const collection = useCollectionStore((state) => state.collection)

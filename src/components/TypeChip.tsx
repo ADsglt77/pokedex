@@ -3,6 +3,7 @@ import { POKEMON_TYPES } from '@/config/pokedex'
 import type { PokemonTypeId } from '@/types'
 import styles from './TypeChip.module.css'
 
+/** Le type d'un Pokémon : sa couleur et son nom. */
 export function TypeChip({ type }: { type: PokemonTypeId }) {
   const { label, color } = POKEMON_TYPES[type]
   return (

@@ -49,7 +49,7 @@ export function CandidateGallery({
                 onClick={() => onView(card.id)}
               >
                 <CardArt
-                  image={candidate.image}
+                  image={card.image}
                   hasCard
                   speciesId={speciesId}
                   reference={card.reference}
@@ -65,11 +65,7 @@ export function CandidateGallery({
                 <span className={styles.caption}>
                   <span className={styles.reference}>
                     {card.reference}
-                    <RarityTag
-                      card={card}
-                      rarityClass={candidate.rarityClass}
-                      deduced={candidate.rarityDeduced}
-                    />
+                    <RarityTag card={card} />
                   </span>
                   <span className="muted">
                     {statusLabel(status)}

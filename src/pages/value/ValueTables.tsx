@@ -114,7 +114,7 @@ export function CompletionTable({
           key: 'generation',
           header: 'Génération',
           cell: ({ generation }) => (
-            <Link to={`/pokedex?generation=${generation.id}&possession=manquants`}>
+            <Link to={`/pokedex?generation=${generation.id}&possession=missing`}>
               {generation.numeral} – {generation.region}
             </Link>
           ),

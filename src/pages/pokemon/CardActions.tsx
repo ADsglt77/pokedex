@@ -4,9 +4,8 @@ import { STATUS_ICONS } from '@/components/statusIcons'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { cx } from '@/lib/cx'
 import type { CardView } from '@/lib/candidates'
-import type { PokedexEntry } from '@/lib/pokedex'
 import { useCollectionStore } from '@/store/collection'
-import type { CardStatus } from '@/types'
+import type { CardStatus, PokemonSpecies } from '@/types'
 import { PaidPriceField } from './PaidPriceField'
 import styles from './CardActions.module.css'
 
@@ -17,36 +16,36 @@ const STATUS_BUTTONS: { status: CardStatus; label: string; done: string }[] = [
 ]
 
 /**
- * Le choix de l'illustration, indépendant du statut, et le statut de la carte : un seul à la
- * fois, parmi possédée, commandée et souhaitée. Chaque action est annoncée avec « Annuler ».
+ * Ce que l'utilisateur fait d'une carte : la choisir comme illustration du Pokémon, lui donner un
+ * statut (un seul à la fois ; le relâcher le retire), noter son prix payé. Chaque action est
+ * annoncée avec « Annuler ».
  */
-export function CardActions({ candidate, entry }: { candidate: CardView; entry: PokedexEntry }) {
+export function CardActions({
+  candidate,
+  species,
+}: {
+  candidate: CardView
+  species: PokemonSpecies
+}) {
   const act = useCollectionAction()
+  const store = useCollectionStore.getState
   const { card, status, isFavorite } = candidate
-  const name = entry.species.names.fr
+  const name = species.names.fr
 
   const setStatus = (next: CardStatus | null) => {
-    const isUnlocked = entry.candidates.some(
-      (other) => (other.card.id === card.id ? next : other.status) === 'owned',
-    )
-    const relocked = entry.unlocked && !isUnlocked ? ` ${name} est de nouveau à débloquer.` : ''
     const done = STATUS_BUTTONS.find((button) => button.status === next)?.done
-    const message =
-      !entry.unlocked && isUnlocked
-        ? `${name} est débloqué : vous possédez la carte ${card.reference}.`
-        : done
-          ? `Carte ${card.reference} marquée comme ${done}.${relocked}`
-          : `Statut retiré de la carte ${card.reference}.${relocked}`
     act(
-      () => useCollectionStore.getState().setCardStatus(card, next),
-      message,
-      next && !relocked ? 'success' : 'info',
+      () => store().setCardStatus(card, next),
+      done
+        ? `Carte ${card.reference} marquée comme ${done}.`
+        : `Statut retiré de la carte ${card.reference}.`,
+      next ? 'success' : 'info',
     )
   }
 
   const toggleFavorite = () =>
     act(
-      () => useCollectionStore.getState().setFavorite(entry.species.id, isFavorite ? null : card),
+      () => store().setFavorite(species.id, isFavorite ? null : card),
       isFavorite
         ? `${name} n’a plus d’illustration choisie.`
         : `Illustration choisie pour ${name} : carte ${card.reference}.`,
@@ -75,8 +74,7 @@ export function CardActions({ candidate, entry }: { candidate: CardView; entry: 
         {STATUS_BUTTONS.map(({ status: value, label }) => {
           const Icon = STATUS_ICONS[value]
           return (
-            // Relâcher le statut actif le retire. Tant que rien n'est suivi, « Je possède » est
-            // mis en avant : c'est l'action attendue.
+            // Tant que rien n'est suivi, « Je possède » est mis en avant : l'action attendue.
             <Toggle
               key={value}
               pressed={status === value}
@@ -95,9 +93,7 @@ export function CardActions({ candidate, entry }: { candidate: CardView; entry: 
       </ButtonGroup>
 
       {(status === 'owned' || status === 'ordered') && (
-        <div className={styles.group}>
-          <PaidPriceField card={card} />
-        </div>
+        <PaidPriceField card={card} className={styles.group} />
       )}
     </Stack>
   )

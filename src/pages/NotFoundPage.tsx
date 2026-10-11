@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { pageTitle } from '@/lib/format'
 
+/** Adresse inconnue, ou numéro de Pokémon qui n'existe pas. */
 export function NotFoundPage() {
   const { pathname } = useLocation()
   return (

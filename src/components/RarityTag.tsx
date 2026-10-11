@@ -1,33 +1,30 @@
 import { Badge, Tooltip } from '@camply/ui'
-import type { RarityClass } from '@/config/rarities'
 import { cx } from '@/lib/cx'
-import { findRarityClass, usableRarityOf } from '@/lib/rarity'
+import { findRarityClass } from '@/lib/rarity'
 import type { PokemonCard } from '@/types'
 import styles from './RarityTag.module.css'
 
-interface RarityTagProps {
-  card: PokemonCard
-  rarityClass: RarityClass | null
-  deduced?: boolean
-  /** Affiche aussi le nom de la classe (« AR Art Rare »). */
-  withLabel?: boolean
-}
-
-/** Code de rareté ; une rareté déduite de la numérotation est marquée d'un astérisque. */
-export function RarityTag({ card, rarityClass, deduced, withLabel }: RarityTagProps) {
-  const raw = usableRarityOf(card)
-  const code = rarityClass?.code ?? raw
+/**
+ * Le code de rareté d'une carte (« AR »), et son nom au survol ; un astérisque quand la classe
+ * est déduite de la numérotation. `withLabel` affiche aussi le nom (« AR Art Rare »).
+ */
+export function RarityTag({ card, withLabel }: { card: PokemonCard; withLabel?: boolean }) {
+  const rarityClass = findRarityClass(card.rarity)
+  const code = rarityClass?.code ?? card.rarity
   if (!code) return null
-
-  const label = rarityClass?.label ?? findRarityClass(raw)?.label ?? raw ?? code
-  const tip = deduced ? `${label}, rareté déduite de la numérotation de la carte` : label
+  const label = rarityClass?.label ?? code
 
   return (
     <span className={styles.rarity}>
-      <Tooltip content={tip}>
-        <Badge size="sm" tone="neutral" variant="outline" className={cx(deduced && styles.deduced)}>
+      <Tooltip content={card.deduced ? `${label}, rareté déduite de la numérotation` : label}>
+        <Badge
+          size="sm"
+          tone="neutral"
+          variant="outline"
+          className={cx(card.deduced && styles.deduced)}
+        >
           {code}
-          {deduced && '*'}
+          {card.deduced && '*'}
         </Badge>
       </Tooltip>
       {withLabel && label !== code && <span>{label}</span>}

@@ -1,52 +1,49 @@
 import { Alert, Button, FileUpload, Stack, type UploadFile } from '@camply/ui'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { isEmptySummary, summarize } from '@/lib/collection'
-import { formatDateTime, plural } from '@/lib/format'
-import { parseImport, type ParsedImport } from '@/lib/transfer'
+import { formatDateTime } from '@/lib/format'
+import { type ImportedFile, parseImport } from '@/lib/transfer'
 import { useCollectionStore } from '@/store/collection'
 import { DataSection } from './DataSection'
 import { SummaryLedger } from './SummaryLedger'
 import styles from './DataPage.module.css'
 
+/**
+ * Reprendre un export : le fichier est lu et résumé, puis il remplace la collection et les
+ * raretés suivies (après confirmation si la collection actuelle n'est pas vide).
+ */
 export function ImportSection() {
   const act = useCollectionAction()
   const currentIsEmpty = useCollectionStore((state) => isEmptySummary(summarize(state.collection)))
   const [files, setFiles] = useState<UploadFile[]>([])
-  const [parsed, setParsed] = useState<ParsedImport | null>(null)
+  // `null` : le fichier choisi n'est pas un export.
+  const [imported, setImported] = useState<ImportedFile | null>()
   const [confirming, setConfirming] = useState(false)
-
-  // Le dernier fichier choisi : la lecture d'un fichier remplacé entre-temps est ignorée.
-  const selected = useRef<File | null>(null)
 
   const onFiles = async (next: UploadFile[]) => {
     setFiles(next)
-    const file = next[0]?.file ?? null
-    selected.current = file
-    setParsed(null)
-    if (!file) return
-    const result = parseImport(await file.text())
-    if (selected.current === file) setParsed(result)
+    const file = next[0]?.file
+    setImported(file ? parseImport(await file.text()) : undefined)
   }
 
   const reset = () => {
-    selected.current = null
     setFiles([])
-    setParsed(null)
+    setImported(undefined)
   }
 
   const runImport = () => {
-    if (!parsed?.ok) return
+    if (!imported) return
     act(() => {
       const store = useCollectionStore.getState()
-      store.replaceCollection(parsed.collection)
-      if (parsed.settings) store.replaceSettings(parsed.settings)
+      store.replaceCollection(imported.collection)
+      store.replaceSettings(imported.settings)
     }, 'Collection remplacée par celle du fichier.')
     reset()
   }
 
-  const updatedAt = parsed?.ok ? formatDateTime(parsed.collection.updatedAt) : null
+  const updatedAt = imported && formatDateTime(imported.collection.updatedAt)
 
   return (
     <DataSection id="importer" title="Importer">
@@ -65,35 +62,21 @@ export function ImportSection() {
         onFilesChange={onFiles}
       />
 
-      {parsed && !parsed.ok && (
+      {imported === null && (
         <Alert tone="danger" title="Ce fichier ne peut pas être importé.">
-          {parsed.error}
+          Ce n’est pas un export de collection de ce Pokédex.
         </Alert>
       )}
 
-      {parsed?.ok && (
+      {imported && (
         <Stack gap={4} className={styles.group}>
           <h3 className={styles.groupTitle}>Contenu du fichier</h3>
           {updatedAt && (
             <p className="muted">Collection modifiée pour la dernière fois le {updatedAt}.</p>
           )}
-          <SummaryLedger summary={summarize(parsed.collection)} />
-          {parsed.dropped > 0 && (
-            <Alert tone="warn">
-              {plural(
-                parsed.dropped,
-                'élément illisible sera ignoré',
-                'éléments illisibles seront ignorés',
-              )}
-              .
-            </Alert>
-          )}
-
+          <SummaryLedger summary={summarize(imported.collection)} />
           <Stack direction="horizontal" gap={3} wrap>
-            <Button
-              variant="primary"
-              onClick={() => (currentIsEmpty ? runImport() : setConfirming(true))}
-            >
+            <Button onClick={() => (currentIsEmpty ? runImport() : setConfirming(true))}>
               Importer
             </Button>
             <Button variant="ghost" onClick={reset}>

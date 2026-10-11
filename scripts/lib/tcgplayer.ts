@@ -4,7 +4,7 @@
  * d'usage de tcgcsv : script côté serveur, User-Agent identifié, cache local (voir `net.ts`).
  */
 
-import { tcgplayerImageBase } from '@/lib/tcgdex'
+import { tcgplayerImageBase } from '@/lib/images'
 import { fetchJson } from './net'
 
 const TCGCSV_URL = 'https://tcgcsv.com/tcgplayer/85'

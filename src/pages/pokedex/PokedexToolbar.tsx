@@ -1,6 +1,6 @@
 import { Button, IconButton, Input, Kbd, SegmentedControl, Select, Stack } from '@camply/ui'
 import { ArrowDown01, ArrowDown10, Search, SlidersHorizontal, X } from '@camply/ui/icons'
-import { useEffect, useRef, useState, type Ref } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ProgressRuler } from '@/components/ProgressRuler'
 import { GENERATIONS } from '@/config/pokedex'
 import { cx } from '@/lib/cx'
@@ -37,25 +37,21 @@ const GENERATION_OPTIONS = [
 ]
 
 interface PokedexToolbarProps {
-  ref?: Ref<HTMLDivElement>
   filters: PokedexFilters
   setFilters: (patch: Partial<PokedexFilters>) => void
-  query: string
-  setQuery: (query: string) => void
-  commitSearch: () => void
   pokedex: Pokedex
   /** Nombre de résultats, `null` quand rien ne filtre. */
   resultCount: number | null
   onReset: () => void
 }
 
+/**
+ * La barre du Pokédex, collée en haut : recherche (raccourci « / »), filtres (repliés sur
+ * téléphone), réglette des générations (grand écran), nombre de résultats.
+ */
 export function PokedexToolbar({
-  ref,
   filters,
   setFilters,
-  query,
-  setQuery,
-  commitSearch,
   pokedex,
   resultCount,
   onReset,
@@ -78,13 +74,12 @@ export function PokedexToolbar({
   }, [])
 
   const clearSearch = () => {
-    setQuery('')
     setFilters({ search: '' })
     search.current?.focus()
   }
 
   return (
-    <Stack ref={ref} gap={3} className={styles.toolbar} role="search">
+    <Stack gap={3} className={styles.toolbar} role="search">
       <Stack direction="horizontal" align="center" gap={3} wrap>
         <Input
           ref={search}
@@ -93,16 +88,12 @@ export function PokedexToolbar({
           placeholder="Nom ou numéro"
           autoComplete="off"
           enterKeyHint="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          onBlur={commitSearch}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') commitSearch()
-            if (event.key === 'Escape' && query) clearSearch()
-          }}
+          value={filters.search}
+          onChange={(event) => setFilters({ search: event.target.value })}
+          onKeyDown={(event) => event.key === 'Escape' && clearSearch()}
           leftIcon={<Search size={16} />}
           rightIcon={
-            query ? (
+            filters.search ? (
               <IconButton
                 label="Effacer la recherche"
                 size="sm"

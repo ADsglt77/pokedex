@@ -1,81 +1,69 @@
 /**
- * Construit `src/data/card-index.json` : toutes les cartes Pokémon japonaises de TCGdex qui
- * appartiennent à une classe de rareté (`src/config/rarities.ts`). La grille du Pokédex montre
- * ainsi une vraie carte pour chaque espèce sans aucune requête.
+ * Construit `src/data/card-index.json` : les cartes Pokémon japonaises de TCGdex qui ont une classe
+ * de rareté, déjà classées, avec leur image et leur identifiant Cardmarket.
  *
  *   bun run data:cards [--refresh]
+ *
+ * 1. toutes les cartes Pokémon (GraphQL, par pages) ;
+ * 2. la classe déduite des cartes secrètes sans rareté (`deduceSecrets.ts`) ;
+ * 3. les cartes classées, sauf exclusions ;
+ * 4. les images manquantes : chez TCGdex à l'adresse habituelle, sinon chez TCGplayer ;
+ * 5. l'identifiant Cardmarket de chaque carte (REST, carte par carte).
  */
 
-import { EXCLUDED_CARD_IDS, RARITY_CLASSES, SECRET_CARD_RULES } from '@/config/rarities'
-import { classifyCard, tcgdexIdOf } from '@/lib/rarity'
-import { guessImageBase, normalizeTcgdexCard, type TcgdexRawCard } from '@/lib/tcgdex'
-import type { CardIndexFile, CardIndexRow, PokemonCard } from '@/types'
+import { tcgdexImageBase } from '@/lib/images'
+import type { CardIndexRow } from '@/types'
 import { writeDataFile } from './lib/dataFile'
 import { deduceSecrets } from './lib/deduceSecrets'
-import { fetchJson, mapPool, NotFoundError, urlExists } from './lib/net'
+import { fetchJson, mapPool, urlExists } from './lib/net'
+import { EXCLUDED_CARD_IDS, SECRET_CARD_RULES } from './lib/rules'
+import { type Card, classify, readCard, type TcgdexCard } from './lib/tcgdex'
 import { tcgplayerImages } from './lib/tcgplayer'
 
 const GRAPHQL_URL = 'https://api.tcgdex.net/v2/graphql'
 const REST_URL = 'https://api.tcgdex.net/v2/ja'
 const PAGE_SIZE = 1000
 
-interface RawSet {
-  name?: string
+interface TcgdexSet {
+  name: string
   releaseDate?: string
-  serie?: { id?: string }
-  cardCount?: { official?: number }
-  cards?: { id: string; localId: string; name?: string }[]
-}
-
-type GraphqlCards = { data?: Record<'cards' | 'rarities', (TcgdexRawCard | null)[] | undefined> }
-
-interface CardWithPricing {
-  pricing?: { cardmarket?: { idProduct?: number } | null } | null
+  serie: { id: string }
+  cardCount: { official: number }
+  cards: { id: string; localId: string; name?: string }[]
 }
 
 const fetchSet = (id: string) =>
-  fetchJson<RawSet>(`${REST_URL}/sets/${encodeURIComponent(id)}`, 'tcgdex')
+  fetchJson<TcgdexSet>(`${REST_URL}/sets/${encodeURIComponent(id)}`, 'tcgdex')
 
 /**
  * Une page des cartes Pokémon. `rarity` est déclaré non nul alors qu'environ 5 % des cartes
- * japonaises n'en ont pas — justement des secrètes dont la classe est déduite : le demander
- * ferait disparaître ces cartes. Il est donc demandé dans une seconde sélection, jointe par id.
+ * japonaises n'en ont pas — justement des secrètes à classer : le demander ferait disparaître ces
+ * cartes. Il est donc demandé dans une seconde sélection, où ces cartes valent `null`, et joint
+ * par id.
  */
-async function fetchPage(page: number) {
+async function fetchPage(page: number): Promise<Card[]> {
   const args = `filters: {category: "Pokemon"}, pagination: {page: ${page}, itemsPerPage: ${PAGE_SIZE}}`
   const field = (fields: string) => `cards(${args}) @locale(lang: "ja") { ${fields} }`
-  const query = `query { ${field('id localId name illustrator image dexId category set { id name }')} rarities: ${field('id rarity')} }`
-  const { data } = await fetchJson<GraphqlCards>(GRAPHQL_URL, 'tcgdex', {
+  const query = `query { ${field('id localId name illustrator image dexId set { id }')} rarities: ${field('id rarity')} }`
+  const { data } = await fetchJson<{
+    data: { cards: TcgdexCard[]; rarities: (TcgdexCard | null)[] }
+  }>(GRAPHQL_URL, 'tcgdex', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query }),
   })
-  if (!data?.cards) throw new Error(`La page ${page} de TCGdex ne contient pas de cartes.`)
-
-  const rarities = new Map(data.rarities?.map((card) => [card?.id, card?.rarity]))
-  const cards = data.cards.flatMap((raw) =>
-    raw ? (normalizeTcgdexCard({ ...raw, rarity: rarities.get(raw.id) ?? null }) ?? []) : [],
-  )
-  return { cards, last: data.cards.length < PAGE_SIZE }
+  const rarities = new Map(data.rarities.map((card) => [card?.id, card?.rarity]))
+  return data.cards.map((card) => readCard({ ...card, rarity: rarities.get(card.id) }))
 }
 
-/** Les cartes secrètes de chaque extension de `SECRET_CARD_RULES` reçoivent leur classe déduite. */
-async function withDeducedClasses(cards: PokemonCard[]): Promise<PokemonCard[]> {
-  const byId = new Map(cards.map((card) => [tcgdexIdOf(card), card]))
-  const hints = new Map<string, string>()
-
+/** La classe déduite des cartes secrètes, extension par extension. Clé : id de la carte. */
+async function deduceAll(cards: Card[]): Promise<Map<string, string>> {
+  const byId = new Map(cards.map((card) => [card.id, card]))
+  const deduced = new Map<string, string>()
   for (const setId of Object.keys(SECRET_CARD_RULES)) {
-    const set = await fetchSet(setId).catch((error: unknown) => {
-      if (error instanceof NotFoundError) return console.warn(`  Extension ${setId} inconnue.`)
-      throw error
-    })
-    if (!set) continue
-    const officialCount = set.cardCount?.official ?? null
-    if (officialCount !== SECRET_CARD_RULES[setId]!.officialCount) {
-      console.warn(`  ${setId} : compte officiel ${officialCount} ≠ règle, rien n'est déduit.`)
-    }
-    // La règle a besoin de toute l'extension, Dresseurs compris.
-    const setCards = (set.cards ?? []).map((brief) => {
+    const set = await fetchSet(setId)
+    // La règle lit toute l'extension, Dresseurs compris (ils ne sont pas dans `cards`).
+    const setCards = set.cards.map((brief) => {
       const card = byId.get(brief.id)
       return {
         id: brief.id,
@@ -85,129 +73,82 @@ async function withDeducedClasses(cards: PokemonCard[]): Promise<PokemonCard[]> 
         rarity: card?.rarity ?? null,
       }
     })
-    for (const [id, code] of deduceSecrets(setId, officialCount, setCards)) hints.set(id, code)
+    for (const [id, code] of deduceSecrets(setId, set.cardCount.official, setCards)) {
+      deduced.set(id, code)
+    }
   }
-
-  console.log(`  ${hints.size} cartes secrètes classées par déduction`)
-  return cards.map((card) => {
-    const rarityHint = hints.get(tcgdexIdOf(card) ?? '')
-    return rarityHint ? { ...card, rarityHint } : card
-  })
-}
-
-function toRow(card: PokemonCard): CardIndexRow | null {
-  const id = tcgdexIdOf(card)
-  if (!id || !card.set?.id || !card.number) return null
-  return {
-    id,
-    set: card.set.id,
-    number: card.number,
-    name: card.name ?? '',
-    rarity: card.rarity ?? '',
-    ...(card.rarityHint ? { rarityHint: card.rarityHint } : {}),
-    illustrator: card.illustrator,
-    image: card.image?.small.replace(/\/low\.webp$/, '') ?? null,
-    dexIds: card.dexIds,
-  }
+  return deduced
 }
 
 const compareText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 
-/** Numéros numériques dans l'ordre des nombres, avant les autres. */
+/** Numéros dans l'ordre des nombres, les numéros non numériques ensuite. */
 function compareNumbers(a: string, b: string) {
   const [numericA, numericB] = [/^\d+$/.test(a), /^\d+$/.test(b)]
   if (numericA && numericB) return Number(a) - Number(b) || compareText(a, b)
   return numericA === numericB ? compareText(a, b) : numericA ? -1 : 1
 }
 
+// 1. Toutes les cartes Pokémon japonaises.
 console.log('Lecture des cartes Pokémon japonaises de TCGdex…')
-const crawled: PokemonCard[] = []
+const cards: Card[] = []
 for (let page = 1; ; page++) {
-  const { cards, last } = await fetchPage(page)
-  crawled.push(...cards)
-  if (last) break
+  const pageCards = await fetchPage(page)
+  cards.push(...pageCards)
+  if (pageCards.length < PAGE_SIZE) break
 }
-console.log(`  ${crawled.length} cartes`)
 
-const selected = (await withDeducedClasses(crawled)).filter(
-  (card) =>
-    classifyCard(card).rarityClass !== null &&
-    !EXCLUDED_CARD_IDS.has(tcgdexIdOf(card) ?? '') &&
-    card.dexIds.length > 0,
-)
+// 2 et 3. Les cartes classées.
+const deduced = await deduceAll(cards)
+const rows: CardIndexRow[] = cards.flatMap((card) => {
+  const { code, deduced: isDeduced } = classify(card, deduced.get(card.id))
+  if (!code || EXCLUDED_CARD_IDS.has(card.id) || card.dexIds.length === 0) return []
+  return [{ ...card, rarity: code, ...(isDeduced && { deduced: true as const }) }]
+})
+console.log(`  ${cards.length} cartes, dont ${rows.length} classées`)
 
-const setIds = [...new Set(selected.flatMap((card) => card.set?.id ?? []))]
-console.log(`Lecture de ${setIds.length} extensions…`)
-const setInfo = new Map(
-  await mapPool(setIds, 6, async (id) => {
-    const set = await fetchSet(id)
-    const releaseDate = set.releaseDate?.trim() ?? ''
-    const fallbackName = selected.find((card) => card.set?.id === id)?.set?.name ?? ''
-    return [
-      id,
-      {
-        name: set.name?.trim() || fallbackName,
-        serieId: set.serie?.id?.trim() || null,
-        releaseDate: /^\d{4}-\d{2}-\d{2}$/.test(releaseDate) ? releaseDate : null,
-      },
-    ] as const
-  }),
-)
+const setIds = [...new Set(rows.map((row) => row.set))]
+const sets = new Map(await mapPool(setIds, 6, async (id) => [id, await fetchSet(id)] as const))
 
-const rows = selected.flatMap((card) => toRow(card) ?? [])
-
-// Images manquantes, dans l'ordre : celle que TCGdex publie sans la référencer dans son API
-// (vérifiée à l'adresse habituelle), sinon celle du catalogue TCGplayer (plus petite).
-const withoutImage = rows.filter((row) => row.image === null)
-console.log(`Recherche des images de ${withoutImage.length} cartes sans image dans l'API TCGdex…`)
+// 4. Les images manquantes.
+const withoutImage = rows.filter((row) => !row.image)
 await mapPool(withoutImage, 16, async (row) => {
-  const serieId = setInfo.get(row.set)?.serieId
-  if (!serieId) return
-  const base = guessImageBase(serieId, row.set, row.number)
+  const base = tcgdexImageBase(sets.get(row.set)!.serie.id, row.set, row.number)
   if (await urlExists(`${base}/low.webp`, 'assets')) row.image = base
 })
-const stillMissing = withoutImage.filter((row) => row.image === null)
-console.log(`  ${withoutImage.length - stillMissing.length} trouvées chez TCGdex`)
+const tcgplayerImageOf = await tcgplayerImages(
+  withoutImage.filter((row) => !row.image).map((row) => row.set),
+)
+for (const row of withoutImage) row.image ??= tcgplayerImageOf(row.set, row.number)
+console.log(`  ${rows.filter((row) => !row.image).length} cartes sans image`)
 
-const tcgplayerImageOf = await tcgplayerImages(stillMissing.map((row) => row.set))
-for (const row of stillMissing) row.image = tcgplayerImageOf(row.set, row.number)
-const noImage = rows.filter((row) => row.image === null)
-console.log(`  ${stillMissing.length - noImage.length} trouvées chez TCGplayer`)
-if (noImage.length > 0) console.log(`  sans image : ${noImage.map((row) => row.id).join(', ')}`)
-
-// L'identifiant Cardmarket de chaque carte, pour ses prix (`scripts/prices.ts`). TCGdex ne le
-// donne que carte par carte, dans `pricing` (absent de GraphQL).
-console.log(`Lecture des identifiants Cardmarket de ${rows.length} cartes…`)
+// 5. L'identifiant Cardmarket, pour les prix (`scripts/prices.ts`).
 await mapPool(rows, 8, async (row) => {
-  const card = await fetchJson<CardWithPricing>(
+  const card = await fetchJson<{ pricing?: { cardmarket?: { idProduct: number } } }>(
     `${REST_URL}/cards/${encodeURIComponent(row.id)}`,
     'tcgdex',
-  ).catch((error: unknown) => {
-    if (error instanceof NotFoundError) return null
-    throw error
-  })
-  const idProduct = card?.pricing?.cardmarket?.idProduct
-  if (Number.isInteger(idProduct)) row.cardmarket = idProduct
+  )
+  const idProduct = card.pricing?.cardmarket?.idProduct
+  if (idProduct) row.cardmarket = idProduct
 })
 console.log(`  ${rows.filter((row) => row.cardmarket).length} cartes reliées à Cardmarket`)
 
-const releaseOf = (row: CardIndexRow) => setInfo.get(row.set)?.releaseDate ?? null
-// Extension la plus ancienne d'abord (dates inconnues à la fin), puis extension, numéro et id.
+// Extension la plus ancienne d'abord (date inconnue à la fin), puis extension, numéro et id.
+const releaseOf = (row: CardIndexRow) => sets.get(row.set)!.releaseDate ?? null
 rows.sort((a, b) => {
   const [dateA, dateB] = [releaseOf(a), releaseOf(b)]
   if (dateA !== dateB) return dateA === null ? 1 : dateB === null ? -1 : compareText(dateA, dateB)
   return compareText(a.set, b.set) || compareNumbers(a.number, b.number) || compareText(a.id, b.id)
 })
 
-const sets: CardIndexFile['sets'] = {}
-for (const row of rows) sets[row.set] ??= setInfo.get(row.set)!
+const indexSets: Record<string, { name: string; releaseDate: string | null }> = {}
+for (const row of rows) {
+  const set = sets.get(row.set)!
+  indexSets[row.set] ??= { name: set.name, releaseDate: set.releaseDate ?? null }
+}
 
-console.log(`${rows.length} cartes dans l'index, ${Object.keys(sets).length} extensions`)
 await writeDataFile('card-index.json', (generatedAt) => ({
-  schemaVersion: 1,
   generatedAt,
-  source: `TCGdex (${REST_URL}), images complétées par TCGplayer (tcgcsv.com)`,
-  rarities: RARITY_CLASSES.flatMap((rarityClass) => rarityClass.aliases),
-  sets,
+  sets: indexSets,
   cards: rows,
 }))

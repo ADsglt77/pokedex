@@ -11,6 +11,7 @@ interface DataSectionProps {
   apart?: boolean
 }
 
+/** Une section de la page Données : un titre et son contenu ; `apart` l'écarte (effacement). */
 export function DataSection({ id, title, children, apart }: DataSectionProps) {
   return (
     <Stack
