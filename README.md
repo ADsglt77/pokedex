@@ -1,14 +1,16 @@
 # Pokédex
 
 Pokédex personnel de cartes Pokémon japonaises : chaque Pokémon se débloque en possédant une de ses
-illustrations (Art Rare, Special Art Rare…). React + Vite + TypeScript, interface
-[`@camply/ui`](https://www.npmjs.com/package/@camply/ui), cartes [TCGdex](https://tcgdex.dev/).
+pleines cartes (Art Rare, Special Art Rare, Super Rare, promos illustrées…). React + Vite +
+TypeScript, interface [`@camply/ui`](https://www.npmjs.com/package/@camply/ui), cartes
+[TCGplayer](https://www.tcgplayer.com/) et [TCGdex](https://tcgdex.dev/).
 
 ```sh
 bun install
 bun dev          # serveur de dev Vite
 bun run build    # type-check + build
 bun lint         # ESLint
+bun test         # tests de la logique des achats
 bun run format   # Prettier
 ```
 
@@ -19,9 +21,14 @@ bun run format   # Prettier
   galerie des candidates, détails de l'espèce.
 - **Valeur** : prix Cardmarket du jour, valeur de la collection (et gain par rapport au prix
   payé), commandes, souhaits, coût pour compléter le Pokédex, courbes de prix au fil des jours.
-- **Données** : export / import, raretés suivies, effacement.
+- **Achats** : liste d'achats (les illustrations acceptées, avec priorité et prix maximum),
+  assistant « prochaine commande » dans un budget (100 € par mois, 150 € au plus, réglables),
+  registre des commandes (Cardmarket, Myutsu, Hikaru…) qui met à jour les statuts, suivi du
+  budget par mois et par fournisseur. Export CSV et recherches à coller dans Cardmarket.
+- **Données** : export / import (achats compris), raretés suivies, effacement.
 
-Tout est embarqué (index de cartes généré par `bun run data`) : aucune API externe appelée par le
+Tout est embarqué (index de cartes généré par `bun run data` : la liste et la rareté des pleines
+cartes chez TCGplayer, complétées par TCGdex) : aucune API externe appelée par le
 navigateur, hormis les images. Les prix sont des fichiers du site lui-même (`/prices/`), écrits
 chaque jour par `bun run prices` ; en développement, le lancer une fois pour avoir des prix. La collection reste dans le navigateur (`localStorage`) : l'export est sa seule
 sauvegarde.
