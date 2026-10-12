@@ -5,7 +5,7 @@
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
 import { buildCandidates, pickRepresentative, type CardView } from '@/lib/candidates'
-import { getSpecies, indexCard, SPECIES } from '@/lib/catalog'
+import { findCard, SPECIES, speciesOf } from '@/lib/catalog'
 import type { CardStatus, CollectionData, PokemonCard, PokemonSpecies } from '@/types'
 
 export interface PokedexEntry {
@@ -88,19 +88,16 @@ export interface RecentCard {
   card: PokemonCard
   /** Les Pokémon de la carte. */
   species: PokemonSpecies[]
-  acquiredAt: string
+  acquiredAt: string | null
 }
 
 /** Les dernières cartes obtenues, la plus récente d'abord. */
 export function recentAcquisitions(collection: CollectionData, limit: number): RecentCard[] {
   return Object.entries(collection.cards)
-    .filter(([, ownership]) => ownership.status === 'owned')
-    .sort(([, a], [, b]) => b.acquiredAt!.localeCompare(a.acquiredAt!))
-    .slice(0, limit)
-    .flatMap(([cardId, ownership]) => {
-      const card = indexCard(cardId) ?? collection.customCards[cardId]
-      if (!card) return []
-      const species = card.dexIds.flatMap((id) => getSpecies(id) ?? [])
-      return [{ card, species, acquiredAt: ownership.acquiredAt! }]
+    .flatMap(([cardId, { status, acquiredAt }]) => {
+      const card = status === 'owned' && findCard(cardId, collection)
+      return card ? [{ card, species: speciesOf(card), acquiredAt }] : []
     })
+    .sort((a, b) => (b.acquiredAt ?? '').localeCompare(a.acquiredAt ?? ''))
+    .slice(0, limit)
 }

@@ -1,6 +1,7 @@
 import { useToast, type ToastTone } from '@camply/ui'
 import { useCallback } from 'react'
 import { useCollectionStore } from '@/store/collection'
+import { useShoppingStore } from '@/store/shopping'
 
 interface NotifyOptions {
   tone?: ToastTone
@@ -25,7 +26,7 @@ export function useNotify() {
             if (undo()) toast({ title: 'Modification annulée.', tone: 'info', duration: 3000 })
             else
               toast({
-                title: 'Impossible d’annuler : la collection a changé depuis.',
+                title: 'Impossible d’annuler : vos données ont changé depuis.',
                 tone: 'warn',
               })
           },
@@ -36,15 +37,21 @@ export function useNotify() {
   )
 }
 
+/** Tout ce qu'une action peut modifier : collection, réglages, achats. */
 const snapshot = () => {
   const { collection, settings } = useCollectionStore.getState()
-  return { collection, settings }
+  return { collection, settings, shopping: useShoppingStore.getState().shopping }
 }
 
+type Snapshot = ReturnType<typeof snapshot>
+
+const sameSnapshot = (a: Snapshot, b: Snapshot) =>
+  a.collection === b.collection && a.settings === b.settings && a.shopping === b.shopping
+
 /**
- * Lance une modification de la collection ou des réglages, puis l'annonce avec « Annuler ».
- * Annuler rétablit l'état d'avant, seulement si rien n'a changé depuis : une modification
- * faite entre-temps n'est jamais effacée. Rien n'est annoncé quand rien ne change.
+ * Lance une modification de la collection, des réglages ou des achats, puis l'annonce avec
+ * « Annuler ». Annuler rétablit l'état d'avant, seulement si rien n'a changé depuis : une
+ * modification faite entre-temps n'est jamais effacée. Rien n'est annoncé quand rien ne change.
  */
 export function useCollectionAction() {
   const notify = useNotify()
@@ -54,16 +61,15 @@ export function useCollectionAction() {
       const before = snapshot()
       change()
       const after = snapshot()
-      if (after.collection === before.collection && after.settings === before.settings) return
+      if (sameSnapshot(before, after)) return
 
       notify(message, {
         tone,
         undo: () => {
-          const current = snapshot()
-          if (current.collection !== after.collection || current.settings !== after.settings) {
-            return false
-          }
-          useCollectionStore.setState(before)
+          if (!sameSnapshot(snapshot(), after)) return false
+          const { shopping, ...collection } = before
+          useCollectionStore.setState(collection)
+          useShoppingStore.setState({ shopping })
           return true
         },
       })

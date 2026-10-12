@@ -7,7 +7,7 @@ import { create } from 'zustand'
 import { DEFAULT_ENABLED_RARITY_CODES } from '@/config/rarities'
 import * as rules from '@/lib/collection'
 import { knownRarityCodes } from '@/lib/rarity'
-import { readCollection, readSettings } from '@/lib/transfer'
+import { parseStored, readCollection, readSettings } from '@/lib/transfer'
 import type { AppSettings, CardStatus, CollectionData, PokemonCard } from '@/types'
 
 const COLLECTION_KEY = 'pokedex-collection.collection'
@@ -18,18 +18,9 @@ export const defaultSettings = (): AppSettings => ({
   enabledRarityCodes: [...DEFAULT_ENABLED_RARITY_CODES],
 })
 
-/** Le JSON d'une valeur enregistrée ; `null` si elle est absente ou illisible. */
-function parse(text: string | null): unknown {
-  try {
-    return JSON.parse(text ?? 'null')
-  } catch {
-    return null
-  }
-}
-
 const loadCollection = (text: string | null) =>
-  readCollection(parse(text)) ?? rules.emptyCollection()
-const loadSettings = (text: string | null) => readSettings(parse(text)) ?? defaultSettings()
+  readCollection(parseStored(text)) ?? rules.emptyCollection()
+const loadSettings = (text: string | null) => readSettings(parseStored(text)) ?? defaultSettings()
 
 interface CollectionStore {
   collection: CollectionData

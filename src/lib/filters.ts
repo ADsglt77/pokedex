@@ -1,6 +1,6 @@
 /** Les filtres de la page Pokédex : leur place dans l'adresse, et la recherche par nom ou numéro. */
 
-import { GENERATIONS, generationById, type Generation } from '@/config/pokedex'
+import { generationById, type Generation } from '@/config/pokedex'
 import { SPECIES } from '@/lib/catalog'
 import type { PokedexEntry } from '@/lib/pokedex'
 import type { GenerationId, PokemonSpecies } from '@/types'
@@ -63,7 +63,7 @@ export const activeFilterCount = (filters: PokedexFilters) =>
  * Un nom sous sa forme de recherche : sans casse, accent, ligature, ponctuation ni espace, et les
  * hiragana écrits en katakana. « M. Mime » → « mmime », « Nœunœuf » → « noeunoeuf », ぴかちゅう → ピカチュウ.
  */
-function searchForm(text: string): string {
+export function searchForm(text: string): string {
   return text
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -85,7 +85,7 @@ const SEARCH_NAMES = new Map(
 )
 
 /** « 25 », « #25 », « n°25 » : les numéros qui commencent par 25. Sinon : les noms. */
-function searchMatcher(search: string): (species: PokemonSpecies) => boolean {
+export function searchMatcher(search: string): (species: PokemonSpecies) => boolean {
   const digits = /^(?:#|n°)?\s*(\d+)$/i.exec(search.trim())?.[1]
   if (digits) return (species) => String(species.id).startsWith(String(Number(digits)))
   const needle = searchForm(search)
@@ -110,7 +110,7 @@ export function groupByGeneration(entries: PokedexEntry[]) {
   for (const entry of entries) {
     const last = groups.at(-1)
     if (last?.generation.id === entry.species.generation) last.entries.push(entry)
-    else groups.push({ generation: GENERATIONS[entry.species.generation - 1]!, entries: [entry] })
+    else groups.push({ generation: generationById(entry.species.generation)!, entries: [entry] })
   }
   return groups
 }

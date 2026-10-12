@@ -56,6 +56,10 @@ export function setPaidPrice(
   return { ...data, cards: { ...data.cards, [card.id]: updated }, updatedAt: now }
 }
 
+/** Une carte encore à acheter : ni possédée ni commandée. */
+export const isToBuy = ({ status }: { status: CardStatus | null }) =>
+  status !== 'owned' && status !== 'ordered'
+
 export interface CollectionSummary {
   owned: number
   ordered: number

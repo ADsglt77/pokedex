@@ -1,0 +1,120 @@
+/** La prochaine commande : budget, une carte par Pokémon, priorités, ajouts et retraits. */
+
+import { describe, expect, test } from 'bun:test'
+import { planPurchase, type PlanOptions } from '@/lib/purchase-planner'
+import { wish } from './fixtures'
+
+const options = (extra: Partial<PlanOptions> = {}): PlanOptions => ({
+  budget: 100,
+  shippingReserve: 5,
+  priorities: ['high', 'normal', 'low'],
+  mode: 'new',
+  forced: new Set(),
+  skipped: new Set(),
+  ...extra,
+})
+
+const ids = (rows: { card: { id: string } }[]) => rows.map((row) => row.card.id)
+
+describe('prochaine commande', () => {
+  test('ne dépasse jamais le budget, port réservé', () => {
+    const plan = planPurchase(
+      [wish('a', [1], 40), wish('b', [2], 40), wish('c', [3], 30)],
+      new Set(),
+      options(),
+    )
+    expect(ids(plan.picked)).toEqual(['c', 'a'])
+    expect(plan.total).toBe(75)
+    expect(ids(plan.left)).toEqual(['b'])
+    expect(plan.overBudget).toBe(false)
+  })
+
+  test('une carte qui tient tout juste dans le budget est prise (au centime près)', () => {
+    const plan = planPurchase(
+      [wish('a', [1], 0.12), wish('b', [2], 19.87)],
+      new Set(),
+      options({ budget: 20, shippingReserve: 0.01 }),
+    )
+    expect(ids(plan.picked)).toEqual(['a', 'b'])
+  })
+
+  test('une seule illustration par Pokémon, l’illustration choisie d’abord', () => {
+    const plan = planPurchase(
+      [wish('cheap', [25], 10), wish('favorite', [25], 30, { isFavorite: true })],
+      new Set(),
+      options(),
+    )
+    expect(ids(plan.picked)).toEqual(['favorite'])
+  })
+
+  test('une illustration choisie trop chère laisse sa place à une autre du même Pokémon', () => {
+    const plan = planPurchase(
+      [wish('cheap', [25], 10), wish('favorite', [25], 300, { isFavorite: true })],
+      new Set(),
+      options(),
+    )
+    expect(ids(plan.picked)).toEqual(['cheap'])
+  })
+
+  test('la priorité passe avant le prix', () => {
+    const plan = planPurchase(
+      [wish('low', [1], 10, { priority: 'low' }), wish('high', [2], 80, { priority: 'high' })],
+      new Set(),
+      options(),
+    )
+    expect(ids(plan.picked)).toEqual(['high', 'low'])
+  })
+
+  test('jamais une carte possédée ou commandée, ni un Pokémon déjà obtenu', () => {
+    const plan = planPurchase(
+      [
+        wish('owned', [1], 5, { status: 'owned' }),
+        wish('ordered', [2], 5, { status: 'ordered' }),
+        wish('taken', [3], 5),
+        wish('new', [4], 5),
+      ],
+      new Set([3]),
+      options(),
+    )
+    expect(ids(plan.picked)).toEqual(['new'])
+  })
+
+  test('mode « favorites » : l’illustration choisie d’un Pokémon déjà obtenu', () => {
+    const cards = [wish('favorite', [3], 20, { isFavorite: true }), wish('other', [3], 5)]
+    expect(ids(planPurchase(cards, new Set([3]), options()).picked)).toEqual([])
+    const plan = planPurchase(cards, new Set([3]), options({ mode: 'favorites' }))
+    expect(ids(plan.picked)).toEqual(['favorite'])
+  })
+
+  test('sans prix et au-dessus du prix maximum : à part, jamais chiffrées', () => {
+    const plan = planPurchase(
+      [wish('unpriced', [1], null), wish('expensive', [2], 30, { maxPrice: 20 })],
+      new Set(),
+      options(),
+    )
+    expect(plan.picked).toEqual([])
+    expect(ids(plan.unpriced)).toEqual(['unpriced'])
+    expect(ids(plan.aboveMax)).toEqual(['expensive'])
+  })
+
+  test('seulement les priorités retenues', () => {
+    const plan = planPurchase(
+      [wish('low', [1], 10, { priority: 'low' })],
+      new Set(),
+      options({ priorities: ['high', 'normal'] }),
+    )
+    expect(plan.picked).toEqual([])
+  })
+
+  test('ajout et retrait à la main', () => {
+    const cards = [wish('a', [1], 90), wish('b', [2], 20)]
+    const plan = planPurchase(cards, new Set(), options({ forced: new Set(['a']) }))
+    expect(ids(plan.picked)).toEqual(['a'])
+    expect(ids(plan.left)).toEqual(['b'])
+    const both = planPurchase(cards, new Set(), options({ forced: new Set(['a', 'b']) }))
+    expect(both.total).toBe(115)
+    expect(both.overBudget).toBe(true)
+    const skipped = planPurchase(cards, new Set(), options({ skipped: new Set(['b']) }))
+    expect(ids(skipped.skipped)).toEqual(['b'])
+  })
+})

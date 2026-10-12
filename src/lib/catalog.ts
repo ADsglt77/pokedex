@@ -9,6 +9,7 @@ import { cardImage } from '@/lib/images'
 import type {
   CardIndexFile,
   CardIndexRow,
+  CollectionData,
   PokemonCard,
   PokemonSpecies,
   PokemonSpeciesDetails,
@@ -37,17 +38,16 @@ export const tcgdexIdOf = (card: PokemonCard) =>
 
 /** Une ligne de l'index → la carte affichée. */
 function toCard(row: CardIndexRow): PokemonCard {
-  const set = cardIndex.sets[row.set]
   return {
     id: ID_PREFIX + row.id,
     dexIds: row.dexIds,
     name: row.name,
     reference: `${row.set} ${row.number}`,
-    set: { id: row.set, name: set?.name ?? null, releaseDate: set?.releaseDate ?? null },
+    set: cardIndex.sets[row.set]!,
     rarity: row.rarity,
-    deduced: row.deduced,
     illustrator: row.illustrator,
     image: cardImage(row.image),
+    cardmarket: row.cardmarket,
   }
 }
 
@@ -55,6 +55,20 @@ const INDEX_CARDS = cardIndex.cards.map(toCard)
 const cardById = new Map(INDEX_CARDS.map((card) => [card.id, card]))
 
 export const indexCard = (id: string): PokemonCard | null => cardById.get(id) ?? null
+
+/** Une carte de l'index, ou saisie dans une ancienne version ; `null` si inconnue. */
+export const findCard = (id: string, collection: CollectionData): PokemonCard | null =>
+  indexCard(id) ?? collection.customCards[id] ?? null
+
+/** Les Pokémon d'une carte : plusieurs pour une carte TAG TEAM. */
+export const speciesOf = (card: PokemonCard): PokemonSpecies[] =>
+  card.dexIds.flatMap((id) => getSpecies(id) ?? [])
+
+/** « Pikachu & Zekrom » ; la référence pour une carte sans Pokémon connu. */
+export const cardTitle = (card: PokemonCard) =>
+  speciesOf(card)
+    .map((species) => species.names.fr)
+    .join(' & ') || card.reference
 
 /** Les cartes de chaque espèce ; une carte TAG TEAM est rangée sous chacune. */
 const cardsBySpecies = new Map<number, PokemonCard[]>()

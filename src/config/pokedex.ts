@@ -1,8 +1,6 @@
-import type { GenerationId, PokemonTypeId } from '@/types'
-
 /** Le Pokédex national : générations, couleurs des types, illustrations officielles (PokéAPI). */
 
-export const TOTAL_SPECIES = 1025
+import type { GenerationId, PokemonTypeId } from '@/types'
 
 export interface Generation {
   id: GenerationId
@@ -24,9 +22,24 @@ export const GENERATIONS: readonly Generation[] = [
   { id: 9, numeral: 'IX', region: 'Paldea', first: 906, last: 1025 },
 ]
 
+export const TOTAL_SPECIES = GENERATIONS.at(-1)!.last
+
 export function generationById(id: number): Generation | undefined {
   return GENERATIONS.find((generation) => generation.id === id)
 }
+
+/** « I – Kanto » */
+export const generationLabel = (generation: Generation) =>
+  `${generation.numeral} – ${generation.region}`
+
+/** Les options d'un choix de génération, « toutes » (`''`) d'abord. */
+export const GENERATION_OPTIONS = [
+  { value: '', label: 'Toutes les générations' },
+  ...GENERATIONS.map((generation) => ({
+    value: String(generation.id),
+    label: generationLabel(generation),
+  })),
+]
 
 export const POKEMON_TYPES: Record<PokemonTypeId, { label: string; color: string }> = {
   normal: { label: 'Normal', color: '#C9C7B6' },

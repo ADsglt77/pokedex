@@ -3,17 +3,9 @@
 import { RARITY_CLASSES, type RarityClass } from '@/config/rarities'
 import type { PokemonCard } from '@/types'
 
-const normalize = (label: string) => label.trim().toLowerCase()
-
-/** Un code (`AR`) ou un libellé TCGdex (`Illustration rare`) → sa classe. */
-const CLASS_BY_LABEL = new Map(
-  RARITY_CLASSES.flatMap((rarityClass) =>
-    [rarityClass.code, ...rarityClass.aliases].map((label) => [normalize(label), rarityClass]),
-  ),
-)
-
-export const findRarityClass = (label: string | null): RarityClass | null =>
-  (label && CLASS_BY_LABEL.get(normalize(label))) || null
+/** Un code de rareté (`AR`) → sa classe ; `null` pour le libellé libre d'une carte saisie à la main. */
+export const findRarityClass = (code: string | null): RarityClass | null =>
+  RARITY_CLASSES.find((rarityClass) => rarityClass.code === code) ?? null
 
 /** Une carte de l'index peut illustrer un Pokémon quand sa classe est suivie. */
 export function isEligible(card: PokemonCard, enabledCodes: readonly string[]): boolean {

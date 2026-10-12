@@ -1,3 +1,5 @@
+/** Mise en forme française (nombres, dates, montants) et lecture des montants et liens saisis. */
+
 import type { CardStatus, PokemonCard } from '@/types'
 
 const integerFormat = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 })
@@ -9,8 +11,9 @@ export const formatInteger = (value: number) => integerFormat.format(value)
 
 export const formatDecimal = (value: number) => decimalFormat.format(value)
 
+/** Une date ISO ; un jour seul (`2026-10-09`) est lu à midi, heure locale : jamais la veille. */
 function toDate(iso: string | null | undefined): Date | null {
-  const date = iso ? new Date(iso) : null
+  const date = iso ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : iso) : null
   return date && !Number.isNaN(date.getTime()) ? date : null
 }
 
@@ -18,6 +21,11 @@ export function formatDate(iso: string | null | undefined): string | null {
   const date = toDate(iso)
   return date && dateFormat.format(date)
 }
+
+const monthFormat = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
+
+/** `2026-10` → « octobre 2026 » */
+export const formatMonth = (month: string) => monthFormat.format(toDate(`${month}-01`)!)
 
 const shortDateFormat = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
 
@@ -49,6 +57,16 @@ export const formatEuroChange = (value: number) => signedEuroFormat.format(value
 export function parseEuros(text: string): number | null {
   const input = text.replace(/[\s€]/g, '').replace(',', '.')
   return /^\d+(\.\d{1,2})?$/.test(input) ? Number(input) : null
+}
+
+/** Une adresse web saisie ; `null` si ce n'en est pas une. */
+export function parseLink(text: string): URL | null {
+  try {
+    const url = new URL(text)
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url : null
+  } catch {
+    return null
+  }
 }
 
 /** Un montant à éditer : « 12,50 ». */
@@ -89,6 +107,10 @@ export function setLabel(card: Pick<PokemonCard, 'set'>): string | null {
   const year = card.set?.releaseDate?.slice(0, 4)
   return name ? (year ? `${name} (${year})` : name) : null
 }
+
+/** Des libellés → les options d'un `Select` ou d'un `SegmentedControl`, dans le même ordre. */
+export const toOptions = <T extends string>(labels: Record<T, string>) =>
+  (Object.entries(labels) as [T, string][]).map(([value, label]) => ({ value, label }))
 
 /** Titre de l'onglet : « Pikachu – Mon Pokédex ». */
 export const pageTitle = (name?: string) => (name ? `${name} – Mon Pokédex` : 'Mon Pokédex')

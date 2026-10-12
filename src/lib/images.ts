@@ -5,12 +5,7 @@
 
 import type { CardImage } from '@/types'
 
-const TCGDEX_ASSETS = 'https://assets.tcgdex.net/ja'
 const TCGPLAYER_PRODUCTS = 'https://tcgplayer-cdn.tcgplayer.com/product/'
-
-/** Où TCGdex range l'image d'une carte, même quand son API ne la mentionne pas. */
-export const tcgdexImageBase = (serieId: string, setId: string, number: string) =>
-  `${TCGDEX_ASSETS}/${serieId}/${setId}/${number}`
 
 export const tcgplayerImageBase = (productId: number) => `${TCGPLAYER_PRODUCTS}${productId}`
 
