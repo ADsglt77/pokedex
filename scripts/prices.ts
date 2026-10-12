@@ -42,7 +42,9 @@ async function writeJson(file: string, data: unknown) {
 const index = JSON.parse(
   await readFile(join(import.meta.dirname, '..', 'src', 'data', 'card-index.json'), 'utf8'),
 ) as CardIndexFile
-const guide = (await (await fetch(PRICE_GUIDE_URL)).json()) as PriceGuide
+const response = await fetch(PRICE_GUIDE_URL)
+if (!response.ok) throw new Error(`HTTP ${response.status} pour ${PRICE_GUIDE_URL}`)
+const guide = (await response.json()) as PriceGuide
 const byProduct = new Map(guide.priceGuides.map((row) => [row.idProduct, row]))
 
 // Les prix du jour : la tendance Cardmarket, sinon sa moyenne sur 30 jours.
@@ -56,17 +58,25 @@ const date = guide.createdAt.slice(0, 10)
 await mkdir(outDir, { recursive: true })
 await writeJson(join(outDir, 'latest.json'), { date, cards } satisfies PriceFile)
 
-// L'historique : une colonne par jour ; relancé le même jour, le script remplace sa colonne.
-const history: PriceHistoryFile = await readFile(historyFile, 'utf8')
-  .then((text) => JSON.parse(text) as PriceHistoryFile)
-  .catch(() => ({ days: [], cards: {} }))
+// L'historique : une colonne par jour ; relancé le même jour, le script remplace sa colonne. Un
+// historique illisible arrête le script : il ne doit jamais être remplacé par un vide.
+const history: PriceHistoryFile = await readFile(historyFile, 'utf8').then(
+  (text) => JSON.parse(text) as PriceHistoryFile,
+  (error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT') return { days: [], cards: {} }
+    throw error
+  },
+)
 if (!history.days.includes(date)) history.days.push(date)
 const column = history.days.indexOf(date)
-for (const id of new Set([...Object.keys(history.cards), ...Object.keys(cards)])) {
-  const series = history.cards[id] ?? []
+// Les cartes de l'index seulement : une carte qui l'a quitté perd son historique.
+const previous = history.cards
+history.cards = {}
+for (const { id } of index.cards) {
+  const series = previous[id] ?? []
   while (series.length < history.days.length) series.push(null)
   series[column] = cards[id]?.price ?? null
-  history.cards[id] = series
+  if (series.some((value) => value !== null)) history.cards[id] = series
 }
 await writeJson(historyFile, history)
 

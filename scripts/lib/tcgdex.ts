@@ -1,68 +1,62 @@
-/** Les cartes de TCGdex vues par les scripts : ce qu'on en garde, et leur classe de rareté. */
+/**
+ * TCGdex, cartes japonaises : ce qu'il sait d'une carte (nom japonais, illustrateur, image,
+ * Pokémon), ses extensions, et l'id Cardmarket d'une carte (pour les prix).
+ */
 
-import { TOTAL_SPECIES } from '@/config/pokedex'
-import { findRarityClass } from '@/lib/rarity'
-import { DEX_ID_CORRECTIONS, SECRET_CARD_RULES } from './rules'
+import { fetchJson } from './net'
 
-/** Une carte renvoyée par TCGdex (GraphQL) : les champs facultatifs peuvent valoir `null`. */
+const GRAPHQL_URL = 'https://api.tcgdex.net/v2/graphql'
+const REST_URL = 'https://api.tcgdex.net/v2/ja'
+const PAGE_SIZE = 1000
+
+/** Une carte Pokémon de TCGdex (GraphQL) : les champs facultatifs peuvent valoir `null`. */
 export interface TcgdexCard {
   id: string
   localId: string
-  name?: string | null
-  rarity?: string | null
-  illustrator?: string | null
-  image?: string | null
-  dexId?: number[] | null
+  name: string | null
+  illustrator: string | null
+  /** Base d'image : `https://assets.tcgdex.net/ja/SV/SV2a/173`. */
+  image: string | null
+  dexId: number[] | null
   set: { id: string }
 }
 
-/** Ce que l'index garde d'une carte avant de la classer. */
-export interface Card {
-  id: string
-  set: string
-  number: string
-  name: string | null
-  /** Libellé TCGdex (`Illustration rare`). */
-  rarity: string | null
-  illustrator: string | null
-  /** Base d'image TCGdex. */
-  image: string | null
-  dexIds: number[]
+export interface TcgdexSet {
+  name: string
+  releaseDate?: string
+  serie: { id: string }
 }
 
-const text = (value: string | null | undefined) => value?.trim() || null
-
-export function readCard(card: TcgdexCard): Card {
-  const dexIds = DEX_ID_CORRECTIONS[card.id] ?? card.dexId ?? []
-  return {
-    id: card.id,
-    set: card.set.id,
-    number: card.localId,
-    name: text(card.name),
-    rarity: text(card.rarity),
-    illustrator: text(card.illustrator),
-    image: text(card.image),
-    dexIds: [...new Set(dexIds)].filter((id) => id >= 1 && id <= TOTAL_SPECIES),
+/** Toutes les cartes Pokémon japonaises, par pages. */
+export async function tcgdexCards(): Promise<TcgdexCard[]> {
+  const cards: TcgdexCard[] = []
+  for (let page = 1; ; page++) {
+    const query = `query { cards(filters: {category: "Pokemon"}, pagination: {page: ${page}, itemsPerPage: ${PAGE_SIZE}}) @locale(lang: "ja") { id localId name illustrator image dexId set { id } } }`
+    const { data } = await fetchJson<{ data: { cards: TcgdexCard[] } }>(GRAPHQL_URL, 'tcgdex', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    })
+    cards.push(...data.cards)
+    if (data.cards.length < PAGE_SIZE) return cards
   }
 }
 
-/**
- * La rareté si elle dit quelque chose : ni vide, ni « None », ni un libellé que la règle des
- * cartes secrètes de l'extension déclare faux.
- */
-export function usableRarity(rarity: string | null, setId: string): string | null {
-  const ignored = ['none', ...(SECRET_CARD_RULES[setId]?.ignoredRarities ?? [])]
-  return rarity && !ignored.some((label) => label.toLowerCase() === rarity.toLowerCase())
-    ? rarity
-    : null
+export const tcgdexSetIds = async () =>
+  (await fetchJson<{ id: string }[]>(`${REST_URL}/sets`, 'tcgdex')).map((set) => set.id)
+
+export const tcgdexSet = (id: string) =>
+  fetchJson<TcgdexSet>(`${REST_URL}/sets/${encodeURIComponent(id)}`, 'tcgdex')
+
+/** L'id du produit Cardmarket d'une carte, quand TCGdex le connaît. */
+export async function cardmarketId(cardId: string): Promise<number | undefined> {
+  const card = await fetchJson<{ pricing?: { cardmarket?: { idProduct: number } } }>(
+    `${REST_URL}/cards/${encodeURIComponent(cardId)}`,
+    'tcgdex',
+  )
+  return card.pricing?.cardmarket?.idProduct
 }
 
-/**
- * La classe d'une carte : celle de sa rareté quand elle est utilisable (une « Common » reste sans
- * classe), sinon celle déduite de sa place dans l'extension (`deduced`, voir `deduceSecrets.ts`).
- */
-export function classify(card: Card, deduced: string | undefined) {
-  const rarity = usableRarity(card.rarity, card.set)
-  if (rarity) return { code: findRarityClass(rarity)?.code ?? null, deduced: false }
-  return { code: deduced ?? null, deduced: deduced !== undefined }
-}
+/** Où TCGdex range l'image d'une carte, même quand son API ne la mentionne pas. */
+export const tcgdexImageBase = (serieId: string, setId: string, number: string) =>
+  `https://assets.tcgdex.net/ja/${serieId}/${setId}/${number}`

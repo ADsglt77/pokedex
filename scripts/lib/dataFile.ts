@@ -1,3 +1,5 @@
+/** L'écriture des fichiers de `src/data` : un JSON lisible dans git, réécrit seulement s'il change. */
+
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 

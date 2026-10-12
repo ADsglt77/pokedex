@@ -9,7 +9,7 @@ export default defineConfig({
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
   build: {
-    // Le catalogue (1 025 espèces, 1 439 cartes) est embarqué pour un Pokédex sans réseau.
-    chunkSizeWarningLimit: 900,
+    // Le catalogue (1 025 espèces, quelque 2 200 cartes) est embarqué pour un Pokédex sans réseau.
+    chunkSizeWarningLimit: 1200,
   },
 })

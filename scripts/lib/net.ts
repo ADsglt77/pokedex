@@ -1,7 +1,9 @@
 /**
  * Réseau des scripts de données : un `fetch` JSON avec un cache disque (`scripts/.cache`, pour
  * relancer un script sans solliciter les API à nouveau) et une file à concurrence limitée.
- * Chaque requête s'identifie et attend 100 ms : certaines API (tcgcsv.com) l'exigent.
+ * Chaque requête s'identifie et attend 100 ms avant de partir ; lues une à une (tcgcsv.com
+ * l'exige), les requêtes sont donc espacées de 100 ms. Une réponse négative (404, image absente)
+ * est gardée aussi : `--refresh` la redemande.
  */
 
 import { createHash } from 'node:crypto'
