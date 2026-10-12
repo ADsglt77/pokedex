@@ -1,10 +1,10 @@
 import { Table } from '@camply/ui'
 import { Link } from 'react-router'
-import { getSpecies } from '@/lib/catalog'
+import { cardTitle } from '@/lib/catalog'
 import { cx } from '@/lib/cx'
 import { formatEuro, formatEuroChange, formatInteger, statusLabel } from '@/lib/format'
 import type { CompletionCost, TrackedCard } from '@/lib/prices'
-import type { Generation } from '@/config/pokedex'
+import { type Generation, generationLabel } from '@/config/pokedex'
 import type { CardStatus } from '@/types'
 import styles from './ValuePage.module.css'
 
@@ -26,19 +26,16 @@ interface CardRow {
 
 /** Les cartes suivies : ce qu'elles ont coûté et ce qu'elles valent, la plus chère d'abord. */
 export function CardsTable({ cards }: { cards: TrackedCard[] }) {
-  const rows: CardRow[] = cards.map(({ card, status, paid, value }) => {
-    const species = card.dexIds.flatMap((id) => getSpecies(id) ?? [])
-    return {
-      id: card.id,
-      name: species.map((one) => one.names.fr).join(' & ') || card.reference,
-      speciesId: species[0]?.id ?? null,
-      reference: card.reference,
-      status,
-      paid,
-      value,
-      gain: paid !== null && value !== null ? value - paid : null,
-    }
-  })
+  const rows: CardRow[] = cards.map(({ card, status, paid, value }) => ({
+    id: card.id,
+    name: cardTitle(card),
+    speciesId: card.dexIds[0] ?? null,
+    reference: card.reference,
+    status,
+    paid,
+    value,
+    gain: paid !== null && value !== null ? value - paid : null,
+  }))
 
   return (
     <Table
@@ -115,7 +112,7 @@ export function CompletionTable({
           header: 'Génération',
           cell: ({ generation }) => (
             <Link to={`/pokedex?generation=${generation.id}&possession=missing`}>
-              {generation.numeral} – {generation.region}
+              {generationLabel(generation)}
             </Link>
           ),
         },

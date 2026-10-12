@@ -2,12 +2,6 @@
   margin-top: 1rem;
 }
 
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
-  gap: 1rem;
-}
-
 .title {
   font-size: 1.5rem;
 }

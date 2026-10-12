@@ -6,6 +6,7 @@ import { HomePage } from '@/pages/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PokedexPage } from '@/pages/pokedex/PokedexPage'
 import { PokemonPage } from '@/pages/pokemon/PokemonPage'
+import { ShoppingPage } from '@/pages/shopping/ShoppingPage'
 import { ValuePage } from '@/pages/value/ValuePage'
 
 /** Les pages, toutes dans la coquille commune (en-tête, navigation) ; erreur et 404 comprises. */
@@ -18,6 +19,7 @@ export const router = createBrowserRouter([
       { path: 'pokedex', element: <PokedexPage /> },
       { path: 'pokemon/:id', element: <PokemonPage /> },
       { path: 'valeur', element: <ValuePage /> },
+      { path: 'achats', element: <ShoppingPage /> },
       { path: 'donnees', element: <DataPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

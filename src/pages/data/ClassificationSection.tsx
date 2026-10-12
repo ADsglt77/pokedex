@@ -12,7 +12,7 @@ const GROUPS = [
   { tier: 'fullArt', title: 'Autres pleines cartes' },
 ] as const
 
-/** Quelles raretés comptent comme « illustration complète », avec l'effet immédiat sur la progression. */
+/** Quelles classes de pleines cartes sont suivies, avec l'effet immédiat sur la progression. */
 export function ClassificationSection() {
   const act = useCollectionAction()
   const settings = useCollectionStore((state) => state.settings)

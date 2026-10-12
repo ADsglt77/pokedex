@@ -7,6 +7,7 @@ import { setLabel, statusCaption } from '@/lib/format'
 import type { PokemonCard, PokemonSpecies } from '@/types'
 import { CardActions } from './CardActions'
 import { CardPrice } from './CardPrice'
+import { PurchaseSection } from './PurchaseSection'
 import styles from './CardSheet.module.css'
 
 /** Ce qu'on sait d'une carte, sans ligne vide. */
@@ -48,6 +49,7 @@ export function CardSheet({
       <CardFacts card={candidate.card} />
       <CardPrice card={candidate.card} />
       <CardActions candidate={candidate} species={species} />
+      <PurchaseSection candidate={candidate} />
     </Stack>
   )
 }

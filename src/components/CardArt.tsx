@@ -24,6 +24,7 @@ interface CardArtProps {
 /**
  * Une carte aux proportions réelles (63 × 88). Sans scan : une carte de substitution avec le
  * sprite et la référence. Sans carte : une pochette vide. Une image n'est jamais inventée.
+ * Faite de `span` : elle peut se trouver dans un bouton (galerie des candidates).
  */
 export function CardArt({
   image,
@@ -43,7 +44,7 @@ export function CardArt({
   const showScan = src !== null && src !== failedSrc
 
   return (
-    <div
+    <span
       className={cx(
         styles.card,
         !showScan && styles.proxy,
@@ -62,7 +63,7 @@ export function CardArt({
           className={styles.scan}
         />
       ) : (
-        <div
+        <span
           className={styles.placeholder}
           {...(alt ? { role: 'img', 'aria-label': alt } : { 'aria-hidden': true })}
         >
@@ -73,9 +74,9 @@ export function CardArt({
               <span className={styles.note}>Pas d’image</span>
             </>
           )}
-        </div>
+        </span>
       )}
       {children}
-    </div>
+    </span>
   )
 }

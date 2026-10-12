@@ -18,7 +18,7 @@ export function PokedexGrid({ entries, generations }: PokedexGridProps) {
   let rank = 0
 
   return groups.map(({ generation, entries: groupEntries }) => {
-    const progress = generations.find((row) => row.generation.id === generation.id)
+    const progress = generations.find((row) => row.generation.id === generation.id)!
     return (
       <section
         key={generation.id}
@@ -29,7 +29,7 @@ export function PokedexGrid({ entries, generations }: PokedexGridProps) {
           <h2 id={`generation-${generation.id}`} className={styles.heading}>
             {generation.region}
             <span className={styles.numeral}>{generation.numeral}</span>
-            {progress && <span className={styles.count}>{unlockedOf(progress)}</span>}
+            <span className={styles.count}>{unlockedOf(progress)}</span>
           </h2>
         )}
         <ul className={styles.grid}>

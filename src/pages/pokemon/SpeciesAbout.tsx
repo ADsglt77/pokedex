@@ -53,7 +53,7 @@ export function SpeciesAbout({
 
 function SpeciesDetails({ species }: { species: PokemonSpecies }) {
   const details = use(loadSpeciesDetails()).get(species.id)
-  const generation = generationById(species.generation)
+  const generation = generationById(species.generation)!
   const measure = (value: number | null | undefined, unit: string) =>
     value ? `${formatDecimal(value)} ${unit}` : '—'
 
@@ -65,9 +65,7 @@ function SpeciesDetails({ species }: { species: PokemonSpecies }) {
           { term: 'Catégorie', description: (details && category(details)) ?? '—' },
           {
             term: 'Région',
-            description: generation
-              ? `${generation.region}, génération ${generation.numeral}`
-              : '—',
+            description: `${generation.region}, génération ${generation.numeral}`,
           },
           { term: 'Taille', description: measure(details?.heightM, 'm') },
           { term: 'Poids', description: measure(details?.weightKg, 'kg') },

@@ -22,9 +22,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(10rem, 45%), 1fr));
   gap: 1.25rem 1rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
 .tile {
@@ -71,6 +68,15 @@
 
 .chosen {
   color: var(--camply-accent);
+}
+
+.accepted {
+  color: var(--camply-success);
+}
+
+.excluded {
+  color: var(--camply-text-muted);
+  text-decoration: line-through;
 }
 
 .favorite {

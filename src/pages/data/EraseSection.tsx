@@ -22,7 +22,7 @@ export function EraseSection() {
     <DataSection id="effacer" title="Effacer ma collection" apart>
       <p>
         Supprime de ce navigateur tous vos statuts de carte, prix payés et illustrations choisies.
-        Les raretés suivies sont conservées.
+        Les raretés suivies, la liste d’achats, les commandes et le budget sont conservés.
       </p>
       <Button
         tone="danger"
@@ -44,7 +44,7 @@ export function EraseSection() {
       >
         <p>Ceci sera effacé de ce navigateur :</p>
         <SummaryLedger summary={summary} />
-        <p>Exportez-la d’abord si vous voulez pouvoir la retrouver.</p>
+        <p>Exportez d’abord votre collection si vous voulez pouvoir la retrouver.</p>
         <div>
           <Button
             size="sm"

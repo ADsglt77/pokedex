@@ -2,7 +2,7 @@ import { Button, IconButton, Input, Kbd, SegmentedControl, Select, Stack } from 
 import { ArrowDown01, ArrowDown10, Search, SlidersHorizontal, X } from '@camply/ui/icons'
 import { useEffect, useRef, useState } from 'react'
 import { ProgressRuler } from '@/components/ProgressRuler'
-import { GENERATIONS } from '@/config/pokedex'
+import { GENERATION_OPTIONS } from '@/config/pokedex'
 import { cx } from '@/lib/cx'
 import {
   activeFilterCount,
@@ -26,14 +26,6 @@ const ILLUSTRATION_OPTIONS: { value: IllustrationFilter | ''; label: string }[] 
   { value: '', label: 'Toutes les illustrations' },
   { value: 'card', label: 'Avec carte' },
   { value: 'no-card', label: 'À rechercher' },
-]
-
-const GENERATION_OPTIONS = [
-  { value: '', label: 'Toutes les générations' },
-  ...GENERATIONS.map((generation) => ({
-    value: String(generation.id),
-    label: `${generation.numeral} – ${generation.region}`,
-  })),
 ]
 
 interface PokedexToolbarProps {

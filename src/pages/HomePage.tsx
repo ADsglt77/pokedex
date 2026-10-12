@@ -103,7 +103,7 @@ function RecentCards({ cards }: { cards: RecentCard[] }) {
       </h2>
       <ul className={styles.recent}>
         {cards.map((recent, index) => {
-          const speciesId = recent.species[0]?.id ?? recent.card.dexIds[0] ?? 0
+          const speciesId = recent.card.dexIds[0]!
           const name = listFormat.format(recent.species.map((species) => species.names.fr))
           const date = formatDate(recent.acquiredAt)
           return (

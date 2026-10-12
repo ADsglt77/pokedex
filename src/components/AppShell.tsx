@@ -1,25 +1,22 @@
-import { ChartLine, Database, Grid3x3, House } from '@camply/ui/icons'
+import { ChartLine, Database, Grid3x3, House, ShoppingCart } from '@camply/ui/icons'
 import { useEffect, useRef } from 'react'
 import { Link, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { cx } from '@/lib/cx'
 import styles from './AppShell.module.css'
 
 const NAV = [
-  { to: '/', label: 'Accueil', icon: House, match: (path: string) => path === '/' },
-  {
-    to: '/pokedex',
-    label: 'Pokédex',
-    icon: Grid3x3,
-    match: (path: string) => path.startsWith('/pokedex') || path.startsWith('/pokemon'),
-  },
-  { to: '/valeur', label: 'Valeur', icon: ChartLine, match: (path: string) => path === '/valeur' },
-  {
-    to: '/donnees',
-    label: 'Données',
-    icon: Database,
-    match: (path: string) => path === '/donnees',
-  },
+  { to: '/', label: 'Accueil', icon: House },
+  { to: '/pokedex', label: 'Pokédex', icon: Grid3x3 },
+  { to: '/valeur', label: 'Valeur', icon: ChartLine },
+  { to: '/achats', label: 'Achats', icon: ShoppingCart },
+  { to: '/donnees', label: 'Données', icon: Database },
 ]
+
+/** L'onglet de la page : la fiche d'un Pokémon fait partie du Pokédex. */
+const isCurrent = (to: string, path: string) =>
+  to === '/'
+    ? path === '/'
+    : path.startsWith(to) || (to === '/pokedex' && path.startsWith('/pokemon'))
 
 function Emblem() {
   return (
@@ -46,21 +43,22 @@ function Emblem() {
 export function AppShell() {
   const { pathname } = useLocation()
   const main = useRef<HTMLElement>(null)
-  const firstRender = useRef(true)
+  const shownPath = useRef(pathname)
 
   // À chaque nouvelle page, le focus va au contenu (lecteurs d'écran, navigation au clavier).
   useEffect(() => {
-    if (firstRender.current) firstRender.current = false
-    else main.current?.focus({ preventScroll: true })
+    if (shownPath.current === pathname) return
+    shownPath.current = pathname
+    main.current?.focus({ preventScroll: true })
   }, [pathname])
 
   const navLinks = (className: string | undefined, withIcons: boolean) =>
-    NAV.map(({ to, label, icon: Icon, match }) => (
+    NAV.map(({ to, label, icon: Icon }) => (
       <Link
         key={to}
         to={to}
         className={className}
-        aria-current={match(pathname) ? 'page' : undefined}
+        aria-current={isCurrent(to, pathname) ? 'page' : undefined}
       >
         {withIcons && <Icon size={20} aria-hidden="true" />}
         <span>{label}</span>

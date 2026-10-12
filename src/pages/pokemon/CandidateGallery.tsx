@@ -8,6 +8,7 @@ import type { CardView } from '@/lib/candidates'
 import { formatEuro, statusLabel } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
 import { usePrices } from '@/store/prices'
+import { useShoppingStore } from '@/store/shopping'
 import styles from './CandidateGallery.module.css'
 
 interface CandidateGalleryProps {
@@ -26,6 +27,7 @@ export function CandidateGallery({
   onView,
 }: CandidateGalleryProps) {
   const prices = usePrices()
+  const preferences = useShoppingStore((state) => state.shopping.preferences)
   return (
     <Stack as="section" gap={5} aria-labelledby="candidates-title">
       <header className={styles.header}>
@@ -40,6 +42,7 @@ export function CandidateGallery({
           const { card, status } = candidate
           const viewed = card.id === viewedId
           const price = priceOf(prices, card)
+          const decision = preferences[card.id]?.decision
           return (
             <li key={card.id}>
               <button
@@ -73,6 +76,11 @@ export function CandidateGallery({
                   </span>
                   {candidate.isFavorite && (
                     <span className={styles.chosen}>Illustration choisie</span>
+                  )}
+                  {decision && (
+                    <span className={styles[decision]}>
+                      {decision === 'accepted' ? 'À acheter' : 'Exclue des achats'}
+                    </span>
                   )}
                 </span>
               </button>

@@ -39,6 +39,13 @@ p {
   margin: 0;
 }
 
+/* Les listes de l'app sont des grilles et des piles de cartes, pas des listes à puces. */
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 a {
   color: var(--camply-accent);
 }
@@ -66,6 +73,13 @@ img {
 
 .container--narrow {
   max-width: 50rem;
+}
+
+/* Une rangée de statistiques (`Stat`), qui passe sur plusieurs lignes quand la place manque. */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
+  gap: 1rem;
 }
 
 .muted {

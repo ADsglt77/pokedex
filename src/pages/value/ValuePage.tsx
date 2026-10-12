@@ -9,12 +9,13 @@ import { formatDate, formatEuro, pageTitle, plural } from '@/lib/format'
 import {
   collectionHistory,
   completionByGeneration,
+  gainPercent,
   tallyByStatus,
   trackedCards,
   type Tally,
 } from '@/lib/prices'
 import { useCollectionStore } from '@/store/collection'
-import { loadPriceHistory, usePrices } from '@/store/prices'
+import { loadPriceHistory, usePrices, usePricesMissing } from '@/store/prices'
 import type { PokemonCard } from '@/types'
 import { CardsTable, CompletionTable } from './ValueTables'
 import styles from './ValuePage.module.css'
@@ -30,16 +31,13 @@ function tallyHint(tally: Tally, withPaid: boolean): string {
     .join(' · ')
 }
 
-/** Écart en % entre la valeur et le prix payé des cartes dont le prix payé est noté. */
-const gainPercent = ({ paid, paidCardsValue }: Tally) =>
-  paid > 0 ? Math.round(((paidCardsValue - paid) / paid) * 100) : undefined
-
 /**
  * Valeur : ce que vaut la collection au prix Cardmarket du jour, ce qu'elle a coûté, ce que
  * coûterait de la compléter, et son évolution.
  */
 export function ValuePage() {
   const prices = usePrices()
+  const pricesMissing = usePricesMissing()
   const collection = useCollectionStore((state) => state.collection)
   const { entries } = usePokedex()
   const cards = useMemo(() => trackedCards(collection, prices), [collection, prices])
@@ -54,9 +52,6 @@ export function ValuePage() {
     { value: 0, priced: 0, unpriced: 0 },
   )
   const owned = cards.filter((card) => card.status === 'owned').map((card) => card.card)
-  const OwnedIcon = STATUS_ICONS.owned
-  const OrderedIcon = STATUS_ICONS.ordered
-  const WantedIcon = STATUS_ICONS.wanted
 
   return (
     <div className="container">
@@ -66,7 +61,7 @@ export function ValuePage() {
         estimation : l’état de la carte et le vendeur font varier le prix réel.
       </PageHeader>
 
-      {!prices && (
+      {pricesMissing && (
         <Alert tone="info" title="Les prix ne sont pas disponibles pour le moment.">
           Ils sont relus chaque jour par le serveur. Les prix payés que vous avez notés restent
           visibles ci-dessous.
@@ -74,23 +69,23 @@ export function ValuePage() {
       )}
 
       <Stack gap={8} className={styles.page}>
-        <div className={styles.stats}>
+        <div className="stat-grid">
           <Stat
             label="Ma collection"
-            icon={<OwnedIcon size={18} />}
+            icon={<STATUS_ICONS.owned size={18} />}
             value={formatEuro(tallies.owned.value)}
-            delta={gainPercent(tallies.owned)}
+            delta={gainPercent(tallies.owned.paidCardsValue, tallies.owned.paid)}
             hint={tallyHint(tallies.owned, true)}
           />
           <Stat
             label="Commandées"
-            icon={<OrderedIcon size={18} />}
+            icon={<STATUS_ICONS.ordered size={18} />}
             value={formatEuro(tallies.ordered.value)}
             hint={tallyHint(tallies.ordered, true)}
           />
           <Stat
             label="Souhaitées"
-            icon={<WantedIcon size={18} />}
+            icon={<STATUS_ICONS.wanted size={18} />}
             value={formatEuro(tallies.wanted.value)}
             hint={tallyHint(tallies.wanted, false)}
           />

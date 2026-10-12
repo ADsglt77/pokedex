@@ -2,15 +2,16 @@ import { Skeleton, Stack, Stat } from '@camply/ui'
 import { Suspense, use } from 'react'
 import { PriceChart } from '@/components/PriceChart'
 import { formatEuro } from '@/lib/format'
-import { cardHistory, priceOf } from '@/lib/prices'
+import { cardHistory, gainPercent, priceOf } from '@/lib/prices'
 import { useCollectionStore } from '@/store/collection'
-import { loadPriceHistory, usePrices } from '@/store/prices'
+import { loadPriceHistory, usePrices, usePricesMissing } from '@/store/prices'
 import type { PokemonCard } from '@/types'
 import styles from './CardPrice.module.css'
 
 /** Le prix Cardmarket de la carte, son évolution et, si le prix payé est noté, l'écart. */
 export function CardPrice({ card }: { card: PokemonCard }) {
   const prices = usePrices()
+  const missing = usePricesMissing()
   const paid = useCollectionStore((state) => state.collection.cards[card.id]?.paidPrice ?? null)
   const price = priceOf(prices, card)
 
@@ -24,8 +25,7 @@ export function CardPrice({ card }: { card: PokemonCard }) {
           <Stat
             label="Prix du marché"
             value={formatEuro(price.price)}
-            // L'écart depuis l'achat, en %, quand le prix payé est noté.
-            delta={paid ? Math.round(((price.price - paid) / paid) * 100) : undefined}
+            delta={paid === null ? undefined : gainPercent(price.price, paid)}
             hint={[
               paid !== null && `payée ${formatEuro(paid)}`,
               price.low && `au plus bas ${formatEuro(price.low)}`,
@@ -39,11 +39,15 @@ export function CardPrice({ card }: { card: PokemonCard }) {
           </Suspense>
         </>
       ) : (
-        <p className="muted">
-          {prices
-            ? 'Cardmarket n’a pas de prix pour cette carte.'
-            : 'Les prix ne sont pas disponibles pour le moment.'}
-        </p>
+        (prices || missing) && (
+          <p className="muted">
+            {missing
+              ? 'Les prix ne sont pas disponibles pour le moment.'
+              : card.cardmarket
+                ? 'Cardmarket n’a pas de prix pour cette carte.'
+                : 'Pas de prix : cette carte n’est pas reliée à un produit Cardmarket.'}
+          </p>
+        )
       )}
     </Stack>
   )

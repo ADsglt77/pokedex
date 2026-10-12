@@ -36,7 +36,9 @@ function SpeciesPage({ entry }: { entry: PokedexEntry }) {
     setViewedId(cardId)
     // Sur téléphone, la carte en grand est au-dessus de la galerie : on y remonte.
     if (matchMedia('(max-width: 40rem)').matches)
-      stage.current?.scrollIntoView({ behavior: 'smooth' })
+      stage.current?.scrollIntoView({
+        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      })
   }
 
   return (
