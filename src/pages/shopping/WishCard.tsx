@@ -1,4 +1,4 @@
-import { Badge, IconButton } from '@camply/ui'
+import { Badge, Card, IconButton } from '@camply/ui'
 import { ExternalLink as ExternalIcon, Pencil, Star, X } from '@camply/ui/icons'
 import { Link } from 'react-router'
 import { CardArt } from '@/components/CardArt'
@@ -8,7 +8,8 @@ import { RarityTag } from '@/components/RarityTag'
 import { PRIORITY_LABELS } from '@/config/shopping'
 import { formatDexNumber, formatEuro, statusLabel } from '@/lib/format'
 import { cardTitle } from '@/lib/catalog'
-import { priceVerdict, type WishRow } from '@/lib/wishlist'
+import { priceVerdict } from '@/lib/purchase-planner'
+import type { WishRow } from '@/lib/wishlist'
 import styles from './ShoppingPage.module.css'
 
 const PRIORITY_TONES = { high: 'accent', normal: 'neutral', low: 'neutral' } as const
@@ -43,7 +44,7 @@ export function WishCard({
   const title = cardTitle(card)
 
   return (
-    <article className={styles.wish}>
+    <Card padding="sm" role="article" className={styles.wish}>
       {/* La vignette double le lien du titre : cachée au clavier et aux lecteurs d'écran. */}
       <Link
         to={`/pokemon/${speciesId}`}
@@ -51,7 +52,7 @@ export function WishCard({
         tabIndex={-1}
         aria-hidden="true"
       >
-        <CardArt image={card.image} hasCard speciesId={speciesId} reference={card.reference} alt="">
+        <CardArt card={card} speciesId={speciesId} alt="">
           <PossessionMark status={status} />
         </CardArt>
       </Link>
@@ -127,6 +128,6 @@ export function WishCard({
           </IconButton>
         </div>
       </div>
-    </article>
+    </Card>
   )
 }

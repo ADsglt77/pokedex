@@ -1,7 +1,7 @@
 import { Skeleton, Stack, Stat } from '@camply/ui'
 import { Suspense, use } from 'react'
 import { PriceChart } from '@/components/PriceChart'
-import { formatEuro } from '@/lib/format'
+import { details, formatEuro } from '@/lib/format'
 import { cardHistory, gainPercent, priceOf } from '@/lib/prices'
 import { useCollectionStore } from '@/store/collection'
 import { loadPriceHistory, usePrices, usePricesMissing } from '@/store/prices'
@@ -26,13 +26,11 @@ export function CardPrice({ card }: { card: PokemonCard }) {
             label="Prix du marché"
             value={formatEuro(price.price)}
             delta={paid === null ? undefined : gainPercent(price.price, paid)}
-            hint={[
+            hint={details(
               paid !== null && `payée ${formatEuro(paid)}`,
               price.low && `au plus bas ${formatEuro(price.low)}`,
               price.avg30 && `moyenne 30 jours ${formatEuro(price.avg30)}`,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
+            )}
           />
           <Suspense fallback={<Skeleton height="7rem" />}>
             <CardPriceHistory card={card} />

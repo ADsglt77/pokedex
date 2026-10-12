@@ -1,6 +1,7 @@
 import { Progress, Tooltip } from '@camply/ui'
 import { Link } from 'react-router'
 import { cx } from '@/lib/cx'
+import { pokedexUrl } from '@/lib/filters'
 import { formatInteger, unlockedOf } from '@/lib/format'
 import type { GenerationProgress } from '@/lib/pokedex'
 import type { GenerationId } from '@/types'
@@ -36,11 +37,13 @@ export function ProgressRuler({ generations, selected = null, onSelect }: Progre
             </span>
           </>
         )
+        const tip = `${generation.region} : ${unlockedOf(row)}`
         const props = {
           className: cx(styles.segment, selected === generation.id && styles.selected),
           style: { flexGrow: total },
+          // Le nom reste quand la place manque et que les libellés disparaissent.
+          'aria-label': tip,
         }
-        const tip = `${generation.region} : ${unlockedOf(row)}`
 
         return (
           <Tooltip key={generation.id} content={tip}>
@@ -54,7 +57,7 @@ export function ProgressRuler({ generations, selected = null, onSelect }: Progre
                 {content}
               </button>
             ) : (
-              <Link {...props} to={`/pokedex?generation=${generation.id}`}>
+              <Link {...props} to={pokedexUrl({ generation: generation.id })}>
                 {content}
               </Link>
             )}

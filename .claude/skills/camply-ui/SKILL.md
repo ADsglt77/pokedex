@@ -5,7 +5,7 @@ description: How to use the @camply/ui React component library in this app (impo
 
 # @camply/ui
 
-The user's own React component library (60 components, dark theme by default, French built-in labels, zero runtime deps, ESM, tree-shakable). Version installed: see `package.json` (0.2.x). Typings are the source of truth: `node_modules/@camply/ui/dist/components/<Name>/<Name>.d.ts`. The source lives in `../camply/Camply-UI` (the user co-maintains it): a missing feature is fixed **there**, not worked around here.
+The user's own React component library (60 components, dark theme by default, French built-in labels, zero runtime deps, ESM, tree-shakable). Version installed: see `package.json` (0.2.x). Typings are the source of truth: `node_modules/@camply/ui/dist/components/<Name>/<Name>.d.ts`, and the built JS next to them shows the behaviour. The source lives in `../camply/Camply-UI` when that repo is checked out next to this one (the user co-maintains it): a missing feature is fixed **there** when convenient; meanwhile the workarounds below are the only allowed ones.
 
 ## Setup rules
 
@@ -59,9 +59,13 @@ Every component accepts `className` and `style`; single-root components forward 
 ## Known gaps → workarounds
 
 - **Select with "no value"**: options are strings only → use `''` as the "all" value.
-- **`NumberInput` cannot be emptied** (it commits `0` on blur): an optional amount (prix payé) uses `Input` with `inputMode="decimal"` and `parseEuros` (`src/lib/format.ts`). Fix upstream when convenient.
+- **`NumberInput` cannot be emptied** (it commits `0` on blur): every amount goes through `src/components/CommitInput.tsx` — `EuroInput` (saved when leaving the field, on Enter or Escape, with « Annuler ») or `EuroField` (controlled by a form, e.g. OrderForm). `CommitInput` is the generic « saved on blur » field (link, note). Fix upstream when convenient.
+- **`SegmentedControl` has no `label` / `hint`**: `src/components/SegmentedField.tsx` adds them with camply's field classes (`camply-field`, `camply-field__label`, `camply-field__desc`, hint linked by `aria-describedby`). A group of `Checkbox` has no group label either: `<fieldset>` + `<legend className="camply-field__label">` (PlannerPanel).
+- **`Progress` track**: `ProgressRuler.module.css` restyles `.camply-progress__track`. Internal classes are not an API: recheck these three after a camply update.
+- **`Combobox` as an « add » field**: pass `value=""` (controlled and empty) so the field clears after each pick without remounting (a `key` would lose the focus).
+- **`Card` renders a `div`** (no `as`): give it `role="article"` when it stands for one (WishCard).
 - **No chart component**: `src/components/PriceChart.tsx` is a small SVG line chart on camply tokens.
-- **Toast « Annuler »**: `useNotify()` / `useCollectionAction()` (`src/hooks/useNotify.ts`) wrap `toast({ action })` with the app's undo rule (refused if the collection changed since).
+- **Toast « Annuler »**: `useNotify()` / `useCollectionAction()` (`src/hooks/useNotify.ts`) wrap `toast({ action })` with the app's undo rule (refused if the collection, the settings or the shopping data changed since).
 - `Stack` gaps follow `--camply-space-*` (no 7, no 3rem): keep a CSS class for other spacings or grids.
 
-Domain components (card art, possession mark, rarity tag, pokédex tile, progress ruler, type chip) are app-specific and live in `src/components/`. Anything else generic belongs in camply.
+Domain components shared by several pages (card art, possession mark, rarity tag, pokédex tile, progress ruler, price chart, preference fields) live in `src/components/`; a component used by one page lives in that page's folder (e.g. `TypeChip` in `src/pages/pokemon/`). The only generic wrappers allowed here are those camply lacks: `ConfirmDialog`, `PageHeader`, `ExternalLink`, `CommitInput`/`EuroInput`/`EuroField`, `SegmentedField`. Anything else generic belongs in camply.

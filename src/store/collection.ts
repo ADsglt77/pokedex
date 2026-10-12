@@ -4,11 +4,11 @@
  */
 
 import { create } from 'zustand'
-import { DEFAULT_ENABLED_RARITY_CODES } from '@/config/rarities'
+import { DEFAULT_ENABLED_RARITY_CODES, RARITY_CLASSES } from '@/config/rarities'
 import * as rules from '@/lib/collection'
-import { knownRarityCodes } from '@/lib/rarity'
 import { parseStored, readCollection, readSettings } from '@/lib/transfer'
 import type { AppSettings, CardStatus, CollectionData, PokemonCard } from '@/types'
+import { persist } from './persist'
 
 const COLLECTION_KEY = 'pokedex-collection.collection'
 const SETTINGS_KEY = 'pokedex-collection.settings'
@@ -51,30 +51,26 @@ export const useCollectionStore = create<CollectionStore>()((set, get) => {
     replaceCollection: (collection) => set({ collection }),
 
     setRarityEnabled: (code, enabled) => {
-      const codes = get().settings.enabledRarityCodes.filter((known) => known !== code)
-      const enabledRarityCodes = knownRarityCodes(enabled ? [...codes, code] : codes)
+      const current = get().settings.enabledRarityCodes
+      // Dans l'ordre des classes, sans code inconnu (une classe retirée depuis).
+      const enabledRarityCodes = RARITY_CLASSES.map((rarityClass) => rarityClass.code).filter(
+        (known) => (known === code ? enabled : current.includes(known)),
+      )
       set({ settings: { schemaVersion: 1, enabledRarityCodes } })
     },
     replaceSettings: (settings) => set({ settings }),
   }
 })
 
-useCollectionStore.subscribe((state, previous) => {
-  if (state.collection !== previous.collection) {
-    localStorage.setItem(COLLECTION_KEY, JSON.stringify(state.collection))
-  }
-  if (state.settings !== previous.settings) {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings))
-  }
-})
-
-// Un autre onglet a enregistré : on reprend sa version, sans quoi on l'écraserait au prochain
-// changement. La réécrire ne relance rien : `localStorage` ne signale pas une valeur identique.
-window.addEventListener('storage', (event) => {
-  if (event.key === COLLECTION_KEY) {
-    useCollectionStore.setState({ collection: loadCollection(event.newValue) })
-  }
-  if (event.key === SETTINGS_KEY) {
-    useCollectionStore.setState({ settings: loadSettings(event.newValue) })
-  }
-})
+persist(
+  useCollectionStore,
+  COLLECTION_KEY,
+  (state) => state.collection,
+  (text) => ({ collection: loadCollection(text) }),
+)
+persist(
+  useCollectionStore,
+  SETTINGS_KEY,
+  (state) => state.settings,
+  (text) => ({ settings: loadSettings(text) }),
+)

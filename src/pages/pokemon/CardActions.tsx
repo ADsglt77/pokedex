@@ -4,15 +4,16 @@ import { STATUS_ICONS } from '@/components/statusIcons'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { cx } from '@/lib/cx'
 import type { CardView } from '@/lib/candidates'
+import { statusLabel } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'
 import type { CardStatus, PokemonSpecies } from '@/types'
 import { PaidPriceField } from './PaidPriceField'
 import styles from './CardActions.module.css'
 
-const STATUS_BUTTONS: { status: CardStatus; label: string; done: string }[] = [
-  { status: 'owned', label: 'Je possède cette carte', done: 'possédée' },
-  { status: 'ordered', label: 'Marquer comme commandée', done: 'commandée' },
-  { status: 'wanted', label: 'Marquer comme souhaitée', done: 'souhaitée' },
+const STATUS_BUTTONS: { status: CardStatus; label: string }[] = [
+  { status: 'owned', label: 'Je possède cette carte' },
+  { status: 'ordered', label: 'Marquer comme commandée' },
+  { status: 'wanted', label: 'Marquer comme souhaitée' },
 ]
 
 /**
@@ -28,24 +29,21 @@ export function CardActions({
   species: PokemonSpecies
 }) {
   const act = useCollectionAction()
-  const store = useCollectionStore.getState
   const { card, status, isFavorite } = candidate
   const name = species.names.fr
 
-  const setStatus = (next: CardStatus | null) => {
-    const done = STATUS_BUTTONS.find((button) => button.status === next)?.done
+  const setStatus = (next: CardStatus | null) =>
     act(
-      () => store().setCardStatus(card, next),
-      done
-        ? `Carte ${card.reference} marquée comme ${done}.`
+      () => useCollectionStore.getState().setCardStatus(card, next),
+      next
+        ? `Carte ${card.reference} marquée comme ${statusLabel(next).toLowerCase()}.`
         : `Statut retiré de la carte ${card.reference}.`,
       next ? 'success' : 'info',
     )
-  }
 
   const toggleFavorite = () =>
     act(
-      () => store().setFavorite(species.id, isFavorite ? null : card),
+      () => useCollectionStore.getState().setFavorite(species.id, isFavorite ? null : card),
       isFavorite
         ? `${name} n’a plus d’illustration choisie.`
         : `Illustration choisie pour ${name} : carte ${card.reference}.`,

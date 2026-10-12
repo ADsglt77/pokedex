@@ -53,6 +53,12 @@ export function serializeFilters(filters: PokedexFilters): URLSearchParams {
   return params
 }
 
+/** L'adresse du Pokédex filtré : `pokedexUrl({ generation: 5 })` → `/pokedex?generation=5`. */
+export function pokedexUrl(filters: Partial<PokedexFilters>): string {
+  const search = serializeFilters({ ...DEFAULT_FILTERS, ...filters }).toString()
+  return search ? `/pokedex?${search}` : '/pokedex'
+}
+
 /** Les filtres actifs, recherche exclue (le compteur du bouton « Filtres »). */
 export const activeFilterCount = (filters: PokedexFilters) =>
   Number(filters.generation !== null) +

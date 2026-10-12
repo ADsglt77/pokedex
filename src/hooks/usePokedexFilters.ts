@@ -18,10 +18,13 @@ export function usePokedexFilters() {
 
   const setFilters = useCallback(
     (patch: Partial<PokedexFilters>) =>
-      // `replace` : pas une entrée d'historique par filtre ou par frappe.
       setParams((current) => serializeFilters({ ...parseFilters(current), ...patch }), {
+        // Pas une entrée d'historique par filtre ou par frappe.
         replace: true,
         preventScrollReset: true,
+        // Le routeur passe ses mises à jour dans une transition : le champ de recherche, qui lit
+        // l'adresse, suivrait la frappe en retard. La grille, elle, reste différée (PokedexPage).
+        flushSync: 'search' in patch,
       }),
     [setParams],
   )

@@ -54,19 +54,28 @@ export function CardSheet({
   )
 }
 
-/** Aucune candidate : aucune carte de l'espèce n'a une rareté suivie. */
-export function EmptySheet() {
+/**
+ * Aucune candidate : l'index n'a aucune pleine carte de l'espèce, ou `known` : ses cartes sont
+ * d'une rareté que l'utilisateur ne suit pas.
+ */
+export function EmptySheet({ known }: { known: boolean }) {
   return (
     <Stack as="section" gap={6} className={styles.sheet} aria-labelledby="sheet-title">
       <h2 id="sheet-title" className={styles.title}>
         Illustration à rechercher
       </h2>
-      <p className="muted">Aucune carte de ce Pokémon n’a une rareté que vous suivez.</p>
-      <div>
-        <Button asChild variant="secondary">
-          <Link to="/donnees#classification">Choisir les raretés suivies</Link>
-        </Button>
-      </div>
+      {known ? (
+        <>
+          <p className="muted">Aucune carte de ce Pokémon n’a une rareté que vous suivez.</p>
+          <div>
+            <Button asChild variant="secondary">
+              <Link to="/donnees#classification">Choisir les raretés suivies</Link>
+            </Button>
+          </div>
+        </>
+      ) : (
+        <p className="muted">Aucune pleine carte japonaise de ce Pokémon n’est encore connue.</p>
+      )}
     </Stack>
   )
 }

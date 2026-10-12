@@ -6,13 +6,12 @@ import { CardArt } from '@/components/CardArt'
 import { PokedexTile } from '@/components/PokedexTile'
 import { ProgressRuler } from '@/components/ProgressRuler'
 import { usePokedex } from '@/hooks/usePokedex'
-import { summarize } from '@/lib/collection'
+import { cardTitle } from '@/lib/catalog'
+import { pokedexUrl } from '@/lib/filters'
 import { formatDate, formatInteger, pageTitle, plural, unlockedOf } from '@/lib/format'
-import { recentAcquisitions, type Progress, type RecentCard } from '@/lib/pokedex'
+import { recentAcquisitions, summarize, type Progress, type RecentCard } from '@/lib/pokedex'
 import { useCollectionStore } from '@/store/collection'
 import styles from './HomePage.module.css'
-
-const listFormat = new Intl.ListFormat('fr', { style: 'long', type: 'conjunction' })
 
 /** Quelques belles illustrations à débloquer, montrées tant qu'aucune carte n'est obtenue. */
 const TEASER_SPECIES = [25, 6, 150, 151, 94, 448, 133, 197]
@@ -78,7 +77,7 @@ export function HomePage() {
         <ul className={styles.regions}>
           {pokedex.generations.map(({ generation, unlocked, total }) => (
             <li key={generation.id}>
-              <Link to={`/pokedex?generation=${generation.id}`} className={styles.region}>
+              <Link to={pokedexUrl({ generation: generation.id })} className={styles.region}>
                 <span>{generation.region}</span>
                 <span className="muted numeric">
                   {formatInteger(unlocked)} sur {formatInteger(total)}
@@ -98,13 +97,10 @@ export function HomePage() {
 function RecentCards({ cards }: { cards: RecentCard[] }) {
   return (
     <Stack as="section" gap={6} className={styles.section} aria-labelledby="recent-title">
-      <h2 id="recent-title" className={styles.sectionTitle}>
-        Dernières cartes obtenues
-      </h2>
+      <h2 id="recent-title">Dernières cartes obtenues</h2>
       <ul className={styles.recent}>
         {cards.map((recent, index) => {
           const speciesId = recent.card.dexIds[0]!
-          const name = listFormat.format(recent.species.map((species) => species.names.fr))
           const date = formatDate(recent.acquiredAt)
           return (
             <li
@@ -113,15 +109,8 @@ function RecentCards({ cards }: { cards: RecentCard[] }) {
               style={{ animationDelay: `${index * 70}ms` }}
             >
               <Link to={`/pokemon/${speciesId}`} className={styles.recentCard}>
-                <CardArt
-                  image={recent.card.image}
-                  hasCard
-                  speciesId={speciesId}
-                  reference={recent.card.reference}
-                  alt=""
-                  eager
-                />
-                <span className={styles.recentName}>{name}</span>
+                <CardArt card={recent.card} speciesId={speciesId} alt="" eager />
+                <span className={styles.recentName}>{cardTitle(recent.card)}</span>
                 <span className="muted">{recent.card.reference}</span>
                 {date && <span className={styles.recentDate}>Obtenue le {date}</span>}
               </Link>
@@ -136,7 +125,7 @@ function RecentCards({ cards }: { cards: RecentCard[] }) {
 function FirstCards() {
   const pokedex = usePokedex()
   const teaser = TEASER_SPECIES.flatMap((id) => pokedex.entryById.get(id) ?? [])
-    .filter((entry) => entry.representative?.card.image && !entry.unlocked)
+    .filter((entry) => entry.representative?.card.image)
     .slice(0, 5)
     .sort((a, b) => a.species.id - b.species.id)
 
@@ -150,7 +139,7 @@ function FirstCards() {
       />
       {teaser.length > 0 && (
         <>
-          <h2 className={styles.sectionTitle}>Quelques illustrations à débloquer</h2>
+          <h2>Quelques illustrations à débloquer</h2>
           <ul className={styles.teaser}>
             {teaser.map((entry) => (
               <li key={entry.species.id}>

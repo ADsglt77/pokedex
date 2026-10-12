@@ -18,7 +18,7 @@ export function CardLine({
   const speciesId = card.dexIds[0]!
   return (
     <div className={styles.line}>
-      <CardArt image={card.image} hasCard speciesId={speciesId} alt="" className={styles.lineArt} />
+      <CardArt card={card} speciesId={speciesId} alt="" className={styles.lineArt} />
       <div className={styles.lineText}>
         <Link to={`/pokemon/${speciesId}`} className={styles.lineTitle}>
           {cardTitle(card)}

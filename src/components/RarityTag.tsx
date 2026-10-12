@@ -5,10 +5,9 @@ import styles from './RarityTag.module.css'
 
 /** Le code de rareté d'une carte (« AR »), et son nom au survol ; `withLabel` affiche aussi le nom. */
 export function RarityTag({ card, withLabel }: { card: PokemonCard; withLabel?: boolean }) {
-  const rarityClass = findRarityClass(card.rarity)
-  const code = rarityClass?.code ?? card.rarity
+  const code = card.rarity
   if (!code) return null
-  const label = rarityClass?.label ?? code
+  const label = findRarityClass(code)?.label ?? code
 
   return (
     <span className={styles.rarity}>

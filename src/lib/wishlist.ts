@@ -8,9 +8,10 @@ import { DEFAULT_BUDGET, PRIORITY_LABELS, PRIORITY_RANK } from '@/config/shoppin
 import { cardTitle, findCard, speciesOf } from '@/lib/catalog'
 import { searchForm, searchMatcher } from '@/lib/filters'
 import { parseLink } from '@/lib/format'
-import type { PokedexEntry } from '@/lib/pokedex'
+import { isTaken, type PokedexEntry } from '@/lib/pokedex'
 import { isToBuy } from '@/lib/collection'
-import { cheapestTotal, priceOf } from '@/lib/prices'
+import { cheapestTotal, priceOf, type PricedCard } from '@/lib/prices'
+import { priceVerdict } from '@/lib/purchase-planner'
 import type {
   CardStatus,
   CollectionData,
@@ -109,24 +110,21 @@ export function wishlistRows(
 
 /** Les Pokémon déjà obtenus ou en route : une carte possédée ou commandée. */
 export const takenSpecies = (entries: readonly PokedexEntry[]): Set<number> =>
-  new Set(
-    entries
-      .filter((entry) => entry.unlocked || entry.statusCounts.ordered > 0)
-      .map((entry) => entry.species.id),
-  )
+  new Set(entries.filter(isTaken).map((entry) => entry.species.id))
 
 /**
  * Ce que coûteraient les Pokémon de la liste qui manquent encore, chacun à sa carte acceptée la
  * moins chère ; `unpriced` : ceux dont aucune carte acceptée n'a de prix.
  */
 export function wishlistEstimate(rows: readonly WishRow[], taken: ReadonlySet<number>) {
-  const pricesByPokemon = new Map<number, (number | null)[]>()
+  const cardsByPokemon = new Map<number, PricedCard[]>()
   for (const row of rows.filter(isToBuy)) {
     for (const id of row.card.dexIds.filter((id) => !taken.has(id))) {
-      pricesByPokemon.set(id, [...(pricesByPokemon.get(id) ?? []), row.price])
+      const card = { cardId: row.card.id, price: row.price }
+      cardsByPokemon.set(id, [...(cardsByPokemon.get(id) ?? []), card])
     }
   }
-  return cheapestTotal(pricesByPokemon.values())
+  return cheapestTotal(cardsByPokemon.values())
 }
 
 export type WishlistSort = 'priority' | 'price' | 'price-desc' | 'gap' | 'dex' | 'recent'
@@ -155,10 +153,6 @@ export const DEFAULT_WISHLIST_FILTERS: WishlistFilters = {
   all: false,
   sort: 'priority',
 }
-
-/** Le prix du marché face au prix maximum : dessous (ou égal), dessus, ou rien à comparer. */
-export const priceVerdict = (price: number | null, maxPrice: number | undefined) =>
-  price === null || maxPrice === undefined ? null : price <= maxPrice ? 'under' : 'over'
 
 const isUnderMax = (row: WishRow) => priceVerdict(row.price, row.preference.maxPrice) === 'under'
 

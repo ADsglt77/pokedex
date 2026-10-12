@@ -16,13 +16,14 @@ const GROUPS = [
 export function ClassificationSection() {
   const act = useCollectionAction()
   const settings = useCollectionStore((state) => state.settings)
-  const setRarityEnabled = useCollectionStore((state) => state.setRarityEnabled)
-  const replaceSettings = useCollectionStore((state) => state.replaceSettings)
   const { progress } = usePokedex()
   const isDefault = settings.enabledRarityCodes.join() === DEFAULT_ENABLED_RARITY_CODES.join()
 
   const resetToDefaults = () =>
-    act(() => replaceSettings(defaultSettings()), 'Raretés suivies par défaut rétablies.')
+    act(
+      () => useCollectionStore.getState().replaceSettings(defaultSettings()),
+      'Raretés suivies par défaut rétablies.',
+    )
 
   return (
     <DataSection id="classification" title="Raretés suivies">
@@ -37,7 +38,11 @@ export function ClassificationSection() {
               label={`${rarityClass.code} · ${rarityClass.label}`}
               hint={rarityClass.description}
               checked={settings.enabledRarityCodes.includes(rarityClass.code)}
-              onChange={(event) => setRarityEnabled(rarityClass.code, event.target.checked)}
+              onChange={(event) =>
+                useCollectionStore
+                  .getState()
+                  .setRarityEnabled(rarityClass.code, event.target.checked)
+              }
               spread
             />
           ))}

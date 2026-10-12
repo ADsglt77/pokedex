@@ -1,4 +1,4 @@
-/* Référence : espèces (PokéAPI) et cartes (TCGdex), embarquées dans `src/data` */
+/* Référence : espèces (PokéAPI) et cartes (TCGplayer, complétées par TCGdex), embarquées dans `src/data` */
 
 export type PokemonTypeId =
   | 'normal'

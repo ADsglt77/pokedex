@@ -46,10 +46,13 @@ export const orderSpent = (order: Order) =>
 
 /**
  * Le prix de revient d'une carte de chaque ligne : son prix, plus sa part du port et des frais,
- * au prorata de son prix (à parts égales si les cartes sont gratuites), au centime près.
+ * moins sa part du remboursé, au prorata de son prix (à parts égales si les cartes sont
+ * gratuites), au centime près.
  */
-export function unitCosts(order: Pick<Order, 'lines' | 'shipping' | 'fees'>): number[] {
-  const extra = order.shipping + order.fees
+export function unitCosts(
+  order: Pick<Order, 'lines' | 'shipping' | 'fees' | 'refunded'>,
+): number[] {
+  const extra = order.shipping + order.fees - order.refunded
   const subtotal = linesTotal(order.lines)
   const count = cardCount(order.lines)
   return order.lines.map((line) =>
@@ -66,6 +69,12 @@ export function previousOf(cardId: string, stored: Order | null, collection: Col
   return line ? line.previous : (collection.cards[cardId] ?? null)
 }
 
+/** La commande en cours, parmi `orders`, qui contient la carte ; `undefined` s'il n'y en a pas. */
+const pendingWith = (orders: readonly Order[], cardId: string) =>
+  orders.find(
+    (order) => order.state === 'pending' && order.lines.some((line) => line.cardId === cardId),
+  )
+
 /** Midi, heure locale, du jour donné : la date d'obtention d'une carte reçue. */
 const noonOf = (day: string) => new Date(`${day}T12:00:00`).toISOString()
 
@@ -77,9 +86,10 @@ const noonOf = (day: string) => new Date(`${day}T12:00:00`).toISOString()
  *   autre commande en cours ne les contient. Un état d'avant « commandée » venait d'une autre
  *   commande, disparue depuis : la carte perd alors son statut ;
  * - les cartes d'une commande en cours deviennent « commandée », sauf si elles sont déjà possédées ;
- * - les cartes d'une commande reçue deviennent « possédée », datées du jour de réception ;
+ * - les cartes d'une commande reçue deviennent « possédée », datées du jour de réception (une date
+ *   de réception corrigée les suit) ;
  * - une carte déjà possédée avant la commande (doublon) n'est jamais modifiée ;
- * - le prix payé est le prix de revient (port et frais répartis).
+ * - le prix payé est le prix de revient (port, frais et remboursé répartis).
  */
 export function applyOrder(
   collection: CollectionData,
@@ -91,14 +101,10 @@ export function applyOrder(
   const cards = { ...collection.cards }
   const active = after?.state === 'cancelled' ? null : after
   const kept = new Set(active?.lines.map((line) => line.cardId))
-  const orderedElsewhere = (cardId: string) =>
-    others.some(
-      (order) => order.state === 'pending' && order.lines.some((line) => line.cardId === cardId),
-    )
 
   for (const line of before?.state === 'cancelled' ? [] : (before?.lines ?? [])) {
     if (kept.has(line.cardId) || cards[line.cardId]?.status !== 'ordered') continue
-    if (orderedElsewhere(line.cardId)) continue
+    if (pendingWith(others, line.cardId)) continue
     if (line.previous && line.previous.status !== 'ordered') cards[line.cardId] = line.previous
     else delete cards[line.cardId]
   }
@@ -110,8 +116,12 @@ export function applyOrder(
     const paidPrice = costs[index]
     let next: CardOwnership | null = null
     if (active.state === 'received') {
+      // Possédée avant la réception de cette commande : elle garde sa date. Sinon, la date de
+      // réception, même corrigée après coup.
       const acquiredAt =
-        current?.status === 'owned' ? current.acquiredAt : noonOf(active.receivedAt ?? active.date)
+        current?.status === 'owned' && before?.state !== 'received'
+          ? current.acquiredAt
+          : noonOf(active.receivedAt ?? active.date)
       next = { status: 'owned', updatedAt: now, acquiredAt, paidPrice }
     } else if (current?.status !== 'owned') {
       next = { status: 'ordered', updatedAt: now, acquiredAt: null, paidPrice }
@@ -132,9 +142,7 @@ const sameOwnership = (a: CardOwnership | undefined, b: CardOwnership) =>
 /** Pourquoi une carte d'une commande est peut-être en double ; `null` si elle ne l'est pas. */
 export function duplicateReason(line: OrderLine, others: readonly Order[]): string | null {
   if (line.previous?.status === 'owned') return 'Déjà possédée avant cette commande'
-  const other = others.find(
-    (order) => order.state === 'pending' && order.lines.some((l) => l.cardId === line.cardId),
-  )
+  const other = pendingWith(others, line.cardId)
   return other ? `Déjà dans la commande en cours du ${formatDate(other.date)}` : null
 }
 

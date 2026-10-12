@@ -6,6 +6,11 @@
   box-sizing: border-box;
 }
 
+:root {
+  /* La marge latérale des pages ; la barre collante du Pokédex l'annule pour déborder. */
+  --gutter: clamp(1rem, 0.4rem + 2.5vw, 2.5rem);
+}
+
 html {
   color-scheme: dark;
   -webkit-text-size-adjust: 100%;
@@ -33,6 +38,11 @@ h4 {
   letter-spacing: -0.01em;
   color: var(--camply-text-strong);
   text-wrap: balance;
+}
+
+/* Les intertitres de section ; ceux de camply ont leur propre classe. */
+h2 {
+  font-size: 1.5rem;
 }
 
 p {
@@ -68,7 +78,7 @@ img {
   width: 100%;
   max-width: 76rem;
   margin-inline: auto;
-  padding-inline: clamp(1rem, 0.4rem + 2.5vw, 2.5rem);
+  padding-inline: var(--gutter);
 }
 
 .container--narrow {

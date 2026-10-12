@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { PokedexTile } from '@/components/PokedexTile'
 import { groupByGeneration } from '@/lib/filters'
 import { unlockedOf } from '@/lib/format'
@@ -12,8 +13,11 @@ interface PokedexGridProps {
   generations: GenerationProgress[]
 }
 
-/** Le classeur : un intertitre par génération dès que la liste en couvre plusieurs. */
-export function PokedexGrid({ entries, generations }: PokedexGridProps) {
+/**
+ * Le classeur : un intertitre par génération dès que la liste en couvre plusieurs. Mémoïsé : à
+ * chaque frappe, le rendu urgent garde l'ancienne liste et passe la grille (environ 1 000 tuiles).
+ */
+export const PokedexGrid = memo(function PokedexGrid({ entries, generations }: PokedexGridProps) {
   const groups = groupByGeneration(entries)
   let rank = 0
 
@@ -42,4 +46,4 @@ export function PokedexGrid({ entries, generations }: PokedexGridProps) {
       </section>
     )
   })
-}
+})

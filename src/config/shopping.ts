@@ -5,6 +5,12 @@ import type { BudgetSettings, OrderState, Priority, Supplier } from '@/types'
 /** 100 € par mois d'habitude, 150 € au plus. */
 export const DEFAULT_BUDGET: BudgetSettings = { monthly: 100, ceiling: 150, shippingReserve: 5 }
 
+/** Un mois au-delà de son budget ou de son plafond (`budgetLevel`) : sa couleur, son badge. */
+export const BUDGET_LEVELS = {
+  monthly: { tone: 'warn', label: 'Au-delà du budget' },
+  ceiling: { tone: 'danger', label: 'Plafond dépassé' },
+} as const
+
 /** Dans l'ordre d'affichage, la plus haute d'abord. */
 export const PRIORITY_LABELS: Record<Priority, string> = {
   high: 'Haute',

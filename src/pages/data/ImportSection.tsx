@@ -2,7 +2,7 @@ import { Alert, Button, FileUpload, Stack, type UploadFile } from '@camply/ui'
 import { useState } from 'react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useCollectionAction } from '@/hooks/useNotify'
-import { summarize } from '@/lib/collection'
+import { summarize } from '@/lib/pokedex'
 import { formatDateTime, plural } from '@/lib/format'
 import { type ImportedFile, parseImport } from '@/lib/transfer'
 import { acceptedCount } from '@/lib/wishlist'
@@ -66,7 +66,7 @@ export function ImportSection() {
 
       {imported === null && (
         <Alert tone="danger" title="Ce fichier ne peut pas être importé.">
-          Ce n’est pas un export de collection de ce Pokédex.
+          Ce n’est pas un export de collection de ce Pokédex, ou il a été abîmé.
         </Alert>
       )}
 

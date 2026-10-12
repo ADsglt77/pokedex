@@ -53,9 +53,12 @@ export function PriceChart({ points, label }: { points: PricePoint[]; label: str
         <span className={styles.max} aria-hidden="true">
           {formatEuro(max)}
         </span>
-        <span className={styles.min} aria-hidden="true">
-          {formatEuro(min)}
-        </span>
+        {/* Une série plate n'a qu'une valeur à étiqueter. */}
+        {min !== max && (
+          <span className={styles.min} aria-hidden="true">
+            {formatEuro(min)}
+          </span>
+        )}
       </div>
       <figcaption className={styles.axis} aria-hidden="true">
         <span>{formatShortDate(first.date)}</span>

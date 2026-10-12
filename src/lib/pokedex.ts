@@ -5,7 +5,7 @@
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
 import { buildCandidates, pickRepresentative, type CardView } from '@/lib/candidates'
-import { findCard, SPECIES, speciesOf } from '@/lib/catalog'
+import { findCard, SPECIES } from '@/lib/catalog'
 import type { CardStatus, CollectionData, PokemonCard, PokemonSpecies } from '@/types'
 
 export interface PokedexEntry {
@@ -63,6 +63,9 @@ function buildEntry(
   }
 }
 
+/** Un Pokémon obtenu ou en route : une de ses candidates est possédée ou commandée. */
+export const isTaken = (entry: PokedexEntry) => entry.unlocked || entry.statusCounts.ordered > 0
+
 /** Le statut affiché pour une espèce : possédée, sinon commandée, sinon souhaitée. */
 export function speciesStatus({ statusCounts }: PokedexEntry): CardStatus | null {
   if (statusCounts.owned) return 'owned'
@@ -84,10 +87,36 @@ export function buildPokedex(collection: CollectionData, enabledCodes: readonly 
   }
 }
 
+export interface CollectionSummary {
+  owned: number
+  ordered: number
+  wanted: number
+  favorites: number
+}
+
+/**
+ * Ce que contient la collection. Une carte sortie de l'index n'y compte plus, comme partout
+ * ailleurs dans l'app : ce que l'utilisateur en avait noté reste enregistré, sans s'afficher.
+ */
+export function summarize(data: CollectionData): CollectionSummary {
+  const known = (cardId: string | null) => cardId !== null && findCard(cardId, data) !== null
+  const summary = {
+    owned: 0,
+    ordered: 0,
+    wanted: 0,
+    favorites: Object.values(data.entries).filter((entry) => known(entry.favoriteCardId)).length,
+  }
+  for (const [cardId, ownership] of Object.entries(data.cards)) {
+    if (known(cardId)) summary[ownership.status]++
+  }
+  return summary
+}
+
+export const isEmptySummary = (summary: CollectionSummary) =>
+  Object.values(summary).every((count) => count === 0)
+
 export interface RecentCard {
   card: PokemonCard
-  /** Les Pokémon de la carte. */
-  species: PokemonSpecies[]
   acquiredAt: string | null
 }
 
@@ -96,7 +125,7 @@ export function recentAcquisitions(collection: CollectionData, limit: number): R
   return Object.entries(collection.cards)
     .flatMap(([cardId, { status, acquiredAt }]) => {
       const card = status === 'owned' && findCard(cardId, collection)
-      return card ? [{ card, species: speciesOf(card), acquiredAt }] : []
+      return card ? [{ card, acquiredAt }] : []
     })
     .sort((a, b) => (b.acquiredAt ?? '').localeCompare(a.acquiredAt ?? ''))
     .slice(0, limit)

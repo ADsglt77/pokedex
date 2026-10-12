@@ -2,9 +2,8 @@ import { Stack } from '@camply/ui'
 import { useRef, useState } from 'react'
 import { useParams } from 'react-router'
 import { PossessionMark } from '@/components/PossessionMark'
-import { TypeChip } from '@/components/TypeChip'
 import { usePokedex } from '@/hooks/usePokedex'
-import { getSpecies } from '@/lib/catalog'
+import { getSpecies, indexCardsFor } from '@/lib/catalog'
 import { formatDexNumber, pageTitle, plural } from '@/lib/format'
 import { speciesStatus, type PokedexEntry } from '@/lib/pokedex'
 import { NotFoundPage } from '@/pages/NotFoundPage'
@@ -13,6 +12,7 @@ import { CardSheet, EmptySheet } from './CardSheet'
 import { CardStage } from './CardStage'
 import { SpeciesAbout } from './SpeciesAbout'
 import { SpeciesNav } from './SpeciesNav'
+import { TypeChip } from './TypeChip'
 import styles from './PokemonPage.module.css'
 
 /** La fiche d'un Pokémon (`/pokemon/:id`) ; un numéro inconnu mène à la page introuvable. */
@@ -68,7 +68,12 @@ function SpeciesPage({ entry }: { entry: PokedexEntry }) {
 
         <div className={styles.body}>
           <div className={styles.columns}>
-            {viewed ? <CardSheet candidate={viewed} species={species} /> : <EmptySheet />}
+            {/* Une clé par carte : une saisie en cours ne passe pas d'une carte à l'autre. */}
+            {viewed ? (
+              <CardSheet key={viewed.card.id} candidate={viewed} species={species} />
+            ) : (
+              <EmptySheet known={indexCardsFor(species.id).length > 0} />
+            )}
             <SpeciesAbout species={species} showArtwork={viewed === null} />
           </div>
 

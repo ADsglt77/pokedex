@@ -25,9 +25,9 @@ export function setFavorite(
 }
 
 /**
- * Le statut d'une carte ; `null` le retire, prix payé compris. Le prix payé suit la carte d'un
- * statut à l'autre (commandée, puis possédée). Une carte TAG TEAM possédée débloque chacun de ses
- * Pokémon : le statut appartient à la carte.
+ * Le statut d'une carte ; `null` le retire, prix payé compris. Le prix payé suit la carte de
+ * commandée à possédée ; souhaitée, elle n'en a pas. Une carte TAG TEAM possédée débloque chacun
+ * de ses Pokémon : le statut appartient à la carte.
  */
 export function setCardStatus(
   data: CollectionData,
@@ -38,7 +38,8 @@ export function setCardStatus(
   const { [card.id]: previous, ...cards } = data.cards
   if (status) {
     const acquiredAt = status === 'owned' ? now : null
-    cards[card.id] = { status, updatedAt: now, acquiredAt, paidPrice: previous?.paidPrice }
+    const paidPrice = status === 'wanted' ? undefined : previous?.paidPrice
+    cards[card.id] = { status, updatedAt: now, acquiredAt, paidPrice }
   }
   return { ...data, cards, updatedAt: now }
 }
@@ -59,24 +60,3 @@ export function setPaidPrice(
 /** Une carte encore à acheter : ni possédée ni commandée. */
 export const isToBuy = ({ status }: { status: CardStatus | null }) =>
   status !== 'owned' && status !== 'ordered'
-
-export interface CollectionSummary {
-  owned: number
-  ordered: number
-  wanted: number
-  favorites: number
-}
-
-export function summarize(data: CollectionData): CollectionSummary {
-  const summary = {
-    owned: 0,
-    ordered: 0,
-    wanted: 0,
-    favorites: Object.values(data.entries).filter((entry) => entry.favoriteCardId).length,
-  }
-  for (const ownership of Object.values(data.cards)) summary[ownership.status]++
-  return summary
-}
-
-export const isEmptySummary = (summary: CollectionSummary) =>
-  Object.values(summary).every((count) => count === 0)

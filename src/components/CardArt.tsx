@@ -1,15 +1,13 @@
 import { useState, type ReactNode } from 'react'
 import { spriteUrl } from '@/config/pokedex'
 import { cx } from '@/lib/cx'
-import type { CardImage } from '@/types'
+import type { PokemonCard } from '@/types'
 import styles from './CardArt.module.css'
 
 interface CardArtProps {
-  image: CardImage | null
-  /** `false` : aucune carte connue, on montre une pochette vide. */
-  hasCard: boolean
+  /** `null` : aucune carte connue, on montre une pochette vide. */
+  card: Pick<PokemonCard, 'image' | 'reference'> | null
   speciesId: number
-  reference?: string
   alt: string
   /** `large` charge le scan haute définition. */
   large?: boolean
@@ -27,10 +25,8 @@ interface CardArtProps {
  * Faite de `span` : elle peut se trouver dans un bouton (galerie des candidates).
  */
 export function CardArt({
-  image,
-  hasCard,
+  card,
   speciesId,
-  reference,
   alt,
   large,
   locked,
@@ -40,7 +36,8 @@ export function CardArt({
 }: CardArtProps) {
   // Une image qui ne se charge pas retombe sur la carte de substitution.
   const [failedSrc, setFailedSrc] = useState<string | null>(null)
-  const src = image && (large ? image.large : image.small)
+  const image = card?.image
+  const src = image ? (large ? image.large : image.small) : null
   const showScan = src !== null && src !== failedSrc
 
   return (
@@ -48,7 +45,7 @@ export function CardArt({
       className={cx(
         styles.card,
         !showScan && styles.proxy,
-        !hasCard && styles.empty,
+        !card && styles.empty,
         locked && styles.locked,
         className,
       )}
@@ -68,9 +65,9 @@ export function CardArt({
           {...(alt ? { role: 'img', 'aria-label': alt } : { 'aria-hidden': true })}
         >
           <img src={spriteUrl(speciesId)} alt="" loading="lazy" className={styles.sprite} />
-          {hasCard && (
+          {card && (
             <>
-              {reference && <span className={styles.reference}>{reference}</span>}
+              <span className={styles.reference}>{card.reference}</span>
               <span className={styles.note}>Pas d’image</span>
             </>
           )}

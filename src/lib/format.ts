@@ -11,6 +11,14 @@ export const formatInteger = (value: number) => integerFormat.format(value)
 
 export const formatDecimal = (value: number) => decimalFormat.format(value)
 
+/** Aujourd'hui (YYYY-MM-DD), dans le fuseau de l'utilisateur. */
+export const today = () => {
+  const date = new Date()
+  return [date.getFullYear(), date.getMonth() + 1, date.getDate()]
+    .map((part) => String(part).padStart(2, '0'))
+    .join('-')
+}
+
 /** Une date ISO ; un jour seul (`2026-10-09`) est lu à midi, heure locale : jamais la veille. */
 function toDate(iso: string | null | undefined): Date | null {
   const date = iso ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : iso) : null
@@ -71,6 +79,10 @@ export function parseLink(text: string): URL | null {
 
 /** Un montant à éditer : « 12,50 ». */
 export const euroInput = (value: number) => value.toFixed(2).replace('.', ',')
+
+/** « 3 cartes · payées 120,00 € » : les précisions d'une valeur, sans les vides. */
+export const details = (...parts: (string | 0 | false | null | undefined)[]) =>
+  parts.filter(Boolean).join(' · ')
 
 /** « 1 carte », « 3 cartes » ; « Pokémon » reste invariable. */
 export function plural(count: number, singular: string, pluralForm: string): string {

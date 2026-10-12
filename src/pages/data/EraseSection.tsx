@@ -3,7 +3,8 @@ import { Download, Trash2 } from '@camply/ui/icons'
 import { useState } from 'react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useCollectionAction } from '@/hooks/useNotify'
-import { emptyCollection, isEmptySummary, summarize } from '@/lib/collection'
+import { emptyCollection } from '@/lib/collection'
+import { isEmptySummary, summarize } from '@/lib/pokedex'
 import { useCollectionStore } from '@/store/collection'
 import { DataSection } from './DataSection'
 import { SummaryLedger } from './SummaryLedger'
@@ -14,7 +15,6 @@ export function EraseSection() {
   const act = useCollectionAction()
   const exportCollection = useExportCollection()
   const collection = useCollectionStore((state) => state.collection)
-  const replaceCollection = useCollectionStore((state) => state.replaceCollection)
   const [confirming, setConfirming] = useState(false)
   const summary = summarize(collection)
 
@@ -39,7 +39,11 @@ export function EraseSection() {
         confirmLabel="Effacer"
         onClose={() => setConfirming(false)}
         onConfirm={() =>
-          act(() => replaceCollection(emptyCollection()), 'Collection effacée.', 'info')
+          act(
+            () => useCollectionStore.getState().replaceCollection(emptyCollection()),
+            'Collection effacée.',
+            'info',
+          )
         }
       >
         <p>Ceci sera effacé de ce navigateur :</p>

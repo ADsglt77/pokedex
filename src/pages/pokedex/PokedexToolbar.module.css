@@ -3,8 +3,8 @@
   top: 0;
   z-index: 10;
   margin-bottom: 1.5rem;
-  margin-inline: calc(-1 * clamp(1rem, 0.4rem + 2.5vw, 2.5rem));
-  padding: 0.75rem clamp(1rem, 0.4rem + 2.5vw, 2.5rem) 0.5rem;
+  margin-inline: calc(-1 * var(--gutter));
+  padding: 0.75rem var(--gutter) 0.5rem;
   border-bottom: 1px solid var(--camply-border-soft);
   background: color-mix(in srgb, var(--camply-bg) 88%, transparent);
   backdrop-filter: blur(12px);

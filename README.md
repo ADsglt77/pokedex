@@ -1,9 +1,9 @@
 # Pokédex
 
 Pokédex personnel de cartes Pokémon japonaises : chaque Pokémon se débloque en possédant une de ses
-pleines cartes (Art Rare, Special Art Rare, Super Rare, promos illustrées…). React + Vite +
-TypeScript, interface [`@camply/ui`](https://www.npmjs.com/package/@camply/ui), cartes
-[TCGplayer](https://www.tcgplayer.com/) et [TCGdex](https://tcgdex.dev/).
+pleines cartes (Art Rare, Special Art Rare, Super Rare, GX et V, promos et decks illustrés…).
+React + Vite + TypeScript, interface [`@camply/ui`](https://www.npmjs.com/package/@camply/ui),
+cartes [TCGplayer](https://www.tcgplayer.com/) et [TCGdex](https://tcgdex.dev/).
 
 ```sh
 bun install
@@ -17,8 +17,9 @@ bun run format   # Prettier
 - **Accueil** : progression, réglette par génération, dernières cartes obtenues.
 - **Pokédex** : les 1 025 espèces, recherche (nom fr/en/ja ou numéro, raccourci `/`), filtres
   partageables dans l'adresse.
-- **Fiche** : carte en grand, statut (possédée / commandée / souhaitée), illustration choisie,
-  galerie des candidates, détails de l'espèce.
+- **Fiche** : carte en grand, statut (possédée / commandée / souhaitée) et prix payé, illustration
+  choisie, prix Cardmarket et sa courbe, achat (à acheter ou exclue, priorité, prix maximum, page
+  Cardmarket), galerie des candidates, détails de l'espèce.
 - **Valeur** : prix Cardmarket du jour, valeur de la collection (et gain par rapport au prix
   payé), commandes, souhaits, coût pour compléter le Pokédex, courbes de prix au fil des jours.
 - **Achats** : liste d'achats (les illustrations acceptées, avec priorité et prix maximum),
@@ -28,10 +29,11 @@ bun run format   # Prettier
 - **Données** : export / import (achats compris), raretés suivies, effacement.
 
 Tout est embarqué (index de cartes généré par `bun run data` : la liste et la rareté des pleines
-cartes chez TCGplayer, complétées par TCGdex) : aucune API externe appelée par le
+cartes chez TCGplayer, reconnues à l'image quand aucune rareté ne le dit, complétées par TCGdex ;
+la première construction télécharge ~15 000 vignettes) : aucune API externe appelée par le
 navigateur, hormis les images. Les prix sont des fichiers du site lui-même (`/prices/`), écrits
-chaque jour par `bun run prices` ; en développement, le lancer une fois pour avoir des prix. La collection reste dans le navigateur (`localStorage`) : l'export est sa seule
-sauvegarde.
+chaque jour par `bun run prices` ; en développement, le lancer une fois pour avoir des prix. La
+collection reste dans le navigateur (`localStorage`) : l'export est sa seule sauvegarde.
 
 ## Déploiement (VPS + tunnel Cloudflare)
 
@@ -44,10 +46,12 @@ l'effacerait.
 
 **Une fois, sur le VPS**
 
-1. Cloner le dépôt puis lancer le site (dépôt privé : ajouter au VPS une clé de déploiement en
-   lecture seule) :
+1. Cloner le dépôt **en SSH** puis lancer le site. Le dépôt est privé : ajouter au VPS une clé de
+   déploiement en lecture seule, qui est une clé SSH. C'est la clé par défaut de l'utilisateur, ou
+   celle déclarée pour `github.com` dans `~/.ssh/config`. Un clone HTTPS demanderait un jeton, et le
+   `git pull` du déploiement automatique échouerait.
    ```sh
-   git clone https://github.com/ADsglt77/pokedex.git
+   git clone git@github.com:ADsglt77/pokedex.git
    cd pokedex
    docker compose up -d --build
    ```
@@ -64,9 +68,9 @@ l'effacerait.
    viser `http://pokedex:80`.
 
 **Ensuite, à chaque push sur `main`** (`.github/workflows/deploy.yml`) : GitHub se connecte au VPS
-en SSH, fait `git pull` et reconstruit le conteneur ; si la construction échoue, l'ancienne
-version reste en ligne. Secrets à créer dans le dépôt (Settings › Secrets and variables ›
-Actions) :
+en SSH, fait `git pull` et reconstruit le conteneur. La construction lance d'abord `bun test` et
+rafraîchit les images de base ; si elle échoue, test compris, l'ancienne version reste en ligne.
+Secrets à créer dans le dépôt (Settings › Secrets and variables › Actions) :
 
 | Secret | Valeur |
 |---|---|
@@ -75,6 +79,7 @@ Actions) :
 | `VPS_SSH_KEY` | clé privée dédiée au déploiement (sa clé publique dans `~/.ssh/authorized_keys` du VPS) |
 | `VPS_PATH` | dossier du clone, par exemple `/home/moi/pokedex` |
 | `VPS_PORT` | port SSH, seulement s'il n'est pas 22 |
+| `VPS_FINGERPRINT` | empreinte de la clé d'hôte du VPS, pour ne parler qu'à lui : la sortie de `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub \| cut -d ' ' -f2` (`SHA256:…`). Sans elle, l'hôte n'est pas vérifié |
 
 Le port SSH doit être joignable depuis GitHub. S'il ne passe que par le tunnel (Cloudflare
 Access), ce workflow ne peut pas s'y connecter : il faut alors un runner GitHub auto-hébergé sur

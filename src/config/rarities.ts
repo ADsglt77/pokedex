@@ -35,18 +35,19 @@ export const RARITY_CLASSES: readonly RarityClass[] = [
     description: 'Pokémon illustré avec son Dresseur.',
   },
   {
-    // Une promo n'entre dans l'index que par la liste tenue à la main (`FULL_ART_PROMO_IDS`).
+    // Reconnue à l'image, ou notée à la main (`FULL_ART_CLASSES`) : aucune rareté ne la distingue.
     code: 'PR',
-    label: 'Promo pleine carte',
+    label: 'Pleine carte hors rareté',
     tier: 'illustration',
     description:
-      'Carte promotionnelle en illustration pleine carte, choisie à la main : aucune rareté imprimée ne la distingue.',
+      'Illustration pleine carte sans rareté qui la distingue : promos, decks, coffrets, collections…',
   },
   {
     code: 'BWR',
     label: 'Black White Rare',
     tier: 'fullArt',
-    description: 'Pleine carte monochrome des extensions Black Bolt et White Flare.',
+    description:
+      'Pleine carte monochrome : Black Bolt et White Flare, les Mew RGB de 30th CELEBRATION.',
   },
   {
     code: 'SSR',
@@ -59,7 +60,7 @@ export const RARITY_CLASSES: readonly RarityClass[] = [
     label: 'Ultra Rare',
     tier: 'fullArt',
     description:
-      'Pleine carte dorée, y compris les Méga-Pokémon-ex dorés de l’ère MEGA (imprimés MUR).',
+      'Pleine carte dorée (parfois argentée), y compris les Méga-Pokémon-ex dorés de l’ère MEGA (imprimés MUR).',
   },
   {
     code: 'HR',
@@ -71,11 +72,29 @@ export const RARITY_CLASSES: readonly RarityClass[] = [
     code: 'SR',
     label: 'Super Rare',
     tier: 'fullArt',
-    description: 'Pleine carte texturée d’un Pokémon-GX, V ou ex sur fond uni.',
+    description: 'Pleine carte texturée d’un Pokémon-EX, GX, V ou ex.',
+  },
+  {
+    code: 'RR',
+    label: 'GX et V',
+    tier: 'fullArt',
+    description:
+      'Pokémon-GX, TAG TEAM et Pokémon-V ordinaires : l’illustration couvre déjà la carte.',
+  },
+  {
+    code: 'RRR',
+    label: 'VMAX et VSTAR',
+    tier: 'fullArt',
+    description:
+      'Pokémon-VMAX et VSTAR ordinaires (et V-UNION) : l’illustration couvre déjà la carte.',
   },
 ]
 
-/** Par défaut, toutes les pleines cartes comptent ; on peut en écarter dans Données. */
+/**
+ * Par défaut, toutes les pleines cartes comptent ; on peut en écarter dans Données. Une classe
+ * ajoutée ici n'est suivie que dans les navigateurs sans réglages enregistrés : ailleurs (ou après
+ * l'import d'un ancien export), l'activer dans Données, ou « Rétablir les réglages par défaut ».
+ */
 export const DEFAULT_ENABLED_RARITY_CODES: readonly string[] = RARITY_CLASSES.map(
   (rarityClass) => rarityClass.code,
 )

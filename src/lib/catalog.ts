@@ -1,6 +1,7 @@
 /**
  * Les données embarquées (`src/data`, écrites par `bun run data`) : les 1 025 espèces et l'index
- * des cartes classées. Le Pokédex s'affiche sans aucun appel réseau.
+ * des cartes classées. Le Pokédex s'affiche sans appeler aucune API ; seules les images viennent
+ * d'Internet.
  */
 
 import cardIndexJson from '@/data/card-index.json'

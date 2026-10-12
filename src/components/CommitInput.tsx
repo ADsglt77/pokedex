@@ -23,8 +23,8 @@ interface CommitInputProps<T> extends Omit<
 }
 
 /**
- * Un champ enregistré en le quittant (ou par Entrée), pas à chaque frappe. Il repart de la valeur
- * enregistrée quand elle change ailleurs : annulation, autre onglet.
+ * Un champ enregistré en le quittant (ou par Entrée, ou Échap), pas à chaque frappe. Il repart de
+ * la valeur enregistrée quand elle change ailleurs : annulation, autre onglet.
  */
 export function CommitInput<T>({
   value,
@@ -59,7 +59,8 @@ export function CommitInput<T>({
       value={draft}
       onChange={(event) => setDraft(event.target.value)}
       onBlur={commit}
-      onKeyDown={(event) => event.key === 'Enter' && commit()}
+      // Échap ferme aussi la modale autour : sans enregistrer d'abord, la saisie serait perdue.
+      onKeyDown={(event) => (event.key === 'Enter' || event.key === 'Escape') && commit()}
       error={error}
     />
   )

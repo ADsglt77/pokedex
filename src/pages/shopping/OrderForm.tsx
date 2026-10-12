@@ -30,6 +30,7 @@ import {
 } from '@/lib/format'
 import {
   cardCount,
+  cents,
   duplicateReason,
   linesTotal,
   orderSpent,
@@ -48,7 +49,7 @@ const SUPPLIER_OPTIONS = toOptions(SUPPLIER_LABELS)
 const STATE_OPTIONS = toOptions(ORDER_STATE_LABELS)
 
 const STATE_HINTS: Record<OrderState, string> = {
-  pending: 'Ses cartes passent en « commandée ».',
+  pending: 'Ses cartes passent en « commandée », sauf celles déjà possédées.',
   received: 'Ses cartes passent en « possédée », datées du jour de réception.',
   cancelled:
     'Elle ne compte plus dans le budget ; ses cartes encore commandées retrouvent leur état d’avant.',
@@ -108,12 +109,17 @@ function readDraft(draft: Draft, base: Order, stored: Order | null, collection: 
   const lines: OrderLine[] = draft.lines.map((line) => {
     const quantity = Number(line.quantity)
     const unitPrice = parseEuros(line.unitPrice)
-    if (!Number.isInteger(quantity) || quantity < 1) {
-      errors[`quantity-${line.cardId}`] = 'Un nombre entier, 1 ou plus.'
-    }
+    const readable = Number.isInteger(quantity) && quantity >= 1
+    if (!readable) errors[`quantity-${line.cardId}`] = 'Un nombre entier, 1 ou plus.'
     if (unitPrice === null) errors[`price-${line.cardId}`] = 'Un montant, par exemple 12,50.'
     const previous = previousOf(line.cardId, stored, collection)
-    return { cardId: line.cardId, quantity, unitPrice: unitPrice ?? 0, previous }
+    // Illisible, la ligne compte pour 0 dans l'aperçu : l'erreur bloque l'enregistrement.
+    return {
+      cardId: line.cardId,
+      quantity: readable ? quantity : 0,
+      unitPrice: unitPrice ?? 0,
+      previous,
+    }
   })
   if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.date)) errors.date = 'Indiquez la date d’achat.'
   if (lines.length === 0) errors.lines = 'Ajoutez au moins une carte.'
@@ -134,6 +140,10 @@ function readDraft(draft: Draft, base: Order, stored: Order | null, collection: 
     receivedAt: draft.state === 'received' ? draft.receivedAt || draft.date : undefined,
     link: link || undefined,
     note: draft.note.trim() || undefined,
+  }
+  // Un remboursé plus grand que la commande ferait compter une dépense négative dans le budget.
+  if (orderSpent({ ...order, state: 'pending' }) < 0) {
+    errors.refunded = 'Pas plus que le total de la commande.'
   }
   return { order, errors }
 }
@@ -210,7 +220,7 @@ export function OrderForm({
     if (Object.keys(read.errors).length > 0) return
     // Le plafond est dépassé par cet enregistrement : on demande, sans interdire.
     const month = monthOf(order.date)
-    const monthTotal = spentIn(others, month).spent + orderSpent(order)
+    const monthTotal = cents(spentIn(others, month).spent + orderSpent(order))
     if (monthTotal > budget.ceiling && monthTotal > spentIn(orders, month).spent) {
       setOverCeiling({ order, monthTotal })
     } else save(order)
@@ -290,6 +300,8 @@ export function OrderForm({
               {draft.lines.map((line, index) => {
                 const card = findCard(line.cardId, collection)
                 const duplicate = duplicateReason(order.lines[index]!, others)
+                const unreadable =
+                  read.errors[`quantity-${line.cardId}`] || read.errors[`price-${line.cardId}`]
                 if (!card) return <li key={line.cardId}>{line.cardId}</li>
                 return (
                   <li key={line.cardId}>
@@ -299,7 +311,7 @@ export function OrderForm({
                         duplicate ? (
                           <span className={styles.warn}>{duplicate}</span>
                         ) : (
-                          `revient à ${formatEuro(costs[index] ?? 0)}`
+                          !unreadable && `revient à ${formatEuro(costs[index] ?? 0)}`
                         )
                       }
                     >
@@ -335,14 +347,13 @@ export function OrderForm({
             </ul>
           )}
           <Combobox
-            // Une clé par nombre de lignes : la case repart vide après chaque ajout ou retrait.
-            key={draft.lines.length}
             label="Ajouter une carte"
             hint="Une carte de votre liste d’achats ou déjà suivie. Pour une autre, marquez-la d’abord comme souhaitée sur sa fiche."
             placeholder="Nom ou référence"
             emptyMessage="Aucune carte trouvée."
             options={addable}
-            value={undefined}
+            // Toujours vide : la carte choisie part dans les lignes, la case repart à zéro.
+            value=""
             onChange={addLine}
           />
         </Stack>
@@ -377,8 +388,8 @@ export function OrderForm({
           ]}
         />
         <p className="muted">
-          Le port et les frais sont répartis entre les cartes au prorata de leur prix : c’est le
-          prix payé noté sur chaque carte.
+          Le port, les frais et le remboursé sont répartis entre les cartes au prorata de leur prix
+          : c’est le prix payé noté sur chaque carte.
         </p>
 
         <Input
@@ -402,6 +413,7 @@ export function OrderForm({
         open={overCeiling !== null}
         title="Dépasser votre plafond du mois ?"
         confirmLabel="Enregistrer quand même"
+        tone="warn"
         onClose={() => setOverCeiling(null)}
         onConfirm={() => save(overCeiling!.order)}
       >

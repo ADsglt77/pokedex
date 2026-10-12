@@ -4,6 +4,7 @@ import {
   Alert,
   Badge,
   Button,
+  Card,
   Checkbox,
   EmptyState,
   Progress,
@@ -14,16 +15,15 @@ import {
 } from '@camply/ui'
 import { Receipt, Sparkles } from '@camply/ui/icons'
 import { useState, type ReactNode } from 'react'
-import { EuroInput } from '@/components/CommitInput'
 import { PRIORITY_LABELS } from '@/config/shopping'
-import { useCollectionAction } from '@/hooks/useNotify'
-import { monthOf, spentIn, today } from '@/lib/budget'
-import { formatEuro, plural } from '@/lib/format'
-import { newOrder } from '@/lib/orders'
+import { spentThisMonth } from '@/lib/budget'
+import { details, formatEuro, plural, today } from '@/lib/format'
+import { cents, newOrder } from '@/lib/orders'
 import { planPurchase, type PlanMode } from '@/lib/purchase-planner'
 import type { WishRow } from '@/lib/wishlist'
 import { useShoppingStore } from '@/store/shopping'
 import type { Order, Priority } from '@/types'
+import { BudgetField } from './BudgetField'
 import { CardLine } from './CardLine'
 import { OrderForm } from './OrderForm'
 import { ExportButtons } from './ExportButtons'
@@ -41,6 +41,9 @@ const MODES: { value: PlanMode; label: string; hint: string }[] = [
 
 const ALL_PRIORITIES = Object.keys(PRIORITY_LABELS) as Priority[]
 
+/** Le pas du curseur de budget, en euros. */
+const BUDGET_STEP = 5
+
 /** Ajoute ou retire un id d'un ensemble, sans le modifier. */
 const toggled = (set: ReadonlySet<string>, id: string, on: boolean) => {
   const next = new Set(set)
@@ -54,12 +57,14 @@ const toggled = (set: ReadonlySet<string>, id: string, on: boolean) => {
  * chaque changement. Le plan n'achète rien : on commande sur Cardmarket, puis on enregistre.
  */
 export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
-  const act = useCollectionAction()
   const { rows, taken } = useWishlist()
   const { orders, budget } = useShoppingStore((state) => state.shopping)
-  const spent = spentIn(orders, monthOf(today())).spent
-  const [amount, setAmount] = useState(() =>
-    Math.round(Math.min(Math.max(budget.monthly - spent, 0), budget.ceiling)),
+  const spent = spentThisMonth(orders)
+  // Le reste du budget du mois, au pas du curseur (vers le bas : on reste dans le budget).
+  const [amount, setAmount] = useState(
+    () =>
+      Math.floor(Math.min(Math.max(budget.monthly - spent, 0), budget.ceiling) / BUDGET_STEP) *
+      BUDGET_STEP,
   )
   const [priorities, setPriorities] = useState<Priority[]>(ALL_PRIORITIES)
   const [mode, setMode] = useState<PlanMode>('new')
@@ -75,13 +80,17 @@ export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
     forced,
     skipped,
   })
-  const monthTotal = spent + plan.total
+  const monthTotal = cents(spent + plan.total)
 
-  const force = (row: WishRow, on: boolean) => setForced(toggled(forced, row.card.id, on))
   const skip = (row: WishRow, on: boolean) => {
     setSkipped(toggled(skipped, row.card.id, on))
     if (on) setForced(toggled(forced, row.card.id, false))
   }
+  const addAnyway = (row: WishRow) => (
+    <Button size="sm" variant="ghost" onClick={() => setForced(toggled(forced, row.card.id, true))}>
+      Ajouter quand même
+    </Button>
+  )
 
   if (rows.length === 0) {
     return (
@@ -97,57 +106,48 @@ export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
 
   return (
     <div className={styles.planner}>
-      <Stack as="section" gap={5} className={styles.plannerOptions} aria-label="Réglages du plan">
-        <Slider
-          label="Budget de la commande"
-          hint={`Port compris. Déjà dépensé ce mois-ci : ${formatEuro(spent)}.`}
-          min={0}
-          max={Math.max(budget.ceiling, amount)}
-          step={5}
-          value={amount}
-          onChange={setAmount}
-          showValue
-          formatValue={formatEuro}
-        />
-        <EuroInput
-          label="Réserve pour le port"
-          hint="Gardée sur le budget de la prochaine commande."
-          value={budget.shippingReserve}
-          onCommit={(shippingReserve) =>
-            act(
-              () =>
-                useShoppingStore.getState().setBudget({ shippingReserve: shippingReserve ?? 0 }),
-              `Réserve pour le port : ${formatEuro(shippingReserve ?? 0)}.`,
-            )
-          }
-        />
-        <fieldset className={styles.fieldset}>
-          <legend className="camply-field__label">Priorités prises en compte</legend>
-          {ALL_PRIORITIES.map((priority) => (
-            <Checkbox
-              key={priority}
-              label={PRIORITY_LABELS[priority]}
-              checked={priorities.includes(priority)}
-              onChange={(event) =>
-                setPriorities(
-                  ALL_PRIORITIES.filter((known) =>
-                    known === priority ? event.target.checked : priorities.includes(known),
-                  ),
-                )
-              }
-            />
-          ))}
-        </fieldset>
-        <RadioGroup
-          label="Pokémon proposés"
-          value={mode}
-          onChange={(value) => setMode(value as PlanMode)}
-        >
-          {MODES.map(({ value, label, hint }) => (
-            <Radio key={value} value={value} label={label} hint={hint} />
-          ))}
-        </RadioGroup>
-      </Stack>
+      <Card className={styles.plannerOptions}>
+        <Stack as="section" gap={5} aria-label="Réglages du plan">
+          <Slider
+            label="Budget de la commande"
+            hint={`Port compris. Déjà dépensé ce mois-ci : ${formatEuro(spent)}.`}
+            min={0}
+            max={Math.max(budget.ceiling, amount)}
+            step={BUDGET_STEP}
+            value={amount}
+            onChange={setAmount}
+            showValue
+            formatValue={formatEuro}
+          />
+          <BudgetField field="shippingReserve" />
+          <fieldset className={styles.fieldset}>
+            <legend className="camply-field__label">Priorités prises en compte</legend>
+            {ALL_PRIORITIES.map((priority) => (
+              <Checkbox
+                key={priority}
+                label={PRIORITY_LABELS[priority]}
+                checked={priorities.includes(priority)}
+                onChange={(event) =>
+                  setPriorities(
+                    ALL_PRIORITIES.filter((known) =>
+                      known === priority ? event.target.checked : priorities.includes(known),
+                    ),
+                  )
+                }
+              />
+            ))}
+          </fieldset>
+          <RadioGroup
+            label="Pokémon proposés"
+            value={mode}
+            onChange={(value) => setMode(value as PlanMode)}
+          >
+            {MODES.map(({ value, label, hint }) => (
+              <Radio key={value} value={value} label={label} hint={hint} />
+            ))}
+          </RadioGroup>
+        </Stack>
+      </Card>
 
       <Stack as="section" gap={5} aria-labelledby="plan-title">
         <div className={styles.planSummary}>
@@ -205,8 +205,9 @@ export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
           </ul>
         ) : (
           <p className="muted">
-            Aucune carte ne tient dans ce budget avec ces règles. Augmentez le budget, ou regardez
-            ci-dessous les cartes mises de côté.
+            {plan.left.length > 0
+              ? 'Aucune carte ne tient dans ce budget avec ces règles. Augmentez le budget, ou regardez ci-dessous les cartes mises de côté.'
+              : 'Aucune carte à proposer avec ces règles : regardez ci-dessous les cartes mises de côté.'}
           </p>
         )}
 
@@ -233,22 +234,14 @@ export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
             title="Hors budget"
             rows={plan.left}
             empty="Toutes les cartes possibles tiennent dans le budget."
-            action={(row) => (
-              <Button size="sm" variant="ghost" onClick={() => force(row, true)}>
-                Ajouter quand même
-              </Button>
-            )}
+            action={addAnyway}
           />
           <PlanGroup
             value="above-max"
             title="Au-dessus de leur prix maximum"
             rows={plan.aboveMax}
             empty="Aucune carte ne dépasse son prix maximum."
-            action={(row) => (
-              <Button size="sm" variant="ghost" onClick={() => force(row, true)}>
-                Ajouter quand même
-              </Button>
-            )}
+            action={addAnyway}
           />
           <PlanGroup
             value="unpriced"
@@ -328,14 +321,12 @@ function PlanLine({ row, children }: { row: WishRow; children?: ReactNode }) {
   return (
     <CardLine
       card={row.card}
-      detail={[
+      detail={details(
         price === null ? 'sans prix' : formatEuro(price),
         preference.maxPrice !== undefined && `max ${formatEuro(preference.maxPrice)}`,
         `priorité ${PRIORITY_LABELS[preference.priority].toLowerCase()}`,
         row.isFavorite && 'illustration choisie',
-      ]
-        .filter(Boolean)
-        .join(' · ')}
+      )}
     >
       {children}
     </CardLine>

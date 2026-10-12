@@ -8,7 +8,14 @@ const orders = [
   order({ date: '2026-10-02', lines: [line('a', 40)], shipping: 5 }),
   order({ date: '2026-10-20', lines: [line('b', 30)], shipping: 4, refunded: 30 }),
   order({ date: '2026-10-21', lines: [line('c', 90)], shipping: 6, state: 'cancelled' }),
-  order({ date: '2026-09-30', lines: [line('d', 25)], shipping: 3, state: 'received' }),
+  // Achetée en septembre, reçue en octobre : elle compte en septembre.
+  order({
+    date: '2026-09-30',
+    lines: [line('d', 25)],
+    shipping: 3,
+    state: 'received',
+    receivedAt: '2026-10-02',
+  }),
 ]
 
 describe('budget du mois', () => {

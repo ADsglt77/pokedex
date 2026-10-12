@@ -7,12 +7,9 @@ import type { PokemonCard } from '@/types'
 export const findRarityClass = (code: string | null): RarityClass | null =>
   RARITY_CLASSES.find((rarityClass) => rarityClass.code === code) ?? null
 
-/** Une carte de l'index peut illustrer un Pokémon quand sa classe est suivie. */
-export function isEligible(card: PokemonCard, enabledCodes: readonly string[]): boolean {
-  const code = findRarityClass(card.rarity)?.code
-  return code !== undefined && enabledCodes.includes(code)
-}
-
-/** Les codes connus parmi `codes`, dans l'ordre des classes. */
-export const knownRarityCodes = (codes: readonly unknown[]) =>
-  RARITY_CLASSES.map((rarityClass) => rarityClass.code).filter((code) => codes.includes(code))
+/**
+ * Une carte de l'index (toujours d'une classe connue) peut illustrer un Pokémon quand sa classe est
+ * suivie.
+ */
+export const isEligible = (card: PokemonCard, enabledCodes: readonly string[]) =>
+  card.rarity !== null && enabledCodes.includes(card.rarity)

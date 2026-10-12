@@ -5,7 +5,7 @@
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
 import { findCard, tcgdexIdOf } from '@/lib/catalog'
-import type { PokedexEntry } from '@/lib/pokedex'
+import { isTaken, type PokedexEntry } from '@/lib/pokedex'
 import type {
   CardPrice,
   CardStatus,
@@ -79,16 +79,31 @@ export interface CompletionCost {
   unpriced: number
 }
 
-/** Pour chaque Pokémon, les prix de ses cartes (`null` : sans prix) → ce que coûte la moins chère. */
-export function cheapestTotal(pricesByPokemon: Iterable<(number | null)[]>): CompletionCost {
+/** Une carte et son prix du jour (`null` : sans prix). */
+export interface PricedCard {
+  cardId: string
+  price: number | null
+}
+
+/**
+ * Pour chaque Pokémon, ses cartes et leur prix → ce que coûte, pour chacun, la moins chère. Une
+ * carte TAG TEAM déjà comptée pour un autre Pokémon ne coûte plus rien : payée une seule fois.
+ */
+export function cheapestTotal(cardsByPokemon: Iterable<readonly PricedCard[]>): CompletionCost {
   const cost = { value: 0, priced: 0, unpriced: 0 }
-  for (const prices of pricesByPokemon) {
-    const known = prices.filter((price) => price !== null)
-    if (known.length === 0) cost.unpriced++
-    else {
-      cost.value += Math.min(...known)
-      cost.priced++
+  const counted = new Set<string>()
+  for (const cards of cardsByPokemon) {
+    const costs = cards.flatMap(({ cardId, price }) =>
+      price === null ? [] : [{ cardId, extra: counted.has(cardId) ? 0 : price }],
+    )
+    if (costs.length === 0) {
+      cost.unpriced++
+      continue
     }
+    const cheapest = costs.reduce((best, card) => (card.extra < best.extra ? card : best))
+    cost.priced++
+    cost.value += cheapest.extra
+    counted.add(cheapest.cardId)
   }
   return cost
 }
@@ -97,12 +112,15 @@ export function cheapestTotal(pricesByPokemon: Iterable<(number | null)[]>): Com
  * Ce que coûterait de débloquer les Pokémon qui restent, à la candidate la moins chère. Un
  * Pokémon dont une carte est déjà commandée compte dans les commandes, pas ici.
  */
-const completionCost = (entries: readonly PokedexEntry[], prices: PriceFile | null) =>
+export const completionCost = (entries: readonly PokedexEntry[], prices: PriceFile | null) =>
   cheapestTotal(
     entries
-      .filter((entry) => !entry.unlocked && entry.statusCounts.ordered === 0)
+      .filter((entry) => !isTaken(entry))
       .map((entry) =>
-        entry.candidates.map((candidate) => priceOf(prices, candidate.card)?.price ?? null),
+        entry.candidates.map(({ card }) => ({
+          cardId: card.id,
+          price: priceOf(prices, card)?.price ?? null,
+        })),
       ),
   )
 

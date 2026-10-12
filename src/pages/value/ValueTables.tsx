@@ -2,6 +2,7 @@ import { Table } from '@camply/ui'
 import { Link } from 'react-router'
 import { cardTitle } from '@/lib/catalog'
 import { cx } from '@/lib/cx'
+import { pokedexUrl } from '@/lib/filters'
 import { formatEuro, formatEuroChange, formatInteger, statusLabel } from '@/lib/format'
 import type { CompletionCost, TrackedCard } from '@/lib/prices'
 import { type Generation, generationLabel } from '@/config/pokedex'
@@ -111,7 +112,7 @@ export function CompletionTable({
           key: 'generation',
           header: 'Génération',
           cell: ({ generation }) => (
-            <Link to={`/pokedex?generation=${generation.id}&possession=missing`}>
+            <Link to={pokedexUrl({ generation: generation.id, possession: 'missing' })}>
               {generationLabel(generation)}
             </Link>
           ),

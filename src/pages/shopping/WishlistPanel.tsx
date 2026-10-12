@@ -1,12 +1,13 @@
 import { Alert, Button, EmptyState, Input, Modal, Select, Stack, Switch } from '@camply/ui'
 import { ListChecks, Search } from '@camply/ui/icons'
-import { useDeferredValue, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { PreferenceFields } from '@/components/PreferenceFields'
 import { GENERATION_OPTIONS } from '@/config/pokedex'
 import { PRIORITY_LABELS } from '@/config/shopping'
 import { cardTitle } from '@/lib/catalog'
 import { useCollectionAction } from '@/hooks/useNotify'
+import { pokedexUrl } from '@/lib/filters'
 import { plural, toOptions } from '@/lib/format'
 import {
   DEFAULT_WISHLIST_FILTERS,
@@ -27,7 +28,7 @@ const SORT_LABELS: Record<WishlistSort, string> = {
   'price-desc': 'Par prix décroissant',
   gap: 'Par écart au prix maximum',
   dex: 'Par numéro de Pokédex',
-  recent: 'Par ajout récent',
+  recent: 'Par modification récente',
 }
 
 const PRIORITY_OPTIONS = [
@@ -41,7 +42,7 @@ export function WishlistPanel() {
   const { rows } = useWishlist()
   const [filters, setFilters] = useState<WishlistFilters>(DEFAULT_WISHLIST_FILTERS)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const shown = filterWishlist(rows, useDeferredValue(filters))
+  const shown = filterWishlist(rows, filters)
   const editing = rows.find((row) => row.card.id === editingId)
   const rarities = [...new Set(rows.flatMap((row) => row.card.rarity ?? []))].sort()
   const set = (change: Partial<WishlistFilters>) => setFilters({ ...filters, ...change })
@@ -56,7 +57,7 @@ export function WishlistPanel() {
         description="Sur la fiche d’un Pokémon, choisissez « À acheter » pour chaque illustration que vous accepteriez d’acheter, avec un prix maximum si vous voulez. Vous pouvez en accepter plusieurs par Pokémon."
         actions={
           <Button asChild>
-            <Link to="/pokedex?possession=missing">Voir les Pokémon à débloquer</Link>
+            <Link to={pokedexUrl({ possession: 'missing' })}>Voir les Pokémon à débloquer</Link>
           </Button>
         }
       />

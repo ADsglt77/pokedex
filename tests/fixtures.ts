@@ -1,5 +1,6 @@
 /** Des données d'essai : une collection, des commandes, des cartes de liste d'achats. */
 
+import { emptyCollection } from '@/lib/collection'
 import { newOrder } from '@/lib/orders'
 import type { PlannableCard } from '@/lib/purchase-planner'
 import type { CardOwnership, CollectionData, Order, OrderLine, Priority } from '@/types'
@@ -12,11 +13,8 @@ export const ownership = (
 ): CardOwnership => ({ status, updatedAt: '2026-01-01T00:00:00.000Z', acquiredAt: null, ...extra })
 
 export const collectionWith = (cards: CollectionData['cards'] = {}): CollectionData => ({
-  schemaVersion: 1,
-  updatedAt: null,
-  entries: {},
+  ...emptyCollection(),
   cards,
-  customCards: {},
 })
 
 export const line = (cardId: string, unitPrice: number, extra: Partial<OrderLine> = {}) => ({

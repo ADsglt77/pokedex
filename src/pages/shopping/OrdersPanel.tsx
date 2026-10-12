@@ -5,8 +5,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExternalLink } from '@/components/ExternalLink'
 import { ORDER_STATE_LABELS } from '@/config/shopping'
 import { useCollectionAction } from '@/hooks/useNotify'
-import { today } from '@/lib/budget'
-import { formatDate, formatEuro, formatInteger, plural } from '@/lib/format'
+import { formatDate, formatEuro, formatInteger, plural, today } from '@/lib/format'
 import { cardCount, newOrder, orderSpent, supplierLabel } from '@/lib/orders'
 import { useShoppingStore } from '@/store/shopping'
 import type { Order } from '@/types'
@@ -131,7 +130,7 @@ export function OrdersPanel() {
                     </Button>
                   )}
                   <IconButton
-                    label={`Modifier la commande du ${formatDate(order.date)}`}
+                    label={`Modifier la commande ${supplierLabel(order)} du ${formatDate(order.date)}`}
                     size="sm"
                     variant="ghost"
                     onClick={() => setEditing(order)}
@@ -139,7 +138,7 @@ export function OrdersPanel() {
                     <Pencil size={15} />
                   </IconButton>
                   <IconButton
-                    label={`Supprimer la commande du ${formatDate(order.date)}`}
+                    label={`Supprimer la commande ${supplierLabel(order)} du ${formatDate(order.date)}`}
                     size="sm"
                     variant="ghost"
                     onClick={() => setDeleting(order)}

@@ -9,7 +9,10 @@ import { PokemonPage } from '@/pages/pokemon/PokemonPage'
 import { ShoppingPage } from '@/pages/shopping/ShoppingPage'
 import { ValuePage } from '@/pages/value/ValuePage'
 
-/** Les pages, toutes dans la coquille commune (en-tête, navigation) ; erreur et 404 comprises. */
+/**
+ * Les pages, toutes dans la coquille commune (en-tête, navigation), 404 comprise. Une erreur
+ * d'affichage remplace toute la coquille par ErrorPage.
+ */
 export const router = createBrowserRouter([
   {
     element: <AppShell />,

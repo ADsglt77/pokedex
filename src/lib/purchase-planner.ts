@@ -29,6 +29,13 @@ export interface PlannableCard {
 
 export type PlanMode = 'new' | 'favorites'
 
+/**
+ * Le prix du marché face au prix maximum : dessous (ou égal), dessus, ou rien à comparer. Ici, dans
+ * un module léger (les tests le chargent sans l'index), pour le plan comme pour l'affichage.
+ */
+export const priceVerdict = (price: number | null, maxPrice: number | undefined) =>
+  price === null || maxPrice === undefined ? null : price <= maxPrice ? 'under' : 'over'
+
 export interface PlanOptions {
   /** Port compris. */
   budget: number
@@ -82,11 +89,10 @@ export function planPurchase<T extends PlannableCard>(
 
   const priced: (T & { price: number })[] = []
   for (const row of candidates) {
-    const { maxPrice } = row.preference
+    const verdict = priceVerdict(row.price, row.preference.maxPrice)
     if (options.skipped.has(row.card.id)) plan.skipped.push(row)
     else if (row.price === null) plan.unpriced.push(row)
-    else if (maxPrice !== undefined && row.price > maxPrice && !options.forced.has(row.card.id))
-      plan.aboveMax.push(row)
+    else if (verdict === 'over' && !options.forced.has(row.card.id)) plan.aboveMax.push(row)
     else priced.push(row as T & { price: number })
   }
 

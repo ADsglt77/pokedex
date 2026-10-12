@@ -2,8 +2,9 @@
  * Réseau des scripts de données : un `fetch` JSON avec un cache disque (`scripts/.cache`, pour
  * relancer un script sans solliciter les API à nouveau) et une file à concurrence limitée.
  * Chaque requête s'identifie et attend 100 ms avant de partir ; lues une à une (tcgcsv.com
- * l'exige), les requêtes sont donc espacées de 100 ms. Une réponse négative (404, image absente)
- * est gardée aussi : `--refresh` la redemande.
+ * l'exige), les requêtes sont donc espacées de 100 ms. Une image absente est gardée aussi en cache
+ * (un 404 JSON, lui, arrête le script) ; `--refresh` redemande tout. Le cache n'expire jamais :
+ * une nouvelle extension ou carte n'arrive qu'avec `--refresh`.
  */
 
 import { createHash } from 'node:crypto'
@@ -13,7 +14,7 @@ import { dirname, join } from 'node:path'
 const CACHE_ROOT = join(import.meta.dirname, '..', '.cache')
 
 /** `--refresh` : ignore le cache et redemande tout. */
-const refresh = process.argv.includes('--refresh')
+export const refresh = process.argv.includes('--refresh')
 
 class NotFoundError extends Error {}
 
@@ -69,7 +70,10 @@ export async function urlExists(url: string, namespace: string): Promise<boolean
     if (cached !== null) return cached === 'true'
   }
   const response = await politeFetch(url, { method: 'HEAD' })
-  if (response.status >= 500) throw new Error(`HTTP ${response.status} pour ${url}`)
+  // Un refus passager (trop de requêtes, serveur en panne) n'est pas une image absente.
+  if (response.status === 429 || response.status >= 500) {
+    throw new Error(`HTTP ${response.status} pour ${url}`)
+  }
   await mkdir(dirname(file), { recursive: true })
   await writeFile(file, String(response.ok), 'utf8')
   return response.ok

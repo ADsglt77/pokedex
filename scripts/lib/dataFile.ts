@@ -5,6 +5,9 @@ import { join, relative } from 'node:path'
 
 const DATA_DIR = join(import.meta.dirname, '..', '..', 'src', 'data')
 
+/** Le chemin d'un fichier de `src/data`. */
+export const dataPath = (name: string) => join(DATA_DIR, name)
+
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
@@ -37,7 +40,7 @@ export async function writeDataFile(
   name: string,
   build: (generatedAt: string) => Record<string, unknown>,
 ) {
-  const path = join(DATA_DIR, name)
+  const path = dataPath(name)
   const previous = await readFile(path, 'utf8').catch(() => null)
   const previousDate = previous && (JSON.parse(previous) as { generatedAt?: string }).generatedAt
 

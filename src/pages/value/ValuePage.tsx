@@ -5,10 +5,11 @@ import { PageHeader } from '@/components/PageHeader'
 import { PriceChart } from '@/components/PriceChart'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { usePokedex } from '@/hooks/usePokedex'
-import { formatDate, formatEuro, pageTitle, plural } from '@/lib/format'
+import { details, formatDate, formatEuro, formatInteger, pageTitle, plural } from '@/lib/format'
 import {
   collectionHistory,
   completionByGeneration,
+  completionCost,
   gainPercent,
   tallyByStatus,
   trackedCards,
@@ -21,15 +22,12 @@ import { CardsTable, CompletionTable } from './ValueTables'
 import styles from './ValuePage.module.css'
 
 /** « 3 cartes · payées 120,00 € · 1 sans prix » */
-function tallyHint(tally: Tally, withPaid: boolean): string {
-  return [
+const tallyHint = (tally: Tally, withPaid: boolean) =>
+  details(
     plural(tally.count, 'carte', 'cartes'),
     withPaid && tally.paid > 0 && `payées ${formatEuro(tally.paid)}`,
-    tally.unpriced > 0 && `${tally.unpriced} sans prix`,
-  ]
-    .filter(Boolean)
-    .join(' · ')
-}
+    tally.unpriced > 0 && `${formatInteger(tally.unpriced)} sans prix`,
+  )
 
 /**
  * Valeur : ce que vaut la collection au prix Cardmarket du jour, ce qu'elle a coûté, ce que
@@ -43,14 +41,8 @@ export function ValuePage() {
   const cards = useMemo(() => trackedCards(collection, prices), [collection, prices])
   const tallies = tallyByStatus(cards)
   const completion = useMemo(() => completionByGeneration(entries, prices), [entries, prices])
-  const toComplete = completion.reduce(
-    (total, { cost }) => ({
-      value: total.value + cost.value,
-      priced: total.priced + cost.priced,
-      unpriced: total.unpriced + cost.unpriced,
-    }),
-    { value: 0, priced: 0, unpriced: 0 },
-  )
+  // En un seul calcul : une carte TAG TEAM à cheval sur deux générations n'est payée qu'une fois.
+  const toComplete = useMemo(() => completionCost(entries, prices), [entries, prices])
   const owned = cards.filter((card) => card.status === 'owned').map((card) => card.card)
 
   return (
@@ -93,38 +85,35 @@ export function ValuePage() {
             label="Pour compléter le Pokédex"
             icon={<Flag size={18} />}
             value={formatEuro(toComplete.value)}
-            hint={[
+            hint={details(
               plural(toComplete.priced, 'Pokémon chiffré', 'Pokémon chiffrés'),
-              toComplete.unpriced > 0 && `${toComplete.unpriced} sans carte chiffrée`,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
+              toComplete.unpriced > 0 &&
+                `${formatInteger(toComplete.unpriced)} sans carte chiffrée`,
+            )}
           />
         </div>
 
         <Stack as="section" gap={4} aria-labelledby="history-title">
-          <h2 id="history-title" className={styles.title}>
-            Valeur de ma collection
-          </h2>
+          <h2 id="history-title">Valeur de ma collection</h2>
           <p className="muted">
             Vos cartes possédées aujourd’hui, au prix de chaque jour. Un nouveau point chaque jour.
           </p>
-          <Suspense fallback={<Skeleton height="7rem" />}>
-            <CollectionChart cards={owned} />
-          </Suspense>
+          {owned.length > 0 ? (
+            <Suspense fallback={<Skeleton height="7rem" />}>
+              <CollectionChart cards={owned} />
+            </Suspense>
+          ) : (
+            <p className="muted">Aucune carte possédée pour l’instant : pas de courbe à tracer.</p>
+          )}
         </Stack>
 
         <Stack as="section" gap={4} aria-labelledby="cards-title">
-          <h2 id="cards-title" className={styles.title}>
-            Mes cartes
-          </h2>
+          <h2 id="cards-title">Mes cartes</h2>
           <CardsTable cards={cards} />
         </Stack>
 
         <Stack as="section" gap={4} aria-labelledby="completion-title">
-          <h2 id="completion-title" className={styles.title}>
-            Pour compléter, par génération
-          </h2>
+          <h2 id="completion-title">Pour compléter, par génération</h2>
           <p className="muted">
             Pour chaque Pokémon à débloquer, sa carte candidate la moins chère. Ceux dont une carte
             est déjà commandée n’y sont pas : ils comptent dans les commandes.

@@ -16,8 +16,17 @@ export function SegmentedField<T extends string>({
       <span id={id} className="camply-field__label">
         {label}
       </span>
-      <SegmentedControl aria-labelledby={id} size="sm" {...props} />
-      {hint && <span className="camply-field__desc">{hint}</span>}
+      <SegmentedControl
+        aria-labelledby={id}
+        aria-describedby={hint ? `${id}-hint` : undefined}
+        size="sm"
+        {...props}
+      />
+      {hint && (
+        <span id={`${id}-hint`} className="camply-field__desc">
+          {hint}
+        </span>
+      )}
     </div>
   )
 }

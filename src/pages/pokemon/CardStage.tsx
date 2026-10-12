@@ -14,7 +14,7 @@ export function CardStage({
   if (!candidate) {
     return (
       <figure className={styles.stage}>
-        <CardArt image={null} hasCard={false} speciesId={species.id} alt="" large />
+        <CardArt card={null} speciesId={species.id} alt="" large />
         <figcaption className={styles.caption}>Illustration à rechercher</figcaption>
       </figure>
     )
@@ -26,10 +26,8 @@ export function CardStage({
       {/* Une clé par carte : changer de carte rejoue l'arrivée. */}
       <CardArt
         key={card.id}
-        image={card.image}
-        hasCard
+        card={card}
         speciesId={species.id}
-        reference={card.reference}
         alt={`Carte ${card.reference} de ${species.names.fr}`}
         large
         eager

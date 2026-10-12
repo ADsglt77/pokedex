@@ -51,13 +51,7 @@ export function CandidateGallery({
                 className={cx(styles.tile, viewed && styles.viewed)}
                 onClick={() => onView(card.id)}
               >
-                <CardArt
-                  image={card.image}
-                  hasCard
-                  speciesId={speciesId}
-                  reference={card.reference}
-                  alt=""
-                >
+                <CardArt card={card} speciesId={speciesId} alt="">
                   <PossessionMark status={status} />
                   {candidate.isFavorite && (
                     <span className={styles.favorite} aria-hidden="true">

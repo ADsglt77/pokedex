@@ -11,6 +11,7 @@ import { parseStored, readShopping } from '@/lib/transfer'
 import * as rules from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
 import type { BudgetSettings, Order, ShoppingData } from '@/types'
+import { persist } from './persist'
 
 const SHOPPING_KEY = 'pokedex-collection.shopping'
 
@@ -62,15 +63,9 @@ export const useShoppingStore = create<ShoppingStore>()((set, get) => {
   }
 })
 
-useShoppingStore.subscribe((state, previous) => {
-  if (state.shopping !== previous.shopping) {
-    localStorage.setItem(SHOPPING_KEY, JSON.stringify(state.shopping))
-  }
-})
-
-// Un autre onglet a enregistré : on reprend sa version (comme pour la collection).
-window.addEventListener('storage', (event) => {
-  if (event.key === SHOPPING_KEY) {
-    useShoppingStore.setState({ shopping: loadShopping(event.newValue) })
-  }
-})
+persist(
+  useShoppingStore,
+  SHOPPING_KEY,
+  (state) => state.shopping,
+  (text) => ({ shopping: loadShopping(text) }),
+)

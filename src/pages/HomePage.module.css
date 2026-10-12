@@ -43,10 +43,6 @@
   margin-top: clamp(2.5rem, 2rem + 2vw, 4rem);
 }
 
-.sectionTitle {
-  font-size: 1.5rem;
-}
-
 .recent,
 .teaser {
   display: grid;

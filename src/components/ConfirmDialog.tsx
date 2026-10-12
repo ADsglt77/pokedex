@@ -5,16 +5,19 @@ interface ConfirmDialogProps {
   open: boolean
   title: string
   confirmLabel: string
+  /** `warn` : une action qui dépasse un seuil, sans rien détruire. */
+  tone?: 'danger' | 'warn'
   onConfirm: () => void
   onClose: () => void
   children: ReactNode
 }
 
-/** Demande de confirmation avant une action difficile à défaire. */
+/** Demande de confirmation avant une action difficile à défaire, ou qui dépasse un seuil. */
 export function ConfirmDialog({
   open,
   title,
   confirmLabel,
+  tone = 'danger',
   onConfirm,
   onClose,
   children,
@@ -31,7 +34,7 @@ export function ConfirmDialog({
             Annuler
           </Button>
           <Button
-            tone="danger"
+            tone={tone}
             onClick={() => {
               onConfirm()
               onClose()

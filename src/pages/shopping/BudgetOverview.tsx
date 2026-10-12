@@ -1,9 +1,11 @@
 import { Progress, Stat } from '@camply/ui'
 import { Flag, ListChecks, Package, Wallet } from '@camply/ui/icons'
+import { BUDGET_LEVELS } from '@/config/shopping'
 import { usePokedex } from '@/hooks/usePokedex'
-import { monthOf, spentIn, today } from '@/lib/budget'
-import { isToBuy, summarize } from '@/lib/collection'
-import { formatEuro, formatInteger, plural } from '@/lib/format'
+import { budgetLevel, spentThisMonth } from '@/lib/budget'
+import { isToBuy } from '@/lib/collection'
+import { details, formatEuro, formatInteger, plural } from '@/lib/format'
+import { summarize } from '@/lib/pokedex'
 import { wishlistEstimate } from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
@@ -16,9 +18,10 @@ export function BudgetOverview() {
   const ordered = useCollectionStore((state) => summarize(state.collection).ordered)
   const { progress } = usePokedex()
   const { rows, taken } = useWishlist()
-  const { spent } = spentIn(orders, monthOf(today()))
+  const spent = spentThisMonth(orders)
   const estimate = wishlistEstimate(rows, taken)
-  const tone = spent > budget.ceiling ? 'danger' : spent > budget.monthly ? 'warn' : 'accent'
+  const level = budgetLevel(spent, budget)
+  const tone = level ? BUDGET_LEVELS[level].tone : 'accent'
 
   return (
     <div className="stat-grid">
@@ -51,12 +54,10 @@ export function BudgetOverview() {
         label="Liste d’achats"
         icon={<ListChecks size={18} />}
         value={plural(rows.filter(isToBuy).length, 'carte', 'cartes')}
-        hint={[
+        hint={details(
           `environ ${formatEuro(estimate.value)} pour ${plural(estimate.priced, 'Pokémon', 'Pokémon')}`,
-          estimate.unpriced > 0 && `${estimate.unpriced} sans prix`,
-        ]
-          .filter(Boolean)
-          .join(' · ')}
+          estimate.unpriced > 0 && `${formatInteger(estimate.unpriced)} sans prix`,
+        )}
       />
       <Stat
         label="Pokémon à obtenir"

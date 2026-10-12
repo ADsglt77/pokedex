@@ -74,20 +74,12 @@
   display: flex;
 }
 
+/* Une Card de camply, mise en grille. */
 .wish {
   display: grid;
   grid-template-columns: 7.5rem minmax(0, 1fr);
   gap: 1rem;
   width: 100%;
-  padding: 0.875rem;
-  border: 1px solid var(--camply-border-soft);
-  border-radius: var(--camply-radius-lg);
-  background: var(--camply-surface);
-  transition: border-color 0.15s;
-}
-
-.wish:hover {
-  border-color: var(--camply-border);
 }
 
 .wishArt {
@@ -251,14 +243,11 @@
   padding-top: 1.5rem;
 }
 
+/* Une Card de camply, qui reste visible pendant qu'on parcourt le plan. */
 .plannerOptions {
   align-self: start;
   position: sticky;
   top: 1rem;
-  padding: 1.25rem;
-  border: 1px solid var(--camply-border-soft);
-  border-radius: var(--camply-radius-lg);
-  background: var(--camply-surface);
 }
 
 .fieldset {

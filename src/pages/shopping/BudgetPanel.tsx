@@ -1,24 +1,19 @@
 import { Badge, type Column, Stack, Stat, Table } from '@camply/ui'
 import { Calculator, Receipt, Truck, Wallet } from '@camply/ui/icons'
-import { EuroInput } from '@/components/CommitInput'
-import { useCollectionAction } from '@/hooks/useNotify'
-import { costPerSpecies, spendingByMonth, spendingBySupplier, spentOn } from '@/lib/budget'
+import { BUDGET_LEVELS } from '@/config/shopping'
+import {
+  budgetLevel,
+  costPerSpecies,
+  spendingByMonth,
+  spendingBySupplier,
+  spentOn,
+} from '@/lib/budget'
 import { findCard } from '@/lib/catalog'
-import { formatEuro, formatInteger, formatMonth, plural } from '@/lib/format'
+import { details, formatEuro, formatInteger, formatMonth, plural } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
-import type { BudgetSettings } from '@/types'
+import { BudgetField } from './BudgetField'
 import styles from './ShoppingPage.module.css'
-
-const BUDGET_FIELDS: { key: keyof BudgetSettings; label: string; hint: string }[] = [
-  { key: 'monthly', label: 'Budget du mois', hint: 'Ce que vous dépensez d’habitude.' },
-  { key: 'ceiling', label: 'Plafond du mois', hint: 'Au-delà, une confirmation est demandée.' },
-  {
-    key: 'shippingReserve',
-    label: 'Réserve pour le port',
-    hint: 'Gardée sur le budget de la prochaine commande.',
-  },
-]
 
 type Row = ReturnType<typeof spendingByMonth>[number]
 
@@ -35,7 +30,6 @@ const COUNT_COLUMNS: Column<Row>[] = [
 
 /** Le budget : ses réglages, et ce que disent les commandes, par mois et par fournisseur. */
 export function BudgetPanel() {
-  const act = useCollectionAction()
   const { orders, budget } = useShoppingStore((state) => state.shopping)
   const collection = useCollectionStore((state) => state.collection)
   const months = spendingByMonth(orders)
@@ -48,20 +42,9 @@ export function BudgetPanel() {
       <Stack gap={4}>
         <h2 className={styles.sectionTitle}>Réglages</h2>
         <div className={styles.formGrid3}>
-          {BUDGET_FIELDS.map(({ key, label, hint }) => (
-            <EuroInput
-              key={key}
-              label={label}
-              hint={hint}
-              value={budget[key]}
-              onCommit={(value) =>
-                act(
-                  () => useShoppingStore.getState().setBudget({ [key]: value ?? 0 }),
-                  `${label} : ${formatEuro(value ?? 0)}.`,
-                )
-              }
-            />
-          ))}
+          <BudgetField field="monthly" />
+          <BudgetField field="ceiling" />
+          <BudgetField field="shippingReserve" />
         </div>
       </Stack>
 
@@ -70,7 +53,10 @@ export function BudgetPanel() {
           label="Dépensé en tout"
           icon={<Wallet size={18} />}
           value={formatEuro(total.spent)}
-          hint={`${plural(total.orders, 'commande', 'commandes')} · ${plural(total.cards, 'carte', 'cartes')}`}
+          hint={details(
+            plural(total.orders, 'commande', 'commandes'),
+            plural(total.cards, 'carte', 'cartes'),
+          )}
         />
         <Stat
           label="Port et frais"
@@ -112,22 +98,19 @@ export function BudgetPanel() {
               key: 'spent',
               header: 'Dépensé',
               align: 'right',
-              cell: (row) => (
-                <span className={styles.stacked}>
-                  {formatEuro(row.spent)}
-                  {row.spent > budget.ceiling ? (
-                    <Badge size="sm" tone="danger">
-                      Plafond dépassé
-                    </Badge>
-                  ) : (
-                    row.spent > budget.monthly && (
-                      <Badge size="sm" tone="warn">
-                        Au-delà du budget
+              cell: (row) => {
+                const level = budgetLevel(row.spent, budget)
+                return (
+                  <span className={styles.stacked}>
+                    {formatEuro(row.spent)}
+                    {level && (
+                      <Badge size="sm" tone={BUDGET_LEVELS[level].tone}>
+                        {BUDGET_LEVELS[level].label}
                       </Badge>
-                    )
-                  )}
-                </span>
-              ),
+                    )}
+                  </span>
+                )
+              },
             },
           ]}
         />

@@ -4,17 +4,12 @@
  * rien si elle est annulée).
  */
 
+import { today } from '@/lib/format'
 import { cardCount, cents, orderSpent, supplierLabel } from '@/lib/orders'
 import type { BudgetSettings, Order, ShoppingData } from '@/types'
 
 /** `2026-10` */
 export const monthOf = (day: string) => day.slice(0, 7)
-
-/** Aujourd'hui (YYYY-MM-DD), dans le fuseau de l'utilisateur. */
-export const today = (date = new Date()) =>
-  [date.getFullYear(), date.getMonth() + 1, date.getDate()]
-    .map((part) => String(part).padStart(2, '0'))
-    .join('-')
 
 /** Ce qu'ont coûté des commandes : leur nombre (annulées exclues), leurs cartes, port et frais. */
 export function spentOn(orders: readonly Order[]) {
@@ -31,6 +26,13 @@ export function spentOn(orders: readonly Order[]) {
 /** Ce qui a été dépensé dans un mois (`2026-10`). */
 export const spentIn = (orders: readonly Order[], month: string) =>
   spentOn(orders.filter((order) => monthOf(order.date) === month))
+
+/** Ce qui a été dépensé ce mois-ci. */
+export const spentThisMonth = (orders: readonly Order[]) => spentIn(orders, monthOf(today())).spent
+
+/** Un mois au-delà de son plafond, au-delà du budget habituel, ou dans le budget (`null`). */
+export const budgetLevel = (spent: number, budget: BudgetSettings) =>
+  spent > budget.ceiling ? 'ceiling' : spent > budget.monthly ? 'monthly' : null
 
 /** Un total par mois, ou par fournisseur… (`key`), sans les commandes annulées. */
 function spendingBy(orders: readonly Order[], keyOf: (order: Order) => string) {

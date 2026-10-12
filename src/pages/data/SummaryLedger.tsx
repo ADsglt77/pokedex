@@ -1,5 +1,5 @@
 import { DescriptionList } from '@camply/ui'
-import type { CollectionSummary } from '@/lib/collection'
+import type { CollectionSummary } from '@/lib/pokedex'
 import { formatInteger } from '@/lib/format'
 import styles from './DataPage.module.css'
 
