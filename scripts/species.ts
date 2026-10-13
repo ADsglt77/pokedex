@@ -2,7 +2,7 @@
  * Construit le catalogue des espèces à partir de PokéAPI : `src/data/species.json` et
  * `src/data/species-details.json`. L'app n'appelle jamais PokéAPI elle-même.
  *
- *   bun run data:species [--refresh]
+ *   bun run data [--refresh]
  */
 
 import { GENERATIONS, TOTAL_SPECIES } from '@/config/pokedex'

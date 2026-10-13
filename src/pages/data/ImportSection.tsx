@@ -14,7 +14,7 @@ import styles from './DataPage.module.css'
 
 /**
  * Reprendre un export : le fichier est lu et résumé, puis, après confirmation, il remplace la
- * collection, les raretés suivies et les achats (s'il en contient).
+ * collection et les achats (s'il en contient).
  */
 export function ImportSection() {
   const act = useCollectionAction()
@@ -36,9 +36,7 @@ export function ImportSection() {
 
   const runImport = () => {
     act(() => {
-      const store = useCollectionStore.getState()
-      store.replaceCollection(imported!.collection)
-      store.replaceSettings(imported!.settings)
+      useCollectionStore.getState().replaceCollection(imported!.collection)
       if (imported!.shopping) useShoppingStore.getState().replaceShopping(imported!.shopping)
     }, 'Collection remplacée par celle du fichier.')
     reset()
@@ -50,8 +48,7 @@ export function ImportSection() {
     <DataSection id="importer" title="Importer">
       <p>
         Reprenez une collection exportée depuis ce Pokédex, ici ou dans un autre navigateur. Elle
-        remplace votre collection actuelle et les raretés suivies, ainsi que vos achats si le
-        fichier en contient.
+        remplace votre collection actuelle, ainsi que vos achats si le fichier en contient.
       </p>
 
       <FileUpload
@@ -99,9 +96,9 @@ export function ImportSection() {
         onConfirm={runImport}
       >
         <p>
-          Votre collection et les raretés suivies seront remplacées par celles du fichier, ainsi que
-          vos achats s’il en contient. Vous pourrez annuler juste après l’import ; au-delà, seul un
-          export vous permettra de les retrouver.
+          Votre collection sera remplacée par celle du fichier, ainsi que vos achats s’il en
+          contient. Vous pourrez annuler juste après l’import ; au-delà, seul un export vous
+          permettra de les retrouver.
         </p>
       </ConfirmDialog>
     </DataSection>

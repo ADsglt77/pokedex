@@ -33,7 +33,7 @@ export function CardPrice({ card }: { card: PokemonCard }) {
             )}
           />
           <Suspense fallback={<Skeleton height="7rem" />}>
-            <CardPriceHistory card={card} />
+            <CardPriceHistory card={card} cardmarket={card.cardmarket!} />
           </Suspense>
         </>
       ) : (
@@ -43,7 +43,7 @@ export function CardPrice({ card }: { card: PokemonCard }) {
               ? 'Les prix ne sont pas disponibles pour le moment.'
               : card.cardmarket
                 ? 'Cardmarket n’a pas de prix pour cette carte.'
-                : 'Pas de prix : cette carte n’est pas reliée à un produit Cardmarket.'}
+                : 'Pas de prix : ajoutez l’id Cardmarket de la carte (« Modifier la carte »).'}
           </p>
         )
       )}
@@ -51,9 +51,8 @@ export function CardPrice({ card }: { card: PokemonCard }) {
   )
 }
 
-function CardPriceHistory({ card }: { card: PokemonCard }) {
-  const history = use(loadPriceHistory())
-  return (
-    <PriceChart points={cardHistory(history, card)} label={`Prix de la carte ${card.reference}`} />
-  )
+/** La courbe d'une carte qui a un prix (donc un id Cardmarket). */
+function CardPriceHistory({ card, cardmarket }: { card: PokemonCard; cardmarket: number }) {
+  const history = use(loadPriceHistory(cardmarket))
+  return <PriceChart points={cardHistory(history)} label={`Prix de la carte ${card.reference}`} />
 }

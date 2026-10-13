@@ -1,10 +1,9 @@
 import { Badge, Card, IconButton } from '@camply/ui'
-import { ExternalLink as ExternalIcon, Pencil, Star, X } from '@camply/ui/icons'
+import { ExternalLink as ExternalIcon, Pencil, X } from '@camply/ui/icons'
 import { Link } from 'react-router'
 import { CardArt } from '@/components/CardArt'
 import { ExternalLink } from '@/components/ExternalLink'
 import { PossessionMark } from '@/components/PossessionMark'
-import { RarityTag } from '@/components/RarityTag'
 import { PRIORITY_LABELS } from '@/config/shopping'
 import { formatDexNumber, formatEuro, statusLabel } from '@/lib/format'
 import { cardTitle } from '@/lib/catalog'
@@ -64,15 +63,7 @@ export function WishCard({
           </h2>
           <span className="muted numeric">{formatDexNumber(speciesId)}</span>
         </header>
-        <p className={styles.wishSet}>
-          <span>{card.reference}</span>
-          <RarityTag card={card} />
-          {card.set?.name && (
-            <span className="muted" lang="ja">
-              {card.set.name}
-            </span>
-          )}
-        </p>
+        <p className={styles.wishReference}>{card.reference}</p>
 
         <dl className={styles.wishPrices}>
           <div>
@@ -89,11 +80,6 @@ export function WishCard({
           <Badge size="sm" tone={PRIORITY_TONES[preference.priority]}>
             Priorité {PRIORITY_LABELS[preference.priority].toLowerCase()}
           </Badge>
-          {row.isFavorite && (
-            <Badge size="sm" tone="accent" icon={<Star size={10} fill="currentColor" />}>
-              Illustration choisie
-            </Badge>
-          )}
           {status && status !== 'wanted' && (
             <Badge size="sm" tone={status === 'owned' ? 'success' : 'info'}>
               {statusLabel(status)}
@@ -105,8 +91,8 @@ export function WishCard({
         {preference.note && <p className={styles.wishNote}>{preference.note}</p>}
 
         <div className={styles.wishActions}>
-          {preference.link && (
-            <ExternalLink href={preference.link} className={styles.wishLink}>
+          {card.page && (
+            <ExternalLink href={card.page} className={styles.wishLink}>
               Page Cardmarket <ExternalIcon size={13} aria-hidden="true" />
             </ExternalLink>
           )}

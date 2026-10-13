@@ -4,10 +4,10 @@ import { formatInteger } from '@/lib/format'
 import styles from './DataPage.module.css'
 
 const ROWS: { key: keyof CollectionSummary; label: string }[] = [
-  { key: 'owned', label: 'Cartes possédées' },
-  { key: 'ordered', label: 'Cartes commandées' },
-  { key: 'wanted', label: 'Cartes souhaitées' },
-  { key: 'favorites', label: 'Illustrations choisies' },
+  { key: 'cards', label: 'Cartes ajoutées' },
+  { key: 'owned', label: 'Possédées' },
+  { key: 'ordered', label: 'Commandées' },
+  { key: 'wanted', label: 'Souhaitées' },
 ]
 
 /** L'inventaire d'une collection, une ligne par type de donnée. */

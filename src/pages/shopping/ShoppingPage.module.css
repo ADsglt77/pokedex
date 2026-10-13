@@ -114,17 +114,9 @@
   color: var(--camply-accent);
 }
 
-.wishSet {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem 0.5rem;
+.wishReference {
   font-size: 0.8125rem;
   font-weight: 600;
-}
-
-.wishSet :global(.muted) {
-  font-weight: 400;
 }
 
 .wishPrices {

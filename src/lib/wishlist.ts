@@ -1,16 +1,14 @@
 /**
  * La liste d'achats : les cartes acceptées à l'achat (ou exclues), avec leur priorité et leur prix
- * maximum. Une préférence ne touche jamais au statut de la carte (souhaitée, commandée, possédée) :
- * on peut accepter plusieurs illustrations d'un même Pokémon et n'en acheter qu'une.
+ * maximum. Une préférence ne touche jamais au statut de la carte (souhaitée, commandée, possédée).
  */
 
 import { DEFAULT_BUDGET, PRIORITY_LABELS, PRIORITY_RANK } from '@/config/shopping'
 import { cardTitle, findCard, speciesOf } from '@/lib/catalog'
 import { searchForm, searchMatcher } from '@/lib/filters'
-import { parseLink } from '@/lib/format'
 import { isTaken, type PokedexEntry } from '@/lib/pokedex'
 import { isToBuy } from '@/lib/collection'
-import { cheapestTotal, priceOf, type PricedCard } from '@/lib/prices'
+import { priceOf } from '@/lib/prices'
 import { priceVerdict } from '@/lib/purchase-planner'
 import type {
   CardStatus,
@@ -45,11 +43,9 @@ export function setDecision(
   return { ...data, preferences, updatedAt: now }
 }
 
-export type PreferenceChange = Partial<
-  Pick<PurchasePreference, 'priority' | 'maxPrice' | 'note' | 'link'>
->
+export type PreferenceChange = Partial<Pick<PurchasePreference, 'priority' | 'maxPrice' | 'note'>>
 
-/** Change la priorité, le prix maximum, la note ou le lien ; `undefined` efface. Inchangé : `data`. */
+/** Change la priorité, le prix maximum ou la note ; `undefined` efface. Inchangé : `data`. */
 export function updatePreference(
   data: ShoppingData,
   cardId: string,
@@ -63,15 +59,6 @@ export function updatePreference(
   return { ...data, preferences: { ...data.preferences, [cardId]: updated }, updatedAt: now }
 }
 
-/**
- * Un lien collé vers une page de Cardmarket ; `null` s'il ne mène pas à www.cardmarket.com.
- * L'app ne fabrique aucun lien Cardmarket : leur format n'a pas pu être vérifié.
- */
-export function parseCardmarketLink(text: string): string | null {
-  const url = parseLink(text)
-  return url?.protocol === 'https:' && url.hostname === 'www.cardmarket.com' ? url.href : null
-}
-
 /** Le nombre de cartes de la liste d'achats. */
 export const acceptedCount = (data: ShoppingData) =>
   Object.values(data.preferences).filter((preference) => preference.decision === 'accepted').length
@@ -81,8 +68,6 @@ export interface WishRow {
   card: PokemonCard
   preference: PurchasePreference
   status: CardStatus | null
-  /** L'illustration choisie d'un de ses Pokémon. */
-  isFavorite: boolean
   /** Prix indicatif Cardmarket ; `null` sans prix. */
   price: number | null
 }
@@ -101,7 +86,6 @@ export function wishlistRows(
         card,
         preference,
         status: collection.cards[cardId]?.status ?? null,
-        isFavorite: card.dexIds.some((id) => collection.entries[id]?.favoriteCardId === cardId),
         price: priceOf(prices, card)?.price ?? null,
       },
     ]
@@ -113,18 +97,17 @@ export const takenSpecies = (entries: readonly PokedexEntry[]): Set<number> =>
   new Set(entries.filter(isTaken).map((entry) => entry.species.id))
 
 /**
- * Ce que coûteraient les Pokémon de la liste qui manquent encore, chacun à sa carte acceptée la
- * moins chère ; `unpriced` : ceux dont aucune carte acceptée n'a de prix.
+ * Ce que coûteraient les cartes de la liste encore à acheter, d'un Pokémon qui manque encore ;
+ * `unpriced` : celles qui n'ont pas de prix.
  */
 export function wishlistEstimate(rows: readonly WishRow[], taken: ReadonlySet<number>) {
-  const cardsByPokemon = new Map<number, PricedCard[]>()
+  const estimate = { value: 0, unpriced: 0 }
   for (const row of rows.filter(isToBuy)) {
-    for (const id of row.card.dexIds.filter((id) => !taken.has(id))) {
-      const card = { cardId: row.card.id, price: row.price }
-      cardsByPokemon.set(id, [...(cardsByPokemon.get(id) ?? []), card])
-    }
+    if (row.card.dexIds.every((id) => taken.has(id))) continue
+    if (row.price === null) estimate.unpriced++
+    else estimate.value += row.price
   }
-  return cheapestTotal(cardsByPokemon.values())
+  return estimate
 }
 
 export type WishlistSort = 'priority' | 'price' | 'price-desc' | 'gap' | 'dex' | 'recent'
@@ -133,9 +116,6 @@ export interface WishlistFilters {
   search: string
   generation: GenerationId | null
   priority: Priority | null
-  /** Code de rareté. */
-  rarity: string | null
-  favorites: boolean
   /** Seulement les cartes dont le prix du marché est sous le prix maximum. */
   underMax: boolean
   /** Aussi les cartes possédées ou commandées. */
@@ -147,8 +127,6 @@ export const DEFAULT_WISHLIST_FILTERS: WishlistFilters = {
   search: '',
   generation: null,
   priority: null,
-  rarity: null,
-  favorites: false,
   underMax: false,
   all: false,
   sort: 'priority',
@@ -188,8 +166,6 @@ export function filterWishlist(rows: readonly WishRow[], filters: WishlistFilter
         (filters.all || isToBuy(row)) &&
         (!filters.generation || species.some((one) => one.generation === filters.generation)) &&
         (!filters.priority || row.preference.priority === filters.priority) &&
-        (!filters.rarity || row.card.rarity === filters.rarity) &&
-        (!filters.favorites || row.isFavorite) &&
         (!filters.underMax || isUnderMax(row)) &&
         (species.some(matches) || searchForm(row.card.reference).includes(needle))
       )
@@ -215,29 +191,25 @@ export function wishlistCsv(rows: readonly WishRow[]): string {
   const header = [
     'Pokémon',
     'Nom anglais',
-    'Extension',
     'Référence',
-    'Numéro',
     'Quantité',
     'Prix max (€)',
     'Prix indicatif (€)',
     'Priorité',
     'Id produit Cardmarket',
-    'Lien',
+    'Page Cardmarket',
     'Note',
   ]
   const lines = rows.map((row) => [
     cardTitle(row.card),
     englishNames(row.card).join(' & '),
-    row.card.set?.name ?? '',
     row.card.reference,
-    row.card.reference.split(' ').at(-1)!,
     1,
     csvNumber(row.preference.maxPrice),
     csvNumber(row.price),
     PRIORITY_LABELS[row.preference.priority],
     row.card.cardmarket ?? '',
-    row.preference.link ?? '',
+    row.card.page ?? '',
     row.preference.note ?? '',
   ])
   return [header, ...lines].map((line) => line.map(csvCell).join(';')).join('\r\n')

@@ -22,7 +22,7 @@ interface CardArtProps {
 /**
  * Une carte aux proportions réelles (63 × 88). Sans scan : une carte de substitution avec le
  * sprite et la référence. Sans carte : une pochette vide. Une image n'est jamais inventée.
- * Faite de `span` : elle peut se trouver dans un bouton (galerie des candidates).
+ * Faite de `span` : elle peut se trouver dans un lien (tuile du Pokédex).
  */
 export function CardArt({
   card,

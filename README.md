@@ -1,9 +1,10 @@
 # Pokédex
 
-Pokédex personnel de cartes Pokémon japonaises : chaque Pokémon se débloque en possédant une de ses
-pleines cartes (Art Rare, Special Art Rare, Super Rare, GX et V, promos et decks illustrés…).
-React + Vite + TypeScript, interface [`@camply/ui`](https://www.npmjs.com/package/@camply/ui),
-cartes [TCGplayer](https://www.tcgplayer.com/) et [TCGdex](https://tcgdex.dev/).
+Pokédex personnel de cartes Pokémon : pour chacun des 1 025 Pokémon, on ajoute la carte que l'on
+veut (son id Cardmarket pour suivre son prix, une image si l'on en a une) ; le Pokémon se débloque
+quand on la possède. React + Vite + TypeScript, interface
+[`@camply/ui`](https://www.npmjs.com/package/@camply/ui), espèces [PokéAPI](https://pokeapi.co/),
+prix [Cardmarket](https://www.cardmarket.com/).
 
 ```sh
 bun install
@@ -17,23 +18,32 @@ bun run format   # Prettier
 - **Accueil** : progression, réglette par génération, dernières cartes obtenues.
 - **Pokédex** : les 1 025 espèces, recherche (nom fr/en/ja ou numéro, raccourci `/`), filtres
   partageables dans l'adresse.
-- **Fiche** : carte en grand, statut (possédée / commandée / souhaitée) et prix payé, illustration
-  choisie, prix Cardmarket et sa courbe, achat (à acheter ou exclue, priorité, prix maximum, page
-  Cardmarket), galerie des candidates, détails de l'espèce.
+- **Fiche** : la carte du Pokémon (à ajouter, corriger ou retirer), en grand, son statut
+  (possédée / commandée / souhaitée) et son prix payé, son prix Cardmarket et sa courbe, le lien
+  vers sa page Cardmarket, l'achat (à acheter ou exclue, priorité, prix maximum, note), les détails
+  de l'espèce.
+- **Ajouter depuis Cardmarket** : sur la page d'une carte chez Cardmarket, le favori « Ajouter au
+  Pokédex » ouvre l'app avec son id, son nom et l'adresse de la page ; le Pokémon est reconnu
+  d'après le nom (à vérifier), il reste à valider.
 - **Valeur** : prix Cardmarket du jour, valeur de la collection (et gain par rapport au prix
   payé), commandes, souhaits, coût pour compléter le Pokédex, courbes de prix au fil des jours.
-- **Achats** : liste d'achats (les illustrations acceptées, avec priorité et prix maximum),
+- **Achats** : liste d'achats (les cartes acceptées, avec priorité et prix maximum),
   assistant « prochaine commande » dans un budget (100 € par mois, 150 € au plus, réglables),
   registre des commandes (Cardmarket, Myutsu, Hikaru…) qui met à jour les statuts, suivi du
   budget par mois et par fournisseur. Export CSV et recherches à coller dans Cardmarket.
-- **Données** : export / import (achats compris), raretés suivies, effacement.
+- **Données** : le favori Cardmarket à installer (à glisser dans la barre de favoris, ou son code
+  à copier), export / import (achats compris), effacement.
 
-Tout est embarqué (index de cartes généré par `bun run data` : la liste et la rareté des pleines
-cartes chez TCGplayer, reconnues à l'image quand aucune rareté ne le dit, complétées par TCGdex ;
-la première construction télécharge ~15 000 vignettes) : aucune API externe appelée par le
-navigateur, hormis les images. Les prix sont des fichiers du site lui-même (`/prices/`), écrits
-chaque jour par `bun run prices` ; en développement, le lancer une fois pour avoir des prix. La
-collection reste dans le navigateur (`localStorage`) : l'export est sa seule sauvegarde.
+Les espèces sont embarquées (`bun run data`, depuis PokéAPI) : aucune API externe appelée par le
+navigateur, hormis les images (dessins des Pokémon, chez PokéAPI, et cartes dont vous collez
+l'adresse ; pas celles de Cardmarket, qui ne s'affichent que sur son site). Le favori ne fait que
+lire la page Cardmarket ouverte et l'envoyer à l'app d'où il a été installé : installé depuis
+`bun dev`, il ouvre `localhost`. Les prix sont des fichiers du site
+lui-même (`/prices/`), écrits chaque jour par `bun run prices` d'après les fichiers publics de
+Cardmarket : le prix du jour de toutes ses cartes à l'unité, et l'historique de chacune. En
+développement, lancer `bun run prices` une fois (le premier passage écrit quelque 60 000 fichiers
+dans `prices/`). La collection reste dans le navigateur (`localStorage`) : l'export est sa seule
+sauvegarde.
 
 ## Déploiement (VPS + tunnel Cloudflare)
 
@@ -41,8 +51,8 @@ Le site est statique. L'image Docker le construit avec Bun et le sert avec nginx
 (`deploy/nginx.conf` renvoie `index.html` pour les adresses du routage côté client).
 `compose.yaml` l'expose sur `127.0.0.1:8080` (variable `POKEDEX_PORT`), joignable seulement par le
 tunnel. Le service `prices` du même fichier relit les prix Cardmarket toutes les 6 h et en garde
-l'historique dans le volume Docker `prices` : ne pas lancer `docker compose down -v`, qui
-l'effacerait.
+l'historique (un fichier par carte, quelques centaines de Mo) dans le volume Docker `prices` : ne
+pas lancer `docker compose down -v`, qui l'effacerait.
 
 **Une fois, sur le VPS**
 

@@ -8,8 +8,6 @@ import {
   Checkbox,
   EmptyState,
   Progress,
-  Radio,
-  RadioGroup,
   Slider,
   Stack,
 } from '@camply/ui'
@@ -19,7 +17,7 @@ import { PRIORITY_LABELS } from '@/config/shopping'
 import { spentThisMonth } from '@/lib/budget'
 import { details, formatEuro, plural, today } from '@/lib/format'
 import { cents, newOrder } from '@/lib/orders'
-import { planPurchase, type PlanMode } from '@/lib/purchase-planner'
+import { planPurchase } from '@/lib/purchase-planner'
 import type { WishRow } from '@/lib/wishlist'
 import { useShoppingStore } from '@/store/shopping'
 import type { Order, Priority } from '@/types'
@@ -29,15 +27,6 @@ import { OrderForm } from './OrderForm'
 import { ExportButtons } from './ExportButtons'
 import { useWishlist } from './useWishlist'
 import styles from './ShoppingPage.module.css'
-
-const MODES: { value: PlanMode; label: string; hint: string }[] = [
-  { value: 'new', label: 'Nouveaux Pokémon', hint: 'Ni obtenus, ni commandés.' },
-  {
-    value: 'favorites',
-    label: 'Aussi les illustrations choisies',
-    hint: 'Celle d’un Pokémon déjà obtenu peut être proposée.',
-  },
-]
 
 const ALL_PRIORITIES = Object.keys(PRIORITY_LABELS) as Priority[]
 
@@ -67,7 +56,6 @@ export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
       BUDGET_STEP,
   )
   const [priorities, setPriorities] = useState<Priority[]>(ALL_PRIORITIES)
-  const [mode, setMode] = useState<PlanMode>('new')
   const [forced, setForced] = useState<ReadonlySet<string>>(new Set())
   const [skipped, setSkipped] = useState<ReadonlySet<string>>(new Set())
   const [draft, setDraft] = useState<Order | null>(null)
@@ -76,7 +64,6 @@ export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
     budget: amount,
     shippingReserve: budget.shippingReserve,
     priorities,
-    mode,
     forced,
     skipped,
   })
@@ -137,15 +124,6 @@ export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
               />
             ))}
           </fieldset>
-          <RadioGroup
-            label="Pokémon proposés"
-            value={mode}
-            onChange={(value) => setMode(value as PlanMode)}
-          >
-            {MODES.map(({ value, label, hint }) => (
-              <Radio key={value} value={value} label={label} hint={hint} />
-            ))}
-          </RadioGroup>
         </Stack>
       </Card>
 
@@ -265,16 +243,12 @@ export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
             <ol className={styles.steps}>
               <li>
                 Les cartes de votre liste d’achats, ni possédées ni commandées, des priorités
-                cochées, et d’un Pokémon que vous n’avez pas (ou son illustration choisie, selon le
-                réglage).
+                cochées, et d’un Pokémon que vous n’avez pas.
               </li>
               <li>
                 Les cartes sans prix et celles au-dessus de leur prix maximum sont mises de côté.
               </li>
-              <li>
-                Dans l’ordre : vos ajouts à la main, les illustrations choisies, la priorité, puis
-                le prix le plus bas.
-              </li>
+              <li>Dans l’ordre : vos ajouts à la main, la priorité, puis le prix le plus bas.</li>
               <li>
                 Une carte est prise si son Pokémon n’est pas déjà dans le plan et si elle tient dans
                 le budget, port réservé.
@@ -325,7 +299,6 @@ function PlanLine({ row, children }: { row: WishRow; children?: ReactNode }) {
         price === null ? 'sans prix' : formatEuro(price),
         preference.maxPrice !== undefined && `max ${formatEuro(preference.maxPrice)}`,
         `priorité ${PRIORITY_LABELS[preference.priority].toLowerCase()}`,
-        row.isFavorite && 'illustration choisie',
       )}
     >
       {children}

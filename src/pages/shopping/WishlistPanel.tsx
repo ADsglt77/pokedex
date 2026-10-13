@@ -44,7 +44,6 @@ export function WishlistPanel() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const shown = filterWishlist(rows, filters)
   const editing = rows.find((row) => row.card.id === editingId)
-  const rarities = [...new Set(rows.flatMap((row) => row.card.rarity ?? []))].sort()
   const set = (change: Partial<WishlistFilters>) => setFilters({ ...filters, ...change })
 
   if (rows.length === 0) {
@@ -54,7 +53,7 @@ export function WishlistPanel() {
         className={styles.panel}
         icon={<ListChecks size={22} />}
         title="Votre liste d’achats est vide"
-        description="Sur la fiche d’un Pokémon, choisissez « À acheter » pour chaque illustration que vous accepteriez d’acheter, avec un prix maximum si vous voulez. Vous pouvez en accepter plusieurs par Pokémon."
+        description="Sur la fiche d’un Pokémon, ajoutez la carte que vous voulez, puis choisissez « À acheter », avec un prix maximum si vous voulez."
         actions={
           <Button asChild>
             <Link to={pokedexUrl({ possession: 'missing' })}>Voir les Pokémon à débloquer</Link>
@@ -96,15 +95,6 @@ export function WishlistPanel() {
           onChange={(value) => set({ priority: (value || null) as Priority | null })}
         />
         <Select
-          aria-label="Rareté"
-          options={[
-            { value: '', label: 'Toutes les raretés' },
-            ...rarities.map((code) => ({ value: code, label: code })),
-          ]}
-          value={filters.rarity ?? ''}
-          onChange={(value) => set({ rarity: value || null })}
-        />
-        <Select
           aria-label="Trier par"
           options={toOptions(SORT_LABELS)}
           value={filters.sort}
@@ -116,11 +106,6 @@ export function WishlistPanel() {
           label="Sous le prix maximum"
           checked={filters.underMax}
           onChange={(event) => set({ underMax: event.target.checked })}
-        />
-        <Switch
-          label="Illustrations choisies"
-          checked={filters.favorites}
-          onChange={(event) => set({ favorites: event.target.checked })}
         />
         <Switch
           label="Aussi possédées et commandées"

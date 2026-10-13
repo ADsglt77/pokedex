@@ -1,10 +1,8 @@
 /**
  * Réseau des scripts de données : un `fetch` JSON avec un cache disque (`scripts/.cache`, pour
  * relancer un script sans solliciter les API à nouveau) et une file à concurrence limitée.
- * Chaque requête s'identifie et attend 100 ms avant de partir ; lues une à une (tcgcsv.com
- * l'exige), les requêtes sont donc espacées de 100 ms. Une image absente est gardée aussi en cache
- * (un 404 JSON, lui, arrête le script) ; `--refresh` redemande tout. Le cache n'expire jamais :
- * une nouvelle extension ou carte n'arrive qu'avec `--refresh`.
+ * Chaque requête s'identifie et attend 100 ms avant de partir. Un 404 arrête le script ;
+ * `--refresh` redemande tout (le cache n'expire jamais).
  */
 
 import { createHash } from 'node:crypto'
@@ -14,7 +12,7 @@ import { dirname, join } from 'node:path'
 const CACHE_ROOT = join(import.meta.dirname, '..', '.cache')
 
 /** `--refresh` : ignore le cache et redemande tout. */
-export const refresh = process.argv.includes('--refresh')
+const refresh = process.argv.includes('--refresh')
 
 class NotFoundError extends Error {}
 
@@ -59,24 +57,6 @@ export async function fetchJson<T>(url: string, namespace: string, init?: Reques
       await wait(500 * 2 ** attempt)
     }
   }
-}
-
-/** Une adresse répond-elle 200 ? Le résultat est gardé en cache comme les documents JSON. */
-export async function urlExists(url: string, namespace: string): Promise<boolean> {
-  const key = createHash('sha1').update(`HEAD ${url}`).digest('hex')
-  const file = join(CACHE_ROOT, namespace, `${key}.json`)
-  if (!refresh) {
-    const cached = await readFile(file, 'utf8').catch(() => null)
-    if (cached !== null) return cached === 'true'
-  }
-  const response = await politeFetch(url, { method: 'HEAD' })
-  // Un refus passager (trop de requêtes, serveur en panne) n'est pas une image absente.
-  if (response.status === 429 || response.status >= 500) {
-    throw new Error(`HTTP ${response.status} pour ${url}`)
-  }
-  await mkdir(dirname(file), { recursive: true })
-  await writeFile(file, String(response.ok), 'utf8')
-  return response.ok
 }
 
 /** `task` sur chaque élément, au plus `concurrency` à la fois ; les résultats gardent l'ordre. */

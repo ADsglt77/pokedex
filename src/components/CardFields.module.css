@@ -1,0 +1,30 @@
+/* Les champs, et l'aperçu de la carte à côté (dessous sur un téléphone). */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 10rem;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.preview {
+  width: 100%;
+}
+
+.check {
+  font-size: 0.875rem;
+}
+
+.warn {
+  color: var(--camply-warn);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 40rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .preview {
+    max-width: 10rem;
+  }
+}

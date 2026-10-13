@@ -1,25 +1,27 @@
 import { PageHeader } from '@/components/PageHeader'
 import { pageTitle } from '@/lib/format'
-import { ClassificationSection } from './ClassificationSection'
+import { BookmarkletSection } from './BookmarkletSection'
 import { CollectionSection } from './CollectionSection'
 import { EraseSection } from './EraseSection'
 import { ExportSection } from './ExportSection'
 import { ImportSection } from './ImportSection'
 import { ReferenceSection } from './ReferenceSection'
 
-/** Données : la collection, sa sauvegarde (export, import), les raretés suivies, les sources. */
+/**
+ * Données : la collection, le favori Cardmarket, la sauvegarde (export, import), les sources,
+ * l'effacement.
+ */
 export function DataPage() {
   return (
     <div className="container container--narrow">
       <title>{pageTitle('Données')}</title>
       <PageHeader title="Données">
-        Sauvegarder, transférer ou effacer votre collection, et régler ce qui compte comme une
-        illustration.
+        Installer le favori Cardmarket ; sauvegarder, transférer ou effacer votre collection.
       </PageHeader>
       <CollectionSection />
+      <BookmarkletSection />
       <ExportSection />
       <ImportSection />
-      <ClassificationSection />
       <ReferenceSection />
       <EraseSection />
     </div>

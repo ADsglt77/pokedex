@@ -35,13 +35,10 @@ export const wish = (
   id: string,
   dexIds: number[],
   price: number | null,
-  extra: { priority?: Priority; maxPrice?: number; isFavorite?: boolean } & Partial<
-    Pick<PlannableCard, 'status'>
-  > = {},
+  extra: { priority?: Priority; maxPrice?: number } & Partial<Pick<PlannableCard, 'status'>> = {},
 ): PlannableCard => ({
   card: { id, dexIds },
   preference: { priority: extra.priority ?? 'normal', maxPrice: extra.maxPrice },
   status: extra.status ?? null,
-  isFavorite: extra.isFavorite ?? false,
   price,
 })

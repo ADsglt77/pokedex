@@ -4,7 +4,7 @@ import { SegmentedField } from '@/components/SegmentedField'
 import { PRIORITY_LABELS } from '@/config/shopping'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { formatEuro, toOptions } from '@/lib/format'
-import { parseCardmarketLink, type PreferenceChange } from '@/lib/wishlist'
+import type { PreferenceChange } from '@/lib/wishlist'
 import { useShoppingStore } from '@/store/shopping'
 import type { PokemonCard, PurchasePreference } from '@/types'
 
@@ -12,8 +12,8 @@ const PRIORITY_OPTIONS = toOptions(PRIORITY_LABELS)
 const asText = (text: string) => text
 
 /**
- * Ce qu'on règle sur une carte de la liste d'achats : priorité, prix maximum, lien Cardmarket et
- * note. Chaque changement est enregistré aussitôt, avec « Annuler ».
+ * Ce qu'on règle sur une carte de la liste d'achats : priorité, prix maximum et note. Chaque
+ * changement est enregistré aussitôt, avec « Annuler ».
  */
 export function PreferenceFields({
   card,
@@ -50,24 +50,6 @@ export function PreferenceFields({
             maxPrice === undefined
               ? `Prix maximum retiré de la carte ${card.reference}.`
               : `Prix maximum de ${formatEuro(maxPrice)} pour la carte ${card.reference}.`,
-          )
-        }
-      />
-      <CommitInput
-        label="Page Cardmarket"
-        hint="Facultatif : l’adresse de la page du produit, copiée depuis Cardmarket."
-        placeholder="https://www.cardmarket.com/…"
-        inputMode="url"
-        value={preference.link}
-        parse={parseCardmarketLink}
-        format={asText}
-        invalid="Collez une adresse de www.cardmarket.com."
-        onCommit={(link) =>
-          change(
-            { link },
-            link
-              ? `Page Cardmarket enregistrée pour la carte ${card.reference}.`
-              : `Page Cardmarket retirée de la carte ${card.reference}.`,
           )
         }
       />

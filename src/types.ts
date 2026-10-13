@@ -1,4 +1,4 @@
-/* Référence : espèces (PokéAPI) et cartes (TCGplayer, complétées par TCGdex), embarquées dans `src/data` */
+/* Référence : les espèces (PokéAPI), embarquées dans `src/data` */
 
 export type PokemonTypeId =
   | 'normal'
@@ -49,41 +49,25 @@ export interface CardImage {
   large: string
 }
 
-export interface CardSet {
-  name: string | null
-  /** YYYY-MM-DD */
-  releaseDate: string | null
-}
-
-/** Une carte telle que l'app l'affiche. */
+/** La carte qu'un Pokémon attend : c'est l'utilisateur qui l'ajoute, une par Pokémon. */
 export interface PokemonCard {
-  /** `tcgdex:ja:<id de l'index>` ; `manual:<uuid>` pour une carte saisie dans une ancienne version. */
+  /** `manual:<uuid>`. */
   id: string
-  /** Les Pokémon de la carte : plusieurs pour une carte TAG TEAM. */
+  /** Le Pokémon de la carte (plusieurs pour une carte TAG TEAM d'une ancienne version). */
   dexIds: number[]
-  /** Nom imprimé, en japonais. */
-  name: string | null
-  /** `SV2a 173` */
+  /** Ce qu'on en dit : « SV4a 349 », le nom Cardmarket… */
   reference: string
-  set: CardSet | null
-  /** Code de la classe de rareté (`AR`) ; libellé libre pour une carte d'une ancienne version. */
-  rarity: string | null
-  illustrator: string | null
+  /** L'adresse de l'image collée (la même pour les deux tailles) ; `null` sans image. */
   image: CardImage | null
-  /** Id du produit Cardmarket (`idProduct`), quand l'index le connaît. */
+  /** Id du produit Cardmarket (`idProduct`), pour son prix. */
   cardmarket?: number
+  /** Sa page chez Cardmarket, collée ou reprise par le favori : l'app n'invente aucun lien. */
+  page?: string
 }
 
 /* Données de l'utilisateur : `localStorage` et fichier d'export */
 
 export type CardStatus = 'wanted' | 'ordered' | 'owned'
-
-/** L'illustration choisie pour un Pokémon. */
-export interface CollectionEntry {
-  speciesId: number
-  favoriteCardId: string | null
-  updatedAt: string
-}
 
 export interface CardOwnership {
   status: CardStatus
@@ -97,18 +81,10 @@ export interface CardOwnership {
 export interface CollectionData {
   schemaVersion: 1
   updatedAt: string | null
-  /** Clé : numéro de Pokédex. */
-  entries: Record<string, CollectionEntry>
   /** Clé : id de carte. Une carte sans statut n'y figure pas. */
   cards: Record<string, CardOwnership>
-  /** Cartes ajoutées par une ancienne version (saisies à la main) : toujours candidates. */
+  /** Les cartes ajoutées par l'utilisateur, une par Pokémon. Clé : id de carte. */
   customCards: Record<string, PokemonCard>
-}
-
-export interface AppSettings {
-  schemaVersion: 1
-  /** Classes de rareté dont les cartes peuvent illustrer un Pokémon. */
-  enabledRarityCodes: string[]
 }
 
 export interface CollectionExportFile {
@@ -117,7 +93,6 @@ export interface CollectionExportFile {
   schemaVersion: 1
   exportedAt: string
   collection: CollectionData
-  settings: AppSettings
   /** Absent des exports faits avant le module d'achats (l'import le tolère). */
   shopping: ShoppingData
 }
@@ -134,8 +109,6 @@ export interface PurchasePreference {
   /** Prix maximum, en euros. */
   maxPrice?: number
   note?: string
-  /** Page du produit sur Cardmarket, collée par l'utilisateur : l'app n'invente aucun lien. */
-  link?: string
   updatedAt: string
 }
 
@@ -204,30 +177,6 @@ export interface SpeciesDetailsFile {
   details: PokemonSpeciesDetails[]
 }
 
-/** Une carte de l'index : déjà classée, avec la base de son image. */
-export interface CardIndexRow {
-  /** Extension et numéro, à la façon de TCGdex : `SV2a-173` (aussi pour une carte qu'il n'a pas). */
-  id: string
-  /** Extension : clé de `CardIndexFile.sets`. */
-  set: string
-  number: string
-  name: string | null
-  /** Code de la classe de rareté. */
-  rarity: string
-  illustrator: string | null
-  /** Base d'image TCGdex ou TCGplayer (voir `src/lib/images.ts`). */
-  image: string | null
-  dexIds: number[]
-  /** Id du produit Cardmarket, pour les prix. */
-  cardmarket?: number
-}
-
-export interface CardIndexFile {
-  generatedAt: string
-  sets: Record<string, { name: string; releaseDate: string }>
-  cards: CardIndexRow[]
-}
-
 /* Prix Cardmarket : `/prices/`, écrits chaque jour par `scripts/prices.ts` */
 
 export interface CardPrice {
@@ -237,17 +186,23 @@ export interface CardPrice {
   avg30: number | null
 }
 
+/** Le prix du jour d'une carte, en court : prix du marché, plus bas, moyenne sur 30 jours. */
+export type CardPriceRow = [price: number, low: number | null, avg30: number | null]
+
+/** `latest.json` : le prix du jour de toutes les cartes Pokémon à l'unité de Cardmarket. */
 export interface PriceFile {
   /** Jour du guide des prix (YYYY-MM-DD). */
   date: string
-  /** Clé : id de l'index (`SV2a-173`). */
-  cards: Record<string, CardPrice>
+  /** Clé : id Cardmarket (`idProduct`). */
+  cards: Record<string, CardPriceRow>
 }
 
-/** Un prix par carte et par jour : Cardmarket ne garde pas d'historique. */
-export interface PriceHistoryFile {
-  /** Du plus ancien au plus récent (YYYY-MM-DD). */
-  days: string[]
-  /** Clé : id de l'index ; une valeur par jour de `days`, `null` sans prix ce jour-là. */
-  cards: Record<string, (number | null)[]>
+/** `history/<idProduct>.json` : l'historique d'une carte (Cardmarket n'en garde pas). */
+export interface CardPriceHistory {
+  /** Son nom chez Cardmarket : « Leafeon V [Greening Cells | Leaf Blade] ». */
+  name: string | null
+  /** Le premier jour (YYYY-MM-DD). */
+  from: string
+  /** Un prix par jour depuis `from` ; `null` sans prix ce jour-là. */
+  prices: (number | null)[]
 }

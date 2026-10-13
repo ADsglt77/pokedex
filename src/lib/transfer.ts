@@ -1,11 +1,10 @@
 /** Export et import de la collection, et sa relecture depuis le stockage du navigateur. */
 
 import { today } from '@/lib/format'
-import type { AppSettings, CollectionData, CollectionExportFile, ShoppingData } from '@/types'
+import type { CollectionData, CollectionExportFile, ShoppingData } from '@/types'
 
 export function buildExportFile(
   collection: CollectionData,
-  settings: AppSettings,
   shopping: ShoppingData,
 ): CollectionExportFile {
   return {
@@ -14,7 +13,6 @@ export function buildExportFile(
     schemaVersion: 1,
     exportedAt: new Date().toISOString(),
     collection,
-    settings,
     shopping,
   }
 }
@@ -49,20 +47,13 @@ export function parseStored(text: string | null): unknown {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
 
-/** Une collection, telle qu'enregistrée ; `null` si ce n'en est pas une (mauvais fichier). */
+/**
+ * Une collection, telle qu'enregistrée ; `null` si ce n'en est pas une (mauvais fichier). Ce
+ * qu'une ancienne version y gardait en plus (illustration choisie, raretés suivies) est ignoré.
+ */
 export function readCollection(value: unknown): CollectionData | null {
-  const isCollection =
-    isRecord(value) &&
-    isRecord(value.entries) &&
-    isRecord(value.cards) &&
-    isRecord(value.customCards)
+  const isCollection = isRecord(value) && isRecord(value.cards) && isRecord(value.customCards)
   return isCollection ? (value as unknown as CollectionData) : null
-}
-
-export function readSettings(value: unknown): AppSettings | null {
-  return isRecord(value) && Array.isArray(value.enabledRarityCodes)
-    ? (value as unknown as AppSettings)
-    : null
 }
 
 /** Les achats (liste, commandes, budget) ; `null` si ce n'en sont pas. */
@@ -84,7 +75,6 @@ const all = (values: object, ok: (value: Record<string, unknown>) => boolean = (
  * ne doit pas faire planter toutes les pages une fois importé (puis enregistré).
  */
 const readable = (collection: CollectionData, shopping: ShoppingData | null) =>
-  all(collection.entries) &&
   all(collection.cards, (card) => ['owned', 'ordered', 'wanted'].includes(card.status as string)) &&
   all(
     collection.customCards,
@@ -105,10 +95,9 @@ export function parseImport(text: string) {
   const file = parseStored(text)
   if (!isRecord(file) || file.kind !== 'collection-export') return null
   const collection = readCollection(file.collection)
-  const settings = readSettings(file.settings)
   const shopping = readShopping(file.shopping)
-  if (!collection || !settings || (file.shopping !== undefined && !shopping)) return null
-  return readable(collection, shopping) ? { collection, settings, shopping } : null
+  if (!collection || (file.shopping !== undefined && !shopping)) return null
+  return readable(collection, shopping) ? { collection, shopping } : null
 }
 
 export type ImportedFile = NonNullable<ReturnType<typeof parseImport>>

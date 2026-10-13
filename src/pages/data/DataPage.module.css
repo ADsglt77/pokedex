@@ -41,3 +41,11 @@
 .groupTitle {
   font-size: 1rem;
 }
+
+/* Les étapes d'installation du favori. */
+.steps {
+  max-width: 62ch;
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--camply-text-muted);
+}

@@ -23,9 +23,9 @@ const POSSESSION_OPTIONS: { value: PossessionFilter; label: string }[] = [
 
 // Les listes de camply n'acceptent que des chaînes : '' veut dire « tout ».
 const ILLUSTRATION_OPTIONS: { value: IllustrationFilter | ''; label: string }[] = [
-  { value: '', label: 'Toutes les illustrations' },
+  { value: '', label: 'Avec ou sans carte' },
   { value: 'card', label: 'Avec carte' },
-  { value: 'no-card', label: 'À rechercher' },
+  { value: 'no-card', label: 'Sans carte' },
 ]
 
 interface PokedexToolbarProps {
@@ -129,7 +129,7 @@ export function PokedexToolbar({
             onChange={(possession) => setFilters({ possession })}
           />
           <Select
-            aria-label="Illustration"
+            aria-label="Carte"
             size="sm"
             options={ILLUSTRATION_OPTIONS}
             value={filters.illustration ?? ''}

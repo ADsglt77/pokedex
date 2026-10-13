@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router'
 import { AppShell } from '@/components/AppShell'
+import { AddCardPage } from '@/pages/AddCardPage'
 import { DataPage } from '@/pages/data/DataPage'
 import { ErrorPage } from '@/pages/ErrorPage'
 import { HomePage } from '@/pages/HomePage'
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
       { path: 'valeur', element: <ValuePage /> },
       { path: 'achats', element: <ShoppingPage /> },
       { path: 'donnees', element: <DataPage /> },
+      { path: 'ajouter', element: <AddCardPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

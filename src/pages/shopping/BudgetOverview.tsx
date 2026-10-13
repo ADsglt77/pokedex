@@ -55,7 +55,7 @@ export function BudgetOverview() {
         icon={<ListChecks size={18} />}
         value={plural(rows.filter(isToBuy).length, 'carte', 'cartes')}
         hint={details(
-          `environ ${formatEuro(estimate.value)} pour ${plural(estimate.priced, 'Pokémon', 'Pokémon')}`,
+          `environ ${formatEuro(estimate.value)}`,
           estimate.unpriced > 0 && `${formatInteger(estimate.unpriced)} sans prix`,
         )}
       />

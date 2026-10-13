@@ -13,9 +13,6 @@ import { recentAcquisitions, summarize, type Progress, type RecentCard } from '@
 import { useCollectionStore } from '@/store/collection'
 import styles from './HomePage.module.css'
 
-/** Quelques belles illustrations à débloquer, montrées tant qu'aucune carte n'est obtenue. */
-const TEASER_SPECIES = [25, 6, 150, 151, 94, 448, 133, 197]
-
 function progressSentence(progress: Progress) {
   const { unlocked, missing, total } = progress
   if (unlocked === 0) {
@@ -122,12 +119,10 @@ function RecentCards({ cards }: { cards: RecentCard[] }) {
   )
 }
 
+/** Tant qu'aucune carte n'est obtenue : comment commencer, et les premières cartes ajoutées. */
 function FirstCards() {
   const pokedex = usePokedex()
-  const teaser = TEASER_SPECIES.flatMap((id) => pokedex.entryById.get(id) ?? [])
-    .filter((entry) => entry.representative?.card.image)
-    .slice(0, 5)
-    .sort((a, b) => a.species.id - b.species.id)
+  const teaser = pokedex.entries.filter((entry) => entry.card?.card.image).slice(0, 5)
 
   return (
     <Stack as="section" gap={6} className={styles.section}>
@@ -135,11 +130,11 @@ function FirstCards() {
         headingLevel={2}
         icon={<WalletCards size={22} />}
         title="Aucune carte obtenue pour l’instant"
-        description="Ouvrez un Pokémon, choisissez une illustration, puis indiquez « Je possède cette carte ». La carte apparaît ici et le Pokémon est débloqué."
+        description="Ouvrez un Pokémon, ajoutez la carte que vous voulez, puis indiquez « Je possède cette carte » quand vous l’avez. Elle apparaît ici et le Pokémon est débloqué."
       />
       {teaser.length > 0 && (
         <>
-          <h2>Quelques illustrations à débloquer</h2>
+          <h2>Vos cartes à obtenir</h2>
           <ul className={styles.teaser}>
             {teaser.map((entry) => (
               <li key={entry.species.id}>

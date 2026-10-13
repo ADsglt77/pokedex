@@ -2,13 +2,11 @@
  * Préparer la prochaine commande : quelles cartes de la liste d'achats prendre avec un budget.
  * Un plan indicatif : les prix sont ceux du marché Cardmarket, pas des offres de vendeurs.
  *
- * 1. Candidates : les cartes acceptées, ni possédées ni commandées, d'une priorité retenue. En
- *    mode « nouveaux », seulement des Pokémon pas encore obtenus ni commandés ; en mode
- *    « favorites », aussi l'illustration choisie d'un Pokémon déjà obtenu.
+ * 1. Candidates : les cartes acceptées, ni possédées ni commandées, d'une priorité retenue, d'un
+ *    Pokémon pas encore obtenu ni commandé.
  * 2. Mises à part : les cartes sans prix (aucun prix n'est inventé) et celles dont le prix
  *    dépasse le prix maximum fixé.
- * 3. Ordre : les cartes choisies à la main, puis les illustrations choisies, puis la priorité,
- *    puis le prix le plus bas.
+ * 3. Ordre : les cartes choisies à la main, puis la priorité, puis le prix le plus bas.
  * 4. Dans cet ordre, une carte est prise si aucun de ses Pokémon n'est déjà dans le plan et si
  *    elle tient dans le budget, port réservé. Une carte choisie à la main est toujours prise.
  */
@@ -23,15 +21,12 @@ export interface PlannableCard {
   card: { id: string; dexIds: number[] }
   preference: { priority: Priority; maxPrice?: number }
   status: CardStatus | null
-  isFavorite: boolean
   price: number | null
 }
 
-export type PlanMode = 'new' | 'favorites'
-
 /**
  * Le prix du marché face au prix maximum : dessous (ou égal), dessus, ou rien à comparer. Ici, dans
- * un module léger (les tests le chargent sans l'index), pour le plan comme pour l'affichage.
+ * un module léger (les tests le chargent sans les données), pour le plan comme pour l'affichage.
  */
 export const priceVerdict = (price: number | null, maxPrice: number | undefined) =>
   price === null || maxPrice === undefined ? null : price <= maxPrice ? 'under' : 'over'
@@ -41,7 +36,6 @@ export interface PlanOptions {
   budget: number
   shippingReserve: number
   priorities: readonly Priority[]
-  mode: PlanMode
   /** Ajoutées à la main : prises en premier, même au-delà du budget. */
   forced: ReadonlySet<string>
   /** Retirées à la main. */
@@ -81,10 +75,7 @@ export function planPurchase<T extends PlannableCard>(
 
   const isNew = (row: T) => row.card.dexIds.some((id) => !taken.has(id))
   const candidates = cards.filter(
-    (row) =>
-      isToBuy(row) &&
-      options.priorities.includes(row.preference.priority) &&
-      (isNew(row) || (options.mode === 'favorites' && row.isFavorite)),
+    (row) => isToBuy(row) && options.priorities.includes(row.preference.priority) && isNew(row),
   )
 
   const priced: (T & { price: number })[] = []
@@ -99,7 +90,6 @@ export function planPurchase<T extends PlannableCard>(
   priced.sort(
     (a, b) =>
       Number(options.forced.has(b.card.id)) - Number(options.forced.has(a.card.id)) ||
-      Number(b.isFavorite) - Number(a.isFavorite) ||
       PRIORITY_RANK[a.preference.priority] - PRIORITY_RANK[b.preference.priority] ||
       a.price - b.price ||
       (a.card.id < b.card.id ? -1 : 1),

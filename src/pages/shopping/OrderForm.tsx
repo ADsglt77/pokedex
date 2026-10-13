@@ -178,14 +178,10 @@ export function OrderForm({
   const errors = submitted ? read.errors : {}
   const costs = unitCosts(order)
   const inLines = new Set(draft.lines.map((line) => line.cardId))
-  // On ajoute une carte de la liste d'achats ou une carte déjà suivie : l'index entier ferait
-  // une liste de plus de mille cartes.
-  const addable = [...new Set([...Object.keys(preferences), ...Object.keys(collection.cards)])]
-    .filter((cardId) => !inLines.has(cardId) && preferences[cardId]?.decision !== 'excluded')
-    .flatMap((cardId) => {
-      const card = findCard(cardId, collection)
-      return card ? [{ value: cardId, label: `${cardTitle(card)} · ${card.reference}` }] : []
-    })
+  // Les cartes du Pokédex, sauf celles exclues des achats.
+  const addable = Object.values(collection.customCards)
+    .filter((card) => !inLines.has(card.id) && preferences[card.id]?.decision !== 'excluded')
+    .map((card) => ({ value: card.id, label: `${cardTitle(card)} · ${card.reference}` }))
     .sort((a, b) => a.label.localeCompare(b.label, 'fr'))
 
   const addLine = (cardId: string) => {
@@ -302,7 +298,7 @@ export function OrderForm({
                 const duplicate = duplicateReason(order.lines[index]!, others)
                 const unreadable =
                   read.errors[`quantity-${line.cardId}`] || read.errors[`price-${line.cardId}`]
-                if (!card) return <li key={line.cardId}>{line.cardId}</li>
+                if (!card) return <li key={line.cardId}>Carte retirée du Pokédex</li>
                 return (
                   <li key={line.cardId}>
                     <CardLine
@@ -348,7 +344,7 @@ export function OrderForm({
           )}
           <Combobox
             label="Ajouter une carte"
-            hint="Une carte de votre liste d’achats ou déjà suivie. Pour une autre, marquez-la d’abord comme souhaitée sur sa fiche."
+            hint="Une carte de votre Pokédex. Pour une autre, ajoutez-la d’abord sur la fiche de son Pokémon."
             placeholder="Nom ou référence"
             emptyMessage="Aucune carte trouvée."
             options={addable}

@@ -1,13 +1,12 @@
 import { Stack } from '@camply/ui'
-import { useRef, useState } from 'react'
 import { useParams } from 'react-router'
 import { PossessionMark } from '@/components/PossessionMark'
 import { usePokedex } from '@/hooks/usePokedex'
-import { getSpecies, indexCardsFor } from '@/lib/catalog'
-import { formatDexNumber, pageTitle, plural } from '@/lib/format'
-import { speciesStatus, type PokedexEntry } from '@/lib/pokedex'
+import { getSpecies } from '@/lib/catalog'
+import { formatDexNumber, pageTitle } from '@/lib/format'
+import type { PokedexEntry } from '@/lib/pokedex'
 import { NotFoundPage } from '@/pages/NotFoundPage'
-import { CandidateGallery } from './CandidateGallery'
+import type { CardStatus } from '@/types'
 import { CardSheet, EmptySheet } from './CardSheet'
 import { CardStage } from './CardStage'
 import { SpeciesAbout } from './SpeciesAbout'
@@ -23,24 +22,7 @@ export function PokemonPage() {
 }
 
 function SpeciesPage({ entry }: { entry: PokedexEntry }) {
-  const { species, candidates } = entry
-  const stage = useRef<HTMLDivElement>(null)
-
-  // La carte affichée en grand : la représentante à l'arrivée, puis celle choisie dans la
-  // galerie. Fixée à l'arrivée : retirer le favori ne doit pas faire sauter à une autre carte.
-  const [viewedId, setViewedId] = useState(() => entry.representative?.card.id ?? null)
-  const viewed =
-    candidates.find((candidate) => candidate.card.id === viewedId) ?? entry.representative
-
-  const viewCard = (cardId: string) => {
-    setViewedId(cardId)
-    // Sur téléphone, la carte en grand est au-dessus de la galerie : on y remonte.
-    if (matchMedia('(max-width: 40rem)').matches)
-      stage.current?.scrollIntoView({
-        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-      })
-  }
-
+  const { species, card } = entry
   return (
     <div className="container">
       <title>{pageTitle(species.names.fr)}</title>
@@ -62,51 +44,45 @@ function SpeciesPage({ entry }: { entry: PokedexEntry }) {
           <PossessionStatement entry={entry} />
         </Stack>
 
-        <div ref={stage} className={styles.stage}>
-          <CardStage candidate={viewed} species={species} />
+        <div className={styles.stage}>
+          <CardStage view={card} species={species} />
         </div>
 
         <div className={styles.body}>
           <div className={styles.columns}>
             {/* Une clé par carte : une saisie en cours ne passe pas d'une carte à l'autre. */}
-            {viewed ? (
-              <CardSheet key={viewed.card.id} candidate={viewed} species={species} />
+            {card ? (
+              <CardSheet key={card.card.id} view={card} species={species} />
             ) : (
-              <EmptySheet known={indexCardsFor(species.id).length > 0} />
+              <EmptySheet species={species} />
             )}
-            <SpeciesAbout species={species} showArtwork={viewed === null} />
+            <SpeciesAbout species={species} showArtwork={card === null} />
           </div>
-
-          {candidates.length > 1 && (
-            <CandidateGallery
-              candidates={candidates}
-              speciesId={species.id}
-              viewedId={viewed?.card.id ?? null}
-              onView={viewCard}
-            />
-          )}
         </div>
       </div>
     </div>
   )
 }
 
-/** « Débloqué : 1 carte possédée, 2 souhaitées. » */
-function PossessionStatement({ entry }: { entry: PokedexEntry }) {
-  const { owned, ordered, wanted } = entry.statusCounts
-  const counts = [
-    owned ? plural(owned, 'carte possédée', 'cartes possédées') : 'aucune carte possédée',
-    ordered > 0 && plural(ordered, 'commandée', 'commandées'),
-    wanted > 0 && plural(wanted, 'souhaitée', 'souhaitées'),
-  ].filter(Boolean)
+const STATEMENTS: Record<CardStatus | 'none' | 'no-card', string> = {
+  owned: 'carte possédée',
+  ordered: 'carte commandée',
+  wanted: 'carte souhaitée',
+  none: 'carte choisie, pas encore obtenue',
+  'no-card': 'pas encore de carte',
+}
 
+/** « Débloqué : carte possédée. » */
+function PossessionStatement({ entry }: { entry: PokedexEntry }) {
+  const status = entry.card?.status ?? null
   return (
     <p className={styles.statement}>
       <span className={styles.statementMark}>
-        <PossessionMark status={speciesStatus(entry)} />
+        <PossessionMark status={status} />
       </span>
       <span>
-        <strong>{entry.unlocked ? 'Débloqué' : 'À débloquer'}</strong> : {counts.join(', ')}.
+        <strong>{entry.unlocked ? 'Débloqué' : 'À débloquer'}</strong> :{' '}
+        {STATEMENTS[entry.card ? (status ?? 'none') : 'no-card']}.
       </span>
     </p>
   )

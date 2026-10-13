@@ -1,6 +1,6 @@
 /** Mise en forme française (nombres, dates, montants) et lecture des montants et liens saisis. */
 
-import type { CardStatus, PokemonCard } from '@/types'
+import type { CardStatus } from '@/types'
 
 const integerFormat = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 })
 const decimalFormat = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 })
@@ -111,13 +111,6 @@ export const statusLabel = (status: CardStatus | null) => STATUS_LABELS[status ?
 export function statusCaption(status: CardStatus | null, acquiredAt: string | null): string {
   const date = status === 'owned' ? formatDate(acquiredAt) : null
   return date ? `Possédée depuis le ${date}` : statusLabel(status)
-}
-
-/** « ポケモンカード151 (2023) » : l'extension d'une carte et son année. */
-export function setLabel(card: Pick<PokemonCard, 'set'>): string | null {
-  const name = card.set?.name
-  const year = card.set?.releaseDate?.slice(0, 4)
-  return name ? (year ? `${name} (${year})` : name) : null
 }
 
 /** Des libellés → les options d'un `Select` ou d'un `SegmentedControl`, dans le même ordre. */

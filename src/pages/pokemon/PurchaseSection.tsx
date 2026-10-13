@@ -2,7 +2,7 @@ import { Button, SegmentedControl, Stack } from '@camply/ui'
 import { Link } from 'react-router'
 import { PreferenceFields } from '@/components/PreferenceFields'
 import { useCollectionAction } from '@/hooks/useNotify'
-import type { CardView } from '@/lib/candidates'
+import type { CardView } from '@/lib/pokedex'
 import { formatEuro } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
 import { priceVerdict } from '@/lib/purchase-planner'
@@ -27,12 +27,11 @@ const MESSAGES: Record<Choice, string> = {
 }
 
 /**
- * Accepter une carte à l'achat (dans la liste d'achats), ou l'exclure. Indépendant du statut :
- * on peut accepter plusieurs illustrations d'un Pokémon, et n'en acheter qu'une.
+ * Accepter une carte à l'achat (dans la liste d'achats), ou l'exclure. Indépendant de son statut.
  */
-export function PurchaseSection({ candidate }: { candidate: CardView }) {
+export function PurchaseSection({ view }: { view: CardView }) {
   const act = useCollectionAction()
-  const { card, status } = candidate
+  const { card, status } = view
   const preference = useShoppingStore((state) => state.shopping.preferences[card.id])
   const price = priceOf(usePrices(), card)?.price ?? null
   const choice = preference?.decision ?? 'none'
@@ -79,7 +78,7 @@ function purchaseHint(
   price: number | null,
 ): string {
   if (choice === 'none') {
-    return 'À acheter : la carte entre dans votre liste d’achats. Vous pouvez en accepter plusieurs pour un même Pokémon.'
+    return 'À acheter : la carte entre dans votre liste d’achats.'
   }
   if (choice === 'excluded') return 'Cette carte ne vous sera jamais proposée à l’achat.'
   if (status === 'owned') return 'Dans votre liste d’achats. Possédée : elle n’est plus proposée.'

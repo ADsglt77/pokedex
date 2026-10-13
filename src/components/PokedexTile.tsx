@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { formatDexNumber } from '@/lib/format'
-import { speciesStatus, type PokedexEntry } from '@/lib/pokedex'
+import type { PokedexEntry } from '@/lib/pokedex'
 import type { CardStatus } from '@/types'
 import { CardArt } from './CardArt'
 import { PossessionMark } from './PossessionMark'
@@ -13,16 +13,16 @@ const SPECIES_LABELS: Record<CardStatus | 'none', string> = {
   none: 'Non possédé',
 }
 
-/** Une pochette du classeur : la carte qui représente l'espèce, son numéro et son nom. */
+/** Une pochette du classeur : la carte de l'espèce (ou son dessin), son numéro et son nom. */
 export function PokedexTile({ entry, eager }: { entry: PokedexEntry; eager?: boolean }) {
-  const { species, representative } = entry
-  const status = speciesStatus(entry)
+  const { species, card } = entry
+  const status = card?.status ?? null
   const label = `${formatDexNumber(species.id)} ${species.names.fr}, ${SPECIES_LABELS[status ?? 'none']}`
 
   return (
     <Link to={`/pokemon/${species.id}`} className={styles.tile} aria-label={label}>
       <CardArt
-        card={representative?.card ?? null}
+        card={card?.card ?? null}
         speciesId={species.id}
         alt=""
         locked={!entry.unlocked}

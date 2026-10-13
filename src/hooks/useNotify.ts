@@ -37,19 +37,19 @@ export function useNotify() {
   )
 }
 
-/** Tout ce qu'une action peut modifier : collection, réglages, achats. */
-const snapshot = () => {
-  const { collection, settings } = useCollectionStore.getState()
-  return { collection, settings, shopping: useShoppingStore.getState().shopping }
-}
+/** Tout ce qu'une action peut modifier : collection, achats. */
+const snapshot = () => ({
+  collection: useCollectionStore.getState().collection,
+  shopping: useShoppingStore.getState().shopping,
+})
 
 type Snapshot = ReturnType<typeof snapshot>
 
 const sameSnapshot = (a: Snapshot, b: Snapshot) =>
-  a.collection === b.collection && a.settings === b.settings && a.shopping === b.shopping
+  a.collection === b.collection && a.shopping === b.shopping
 
 /**
- * Lance une modification de la collection, des réglages ou des achats, puis l'annonce avec
+ * Lance une modification de la collection ou des achats, puis l'annonce avec
  * « Annuler ». Annuler rétablit l'état d'avant, seulement si rien n'a changé depuis : une
  * modification faite entre-temps n'est jamais effacée. Rien n'est annoncé quand rien ne change.
  */
@@ -67,9 +67,8 @@ export function useCollectionAction() {
         tone,
         undo: () => {
           if (!sameSnapshot(snapshot(), after)) return false
-          const { shopping, ...collection } = before
-          useCollectionStore.setState(collection)
-          useShoppingStore.setState({ shopping })
+          useCollectionStore.setState({ collection: before.collection })
+          useShoppingStore.setState({ shopping: before.shopping })
           return true
         },
       })

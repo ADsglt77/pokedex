@@ -26,5 +26,5 @@ dist-ssr
 # Réponses des API gardées par les scripts de données
 scripts/.cache
 
-# Prix Cardmarket du jour, écrits par `bun run prices` (sur le VPS : volume du service `prices`)
-public/prices
+# Prix Cardmarket, écrits par `bun run prices` et servis par `bun dev` (sur le VPS : volume du service `prices`)
+/prices

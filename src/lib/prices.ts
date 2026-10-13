@@ -4,20 +4,25 @@
  */
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
-import { findCard, tcgdexIdOf } from '@/lib/catalog'
+import { findCard } from '@/lib/catalog'
 import { isTaken, type PokedexEntry } from '@/lib/pokedex'
 import type {
   CardPrice,
+  CardPriceHistory,
   CardStatus,
   CollectionData,
   PokemonCard,
   PriceFile,
-  PriceHistoryFile,
 } from '@/types'
 
-/** Le prix du jour d'une carte ; `null` sans prix (ou sans fichier de prix). */
-export const priceOf = (prices: PriceFile | null, card: PokemonCard): CardPrice | null =>
-  prices?.cards[tcgdexIdOf(card) ?? ''] ?? null
+/** Le prix du jour d'une carte, par son id Cardmarket ; `null` sans id, sans prix ou sans fichier. */
+export function priceOf(
+  prices: PriceFile | null,
+  card: Pick<PokemonCard, 'cardmarket'>,
+): CardPrice | null {
+  const row = card.cardmarket === undefined ? undefined : prices?.cards[card.cardmarket]
+  return row ? { price: row[0], low: row[1], avg30: row[2] } : null
+}
 
 /** L'écart en % entre ce que vaut une carte (ou une collection) et ce qu'elle a coûté. */
 export const gainPercent = (value: number, paid: number) =>
@@ -71,58 +76,43 @@ export function tallyByStatus(cards: readonly TrackedCard[]): Record<CardStatus,
 }
 
 export interface CompletionCost {
-  /** Somme, pour chaque Pokémon, du prix de sa carte la moins chère. */
+  /** Somme des prix des cartes chiffrées. */
   value: number
-  /** Pokémon chiffrés. */
+  /** Pokémon dont la carte a un prix. */
   priced: number
-  /** Pokémon dont aucune carte n'a de prix (ou sans carte). */
+  /** Pokémon dont la carte n'a pas de prix (pas d'id Cardmarket, ou pas de prix ce jour). */
   unpriced: number
-}
-
-/** Une carte et son prix du jour (`null` : sans prix). */
-export interface PricedCard {
-  cardId: string
-  price: number | null
+  /** Pokémon sans carte. */
+  noCard: number
 }
 
 /**
- * Pour chaque Pokémon, ses cartes et leur prix → ce que coûte, pour chacun, la moins chère. Une
- * carte TAG TEAM déjà comptée pour un autre Pokémon ne coûte plus rien : payée une seule fois.
+ * Ce que coûterait de débloquer les Pokémon qui restent, au prix de leur carte. Un Pokémon dont la
+ * carte est déjà commandée compte dans les commandes, pas ici. Une carte de plusieurs Pokémon
+ * (TAG TEAM d'une ancienne version) n'est comptée qu'une fois.
  */
-export function cheapestTotal(cardsByPokemon: Iterable<readonly PricedCard[]>): CompletionCost {
-  const cost = { value: 0, priced: 0, unpriced: 0 }
+export function completionCost(
+  entries: readonly PokedexEntry[],
+  prices: PriceFile | null,
+): CompletionCost {
+  const cost = { value: 0, priced: 0, unpriced: 0, noCard: 0 }
   const counted = new Set<string>()
-  for (const cards of cardsByPokemon) {
-    const costs = cards.flatMap(({ cardId, price }) =>
-      price === null ? [] : [{ cardId, extra: counted.has(cardId) ? 0 : price }],
-    )
-    if (costs.length === 0) {
+  for (const { card } of entries.filter((entry) => !isTaken(entry))) {
+    if (!card) {
+      cost.noCard++
+      continue
+    }
+    const price = priceOf(prices, card.card)?.price
+    if (price === undefined) {
       cost.unpriced++
       continue
     }
-    const cheapest = costs.reduce((best, card) => (card.extra < best.extra ? card : best))
     cost.priced++
-    cost.value += cheapest.extra
-    counted.add(cheapest.cardId)
+    if (!counted.has(card.card.id)) cost.value += price
+    counted.add(card.card.id)
   }
   return cost
 }
-
-/**
- * Ce que coûterait de débloquer les Pokémon qui restent, à la candidate la moins chère. Un
- * Pokémon dont une carte est déjà commandée compte dans les commandes, pas ici.
- */
-export const completionCost = (entries: readonly PokedexEntry[], prices: PriceFile | null) =>
-  cheapestTotal(
-    entries
-      .filter((entry) => !isTaken(entry))
-      .map((entry) =>
-        entry.candidates.map(({ card }) => ({
-          cardId: card.id,
-          price: priceOf(prices, card)?.price ?? null,
-        })),
-      ),
-  )
 
 export const completionByGeneration = (
   entries: readonly PokedexEntry[],
@@ -141,17 +131,21 @@ export interface PricePoint {
   value: number
 }
 
-const seriesOf = (history: PriceHistoryFile, card: PokemonCard) =>
-  history.cards[tcgdexIdOf(card) ?? ''] ?? []
+const DAY = 86_400_000
+
+/** Le jour (YYYY-MM-DD) `day` jours après `from`. */
+const dayAfter = (from: string, day: number) =>
+  new Date(Date.parse(from) + day * DAY).toISOString().slice(0, 10)
+
+const daysBetween = (from: string, to: string) =>
+  Math.round((Date.parse(to) - Date.parse(from)) / DAY)
 
 /** La courbe d'une carte : un point par jour où elle avait un prix. */
-export function cardHistory(history: PriceHistoryFile | null, card: PokemonCard): PricePoint[] {
+export function cardHistory(history: CardPriceHistory | null): PricePoint[] {
   if (!history) return []
-  const series = seriesOf(history, card)
-  return history.days.flatMap((date, day) => {
-    const value = series[day]
-    return value == null ? [] : [{ date, value }]
-  })
+  return history.prices.flatMap((value, day) =>
+    value === null ? [] : [{ date: dayAfter(history.from, day), value }],
+  )
 }
 
 /**
@@ -164,18 +158,26 @@ function filled(series: readonly (number | null | undefined)[], days: number): n
 }
 
 /**
- * La valeur, jour par jour, des cartes données (celles possédées aujourd'hui) : la courbe de la
- * collection telle qu'elle est, pas telle qu'elle était. Un jour sans prix pour une carte (carte
- * entrée plus tard dans l'index) compte son prix connu le plus proche : pas de faux creux.
+ * La valeur, jour par jour, des cartes données (celles possédées aujourd'hui), d'après leurs
+ * historiques : la courbe de la collection telle qu'elle est, pas telle qu'elle était. Un jour
+ * sans prix pour une carte (avant son premier prix connu) compte son prix connu le plus proche :
+ * pas de faux creux.
  */
-export function collectionHistory(
-  history: PriceHistoryFile | null,
-  cards: readonly PokemonCard[],
-): PricePoint[] {
-  if (!history) return []
-  const series = cards.map((card) => filled(seriesOf(history, card), history.days.length))
-  return history.days.map((date, day) => ({
-    date,
+export function collectionHistory(histories: readonly CardPriceHistory[]): PricePoint[] {
+  if (histories.length === 0) return []
+  const first = histories.map((history) => history.from).sort()[0]!
+  const days = Math.max(
+    ...histories.map((history) => daysBetween(first, history.from) + history.prices.length),
+  )
+  const series = histories.map((history) => {
+    const offset = daysBetween(first, history.from)
+    return filled(
+      Array.from({ length: days }, (_, day) => history.prices[day - offset]),
+      days,
+    )
+  })
+  return Array.from({ length: days }, (_, day) => ({
+    date: dayAfter(first, day),
     value: series.reduce((sum, values) => sum + values[day]!, 0),
   }))
 }

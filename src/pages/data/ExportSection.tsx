@@ -9,7 +9,7 @@ export function ExportSection() {
   return (
     <DataSection id="exporter" title="Exporter">
       <p>
-        Un fichier JSON avec toute votre collection, prix payés compris, les raretés suivies, votre
+        Un fichier JSON avec toute votre collection (vos cartes, leurs statuts et prix payés), votre
         liste d’achats, vos commandes et votre budget. Gardez-le pour sauvegarder votre collection,
         ou importez-le dans un autre navigateur.
       </p>

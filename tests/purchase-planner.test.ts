@@ -8,7 +8,6 @@ const options = (extra: Partial<PlanOptions> = {}): PlanOptions => ({
   budget: 100,
   shippingReserve: 5,
   priorities: ['high', 'normal', 'low'],
-  mode: 'new',
   forced: new Set(),
   skipped: new Set(),
   ...extra,
@@ -38,18 +37,9 @@ describe('prochaine commande', () => {
     expect(ids(plan.picked)).toEqual(['a', 'b'])
   })
 
-  test('une seule illustration par Pokémon, l’illustration choisie d’abord', () => {
+  test('une seule carte par Pokémon, la moins chère d’abord (cartes d’une ancienne version)', () => {
     const plan = planPurchase(
-      [wish('cheap', [25], 10), wish('favorite', [25], 30, { isFavorite: true })],
-      new Set(),
-      options(),
-    )
-    expect(ids(plan.picked)).toEqual(['favorite'])
-  })
-
-  test('une illustration choisie trop chère laisse sa place à une autre du même Pokémon', () => {
-    const plan = planPurchase(
-      [wish('cheap', [25], 10), wish('favorite', [25], 300, { isFavorite: true })],
+      [wish('other', [25], 30), wish('cheap', [25], 10)],
       new Set(),
       options(),
     )
@@ -77,13 +67,6 @@ describe('prochaine commande', () => {
       options(),
     )
     expect(ids(plan.picked)).toEqual(['new'])
-  })
-
-  test('mode « favorites » : l’illustration choisie d’un Pokémon déjà obtenu', () => {
-    const cards = [wish('favorite', [3], 20, { isFavorite: true }), wish('other', [3], 5)]
-    expect(ids(planPurchase(cards, new Set([3]), options()).picked)).toEqual([])
-    const plan = planPurchase(cards, new Set([3]), options({ mode: 'favorites' }))
-    expect(ids(plan.picked)).toEqual(['favorite'])
   })
 
   test('sans prix et au-dessus du prix maximum : à part, jamais chiffrées', () => {

@@ -8,26 +8,13 @@ import type { CardStatus, CollectionData, PokemonCard } from '@/types'
 export const emptyCollection = (): CollectionData => ({
   schemaVersion: 1,
   updatedAt: null,
-  entries: {},
   cards: {},
   customCards: {},
 })
 
-/** L'illustration choisie pour un Pokémon ; `null` la retire. */
-export function setFavorite(
-  data: CollectionData,
-  speciesId: number,
-  card: PokemonCard | null,
-  now: string,
-): CollectionData {
-  const entry = { speciesId, favoriteCardId: card?.id ?? null, updatedAt: now }
-  return { ...data, entries: { ...data.entries, [speciesId]: entry }, updatedAt: now }
-}
-
 /**
  * Le statut d'une carte ; `null` le retire, prix payé compris. Le prix payé suit la carte de
- * commandée à possédée ; souhaitée, elle n'en a pas. Une carte TAG TEAM possédée débloque chacun
- * de ses Pokémon : le statut appartient à la carte.
+ * commandée à possédée ; souhaitée, elle n'en a pas.
  */
 export function setCardStatus(
   data: CollectionData,
@@ -55,6 +42,23 @@ export function setPaidPrice(
   if (ownership.paidPrice === paidPrice) return data
   const updated = { ...ownership, paidPrice, updatedAt: now }
   return { ...data, cards: { ...data.cards, [card.id]: updated }, updatedAt: now }
+}
+
+/**
+ * Ajoute la carte d'un Pokémon, ou la corrige (même id : son statut et ses achats la suivent). Le
+ * Pokémon n'en a qu'une : on retire l'ancienne avant d'en ajouter une autre.
+ */
+export function saveCard(data: CollectionData, card: PokemonCard, now: string): CollectionData {
+  return { ...data, customCards: { ...data.customCards, [card.id]: card }, updatedAt: now }
+}
+
+/** Retire une carte du Pokédex, avec son statut et son prix payé. */
+export function removeCard(data: CollectionData, cardId: string, now: string): CollectionData {
+  const customCards = { ...data.customCards }
+  const cards = { ...data.cards }
+  delete customCards[cardId]
+  delete cards[cardId]
+  return { ...data, customCards, cards, updatedAt: now }
 }
 
 /** Une carte encore à acheter : ni possédée ni commandée. */

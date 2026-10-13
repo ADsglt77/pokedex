@@ -5,15 +5,12 @@ import { join, relative } from 'node:path'
 
 const DATA_DIR = join(import.meta.dirname, '..', '..', 'src', 'data')
 
-/** Le chemin d'un fichier de `src/data`. */
-export const dataPath = (name: string) => join(DATA_DIR, name)
-
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
 /**
  * JSON avec un élément par ligne pour les listes d'objets et les dictionnaires : le fichier reste
- * compact, et une carte qui change est une ligne qui change dans git.
+ * compact, et un élément qui change est une ligne qui change dans git.
  */
 function serialize(file: Record<string, unknown>): string {
   const fields = Object.entries(file).map(([key, value]) => {
@@ -40,7 +37,7 @@ export async function writeDataFile(
   name: string,
   build: (generatedAt: string) => Record<string, unknown>,
 ) {
-  const path = dataPath(name)
+  const path = join(DATA_DIR, name)
   const previous = await readFile(path, 'utf8').catch(() => null)
   const previousDate = previous && (JSON.parse(previous) as { generatedAt?: string }).generatedAt
 

@@ -1,22 +1,26 @@
 /**
- * Le Pokédex tel que l'utilisateur le voit : pour chaque espèce, ses candidates, la carte qui la
- * représente et ce qu'il en possède ; la progression, en tout et par génération.
+ * Le Pokédex tel que l'utilisateur le voit : pour chaque espèce, la carte qu'il y a ajoutée et ce
+ * qu'il en a fait ; la progression, en tout et par génération.
  */
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
-import { buildCandidates, pickRepresentative, type CardView } from '@/lib/candidates'
 import { findCard, SPECIES } from '@/lib/catalog'
 import type { CardStatus, CollectionData, PokemonCard, PokemonSpecies } from '@/types'
 
+/** Une carte et ce que l'utilisateur en a fait : prête à afficher. */
+export interface CardView {
+  card: PokemonCard
+  status: CardStatus | null
+  /** Date d'obtention, pour une carte possédée. */
+  acquiredAt: string | null
+}
+
 export interface PokedexEntry {
   species: PokemonSpecies
-  candidates: CardView[]
-  /** `null` sans candidate : « illustration à rechercher ». */
-  representative: CardView | null
-  /** Débloqué : au moins une candidate possédée. Souhaitée ou commandée ne suffit pas. */
+  /** La carte du Pokémon ; `null` tant que l'utilisateur n'en a pas ajouté. */
+  card: CardView | null
+  /** Débloqué : sa carte est possédée. Souhaitée ou commandée ne suffit pas. */
   unlocked: boolean
-  /** Combien de candidates ont chaque statut. */
-  statusCounts: Record<CardStatus, number>
 }
 
 export interface Progress {
@@ -46,36 +50,30 @@ function progressOf(entries: readonly PokedexEntry[]): Progress {
   return { total, unlocked, missing: total - unlocked, percent: shown / 10 }
 }
 
-function buildEntry(
-  species: PokemonSpecies,
-  collection: CollectionData,
-  enabledCodes: readonly string[],
-): PokedexEntry {
-  const candidates = buildCandidates(species.id, collection, enabledCodes)
-  const statusCounts = { owned: 0, ordered: 0, wanted: 0 }
-  for (const { status } of candidates) if (status) statusCounts[status]++
+function describeCard(card: PokemonCard, collection: CollectionData): CardView {
+  const ownership = collection.cards[card.id]
   return {
-    species,
-    candidates,
-    representative: pickRepresentative(candidates),
-    unlocked: statusCounts.owned > 0,
-    statusCounts,
+    card,
+    status: ownership?.status ?? null,
+    acquiredAt: ownership?.status === 'owned' ? ownership.acquiredAt : null,
   }
 }
 
-/** Un Pokémon obtenu ou en route : une de ses candidates est possédée ou commandée. */
-export const isTaken = (entry: PokedexEntry) => entry.unlocked || entry.statusCounts.ordered > 0
+/** Un Pokémon obtenu ou en route : sa carte est possédée ou commandée. */
+export const isTaken = (entry: PokedexEntry) =>
+  entry.card?.status === 'owned' || entry.card?.status === 'ordered'
 
-/** Le statut affiché pour une espèce : possédée, sinon commandée, sinon souhaitée. */
-export function speciesStatus({ statusCounts }: PokedexEntry): CardStatus | null {
-  if (statusCounts.owned) return 'owned'
-  if (statusCounts.ordered) return 'ordered'
-  if (statusCounts.wanted) return 'wanted'
-  return null
-}
-
-export function buildPokedex(collection: CollectionData, enabledCodes: readonly string[]): Pokedex {
-  const entries = SPECIES.map((species) => buildEntry(species, collection, enabledCodes))
+export function buildPokedex(collection: CollectionData): Pokedex {
+  // Une carte par Pokémon : la première ajoutée, si une ancienne version en a gardé plusieurs.
+  const cardBySpecies = new Map<number, PokemonCard>()
+  for (const card of Object.values(collection.customCards)) {
+    for (const id of card.dexIds) if (!cardBySpecies.has(id)) cardBySpecies.set(id, card)
+  }
+  const entries = SPECIES.map((species): PokedexEntry => {
+    const card = cardBySpecies.get(species.id)
+    const view = card ? describeCard(card, collection) : null
+    return { species, card: view, unlocked: view?.status === 'owned' }
+  })
   return {
     entries,
     entryById: new Map(entries.map((entry) => [entry.species.id, entry])),
@@ -88,26 +86,21 @@ export function buildPokedex(collection: CollectionData, enabledCodes: readonly 
 }
 
 export interface CollectionSummary {
+  /** Les cartes ajoutées au Pokédex. */
+  cards: number
   owned: number
   ordered: number
   wanted: number
-  favorites: number
 }
 
 /**
- * Ce que contient la collection. Une carte sortie de l'index n'y compte plus, comme partout
- * ailleurs dans l'app : ce que l'utilisateur en avait noté reste enregistré, sans s'afficher.
+ * Ce que contient la collection. Un statut dont la carte a été retirée n'y compte plus, comme
+ * partout ailleurs dans l'app.
  */
 export function summarize(data: CollectionData): CollectionSummary {
-  const known = (cardId: string | null) => cardId !== null && findCard(cardId, data) !== null
-  const summary = {
-    owned: 0,
-    ordered: 0,
-    wanted: 0,
-    favorites: Object.values(data.entries).filter((entry) => known(entry.favoriteCardId)).length,
-  }
+  const summary = { cards: Object.keys(data.customCards).length, owned: 0, ordered: 0, wanted: 0 }
   for (const [cardId, ownership] of Object.entries(data.cards)) {
-    if (known(cardId)) summary[ownership.status]++
+    if (findCard(cardId, data)) summary[ownership.status]++
   }
   return summary
 }

@@ -16,7 +16,7 @@ import {
   type Tally,
 } from '@/lib/prices'
 import { useCollectionStore } from '@/store/collection'
-import { loadPriceHistory, usePrices, usePricesMissing } from '@/store/prices'
+import { loadPriceHistories, usePrices, usePricesMissing } from '@/store/prices'
 import type { PokemonCard } from '@/types'
 import { CardsTable, CompletionTable } from './ValueTables'
 import styles from './ValuePage.module.css'
@@ -41,7 +41,6 @@ export function ValuePage() {
   const cards = useMemo(() => trackedCards(collection, prices), [collection, prices])
   const tallies = tallyByStatus(cards)
   const completion = useMemo(() => completionByGeneration(entries, prices), [entries, prices])
-  // En un seul calcul : une carte TAG TEAM à cheval sur deux générations n'est payée qu'une fois.
   const toComplete = useMemo(() => completionCost(entries, prices), [entries, prices])
   const owned = cards.filter((card) => card.status === 'owned').map((card) => card.card)
 
@@ -87,8 +86,8 @@ export function ValuePage() {
             value={formatEuro(toComplete.value)}
             hint={details(
               plural(toComplete.priced, 'Pokémon chiffré', 'Pokémon chiffrés'),
-              toComplete.unpriced > 0 &&
-                `${formatInteger(toComplete.unpriced)} sans carte chiffrée`,
+              toComplete.unpriced > 0 && `${formatInteger(toComplete.unpriced)} sans prix`,
+              toComplete.noCard > 0 && `${formatInteger(toComplete.noCard)} sans carte`,
             )}
           />
         </div>
@@ -115,8 +114,9 @@ export function ValuePage() {
         <Stack as="section" gap={4} aria-labelledby="completion-title">
           <h2 id="completion-title">Pour compléter, par génération</h2>
           <p className="muted">
-            Pour chaque Pokémon à débloquer, sa carte candidate la moins chère. Ceux dont une carte
-            est déjà commandée n’y sont pas : ils comptent dans les commandes.
+            Pour chaque Pokémon à débloquer, le prix de sa carte ; ceux sans carte, ou dont la carte
+            n’a pas de prix, sont comptés à part. Ceux dont la carte est déjà commandée n’y sont pas
+            : ils comptent dans les commandes.
           </p>
           <CompletionTable rows={completion} />
         </Stack>
@@ -126,6 +126,8 @@ export function ValuePage() {
 }
 
 function CollectionChart({ cards }: { cards: PokemonCard[] }) {
-  const history = use(loadPriceHistory())
-  return <PriceChart points={collectionHistory(history, cards)} label="Valeur de ma collection" />
+  // Les cartes sans id Cardmarket n'ont pas de prix : elles ne pèsent pas sur la courbe.
+  const ids = [...new Set(cards.flatMap((card) => card.cardmarket ?? []))].sort((a, b) => a - b)
+  const histories = use(loadPriceHistories(ids))
+  return <PriceChart points={collectionHistory(histories)} label="Valeur de ma collection" />
 }

@@ -8,7 +8,7 @@ import type { GenerationId, PokemonSpecies } from '@/types'
 const POSSESSIONS = ['all', 'owned', 'missing'] as const
 export type PossessionFilter = (typeof POSSESSIONS)[number]
 
-/** Avec une carte candidate, ou illustration à rechercher. */
+/** Avec une carte ajoutée, ou sans carte. */
 const ILLUSTRATIONS = ['card', 'no-card'] as const
 export type IllustrationFilter = (typeof ILLUSTRATIONS)[number]
 
@@ -98,13 +98,37 @@ export function searchMatcher(search: string): (species: PokemonSpecies) => bool
   return (species) => SEARCH_NAMES.get(species.id)!.includes(needle)
 }
 
+/** En mots simples : sans casse ni accent, ponctuation changée en espaces. « Mr. Mime » → « mr mime ». */
+const words = (text: string) =>
+  ` ${text
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()} `
+
+const SPECIES_WORDS = SPECIES.flatMap(({ id, names }) =>
+  [names.fr, names.en].map((name) => ({ id, name: words(name) })),
+)
+
+/**
+ * Le Pokémon d'un nom de carte (« Lillie's Clefairy ex », « Pikachu (30C 034) ») : celui dont le
+ * nom français ou anglais y figure en entier, le plus long s'il y en a plusieurs (Porygon-Z avant
+ * Porygon) ; `null` si aucun.
+ */
+export function speciesInName(name: string): number | null {
+  const text = words(name)
+  const found = SPECIES_WORDS.filter((species) => text.includes(species.name))
+  return found.sort((a, b) => b.name.length - a.name.length)[0]?.id ?? null
+}
+
 export function filterEntries(entries: PokedexEntry[], filters: PokedexFilters): PokedexEntry[] {
   const matches = searchMatcher(filters.search)
   const kept = entries.filter(
-    ({ species, unlocked, representative }) =>
+    ({ species, unlocked, card }) =>
       (!filters.generation || species.generation === filters.generation) &&
       (filters.possession === 'all' || unlocked === (filters.possession === 'owned')) &&
-      (!filters.illustration || (representative !== null) === (filters.illustration === 'card')) &&
+      (!filters.illustration || (card !== null) === (filters.illustration === 'card')) &&
       matches(species),
   )
   return filters.descending ? kept.reverse() : kept
