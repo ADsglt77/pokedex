@@ -51,7 +51,8 @@ const missing = new Set<string>()
 /**
  * L'image de la carte chez Pokécardex, si elle s'y charge ; `null` sinon. La même promesse pour la
  * même référence (ce qu'attend `use`). `retry`, au moment d'enregistrer, redemande une image qui a
- * échoué : une panne passagère ne doit pas compter pour une image absente.
+ * échoué : une panne passagère ne doit pas compter pour une image absente. Sans réponse en 10 s,
+ * elle compte pour absente : l'enregistrement, qui l'attend, ne reste pas bloqué.
  */
 export function findCardImage(reference: string, { retry = false } = {}) {
   let promise = found.get(reference)
@@ -61,13 +62,22 @@ export function findCardImage(reference: string, { retry = false } = {}) {
       new Promise<CardImage | null>((resolve) => {
         if (!image) return resolve(null)
         const probe = new Image()
+        const fail = () => {
+          missing.add(reference)
+          resolve(null)
+        }
+        const timer = setTimeout(() => {
+          probe.onload = probe.onerror = null
+          fail()
+        }, 10_000)
         probe.onload = () => {
+          clearTimeout(timer)
           missing.delete(reference)
           resolve(image)
         }
         probe.onerror = () => {
-          missing.add(reference)
-          resolve(null)
+          clearTimeout(timer)
+          fail()
         }
         probe.src = image.small
       }),

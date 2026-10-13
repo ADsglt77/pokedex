@@ -1,6 +1,7 @@
 import { Alert, Skeleton, Stack, Stat } from '@camply/ui'
 import { Flag } from '@camply/ui/icons'
 import { Suspense, use, useMemo } from 'react'
+import { Link } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { PriceChart } from '@/components/PriceChart'
 import { STATUS_ICONS } from '@/components/statusIcons'
@@ -10,6 +11,7 @@ import {
   formatDate,
   formatEuro,
   formatInteger,
+  formatPercent,
   monthRange,
   pageTitle,
   plural,
@@ -21,6 +23,8 @@ import {
   completionByGeneration,
   completionCost,
   gainPercent,
+  priceMovers,
+  type PriceMove,
   tallyByStatus,
   trackedCards,
   type Tally,
@@ -62,8 +66,8 @@ export function ValuePage() {
       <PageHeader title="Valeur">
         Prix du marché Cardmarket
         {prices?.cardmarket && ` du ${formatDate(prices.cardmarket.date)}`}, en euros ; pour les
-        cartes sans id Cardmarket, celui de TCGplayer, converti. Une estimation : l’état de la carte
-        et le vendeur font varier le prix réel.
+        cartes sans prix Cardmarket, celui de TCGplayer, converti. Une estimation : l’état de la
+        carte et le vendeur font varier le prix réel.
       </PageHeader>
 
       {pricesMissing && (
@@ -120,6 +124,8 @@ export function ValuePage() {
           )}
         </Stack>
 
+        <Movers moves={priceMovers(cards, prices, 5)} />
+
         <MonthlyCharts />
 
         <Stack as="section" gap={4} aria-labelledby="cards-title">
@@ -142,12 +148,52 @@ export function ValuePage() {
 }
 
 function CollectionChart({ cards }: { cards: PokemonCard[] }) {
-  // Les cartes sans id Cardmarket n'ont pas de prix : elles ne pèsent pas sur la courbe. La même
+  // Les cartes sans id Cardmarket n'ont pas d'historique (le prix TCGplayer n'en garde pas) : elles
+  // ne pèsent pas sur la courbe. La même
   // carte Cardmarket possédée pour deux Pokémon compte deux fois, comme dans la valeur du jour ;
   // son historique n'est demandé qu'une fois.
   const ids = cards.flatMap((card) => card.cardmarket ?? []).sort((a, b) => a - b)
   const histories = use(loadPriceHistories(ids))
   return <PriceChart points={collectionHistory(histories)} label="Valeur de ma collection" />
+}
+
+/** Les cartes possédées dont le prix a le plus monté, ou baissé, sur 30 jours. */
+function Movers({ moves }: { moves: { risers: PriceMove[]; fallers: PriceMove[] } }) {
+  const groups = [
+    { title: 'Plus fortes hausses', list: moves.risers, className: styles.up },
+    { title: 'Plus fortes baisses', list: moves.fallers, className: styles.down },
+  ]
+  return (
+    <Stack as="section" gap={4} aria-labelledby="movers-title">
+      <h2 id="movers-title">Ce qui bouge</h2>
+      <p className="muted">
+        Vos cartes possédées dont le prix du jour s’écarte le plus de leur moyenne Cardmarket sur 30
+        jours (au moins 5 % et 0,50 €).
+      </p>
+      <div className={styles.months}>
+        {groups.map(({ title, list, className }) => (
+          <Stack key={title} gap={3}>
+            <h3 className={styles.chartTitle}>{title}</h3>
+            {list.length === 0 ? (
+              <p className="muted">Aucune pour l’instant.</p>
+            ) : (
+              <ul className={styles.movers}>
+                {list.map(({ card, price, avg30, change }) => (
+                  <li key={card.id}>
+                    <Link to={`/pokemon/${card.dexIds[0]}`}>{card.reference}</Link>
+                    <span className="numeric">
+                      {formatEuro(price)} <span className={className}>{formatPercent(change)}</span>
+                      <span className="muted"> · moyenne {formatEuro(avg30)}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Stack>
+        ))}
+      </div>
+    </Stack>
+  )
 }
 
 /** Au fil des mois : les Pokémon débloqués (cumul) et ce que coûtent les commandes de chaque mois. */

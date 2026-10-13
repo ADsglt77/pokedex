@@ -14,7 +14,7 @@ import { CardPrice } from './CardPrice'
 import { PurchaseSection } from './PurchaseSection'
 import styles from './CardSheet.module.css'
 
-/** La fiche de la carte du Pokémon : ce qu'elle est, et ce que l'utilisateur en fait. */
+/** La fiche de la carte du Pokémon : ce que l'utilisateur en fait, ce qu'elle est et vaut, son achat. */
 export function CardSheet({ view, species }: { view: CardView; species: PokemonSpecies }) {
   const { card } = view
   const page = cardmarketPage(card)
@@ -27,6 +27,9 @@ export function CardSheet({ view, species }: { view: CardView; species: PokemonS
         <p className={styles.status}>{statusCaption(view.status, view.acquiredAt)}</p>
       </Stack>
 
+      {/* Les actions d'abord : sur téléphone, « Je possède cette carte » reste près de l'écran. */}
+      <CardActions view={view} species={species} />
+
       {card.cardmarket !== undefined && (
         <DescriptionList items={[{ term: 'Id Cardmarket', description: card.cardmarket }]} />
       )}
@@ -38,7 +41,6 @@ export function CardSheet({ view, species }: { view: CardView; species: PokemonS
         </p>
       )}
       <CardPrice card={card} />
-      <CardActions view={view} species={species} />
       <PurchaseSection view={view} />
     </Stack>
   )

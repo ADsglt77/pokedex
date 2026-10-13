@@ -12,6 +12,7 @@ import { isTaken, type PokedexEntry } from '@/lib/pokedex'
 import { isToBuy } from '@/lib/collection'
 import { priceOf } from '@/lib/prices'
 import { priceVerdict } from '@/lib/purchase-planner'
+import { csvNumber, toCsv } from '@/lib/transfer'
 import type {
   CardStatus,
   CollectionData,
@@ -122,7 +123,7 @@ export function wishlistRows(
   })
 }
 
-/** Les Pokémon déjà obtenus ou en route : une carte possédée ou commandée. */
+/** Les Pokémon déjà débloqués ou en route : une carte possédée ou commandée. */
 export const takenSpecies = (entries: readonly PokedexEntry[]): Set<number> =>
   new Set(entries.filter(isTaken).map((entry) => entry.species.id))
 
@@ -215,15 +216,7 @@ const englishNames = (card: PokemonCard) => speciesOf(card).map((species) => spe
 export const searchText = (card: PokemonCard) =>
   [...englishNames(card), referenceCode(card.reference)?.number ?? ''].join(' ').trim()
 
-const csvNumber = (value: number | null | undefined) =>
-  value == null ? '' : value.toFixed(2).replace('.', ',')
-
-const csvCell = (value: string | number) => {
-  const text = String(value)
-  return /[";\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text
-}
-
-/** Un CSV pour un tableur (séparateur `;`, décimales à virgule) : une ligne par carte. */
+/** Un CSV pour un tableur : une ligne par carte. */
 export function wishlistCsv(rows: readonly WishRow[]): string {
   const header = [
     'Pokémon',
@@ -249,5 +242,5 @@ export function wishlistCsv(rows: readonly WishRow[]): string {
     cardmarketPage(row.card) ?? '',
     row.preference.note ?? '',
   ])
-  return [header, ...lines].map((line) => line.map(csvCell).join(';')).join('\r\n')
+  return toCsv([header, ...lines])
 }

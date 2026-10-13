@@ -10,7 +10,8 @@ import styles from './CardPrice.module.css'
 
 /**
  * Le prix du jour de la carte, son évolution et, si le prix payé est noté, l'écart. Celui de
- * Cardmarket ; sans id Cardmarket, celui de TCGplayer, converti en euros (sans courbe).
+ * Cardmarket ; sans prix Cardmarket ce jour (pas d'id, ou pas de prix pour cet id), celui de
+ * TCGplayer, converti en euros. La courbe est celle de Cardmarket, s'il y a un id.
  */
 export function CardPrice({ card }: { card: PokemonCard }) {
   const prices = usePrices()
@@ -36,28 +37,34 @@ export function CardPrice({ card }: { card: PokemonCard }) {
               price.avg30 && `moyenne 30 jours ${formatEuro(price.avg30)}`,
             )}
           />
-          {usdPerEur ? (
+          {usdPerEur && (
             <p className="muted">
-              Cardmarket n’est pas relié à cette carte : prix du marché américain, converti en euros
-              (1 € = {usdPerEur.toLocaleString('fr-FR')} $). Pour celui de Cardmarket, ajoutez l’id
-              Cardmarket de la carte (« Modifier la carte »).
+              {card.cardmarket
+                ? 'Cardmarket n’a pas de prix pour cette carte aujourd’hui : '
+                : 'Cardmarket n’est pas relié à cette carte : '}
+              prix du marché américain, converti en euros (1 € = {usdPerEur.toLocaleString('fr-FR')}{' '}
+              $).
+              {!card.cardmarket &&
+                ' Pour celui de Cardmarket, ajoutez l’id Cardmarket de la carte (« Modifier la carte »).'}
             </p>
-          ) : (
+          )}
+          {card.cardmarket !== undefined && (
             <Suspense fallback={<Skeleton height="7rem" />}>
-              <CardPriceHistory card={card} cardmarket={card.cardmarket!} />
+              <CardPriceHistory card={card} cardmarket={card.cardmarket} />
             </Suspense>
           )}
         </>
+      ) : prices || missing ? (
+        <p className="muted">
+          {missing
+            ? 'Les prix ne sont pas disponibles pour le moment.'
+            : card.cardmarket
+              ? 'Cardmarket n’a pas de prix pour cette carte.'
+              : 'Pas de prix : ajoutez l’id Cardmarket de la carte (« Modifier la carte »).'}
+        </p>
       ) : (
-        (prices || missing) && (
-          <p className="muted">
-            {missing
-              ? 'Les prix ne sont pas disponibles pour le moment.'
-              : card.cardmarket
-                ? 'Cardmarket n’a pas de prix pour cette carte.'
-                : 'Pas de prix : ajoutez l’id Cardmarket de la carte (« Modifier la carte »).'}
-          </p>
-        )
+        // Les prix arrivent : la place du prix est gardée.
+        <Skeleton height="4.5rem" />
       )}
     </Stack>
   )

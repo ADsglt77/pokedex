@@ -1,5 +1,6 @@
-import { Select, Stack, Switch } from '@camply/ui'
-import { Suspense, use, useState } from 'react'
+import { Combobox, SegmentedControl, Stack, Switch } from '@camply/ui'
+import { Suspense, use, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { useSearchParams } from 'react-router'
 import { CatalogCredit, CatalogGrid, CatalogTile } from '@/components/CatalogTile'
 import { PageHeader } from '@/components/PageHeader'
@@ -7,16 +8,20 @@ import { useCollectionAction } from '@/hooks/useNotify'
 import { usePokedex } from '@/hooks/usePokedex'
 import { loadCatalog, setCards, setOption, type CatalogCard } from '@/lib/card-catalog'
 import { findCardImage } from '@/lib/card-images'
-import { pageTitle, plural } from '@/lib/format'
+import { searchForm } from '@/lib/filters'
+import { formatInteger, pageTitle, plural } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
 import { getSpecies } from '@/lib/species'
 import { usePrices } from '@/store/prices'
 import { addCard } from '@/store/shopping'
+import styles from './CatalogPage.module.css'
 
 /**
  * Le catalogue par extension (`/catalogue?set=SV2a`) : toutes les cartes japonaises d'une
  * extension, pour donner d'un clic sa carte à chacun de vos Pokémon qui n'en a pas encore (remplir
- * la 1ʳᵉ génération depuis « 151 »…). C'est vous qui choisissez : rien n'est ajouté seul.
+ * la 1ʳᵉ génération depuis « 151 »…), sans statut, possédée ou à acheter. Les extensions se
+ * cherchent par code ou par nom, et se classent par nombre de vos Pokémon sans carte qu'elles
+ * complètent. C'est vous qui choisissez : rien n'est ajouté seul.
  */
 export function CatalogPage() {
   return (
@@ -33,6 +38,21 @@ export function CatalogPage() {
   )
 }
 
+type AddAs = 'none' | 'owned' | 'toBuy'
+
+const ADD_AS: { value: AddAs; label: string }[] = [
+  { value: 'none', label: 'Sans statut' },
+  { value: 'owned', label: 'Possédée' },
+  { value: 'toBuy', label: 'À acheter' },
+]
+
+const ADDED_AS: Record<AddAs, string> = { none: '', owned: ', possédée', toBuy: ', à acheter' }
+
+const SET_ORDERS = [
+  { value: 'recent', label: 'Plus récentes' },
+  { value: 'useful', label: 'Plus utiles' },
+] as const
+
 function SetBrowser() {
   const catalog = use(loadCatalog())
   const [params, setParams] = useSearchParams()
@@ -40,11 +60,43 @@ function SetBrowser() {
   const prices = usePrices()
   const act = useCollectionAction()
   const [missingOnly, setMissingOnly] = useState(true)
+  const [setOrder, setSetOrder] = useState<'recent' | 'useful'>('recent')
+  const [addAs, setAddAs] = useState<AddAs>('none')
   const [adding, setAdding] = useState<string | null>(null)
+  const grid = useRef<HTMLDivElement>(null)
+
+  // Les Pokémon sans carte que chaque extension peut compléter.
+  const openBySet = useMemo(() => {
+    const open = new Map<string, Set<number>>()
+    for (const list of catalog.bySpecies.values()) {
+      for (const card of list) {
+        for (const id of card.dexIds.filter((dexId) => !entryById.get(dexId)?.card)) {
+          open.set(card.set.id, (open.get(card.set.id) ?? new Set<number>()).add(id))
+        }
+      }
+    }
+    return open
+  }, [catalog, entryById])
+  const openCount = (setId: string) => openBySet.get(setId)?.size ?? 0
+  // La recherche porte sur le code et le nom (« sv2a », « 151 », ぽけもん), pas sur le décompte.
+  const searchable = useMemo(
+    () => new Map(catalog.sets.map(({ id, name }) => [id, searchForm(`${id} ${name}`)])),
+    [catalog],
+  )
 
   // L'extension de l'adresse, sinon la plus récente.
   const set = catalog.sets.find((known) => known.id === params.get('set')) ?? catalog.sets[0]!
-  const setOptions = catalog.sets.map(setOption)
+  const sets =
+    setOrder === 'useful'
+      ? [...catalog.sets].sort((a, b) => openCount(b.id) - openCount(a.id))
+      : catalog.sets
+  const setOptions = sets.map((known) => {
+    const option = setOption(known)
+    return {
+      ...option,
+      label: `${option.label} · ${formatInteger(openCount(known.id))} sans carte`,
+    }
+  })
   // Pour chaque carte, le Pokémon qui la recevrait : le premier des siens qui n'a pas de carte.
   const rows = setCards(catalog, set.id).map((card) => ({
     card,
@@ -52,73 +104,111 @@ function SetBrowser() {
     price: priceOf(prices, card),
   }))
   const shown = missingOnly ? rows.filter((row) => row.open !== null) : rows
+  // Le rang d'une carte parmi celles qu'on peut encore choisir : celui du focus après l'ajout.
+  const choosable = shown.filter((row) => row.open !== null)
 
-  const choose = async (card: CatalogCard, speciesId: number) => {
+  const choose = async (card: CatalogCard, speciesId: number, rank: number) => {
     setAdding(card.key)
     const image = (await findCardImage(card.reference, { retry: true })) ?? card.fallback
-    setAdding(null)
     const name = getSpecies(speciesId)!.names.fr
-    act(
-      () =>
-        addCard(
-          {
-            id: `manual:${crypto.randomUUID()}`,
-            dexIds: [speciesId],
-            reference: card.reference,
-            image,
-            ...(card.cardmarket !== undefined && { cardmarket: card.cardmarket }),
-          },
-          { owned: false, toBuy: false },
-        ),
-      `Carte ${card.key} ajoutée à ${name}.`,
-    )
+    // Ajoutée et affichée tout de suite : le focus va alors à la carte suivante, celle ajoutée
+    // disparaissant ou se désactivant.
+    flushSync(() => {
+      setAdding(null)
+      act(
+        () =>
+          addCard(
+            {
+              id: `manual:${crypto.randomUUID()}`,
+              dexIds: [speciesId],
+              reference: card.reference,
+              image,
+              ...(card.cardmarket !== undefined && { cardmarket: card.cardmarket }),
+            },
+            { owned: addAs === 'owned', toBuy: addAs === 'toBuy' },
+          ),
+        `Carte ${card.key} ajoutée à ${name}${ADDED_AS[addAs]}.`,
+      )
+    })
+    const tiles = grid.current?.querySelectorAll<HTMLButtonElement>('button:enabled') ?? []
+    tiles[Math.min(rank, tiles.length - 1)]?.focus()
   }
 
   return (
     <Stack gap={5}>
-      <Stack direction="horizontal" align="center" gap={3} wrap>
-        <Select
-          aria-label="Extension"
-          options={setOptions}
-          value={set.id}
-          onChange={(id) => setParams({ set: id }, { replace: true })}
+      <Stack direction="horizontal" align="end" gap={3} wrap>
+        <div className={styles.search}>
+          <Combobox
+            label="Extension"
+            placeholder="Code ou nom : SV2a, 151…"
+            options={setOptions}
+            value={set.id}
+            onChange={(id) => setParams({ set: id }, { replace: true })}
+            emptyMessage="Aucune extension ne correspond."
+            filter={(option, query) => searchable.get(option.value)!.includes(searchForm(query))}
+          />
+        </div>
+        <SegmentedControl
+          aria-label="Ordre des extensions"
+          options={[...SET_ORDERS]}
+          value={setOrder}
+          onChange={setSetOrder}
         />
+      </Stack>
+      <Stack direction="horizontal" align="center" gap={4} wrap>
         <Switch
           label="Seulement les Pokémon sans carte"
           checked={missingOnly}
           onChange={(event) => setMissingOnly(event.target.checked)}
         />
+        <Stack direction="horizontal" align="center" gap={2}>
+          <span id="add-as" className="muted">
+            Ajouter comme
+          </span>
+          <SegmentedControl
+            aria-labelledby="add-as"
+            size="sm"
+            options={ADD_AS}
+            value={addAs}
+            onChange={setAddAs}
+          />
+        </Stack>
       </Stack>
       <p className="muted">
         {plural(shown.length, 'carte', 'cartes')} · <CatalogCredit />
+        {setOrder === 'useful' &&
+          ' · plus utiles : celles qui donnent leur carte au plus de vos Pokémon qui n’en ont pas'}
       </p>
       {shown.length === 0 ? (
         <p className="muted">Tous les Pokémon de cette extension ont déjà leur carte.</p>
       ) : (
-        <CatalogGrid>
-          {shown.map(({ card, open, price }) => {
-            const speciesId = open ?? card.dexIds[0]!
-            return (
-              <li key={card.key}>
-                <CatalogTile
-                  card={card}
-                  price={price}
-                  speciesId={speciesId}
-                  disabled={open === null || adding !== null}
-                  onPick={() => open !== null && choose(card, open)}
-                >
-                  <span>
-                    {open === null
-                      ? `${getSpecies(speciesId)!.names.fr} a déjà sa carte`
-                      : adding === card.key
-                        ? 'Ajout…'
-                        : `Choisir pour ${getSpecies(open)!.names.fr}`}
-                  </span>
-                </CatalogTile>
-              </li>
-            )
-          })}
-        </CatalogGrid>
+        <div ref={grid}>
+          <CatalogGrid>
+            {shown.map((row) => {
+              const { card, open, price } = row
+              const speciesId = open ?? card.dexIds[0]!
+              return (
+                <li key={card.key}>
+                  <CatalogTile
+                    card={card}
+                    price={price}
+                    speciesId={speciesId}
+                    disabled={open === null || adding !== null}
+                    onPick={() => open !== null && choose(card, open, choosable.indexOf(row))}
+                  >
+                    <span>
+                      {open === null
+                        ? `${getSpecies(speciesId)!.names.fr} a déjà sa carte`
+                        : adding === card.key
+                          ? 'Ajout…'
+                          : `Choisir pour ${getSpecies(open)!.names.fr}`}
+                    </span>
+                  </CatalogTile>
+                </li>
+              )
+            })}
+          </CatalogGrid>
+        </div>
       )}
     </Stack>
   )

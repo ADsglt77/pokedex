@@ -9,6 +9,14 @@
   margin-inline: auto;
 }
 
+/* Sur téléphone, la carte passe avant les actions : assez petite pour laisser voir « Je possède
+   cette carte » dès l'ouverture de la fiche. */
+@media (max-width: 39.99rem) {
+  .stage {
+    max-width: min(64vw, 16rem);
+  }
+}
+
 .card {
   box-shadow: var(--camply-shadow-lg);
   animation: drop 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);

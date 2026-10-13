@@ -1,9 +1,10 @@
 /**
  * Préparer la prochaine commande : quelles cartes de la liste d'achats prendre avec un budget.
- * Un plan indicatif : les prix sont ceux du marché Cardmarket, pas des offres de vendeurs.
+ * Un plan indicatif : les prix sont ceux du marché (Cardmarket, sinon TCGplayer), pas des offres
+ * de vendeurs.
  *
  * 1. Candidates : les cartes acceptées, ni possédées ni commandées, d'une priorité retenue, d'un
- *    Pokémon pas encore obtenu ni commandé.
+ *    Pokémon pas encore débloqué ni commandé.
  * 2. Mises à part : les cartes sans prix (aucun prix n'est inventé) et celles dont le prix
  *    dépasse le prix maximum fixé.
  * 3. Ordre : les cartes choisies à la main, puis la priorité, puis le prix le plus bas.
@@ -46,6 +47,8 @@ interface Plan<T> {
   picked: T[]
   /** Candidates qui ne tiennent pas dans le budget. */
   left: T[]
+  /** Candidates d'un Pokémon que le plan prend déjà, avec une autre carte. */
+  covered: T[]
   unpriced: T[]
   aboveMax: T[]
   skipped: T[]
@@ -58,13 +61,14 @@ interface Plan<T> {
 
 export function planPurchase<T extends PlannableCard>(
   cards: readonly T[],
-  /** Pokémon déjà obtenus ou commandés. */
+  /** Pokémon déjà débloqués ou commandés. */
   taken: ReadonlySet<number>,
   options: PlanOptions,
 ): Plan<T> {
   const plan: Plan<T> = {
     picked: [],
     left: [],
+    covered: [],
     unpriced: [],
     aboveMax: [],
     skipped: [],
@@ -96,9 +100,13 @@ export function planPurchase<T extends PlannableCard>(
   )
 
   const covered = new Set<number>()
+  const isCovered = (row: T) => row.card.dexIds.some((id) => covered.has(id))
   for (const row of priced) {
     const forced = options.forced.has(row.card.id)
-    if (!forced && row.card.dexIds.some((id) => covered.has(id))) continue
+    if (!forced && isCovered(row)) {
+      plan.covered.push(row)
+      continue
+    }
     if (!forced && cents(plan.cardsTotal + row.price + options.shippingReserve) > options.budget) {
       plan.left.push(row)
       continue
@@ -110,7 +118,8 @@ export function planPurchase<T extends PlannableCard>(
 
   plan.total = plan.picked.length ? cents(plan.cardsTotal + options.shippingReserve) : 0
   plan.overBudget = plan.total > options.budget
-  // Une carte hors budget dont le Pokémon est finalement dans le plan n'est plus à proposer.
-  plan.left = plan.left.filter((row) => !row.card.dexIds.some((id) => covered.has(id)))
+  // Une carte hors budget dont le Pokémon est finalement dans le plan n'est plus hors budget.
+  plan.covered.push(...plan.left.filter(isCovered))
+  plan.left = plan.left.filter((row) => !isCovered(row))
   return plan
 }

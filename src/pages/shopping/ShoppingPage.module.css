@@ -297,6 +297,12 @@
   gap: 0.125rem;
 }
 
+.badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
 .rowActions {
   display: inline-flex;
   align-items: center;
@@ -330,10 +336,18 @@
   width: 7.5rem;
 }
 
-.totals {
+.totals,
+.orderBudget {
   width: 100%;
   max-width: 24rem;
   margin-left: auto;
+}
+
+/* Le mois de la commande, avec elle : sous le total. */
+.orderBudget {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.875rem;
 }
 
 .totals dd {

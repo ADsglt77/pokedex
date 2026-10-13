@@ -99,10 +99,6 @@
 }
 
 @media (max-width: 64rem) {
-  .ruler {
-    pointer-events: none;
-  }
-
   .regions {
     display: grid;
   }

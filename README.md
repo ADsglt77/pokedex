@@ -48,7 +48,7 @@ lire la page Cardmarket ouverte et l'envoyer à l'app d'où il a été installé
 `bun dev`, il ouvre `localhost`. Les prix sont des fichiers du site
 lui-même (`/prices/`), écrits chaque jour par `bun run prices` d'après les fichiers publics de
 Cardmarket : le prix du jour de toutes ses cartes à l'unité, et l'historique de chacune ; pour les
-cartes du catalogue que Cardmarket ne relie pas (vieilles séries, decks), le prix TCGplayer
+cartes du catalogue sans prix Cardmarket (vieilles séries, decks, promos), le prix TCGplayer
 (export de tcgcsv.com), converti en euros au cours de la BCE. En
 développement, lancer `bun run prices` une fois (le premier passage écrit quelque 60 000 fichiers
 dans `prices/`). La collection reste dans le navigateur (`localStorage`) : l'export est sa seule
@@ -87,8 +87,9 @@ fichier par carte, quelques centaines de Mo) dans le volume Docker `prices` : ne
    Si cloudflared tourne lui-même dans Docker, mettre les deux conteneurs sur un même réseau et
    viser `http://pokedex:80`.
 
-**Ensuite, à chaque push sur `main`** (`.github/workflows/deploy.yml`) : GitHub se connecte au VPS
-en SSH, fait `git pull` et reconstruit le conteneur. La construction lance d'abord `bun test` et
+**Ensuite, à chaque déploiement** (`.github/workflows/deploy.yml`, lancé à la main depuis l'onglet
+Actions tant que le domaine n'est pas prêt ; son en-tête dit comment le relancer à chaque push sur
+`main`) : GitHub se connecte au VPS en SSH, fait `git pull` et reconstruit le conteneur. La construction lance d'abord `bun test` et
 rafraîchit les images de base ; si elle échoue, test compris, l'ancienne version reste en ligne.
 Secrets à créer dans le dépôt (Settings › Secrets and variables › Actions) :
 

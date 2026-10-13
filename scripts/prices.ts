@@ -6,12 +6,16 @@
  * - `history/<idProduct>.json` : son nom (liste des produits de Cardmarket) et un prix par jour,
  *   pour les courbes (Cardmarket n'en garde pas). L'app ne lit que ceux des cartes de
  *   l'utilisateur ;
- * - `tcgplayer.json` : pour les cartes du catalogue sans id Cardmarket (vieilles séries, decks que
- *   TCGdex ne relie pas à Cardmarket), le prix de leur produit TCGplayer (export de tcgcsv.com),
- *   converti en euros au cours de référence du jour de la Banque centrale européenne.
+ * - `tcgplayer.json` : pour les cartes du catalogue sans prix Cardmarket (sans id Cardmarket :
+ *   vieilles séries, decks que TCGdex ne relie pas à Cardmarket ; ou dont l'id n'a pas de prix dans
+ *   le guide du jour : promos…), le prix de leur produit TCGplayer (export de tcgcsv.com), converti
+ *   en euros au cours de référence du jour de la Banque centrale européenne. Écrit après
+ *   `latest.json`, qu'il lit.
  * Chaque source n'est retéléchargée que si elle a changé depuis son dernier passage complet, que
- * date son fichier, écrit en dernier (le supprimer pour forcer un passage). Une source en échec
- * n'empêche pas l'autre ; le script finit alors en erreur, pour être relancé.
+ * date son fichier, écrit en dernier (le supprimer pour forcer un passage) ; TCGplayer aussi quand
+ * le catalogue ou `latest.json` ont changé. Une source en échec n'empêche pas l'autre (TCGplayer
+ * prend alors le `latest.json` d'avant, s'il y en a un) ; le script finit alors en erreur, pour
+ * être relancé.
  *
  *   bun scripts/prices.ts [dossier]      (défaut : prices/, servi par `bun dev` à /prices/)
  *
@@ -168,28 +172,43 @@ async function usdPerEur() {
 }
 
 async function tcgplayerPrices() {
-  // tcgcsv publie l'export de TCGplayer une fois par jour ; le catalogue change quand on le refait.
-  // Une date illisible compte pour un changement.
+  // tcgcsv publie l'export de TCGplayer une fois par jour ; le catalogue change quand on le refait,
+  // `latest.json` avec le guide de Cardmarket. Une date illisible compte pour un changement.
   const stamp = Date.parse(await (await download(`${TCGCSV}/last-updated.txt`)).text())
   const updated = Number.isNaN(stamp) ? Date.now() : stamp
   const lastRun = await writtenAt(tcgplayerFile)
-  if (updated <= lastRun && (await writtenAt(CATALOG)) <= lastRun) {
+  const inputs = await Promise.all([writtenAt(CATALOG), writtenAt(latestFile)])
+  if ([updated, ...inputs].every((time) => time <= lastRun)) {
     return console.log(
-      'TCGplayer : ni ses prix ni le catalogue n’ont changé depuis le dernier passage.',
+      'TCGplayer : ni ses prix, ni le catalogue, ni ceux de Cardmarket n’ont changé depuis le dernier passage.',
     )
   }
 
-  // Les cartes du catalogue sans id Cardmarket, reliées à un produit TCGplayer : leur code (une
-  // TAG TEAM est rangée sous chacun de ses Pokémon : une fois suffit), et les groupes où les lire.
+  // Les cartes du catalogue sans prix Cardmarket ce jour (sans id, ou un id absent du guide ; tous
+  // sans `latest.json`), reliées à un produit TCGplayer : leur code (une TAG TEAM est rangée sous
+  // chacun de ses Pokémon : une fois suffit), et les groupes où les lire.
   const catalog = JSON.parse(await readFile(CATALOG, 'utf8')) as CatalogFile
+  const cardmarket = await readFile(latestFile, 'utf8').then(
+    (text) => (JSON.parse(text) as PriceFile).cards,
+    () => ({}) as PriceFile['cards'],
+  )
   const codes = new Map<number, string>()
+  const ambiguous = new Set<number>()
   const groups = new Set<number>()
   for (const rows of Object.values(catalog.cards)) {
-    for (const [set, number, cardmarket, , product] of rows!) {
-      if (cardmarket || !product) continue
-      codes.set(product, codeKey({ set, number }))
+    for (const [set, number, id, , product] of rows!) {
+      if (!product || cardmarket[id]) continue
+      const code = codeKey({ set, number })
+      if (codes.has(product) && codes.get(product) !== code) ambiguous.add(product)
+      codes.set(product, code)
       for (const group of catalog.sets[set]?.[2] ?? []) groups.add(group)
     }
+  }
+  // `lib/tcgplayer.ts` ne donne un produit qu'à une carte : sinon, le prix irait à la dernière.
+  if (ambiguous.size) {
+    console.warn(
+      `TCGplayer : ${ambiguous.size} produits reliés à plusieurs cartes (${[...ambiguous].slice(0, 10).join(', ')})`,
+    )
   }
 
   const rate = await usdPerEur()
@@ -215,13 +234,17 @@ async function tcgplayerPrices() {
   const date = new Date(updated).toISOString().slice(0, 10)
   await writeJson(tcgplayerFile, { date, usdPerEur: rate, cards } satisfies TcgplayerPriceFile)
   console.log(
-    `TCGplayer, prix du ${date} : ${Object.keys(cards).length} cartes sur ${codes.size} sans id Cardmarket (1 € = ${rate} $)`,
+    `TCGplayer, prix du ${date} : ${Object.keys(cards).length} cartes sur ${codes.size} sans prix Cardmarket (1 € = ${rate} $)`,
   )
 }
 
 await mkdir(outDir, { recursive: true })
-const failures = (await Promise.allSettled([cardmarketPrices(), tcgplayerPrices()])).filter(
-  (result) => result.status === 'rejected',
-)
-for (const { reason } of failures) console.error(reason)
-if (failures.length) process.exit(1)
+// Cardmarket d'abord : TCGplayer lit son `latest.json`.
+let failed = false
+for (const source of [cardmarketPrices, tcgplayerPrices]) {
+  await source().catch((error: unknown) => {
+    console.error(error)
+    failed = true
+  })
+}
+if (failed) process.exit(1)

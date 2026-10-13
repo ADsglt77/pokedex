@@ -1,0 +1,5 @@
+/* La recherche des extensions : assez large pour leurs noms japonais. */
+.search {
+  flex: 1 1 22rem;
+  max-width: 36rem;
+}

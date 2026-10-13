@@ -30,13 +30,15 @@ const LEAVING_OWNED: Record<Exclude<CardStatus, 'owned'> | 'none', string> = {
 /**
  * Ce que l'utilisateur fait de la carte d'un Pokémon : lui donner un statut (un seul à la fois ; le
  * relâcher le retire ; quitter « possédée » demande confirmation), noter son prix payé, la corriger,
- * la retirer pour en choisir une autre. Chaque action est annoncée avec « Annuler ».
+ * la retirer pour en choisir une autre (possédée : après confirmation). Chaque action est annoncée
+ * avec « Annuler ».
  */
 export function CardActions({ view, species }: { view: CardView; species: PokemonSpecies }) {
   const act = useCollectionAction()
   const [editing, setEditing] = useState(false)
   // Le statut qui remplacerait « possédée », en attente de confirmation.
   const [leaving, setLeaving] = useState<{ next: Exclude<CardStatus, 'owned'> | null } | null>(null)
+  const [removing, setRemoving] = useState(false)
   const { card, status } = view
   // Une carte d'une commande y reste : la retirer fausserait le registre.
   const inAnOrder = useShoppingStore((state) =>
@@ -114,7 +116,7 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
             size="sm"
             leftIcon={<Trash2 size={15} />}
             disabled={inAnOrder}
-            onClick={remove}
+            onClick={() => (status === 'owned' ? setRemoving(true) : remove())}
           >
             Retirer la carte
           </Button>
@@ -141,6 +143,19 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
       >
         <p>
           {LEAVING_OWNED[leaving?.next ?? 'none']} {species.names.fr} ne sera plus débloqué.
+        </p>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={removing}
+        title="Retirer cette carte possédée ?"
+        confirmLabel="Retirer la carte"
+        onClose={() => setRemoving(false)}
+        onConfirm={remove}
+      >
+        <p>
+          {LEAVING_OWNED.none} {species.names.fr} ne sera plus débloqué, et vous pourrez lui choisir
+          une autre carte.
         </p>
       </ConfirmDialog>
     </Stack>

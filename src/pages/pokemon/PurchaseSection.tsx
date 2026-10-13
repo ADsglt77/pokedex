@@ -13,7 +13,7 @@ import styles from './CardActions.module.css'
 type Choice = 'accepted' | 'none'
 
 const CHOICES: { value: Choice; label: string }[] = [
-  { value: 'none', label: 'Non décidée' },
+  { value: 'none', label: 'Pas dans la liste' },
   { value: 'accepted', label: 'À acheter' },
 ]
 
@@ -23,8 +23,9 @@ const MESSAGES: Record<Choice, string> = {
 }
 
 /**
- * Mettre une carte dans la liste d'achats, ou l'en retirer. Indépendant de son statut. Une
- * préférence `excluded` d'une ancienne version compte comme non décidée.
+ * Mettre une carte dans la liste d'achats, ou l'en retirer. Indépendant de son statut : une carte
+ * « souhaitée » n'y est pas d'office, le conseil le dit. Une préférence `excluded` d'une ancienne
+ * version compte comme hors de la liste.
  */
 export function PurchaseSection({ view }: { view: CardView }) {
   const act = useCollectionAction()
@@ -75,7 +76,9 @@ function purchaseHint(
   price: CardPrice | null,
 ): string {
   if (choice === 'none') {
-    return 'À acheter : la carte entre dans votre liste d’achats.'
+    return status === 'wanted'
+      ? 'Souhaitée, mais pas dans votre liste d’achats : choisissez « À acheter » pour l’y mettre, avec un prix maximum si vous voulez.'
+      : 'À acheter : la carte entre dans votre liste d’achats.'
   }
   if (status === 'owned') return 'Dans votre liste d’achats. Possédée : elle n’est plus proposée.'
   if (status === 'ordered')

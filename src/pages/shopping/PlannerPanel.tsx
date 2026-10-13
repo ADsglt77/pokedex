@@ -43,23 +43,48 @@ const toggled = (set: ReadonlySet<string>, id: string, on: boolean) => {
   return next
 }
 
+const NONE: ReadonlySet<string> = new Set()
+
+/**
+ * Les réglages du plan, gardés par la page : l'onglet caché est démonté, ils resteraient sinon à
+ * celui d'un autre onglet. Un réglage absent vaut celui par défaut.
+ */
+export interface PlannerSettings {
+  /** Budget de la commande ; par défaut, le reste du budget du mois. */
+  amount?: number
+  priorities?: Priority[]
+  /** Ajoutées à la main. */
+  forced?: ReadonlySet<string>
+  /** Retirées à la main. */
+  skipped?: ReadonlySet<string>
+}
+
 /**
  * L'assistant « Préparer ma prochaine commande » : un budget, des règles, un plan recalculé à
  * chaque changement. Le plan n'achète rien : on commande sur Cardmarket, puis on enregistre.
  */
-export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
+export function PlannerPanel({
+  settings,
+  onSettingsChange,
+  onOrderSaved,
+}: {
+  settings: PlannerSettings
+  onSettingsChange: (settings: PlannerSettings) => void
+  onOrderSaved: () => void
+}) {
   const { rows, taken } = useWishlist()
   const { orders, budget } = useShoppingStore((state) => state.shopping)
   const spent = spentThisMonth(orders)
-  // Le reste du budget du mois, au pas du curseur (vers le bas : on reste dans le budget).
-  const [amount, setAmount] = useState(
-    () =>
-      Math.floor(Math.min(Math.max(budget.monthly - spent, 0), budget.ceiling) / BUDGET_STEP) *
-      BUDGET_STEP,
-  )
-  const [priorities, setPriorities] = useState<Priority[]>(ALL_PRIORITIES)
-  const [forced, setForced] = useState<ReadonlySet<string>>(new Set())
-  const [skipped, setSkipped] = useState<ReadonlySet<string>>(new Set())
+  const {
+    // Le reste du budget du mois, au pas du curseur (vers le bas : on reste dans le budget).
+    amount = Math.floor(
+      Math.min(Math.max(budget.monthly - spent, 0), budget.ceiling) / BUDGET_STEP,
+    ) * BUDGET_STEP,
+    priorities = ALL_PRIORITIES,
+    forced = NONE,
+    skipped = NONE,
+  } = settings
+  const change = (next: PlannerSettings) => onSettingsChange({ ...settings, ...next })
   const [draft, setDraft] = useState<Order | null>(null)
 
   const plan = planPurchase(rows, taken, {
@@ -71,12 +96,17 @@ export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
   })
   const monthTotal = cents(spent + plan.total)
 
-  const skip = (row: WishRow, on: boolean) => {
-    setSkipped(toggled(skipped, row.card.id, on))
-    if (on) setForced(toggled(forced, row.card.id, false))
-  }
+  const skip = (row: WishRow, on: boolean) =>
+    change({
+      skipped: toggled(skipped, row.card.id, on),
+      forced: on ? toggled(forced, row.card.id, false) : forced,
+    })
   const addAnyway = (row: WishRow) => (
-    <Button size="sm" variant="ghost" onClick={() => setForced(toggled(forced, row.card.id, true))}>
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={() => change({ forced: toggled(forced, row.card.id, true) })}
+    >
       Ajouter quand même
     </Button>
   )
@@ -104,7 +134,7 @@ export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
             max={Math.max(budget.ceiling, amount)}
             step={BUDGET_STEP}
             value={amount}
-            onChange={setAmount}
+            onChange={(value) => change({ amount: value })}
             showValue
             formatValue={formatEuro}
           />
@@ -117,11 +147,11 @@ export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
                 label={PRIORITY_LABELS[priority]}
                 checked={priorities.includes(priority)}
                 onChange={(event) =>
-                  setPriorities(
-                    ALL_PRIORITIES.filter((known) =>
+                  change({
+                    priorities: ALL_PRIORITIES.filter((known) =>
                       known === priority ? event.target.checked : priorities.includes(known),
                     ),
-                  )
+                  })
                 }
               />
             ))}
@@ -219,6 +249,14 @@ export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
             action={addAnyway}
           />
           <PlanGroup
+            value="covered"
+            title="Pokémon déjà prévu"
+            rows={plan.covered}
+            empty="Aucune carte d’un Pokémon déjà dans le plan."
+            hint="Une seule carte par Pokémon : celle du plan a été préférée (ajoutée à la main, priorité, puis prix)."
+            action={addAnyway}
+          />
+          <PlanGroup
             value="above-max"
             title="Au-dessus de leur prix maximum"
             rows={plan.aboveMax}
@@ -230,7 +268,7 @@ export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
             title="Sans prix"
             rows={plan.unpriced}
             empty="Toutes les cartes possibles ont un prix."
-            hint="Aucun prix n’est inventé : chiffrez-les vous-même sur Cardmarket."
+            hint="Aucun prix n’est inventé : regardez vous-même les annonces des vendeurs."
           />
           <PlanGroup
             value="skipped"
@@ -271,8 +309,7 @@ export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
           order={draft}
           onClose={() => setDraft(null)}
           onSaved={() => {
-            setForced(new Set())
-            setSkipped(new Set())
+            change({ forced: NONE, skipped: NONE })
             onOrderSaved()
           }}
         />

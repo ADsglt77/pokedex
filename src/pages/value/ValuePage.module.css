@@ -30,3 +30,20 @@
 .chartTitle {
   font-size: 1rem;
 }
+
+/* Les cartes qui bougent : la carte à gauche, son prix et son écart à droite. */
+.movers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.movers li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+}

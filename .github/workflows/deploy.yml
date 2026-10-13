@@ -1,10 +1,12 @@
-# À chaque push sur main : le VPS récupère le code et reconstruit le conteneur.
-# Si la construction échoue, l'ancien conteneur continue de tourner.
+# Lancé à la main (onglet Actions de GitHub, « Run workflow ») : le VPS récupère le code et
+# reconstruit le conteneur. Si la construction échoue, l'ancien conteneur continue de tourner.
+# Le domaine n'est pas encore prêt : quand il le sera, remettre le déploiement à chaque push sur
+# main en ajoutant, au-dessus de `workflow_dispatch` :
+#   push:
+#     branches: [main]
 name: Déploiement
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 # Le job n'utilise pas le jeton GitHub.

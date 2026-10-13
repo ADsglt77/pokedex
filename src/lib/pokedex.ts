@@ -14,6 +14,8 @@ export interface CardView {
   status: CardStatus | null
   /** Date d'obtention, pour une carte possédée. */
   acquiredAt: string | null
+  /** Prix payé, s'il est noté. */
+  paidPrice: number | null
 }
 
 export interface PokedexEntry {
@@ -57,6 +59,7 @@ function describeCard(card: PokemonCard, collection: CollectionData): CardView {
     card,
     status: ownership?.status ?? null,
     acquiredAt: ownership?.status === 'owned' ? ownership.acquiredAt : null,
+    paidPrice: ownership?.paidPrice ?? null,
   }
 }
 

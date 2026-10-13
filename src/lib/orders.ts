@@ -6,7 +6,7 @@
 
 import { SUPPLIER_LABELS } from '@/config/shopping'
 import { formatDate } from '@/lib/format'
-import type { CardOwnership, CollectionData, Order, OrderLine } from '@/types'
+import type { CardOwnership, CollectionData, Order, OrderLine, OrderState } from '@/types'
 
 /** « Cardmarket », ou le nom donné à un autre fournisseur. */
 export const supplierLabel = (order: Pick<Order, 'supplier' | 'supplierName'>) =>
@@ -44,12 +44,18 @@ export const orderSpent = (order: Order) =>
     ? 0
     : cents(linesTotal(order.lines) + order.shipping + order.fees - order.refunded)
 
+/** Le remboursé ne dépasse pas la commande : sinon le budget compterait une dépense négative. */
+export const refundFits = (order: Pick<Order, 'lines' | 'shipping' | 'fees' | 'refunded'>) =>
+  order.refunded <= cents(linesTotal(order.lines) + order.shipping + order.fees)
+
 /**
  * Le prix de revient d'une carte de chaque ligne : son prix, plus sa part du port et des frais,
  * moins sa part du remboursé, au prorata de son prix (à parts égales si les cartes sont
  * gratuites), au centime. Les centimes que l'arrondi perd ou ajoute vont aux lignes d'une seule
- * carte, la plus grosse part d'arrondi d'abord : les prix de revient font le total de la commande.
- * (Une ligne de plusieurs cartes ne peut pas prendre un centime sans le multiplier.)
+ * carte, la plus grosse part d'arrondi d'abord, en plusieurs tours s'il le faut, sans passer une
+ * carte sous 0 € : les prix de revient font le total de la commande dès qu'une ligne d'une seule
+ * carte peut les prendre. (Une ligne de plusieurs cartes ne peut pas prendre un centime sans le
+ * multiplier.)
  */
 export function unitCosts(
   order: Pick<Order, 'lines' | 'shipping' | 'fees' | 'refunded'>,
@@ -69,10 +75,13 @@ export function unitCosts(
   const singles = order.lines
     .flatMap((line, index) => (line.quantity === 1 ? [index] : []))
     .sort((a, b) => step * (exact[b]! - costs[b]! - (exact[a]! - costs[a]!)))
-  for (const index of singles) {
-    if (rest === 0) break
-    costs[index] = costs[index]! + step
-    rest -= step
+  while (rest !== 0) {
+    const takers = singles.filter((index) => costs[index]! + step >= 0)
+    if (takers.length === 0) break
+    for (const index of takers.slice(0, Math.abs(rest))) {
+      costs[index] = costs[index]! + step
+      rest -= step
+    }
   }
   return costs.map((cost) => cost / 100)
 }
@@ -86,10 +95,10 @@ export function previousOf(cardId: string, stored: Order | null, collection: Col
   return line ? line.previous : (collection.cards[cardId] ?? null)
 }
 
-/** La commande en cours, parmi `orders`, qui contient la carte ; `undefined` s'il n'y en a pas. */
-const pendingWith = (orders: readonly Order[], cardId: string) =>
+/** La commande de `orders` dans cet état qui contient la carte ; `undefined` s'il n'y en a pas. */
+const orderWith = (orders: readonly Order[], cardId: string, state: OrderState) =>
   orders.find(
-    (order) => order.state === 'pending' && order.lines.some((line) => line.cardId === cardId),
+    (order) => order.state === state && order.lines.some((line) => line.cardId === cardId),
   )
 
 /** Midi, heure locale, du jour donné : la date d'obtention d'une carte reçue. */
@@ -103,6 +112,8 @@ const noonOf = (day: string) => new Date(`${day}T12:00:00`).toISOString()
  *   commande en cours qui les contient les garde « commandée », à son prix de revient. Un état
  *   d'avant « commandée » venait d'une autre commande, disparue depuis : la carte perd alors son
  *   statut ;
+ * - celles qui quittent une commande reçue restent possédées, mais sans la date ni le prix payé
+ *   qu'elle leur avait donnés : ceux d'avant la commande, aucun (elles n'étaient pas possédées) ;
  * - les cartes d'une commande en cours deviennent « commandée », sauf si elles sont déjà possédées ;
  * - les cartes d'une commande reçue deviennent « possédée », datées du jour de réception (une date
  *   de réception corrigée les suit) ;
@@ -122,9 +133,20 @@ export function applyOrder(
 
   for (const line of before?.state === 'cancelled' ? [] : (before?.lines ?? [])) {
     const current = cards[line.cardId]
-    if (kept.has(line.cardId) || current?.status !== 'ordered') continue
+    if (kept.has(line.cardId)) continue
+    // Possédée grâce à cette commande : elle le reste (une possession n'est jamais retirée), sans
+    // la date ni le prix payé que la commande lui avait donnés.
+    if (
+      before?.state === 'received' &&
+      current?.status === 'owned' &&
+      line.previous?.status !== 'owned'
+    ) {
+      cards[line.cardId] = { status: 'owned', updatedAt: now, acquiredAt: null }
+      continue
+    }
+    if (current?.status !== 'ordered') continue
     // Une autre commande en cours la garde « commandée » : à son prix de revient à elle.
-    const other = pendingWith(others, line.cardId)
+    const other = orderWith(others, line.cardId, 'pending')
     if (other) {
       const index = other.lines.findIndex((known) => known.cardId === line.cardId)
       cards[line.cardId] = { ...current, updatedAt: now, paidPrice: unitCosts(other)[index] }
@@ -164,12 +186,34 @@ export function applyOrder(
 const sameOwnership = (a: CardOwnership | undefined, b: CardOwnership) =>
   a?.status === b.status && a.acquiredAt === b.acquiredAt && a.paidPrice === b.paidPrice
 
-/** Pourquoi une carte d'une commande est peut-être en double ; `null` si elle ne l'est pas. */
+/**
+ * Pourquoi une carte d'une commande est peut-être en double ; `null` si elle ne l'est pas. Déjà
+ * reçue avec une autre commande, elle est signalée : reçue de nouveau, elle prendrait le prix payé
+ * de la dernière commande reçue.
+ */
 export function duplicateReason(line: OrderLine, others: readonly Order[]): string | null {
   if (line.previous?.status === 'owned') return 'Déjà possédée avant cette commande'
-  const other = pendingWith(others, line.cardId)
-  return other ? `Déjà dans la commande en cours du ${formatDate(other.date)}` : null
+  const pending = orderWith(others, line.cardId, 'pending')
+  if (pending) return `Déjà dans la commande en cours du ${formatDate(pending.date)}`
+  const received = orderWith(others, line.cardId, 'received')
+  return received
+    ? `Déjà reçue avec la commande du ${formatDate(received.date)} : à la réception de cette commande-ci, son prix payé sera remplacé`
+    : null
 }
+
+/** Au-delà de ce délai depuis l'achat, en jours, une commande en cours est en retard. */
+export const LATE_AFTER_DAYS = 28
+
+/**
+ * Les commandes en cours achetées il y a plus de `LATE_AFTER_DAYS` jours (`today` : YYYY-MM-DD) :
+ * à réclamer au vendeur.
+ */
+export const latePendingOrders = (orders: readonly Order[], today: string) =>
+  orders.filter(
+    (order) =>
+      order.state === 'pending' &&
+      Date.parse(today) - Date.parse(order.date) > LATE_AFTER_DAYS * 86_400_000,
+  )
 
 /** La plus récente d'abord (date d'achat, puis dernière modification). */
 export const sortOrders = (orders: readonly Order[]) =>

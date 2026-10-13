@@ -1,6 +1,6 @@
 import { Alert, Button, EmptyState, Stack } from '@camply/ui'
 import { WalletCards } from '@camply/ui/icons'
-import { useMemo } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
 import { Link } from 'react-router'
 import { CardArt } from '@/components/CardArt'
 import { PokedexTile } from '@/components/PokedexTile'
@@ -12,6 +12,7 @@ import { cardTitle } from '@/lib/species'
 import { pokedexUrl } from '@/lib/filters'
 import { formatDate, formatInteger, pageTitle, plural, today, unlockedOf } from '@/lib/format'
 import { acquisitions, summarize, type Progress, type RecentCard } from '@/lib/pokedex'
+import { LATE_AFTER_DAYS, latePendingOrders } from '@/lib/orders'
 import { isUnderMax } from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
@@ -22,7 +23,7 @@ function progressSentence(progress: Progress) {
   if (unlocked === 0) {
     return [
       'Aucun Pokémon débloqué pour l’instant.',
-      `Les ${formatInteger(total)} restent à trouver.`,
+      `Les ${formatInteger(total)} restent à débloquer.`,
     ]
   }
   if (missing === 0)
@@ -30,8 +31,8 @@ function progressSentence(progress: Progress) {
   return [
     `${unlockedOf(progress, 'Pokémon')}.`,
     missing === 1
-      ? 'Il n’en reste qu’un à trouver.'
-      : `Il en reste ${formatInteger(missing)} à trouver.`,
+      ? 'Il n’en reste qu’un à débloquer.'
+      : `Il en reste ${formatInteger(missing)} à débloquer.`,
   ]
 }
 
@@ -44,6 +45,18 @@ function trackingSentence(ordered: number, wanted: number): string | null {
   return null
 }
 
+/** Vrai tant que l'écran répond à la requête média ; suit ses changements. */
+function useMediaQuery(query: string) {
+  return useSyncExternalStore(
+    (onChange) => {
+      const list = matchMedia(query)
+      list.addEventListener('change', onChange)
+      return () => list.removeEventListener('change', onChange)
+    },
+    () => matchMedia(query).matches,
+  )
+}
+
 /** L'accueil : la progression en une phrase et par génération, puis les dernières cartes obtenues. */
 export function HomePage() {
   const pokedex = usePokedex()
@@ -54,6 +67,8 @@ export function HomePage() {
   const tracking = trackingSentence(ordered, wanted)
   const month = today().slice(0, 7)
   const thisMonth = obtained.filter(({ acquiredAt }) => acquiredAt?.startsWith(month)).length
+  // Jusqu'à 64rem, la réglette n'est qu'une image : la liste des régions mène au Pokédex.
+  const rulerInert = useMediaQuery('(max-width: 64rem)')
 
   return (
     <div className="container">
@@ -71,6 +86,7 @@ export function HomePage() {
           )}
         </p>
         <UnderMaxNotice />
+        <LateOrdersNotice />
         <Button asChild size="lg" className={styles.cta}>
           <Link to="/pokedex">Ouvrir le Pokédex</Link>
         </Button>
@@ -80,7 +96,7 @@ export function HomePage() {
         <h2 id="progress-title" className="visually-hidden">
           Progression par génération
         </h2>
-        <div className={styles.ruler}>
+        <div inert={rulerInert}>
           <ProgressRuler generations={pokedex.generations} />
         </div>
         <ul className={styles.regions}>
@@ -122,8 +138,23 @@ function UnderMaxCount() {
   if (count === 0) return null
   return (
     <Alert tone="success" title={`${plural(count, 'carte', 'cartes')} sous votre prix maximum`}>
-      Le prix du marché Cardmarket est passé sous le maximum que vous vous êtes fixé.{' '}
-      <Link to="/achats">Voir la liste d’achats</Link>
+      Le prix du marché (Cardmarket, sinon TCGplayer) est passé sous le maximum que vous vous êtes
+      fixé. <Link to="/achats">Voir la liste d’achats</Link>
+    </Alert>
+  )
+}
+
+/** Les commandes en cours depuis plus de quatre semaines : à réclamer au vendeur à temps. */
+function LateOrdersNotice() {
+  const late = useShoppingStore((state) => latePendingOrders(state.shopping.orders, today()).length)
+  if (late === 0) return null
+  return (
+    <Alert
+      tone="warn"
+      title={`${plural(late, 'commande', 'commandes')} en cours depuis plus de ${LATE_AFTER_DAYS / 7} semaines`}
+    >
+      Si rien n’est arrivé, contactez le vendeur ; sur Cardmarket, ouvrez un litige depuis la page
+      de la commande. <Link to="/achats?vue=commandes">Voir les commandes</Link>
     </Alert>
   )
 }

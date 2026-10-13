@@ -21,13 +21,22 @@ interface SpeciesNavProps {
 export function SpeciesNav({ previous, next, nextWithoutCard }: SpeciesNavProps) {
   const navigate = useNavigate()
 
-  // ← et → changent de Pokémon, sauf dans un champ ou une fenêtre ouverte.
+  // ← et → changent de Pokémon, sauf dans un champ ou une fenêtre ouverte, ou quand un réglage s'en
+  // est déjà servi (« Achat », « Priorité » : un choix au clavier ne doit pas quitter la page).
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const busy =
         event.target instanceof HTMLElement &&
         event.target.closest('input, textarea, select, [role=dialog], [role=listbox]')
-      if (busy || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
+      if (
+        busy ||
+        event.defaultPrevented ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        event.shiftKey
+      )
+        return
       const target = event.key === 'ArrowLeft' ? previous : event.key === 'ArrowRight' ? next : null
       if (!target || document.querySelector('[role=dialog]')) return
       event.preventDefault()

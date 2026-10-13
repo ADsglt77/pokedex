@@ -178,8 +178,8 @@ export interface SpeciesDetailsFile {
 }
 
 /**
- * Une carte de `catalog.json` : [extension, numéro, id Cardmarket (0 : inconnu), suffixe, produit
- * TCGplayer (0 : aucun), ses Pokémon s'ils sont plusieurs].
+ * Une carte de `catalog.json` : [extension, numéro, id Cardmarket (0 : inconnu ou douteux), suffixe,
+ * produit TCGplayer (0 : aucun), ses Pokémon s'ils sont plusieurs].
  */
 export type CatalogRow = [string, string, number, string, number, number[]?]
 
@@ -193,7 +193,7 @@ export interface CatalogFile {
 
 /* Prix : `/prices/`, écrits chaque jour par `scripts/prices.ts` */
 
-/** D'où vient un prix : Cardmarket ; TCGplayer pour une carte sans id Cardmarket. */
+/** D'où vient un prix : Cardmarket ; TCGplayer pour une carte sans prix Cardmarket ce jour. */
 export type PriceSource = 'cardmarket' | 'tcgplayer'
 
 export interface CardPrice {
@@ -220,8 +220,8 @@ export interface PriceFile {
 export type TcgplayerPriceRow = [price: number, low: number | null]
 
 /**
- * `tcgplayer.json` : le prix du jour, chez TCGplayer, des cartes du catalogue sans id Cardmarket
- * (vieilles séries, decks), converti en euros.
+ * `tcgplayer.json` : le prix du jour, chez TCGplayer, des cartes du catalogue sans prix Cardmarket
+ * (pas d'id, ou pas de prix pour cet id : vieilles séries, decks, promos), converti en euros.
  */
 export interface TcgplayerPriceFile {
   /** Jour des prix (YYYY-MM-DD). */

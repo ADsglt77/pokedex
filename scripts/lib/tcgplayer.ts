@@ -150,12 +150,14 @@ export async function tcgplayerProducts(
       : pool.filter((product) => !field(product, 'Number') && samePokemon(product, true))
     const normal = matches.filter((product) => !isVariant(product))
     const found = normal.length ? normal : matches
-    // Une seule carte : un même nom, dans un même groupe (ses impressions comprises).
+    // Une seule carte : un même nom, dans un même groupe (ses impressions comprises). Sans numéro,
+    // un seul produit : « Brock's Geodude (Lv.13) » et « (Lv.15) » sont deux cartes, pas deux
+    // impressions.
     const single =
       found.length > 0 &&
       new Set(found.map((product) => product.groupId)).size === 1 &&
       new Set(found.map(cardName)).size === 1 &&
-      (sameNumber.length > 0 || normal.length <= 1)
+      (sameNumber.length > 0 || found.length === 1)
     return single ? { productId: found[0]!.productId, groupId: found[0]!.groupId } : null
   })
 }

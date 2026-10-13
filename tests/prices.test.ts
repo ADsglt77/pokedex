@@ -1,11 +1,11 @@
 /**
- * Le prix d'une carte, que lisent la liste d'achats et le plan : jamais celui d'une autre carte, ni
- * celui de TCGplayer pour une carte reliée à Cardmarket.
+ * Le prix d'une carte, que lisent la liste d'achats et le plan : jamais celui d'une autre carte ;
+ * celui de TCGplayer seulement quand Cardmarket n'en a pas ce jour.
  */
 
 import { describe, expect, test } from 'bun:test'
 import { priceOf } from '@/lib/prices'
-import type { Prices } from '@/types'
+import type { CardPrice, Prices } from '@/types'
 
 const prices: Prices = {
   cardmarket: { date: '2026-10-12', cards: { '719445': [6.87, 5, 7.2] } },
@@ -16,8 +16,10 @@ const prices: Prices = {
   },
 }
 
+const tcgplayer: CardPrice = { price: 99, low: null, avg30: null, source: 'tcgplayer' }
+
 describe('priceOf', () => {
-  test('une carte reliée à Cardmarket : son prix Cardmarket', () => {
+  test('une carte reliée à Cardmarket : son prix Cardmarket, jamais celui de TCGplayer', () => {
     expect(priceOf(prices, { cardmarket: 719445, reference: 'Florizarre ex (SV2a 003)' })).toEqual({
       price: 6.87,
       low: 5,
@@ -26,8 +28,17 @@ describe('priceOf', () => {
     })
   })
 
-  test('reliée à Cardmarket mais sans prix ce jour : pas de prix TCGplayer à la place', () => {
-    expect(priceOf(prices, { cardmarket: 1, reference: 'Florizarre ex (SV2a 003)' })).toBeNull()
+  test('reliée à Cardmarket mais sans prix ce jour : le prix TCGplayer de sa référence', () => {
+    expect(priceOf(prices, { cardmarket: 1, reference: 'Florizarre ex (SV2a 003)' })).toEqual(
+      tcgplayer,
+    )
+  })
+
+  test('sans fichier Cardmarket : le prix TCGplayer de sa référence', () => {
+    const reference = 'Florizarre ex (SV2a 003)'
+    expect(priceOf({ ...prices, cardmarket: null }, { cardmarket: 719445, reference })).toEqual(
+      tcgplayer,
+    )
   })
 
   test('sans id Cardmarket : le prix TCGplayer du code de sa référence, écrit comme on veut', () => {
@@ -41,9 +52,10 @@ describe('priceOf', () => {
     }
   })
 
-  test('sans id ni code connu : pas de prix', () => {
+  test('sans prix Cardmarket ni code connu : pas de prix', () => {
     expect(priceOf(prices, { reference: 'Florizarre (E1 097)' })).toBeNull()
     expect(priceOf(prices, { reference: 'Florizarre' })).toBeNull()
-    expect(priceOf(null, { reference: 'Florizarre (E1 065)' })).toBeNull()
+    expect(priceOf(prices, { cardmarket: 1, reference: 'Florizarre' })).toBeNull()
+    expect(priceOf(null, { cardmarket: 719445, reference: 'Florizarre (E1 065)' })).toBeNull()
   })
 })

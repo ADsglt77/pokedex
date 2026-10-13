@@ -5,12 +5,15 @@ import { SPECIES } from '@/lib/species'
 import type { PokedexEntry } from '@/lib/pokedex'
 import type { GenerationId, PokemonSpecies, PokemonTypeId } from '@/types'
 
-/** Possédés (débloqués), manquants (pas encore possédés), ou carte commandée, souhaitée. */
+/** Débloqués (carte possédée), à débloquer (pas encore), ou carte commandée, souhaitée. */
 const POSSESSIONS = ['all', 'owned', 'ordered', 'wanted', 'missing'] as const
 export type PossessionFilter = (typeof POSSESSIONS)[number]
 
-/** Avec une carte ajoutée, ou sans carte. */
-const CARD_FILTERS = ['with', 'without'] as const
+/**
+ * Avec une carte ajoutée, ou sans carte ; ou une carte à compléter : sans image, sans id Cardmarket
+ * (pas de prix ni de lien Cardmarket), possédée sans prix payé (la valeur ne dit pas le gain).
+ */
+const CARD_FILTERS = ['with', 'without', 'no-image', 'no-cardmarket', 'no-paid'] as const
 export type CardFilter = (typeof CARD_FILTERS)[number]
 
 export interface PokedexFilters {
@@ -133,6 +136,21 @@ export function speciesInName(name: string): number | null {
   return found.sort((a, b) => b.name.length - a.name.length)[0]?.id ?? null
 }
 
+function cardMatches(card: PokedexEntry['card'], filter: CardFilter) {
+  switch (filter) {
+    case 'with':
+      return card !== null
+    case 'without':
+      return card === null
+    case 'no-image':
+      return card !== null && card.card.image === null
+    case 'no-cardmarket':
+      return card !== null && card.card.cardmarket === undefined
+    case 'no-paid':
+      return card?.status === 'owned' && card.paidPrice === null
+  }
+}
+
 export function filterEntries(entries: PokedexEntry[], filters: PokedexFilters): PokedexEntry[] {
   const matches = searchMatcher(filters.search)
   const kept = entries.filter(
@@ -142,7 +160,7 @@ export function filterEntries(entries: PokedexEntry[], filters: PokedexFilters):
         (filters.possession === 'owned' && unlocked) ||
         (filters.possession === 'missing' && !unlocked) ||
         card?.status === filters.possession) &&
-      (!filters.card || (card !== null) === (filters.card === 'with')) &&
+      (!filters.card || cardMatches(card, filters.card)) &&
       (!filters.type || species.types.includes(filters.type)) &&
       matches(species),
   )

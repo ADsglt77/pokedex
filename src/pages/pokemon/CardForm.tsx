@@ -1,5 +1,5 @@
 import { Button, Modal, Stack, Tab, TabList, TabPanel, Tabs } from '@camply/ui'
-import { Suspense, useState } from 'react'
+import { Suspense, useRef, useState } from 'react'
 import { CardFields } from '@/components/CardFields'
 import { NewCardOptions } from '@/components/NewCardOptions'
 import { useCardDraft } from '@/hooks/useCardDraft'
@@ -8,7 +8,7 @@ import type { CatalogCard } from '@/lib/card-catalog'
 import { useCollectionStore } from '@/store/collection'
 import { addCard } from '@/store/shopping'
 import type { PokemonCard, PokemonSpecies } from '@/types'
-import { CatalogPicker } from './CatalogPicker'
+import { CatalogPicker, type PickerView } from './CatalogPicker'
 
 /**
  * Ajouter la carte d'un Pokémon (la choisir dans le catalogue des cartes japonaises, qui remplit la
@@ -30,11 +30,17 @@ export function CardForm({
   const [tab, setTab] = useState('catalogue')
   const [picked, setPicked] = useState<string | null>(null)
   const [choices, setChoices] = useState({ owned: false, toBuy: false })
+  // L'onglet caché est démonté : ses réglages vivent ici.
+  const [view, setView] = useState<PickerView>({ order: 'recent', set: '', pricedOnly: false })
 
+  const entryTab = useRef<HTMLButtonElement>(null)
+
+  // La carte choisie s'ouvre dans la saisie, à vérifier ; le focus suit, la grille disparaissant.
   const pick = (chosen: CatalogCard) => {
     draft.fill(chosen)
     setPicked(chosen.key)
     setTab('saisie')
+    entryTab.current?.focus()
   }
 
   const save = () =>
@@ -73,7 +79,11 @@ export function CardForm({
           <Button variant="ghost" onClick={close} disabled={draft.saving}>
             Annuler
           </Button>
-          <Button onClick={save} loading={draft.saving} disabled={!card && tab === 'catalogue'}>
+          <Button
+            onClick={save}
+            loading={draft.saving}
+            disabled={!card && tab === 'catalogue' && !picked}
+          >
             Enregistrer
           </Button>
         </>
@@ -85,11 +95,19 @@ export function CardForm({
         <Tabs value={tab} defaultValue="catalogue" onChange={setTab}>
           <TabList>
             <Tab value="catalogue">Cartes japonaises</Tab>
-            <Tab value="saisie">{picked ? 'La carte choisie' : 'Saisie à la main'}</Tab>
+            <Tab value="saisie" ref={entryTab}>
+              {picked ? 'La carte choisie' : 'Saisie à la main'}
+            </Tab>
           </TabList>
           <TabPanel value="catalogue">
             <Suspense fallback={<p className="muted">Chargement des cartes…</p>}>
-              <CatalogPicker species={species} selected={picked} onPick={pick} />
+              <CatalogPicker
+                species={species}
+                selected={picked}
+                onPick={pick}
+                view={view}
+                onView={setView}
+              />
             </Suspense>
           </TabPanel>
           <TabPanel value="saisie">

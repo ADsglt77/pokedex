@@ -120,6 +120,12 @@
     padding-bottom: calc(4rem + env(safe-area-inset-bottom));
   }
 
+  /* Les notifications au-dessus de la barre d'onglets, pas dessus : un toucher visant un onglet
+     ne tombe pas sur « Annuler ». */
+  :global(.camply-toast__viewport[data-position='bottom-left']) {
+    bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+
   .tabbar {
     position: fixed;
     inset: auto 0 0;

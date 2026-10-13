@@ -1,5 +1,5 @@
 import { SegmentedControl, Select, Stack, Switch } from '@camply/ui'
-import { use, useState } from 'react'
+import { use } from 'react'
 import { Link } from 'react-router'
 import { CatalogCredit, CatalogGrid, CatalogTile } from '@/components/CatalogTile'
 import { loadCatalog, setOption, type CatalogCard } from '@/lib/card-catalog'
@@ -13,6 +13,14 @@ const ORDERS = [
   { value: 'price', label: 'Plus chères' },
 ] as const
 
+/** Les réglages de la grille, gardés par la fenêtre : revenir aux cartes les retrouve. */
+export interface PickerView {
+  order: 'recent' | 'price'
+  /** L'extension montrée ; `''` : toutes. */
+  set: string
+  pricedOnly: boolean
+}
+
 /**
  * Les cartes japonaises du Pokémon, à choisir : leur image (Pokécardex, sinon TCGplayer), leur
  * extension, leur numéro et leur année, leur prix du jour (Cardmarket, sinon TCGplayer) ; à
@@ -23,16 +31,19 @@ export function CatalogPicker({
   species,
   selected,
   onPick,
+  view,
+  onView,
 }: {
   species: PokemonSpecies
   selected: string | null
   onPick: (card: CatalogCard) => void
+  view: PickerView
+  onView: (view: PickerView) => void
 }) {
   const cards = use(loadCatalog()).bySpecies.get(species.id) ?? []
   const prices = usePrices()
-  const [order, setOrder] = useState<'recent' | 'price'>('recent')
-  const [set, setSet] = useState('')
-  const [pricedOnly, setPricedOnly] = useState(false)
+  const { order, set, pricedOnly } = view
+  const change = (next: Partial<PickerView>) => onView({ ...view, ...next })
 
   if (cards.length === 0) {
     return (
@@ -63,19 +74,19 @@ export function CatalogPicker({
           size="sm"
           options={setOptions}
           value={set}
-          onChange={setSet}
+          onChange={(value) => change({ set: value })}
         />
         <SegmentedControl
           aria-label="Ordre des cartes"
           size="sm"
           options={[...ORDERS]}
           value={order}
-          onChange={setOrder}
+          onChange={(value) => change({ order: value })}
         />
         <Switch
           label="Avec un prix"
           checked={pricedOnly}
-          onChange={(event) => setPricedOnly(event.target.checked)}
+          onChange={(event) => change({ pricedOnly: event.target.checked })}
         />
       </Stack>
       <p className="muted">

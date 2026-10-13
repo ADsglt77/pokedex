@@ -1,7 +1,14 @@
 /** Le registre des commandes : ce qu'elles coûtent, et leur report sur la collection. */
 
 import { describe, expect, test } from 'bun:test'
-import { applyOrder, orderSpent, previousOf, unitCosts } from '@/lib/orders'
+import {
+  applyOrder,
+  duplicateReason,
+  latePendingOrders,
+  orderSpent,
+  previousOf,
+  unitCosts,
+} from '@/lib/orders'
 import { collectionWith, line, NOW, order, ownership } from './fixtures'
 
 describe('ce que coûte une commande', () => {
@@ -183,5 +190,70 @@ describe('report sur la collection', () => {
     const cancelled = { ...second, state: 'cancelled' as const }
     collection = applyOrder(collection, second, cancelled, [first], NOW)
     expect(collection.cards.a).toMatchObject({ status: 'ordered', paidPrice: 20 })
+  })
+})
+
+describe('prix de revient au centime', () => {
+  test('jamais sous 0 € : une carte gratuite ne rend pas le centime de trop', () => {
+    const lines = [line('a', 1, { quantity: 3 }), line('b', 0)]
+    const costs = unitCosts({ lines, shipping: 0.02, fees: 0, refunded: 0 })
+    expect(costs).toEqual([1.01, 0])
+    expect(costs.every((cost) => cost >= 0)).toBe(true)
+  })
+
+  test('quatre centimes d’arrondi et une seule carte seule : elle les prend tous', () => {
+    const lines = [line('a', 1, { quantity: 10 }), line('b', 1)]
+    const costs = unitCosts({ lines, shipping: 0.04, fees: 0, refunded: 0 })
+    expect(costs).toEqual([1, 1.04])
+    expect(Math.round((10 * costs[0]! + costs[1]!) * 100)).toBe(1104)
+  })
+})
+
+describe('commande reçue modifiée', () => {
+  test('une ligne retirée : la carte reste possédée, sans la date ni le prix de la commande', () => {
+    const wanted = ownership('wanted')
+    const received = order({
+      lines: [line('a', 20, { previous: wanted }), line('b', 5)],
+      state: 'received',
+      receivedAt: '2026-10-09',
+    })
+    const owned = applyOrder(collectionWith({ a: wanted }), null, received, [], NOW)
+    expect(owned.cards.a).toMatchObject({ status: 'owned', paidPrice: 20 })
+    const edited = { ...received, lines: [received.lines[1]!] }
+    const collection = applyOrder(owned, received, edited, [], NOW)
+    expect(collection.cards.a).toEqual({ status: 'owned', updatedAt: NOW, acquiredAt: null })
+    expect(collection.cards.b).toBe(owned.cards.b)
+  })
+
+  test('une carte possédée avant la commande (doublon) n’est pas touchée', () => {
+    const owned = ownership('owned', { acquiredAt: '2025-05-01T00:00:00.000Z', paidPrice: 12 })
+    const received = order({
+      lines: [line('a', 20, { previous: owned }), line('b', 5)],
+      state: 'received',
+      receivedAt: '2026-10-09',
+    })
+    const start = applyOrder(collectionWith({ a: owned }), null, received, [], NOW)
+    const edited = { ...received, lines: [received.lines[1]!] }
+    expect(applyOrder(start, received, edited, [], NOW).cards.a).toBe(owned)
+  })
+})
+
+describe('doublons et retards', () => {
+  test('une carte déjà reçue avec une autre commande est signalée : son prix payé changerait', () => {
+    const first = order({ id: 'first', lines: [line('a', 10)], state: 'received' })
+    const reason = duplicateReason(line('a', 50, { previous: ownership('ordered') }), [first])
+    expect(reason).toStartWith('Déjà reçue avec la commande du')
+    expect(duplicateReason(line('b', 50), [first])).toBeNull()
+  })
+
+  test('en retard : en cours, achetée il y a plus de 28 jours', () => {
+    const late = order({ id: 'late', date: '2026-09-14' })
+    const orders = [
+      late,
+      order({ id: 'just', date: '2026-09-15' }),
+      order({ id: 'received', date: '2026-08-01', state: 'received' }),
+      order({ id: 'cancelled', date: '2026-08-01', state: 'cancelled' }),
+    ]
+    expect(latePendingOrders(orders, '2026-10-13')).toEqual([late])
   })
 })

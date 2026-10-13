@@ -1,4 +1,5 @@
 import { Badge, Tab, TabList, TabPanel, Tabs } from '@camply/ui'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { pageTitle } from '@/lib/format'
@@ -8,7 +9,7 @@ import { useShoppingStore } from '@/store/shopping'
 import { BudgetOverview } from './BudgetOverview'
 import { BudgetPanel } from './BudgetPanel'
 import { OrdersPanel } from './OrdersPanel'
-import { PlannerPanel } from './PlannerPanel'
+import { PlannerPanel, type PlannerSettings } from './PlannerPanel'
 import { useWishlist } from '@/hooks/useWishlist'
 import { WishlistPanel } from './WishlistPanel'
 import styles from './ShoppingPage.module.css'
@@ -16,7 +17,8 @@ import styles from './ShoppingPage.module.css'
 const VIEWS = ['liste', 'prochaine-commande', 'commandes', 'budget'] as const
 /**
  * Achats (`/achats`) : le budget du mois, la liste d'achats, l'assistant de la prochaine commande,
- * le registre des commandes et le suivi du budget. L'onglet ouvert est dans l'adresse (`?vue=`).
+ * le registre des commandes et le suivi du budget. L'onglet ouvert est dans l'adresse (`?vue=`) ;
+ * les réglages de l'assistant sont gardés ici, l'onglet caché étant démonté.
  */
 export function ShoppingPage() {
   const [params, setParams] = useSearchParams()
@@ -24,6 +26,7 @@ export function ShoppingPage() {
   const openView = (next: string) =>
     setParams(next === 'liste' ? {} : { vue: next }, { replace: true, preventScrollReset: true })
   const { rows } = useWishlist()
+  const [planner, setPlanner] = useState<PlannerSettings>({})
   const underMax = rows.filter((row) => isToBuy(row) && isUnderMax(row)).length
   const pending = useShoppingStore(
     (state) => state.shopping.orders.filter((order) => order.state === 'pending').length,
@@ -33,8 +36,8 @@ export function ShoppingPage() {
     <div className="container">
       <title>{pageTitle('Achats')}</title>
       <PageHeader title="Achats">
-        Votre liste d’achats, votre budget et vos commandes. Les prix sont ceux du marché Cardmarket
-        : une indication, pas une offre de vendeur.
+        Votre liste d’achats, votre budget et vos commandes. Les prix sont ceux du marché
+        (Cardmarket, sinon TCGplayer) : une indication, pas une offre de vendeur.
       </PageHeader>
 
       <BudgetOverview />
@@ -57,7 +60,11 @@ export function ShoppingPage() {
           <WishlistPanel />
         </TabPanel>
         <TabPanel value="prochaine-commande">
-          <PlannerPanel onOrderSaved={() => openView('commandes')} />
+          <PlannerPanel
+            settings={planner}
+            onSettingsChange={setPlanner}
+            onOrderSaved={() => openView('commandes')}
+          />
         </TabPanel>
         <TabPanel value="commandes">
           <OrdersPanel />

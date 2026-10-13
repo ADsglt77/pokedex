@@ -1,5 +1,5 @@
 import { Banner, Button } from '@camply/ui'
-import { ChartLine, Database, Grid3x3, House, ShoppingCart } from '@camply/ui/icons'
+import { ChartLine, Database, Grid3x3, House, Layers, ShoppingCart } from '@camply/ui/icons'
 import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { ExternalLink } from '@/components/ExternalLink'
@@ -12,6 +12,7 @@ import styles from './AppShell.module.css'
 const NAV = [
   { to: '/', label: 'Accueil', icon: House },
   { to: '/pokedex', label: 'Pokédex', icon: Grid3x3 },
+  { to: '/catalogue', label: 'Catalogue', icon: Layers },
   { to: '/valeur', label: 'Valeur', icon: ChartLine },
   { to: '/achats', label: 'Achats', icon: ShoppingCart },
   { to: '/donnees', label: 'Données', icon: Database },

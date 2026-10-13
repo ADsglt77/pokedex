@@ -16,11 +16,11 @@ import type { GenerationId, PokemonTypeId } from '@/types'
 import styles from './PokedexToolbar.module.css'
 
 const POSSESSION_OPTIONS: { value: PossessionFilter; label: string }[] = [
-  { value: 'all', label: 'Tous' },
-  { value: 'owned', label: 'Possédés' },
+  { value: 'all', label: 'Tous les Pokémon' },
+  { value: 'owned', label: 'Débloqués' },
   { value: 'ordered', label: 'Carte commandée' },
   { value: 'wanted', label: 'Carte souhaitée' },
-  { value: 'missing', label: 'Manquants' },
+  { value: 'missing', label: 'À débloquer' },
 ]
 
 // Les listes de camply n'acceptent que des chaînes : '' veut dire « tout ».
@@ -28,6 +28,9 @@ const CARD_OPTIONS: { value: CardFilter | ''; label: string }[] = [
   { value: '', label: 'Avec ou sans carte' },
   { value: 'with', label: 'Avec carte' },
   { value: 'without', label: 'Sans carte' },
+  { value: 'no-image', label: 'Carte sans image' },
+  { value: 'no-cardmarket', label: 'Carte sans id Cardmarket' },
+  { value: 'no-paid', label: 'Possédée sans prix payé' },
 ]
 
 const TYPE_OPTIONS: { value: PokemonTypeId | ''; label: string }[] = [

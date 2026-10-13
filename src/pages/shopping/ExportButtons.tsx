@@ -1,12 +1,9 @@
 import { Button } from '@camply/ui'
 import { Copy, Download } from '@camply/ui/icons'
 import { useNotify } from '@/hooks/useNotify'
-import { plural, today } from '@/lib/format'
-import { downloadFile } from '@/lib/transfer'
+import { plural } from '@/lib/format'
+import { downloadCsv } from '@/lib/transfer'
 import { searchText, wishlistCsv, type WishRow } from '@/lib/wishlist'
-
-/** Le BOM UTF-8 : sans lui, Excel lit mal les accents d'un CSV. */
-const BOM = String.fromCharCode(0xfeff)
 
 /** Copier les cartes pour la recherche de Cardmarket, ou les télécharger en CSV. */
 export function ExportButtons({ rows, name }: { rows: readonly WishRow[]; name: string }) {
@@ -25,8 +22,7 @@ export function ExportButtons({ rows, name }: { rows: readonly WishRow[]; name: 
     )
 
   const download = () => {
-    const file = `${name}-${today()}.csv`
-    downloadFile(file, BOM + wishlistCsv(rows), 'text/csv;charset=utf-8')
+    const file = downloadCsv(name, wishlistCsv(rows))
     notify(`${plural(rows.length, 'carte exportée', 'cartes exportées')} : ${file}.`)
   }
 

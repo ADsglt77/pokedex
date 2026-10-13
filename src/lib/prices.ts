@@ -1,8 +1,9 @@
 /**
  * Les prix du jour appliqués à la collection : prix d'une carte, totaux par statut, coût pour
- * compléter le Pokédex, courbes au fil des jours. Les prix de Cardmarket ; pour une carte sans id
- * Cardmarket (vieilles séries, decks que TCGdex ne relie pas à Cardmarket), ceux de TCGplayer,
- * convertis en euros.
+ * compléter le Pokédex, courbes au fil des jours, plus fortes hausses et baisses. Les prix de
+ * Cardmarket ; pour une carte sans prix Cardmarket ce jour (sans id Cardmarket : vieilles séries,
+ * decks que TCGdex ne relie pas à Cardmarket ; ou un id sans prix dans le guide du jour : promos…),
+ * ceux de TCGplayer, convertis en euros.
  */
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
@@ -19,24 +20,27 @@ import type {
   PriceSource,
 } from '@/types'
 
-/** Ce qu'il faut d'une carte pour son prix : son id Cardmarket, sinon le code de sa référence. */
+/** Ce qu'il faut d'une carte pour son prix : son id Cardmarket, et le code de sa référence. */
 interface Priced {
   cardmarket?: number
   reference?: string
 }
 
 /**
- * Le prix du jour d'une carte : celui de Cardmarket, par son id ; sans id, celui de TCGplayer, par
- * le code de sa référence (« (E1 097) »). `null` sans prix ou sans fichier.
+ * Le prix du jour d'une carte : celui de Cardmarket, par son id ; sans prix Cardmarket ce jour (pas
+ * d'id, ou pas de prix pour cet id), celui de TCGplayer, par le code de sa référence (« (E1 097) »).
+ * `null` sans prix ou sans fichier.
  */
 export function priceOf(prices: Prices | null, card: Priced): CardPrice | null {
-  if (card.cardmarket !== undefined) {
-    const row = prices?.cardmarket?.cards[card.cardmarket]
-    return row ? { price: row[0], low: row[1], avg30: row[2], source: 'cardmarket' } : null
+  const cardmarket = card.cardmarket && prices?.cardmarket?.cards[card.cardmarket]
+  if (cardmarket) {
+    return { price: cardmarket[0], low: cardmarket[1], avg30: cardmarket[2], source: 'cardmarket' }
   }
   const code = card.reference === undefined ? null : referenceCode(card.reference)
-  const row = code && prices?.tcgplayer?.cards[codeKey(code)]
-  return row ? { price: row[0], low: row[1], avg30: null, source: 'tcgplayer' } : null
+  const tcgplayer = code && prices?.tcgplayer?.cards[codeKey(code)]
+  return tcgplayer
+    ? { price: tcgplayer[0], low: tcgplayer[1], avg30: null, source: 'tcgplayer' }
+    : null
 }
 
 /** Le prix du marché d'une carte ; `null` sans prix. */
@@ -104,12 +108,53 @@ export function tallyByStatus(cards: readonly TrackedCard[]): Record<CardStatus,
   return tallies
 }
 
+/** Une carte dont le prix a bougé : son prix du jour, sa moyenne sur 30 jours, l'écart. */
+export interface PriceMove {
+  card: PokemonCard
+  price: number
+  avg30: number
+  /** L'écart du prix du jour à la moyenne sur 30 jours : 0,12 pour +12 %, −0,2 pour −20 %. */
+  change: number
+}
+
+/**
+ * Les cartes possédées dont le prix a le plus bougé : l'écart du prix du jour à la moyenne sur 30
+ * jours de Cardmarket, les `limit` plus fortes hausses et les `limit` plus fortes baisses, en %.
+ * Un écart de moins de 5 % ou de moins de 0,50 € n'est que le bruit du marché : il n'y est pas ;
+ * les prix TCGplayer, sans moyenne, non plus. Une carte Cardmarket possédée pour deux Pokémon n'y
+ * est qu'une fois.
+ */
+export function priceMovers(
+  cards: readonly TrackedCard[],
+  prices: Prices | null,
+  limit: number,
+): { risers: PriceMove[]; fallers: PriceMove[] } {
+  const seen = new Set<number>()
+  const moves = cards.flatMap(({ card, status }): PriceMove[] => {
+    const price = status === 'owned' ? priceOf(prices, card) : null
+    if (!price?.avg30 || seen.has(card.cardmarket!)) return []
+    seen.add(card.cardmarket!)
+    const change = (price.price - price.avg30) / price.avg30
+    return Math.abs(change) < 0.05 || Math.abs(price.price - price.avg30) < 0.5
+      ? []
+      : [{ card, price: price.price, avg30: price.avg30, change }]
+  })
+  moves.sort((a, b) => b.change - a.change)
+  return {
+    risers: moves.filter((move) => move.change > 0).slice(0, limit),
+    fallers: moves
+      .filter((move) => move.change < 0)
+      .reverse()
+      .slice(0, limit),
+  }
+}
+
 export interface CompletionCost {
   /** Somme des prix des cartes chiffrées. */
   value: number
   /** Pokémon dont la carte a un prix. */
   priced: number
-  /** Pokémon dont la carte n'a pas de prix (pas d'id Cardmarket, ou pas de prix ce jour). */
+  /** Pokémon dont la carte n'a de prix ni chez Cardmarket ni chez TCGplayer ce jour. */
   unpriced: number
   /** Pokémon sans carte. */
   noCard: number

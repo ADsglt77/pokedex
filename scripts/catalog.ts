@@ -1,20 +1,23 @@
 /**
  * Construit le catalogue des cartes Pokémon japonaises à partir de TCGdex : `src/data/catalog.json`.
  * Pour chaque Pokémon, ses cartes, des plus récentes aux plus anciennes (dans une extension, du plus
- * grand numéro au plus petit) : extension, numéro, id Cardmarket (pour le prix, 0 si TCGdex ne le
- * connaît pas), suffixe (ex, V, GX…), produit TCGplayer (son image quand Pokécardex n'a pas la
- * sienne, `lib/tcgplayer.ts` ; 0 : aucun) et, pour une carte de plusieurs Pokémon (TAG TEAM), tous
- * ses Pokémon ; et chaque extension, avec son nom japonais, sa date de sortie et les groupes
- * TCGplayer de ses cartes (où `prices.ts` lit le prix de celles sans id Cardmarket). L'app y
- * choisit une carte ; ses images viennent de Pokécardex (sinon TCGplayer), ses prix du guide de
- * Cardmarket (sinon de TCGplayer).
+ * grand numéro au plus petit) : extension, numéro, id Cardmarket (pour le prix ; 0 si TCGdex ne le
+ * connaît pas, ou s'il est douteux : partagé par plusieurs cartes, ou d'un autre Pokémon dans la
+ * liste des produits de Cardmarket), suffixe (ex, V, GX…), produit TCGplayer (son image quand
+ * Pokécardex n'a pas la sienne, `lib/tcgplayer.ts` ; 0 : aucun) et, pour une carte de plusieurs
+ * Pokémon (TAG TEAM), tous ses Pokémon ; et chaque extension, avec son nom japonais, sa date de
+ * sortie et les groupes TCGplayer de ses cartes (où `prices.ts` lit le prix de celles sans prix
+ * Cardmarket). L'app y choisit une carte ; ses images viennent de Pokécardex (sinon TCGplayer), ses
+ * prix du guide de Cardmarket (sinon de TCGplayer).
  * Aucun tri par rareté ni détection des pleines cartes : toutes les cartes Pokémon.
  *
- *   bun run data:catalog [--refresh]   (--refresh : nouvelles cartes et nouveaux id Cardmarket)
+ *   bun run data:catalog [--refresh]   (--refresh : nouvelles cartes, nouveaux id et produits
+ *                                       Cardmarket)
  */
 
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import speciesFile from '@/data/species.json'
+import { speciesInName } from '@/lib/filters'
 import type { CatalogFile, CatalogRow } from '@/types'
 import { writeDataFile } from './lib/dataFile'
 import { fetchJson, mapPool } from './lib/net'
@@ -23,6 +26,9 @@ import { tcgplayerProducts } from './lib/tcgplayer'
 const GRAPHQL = 'https://api.tcgdex.net/v2/graphql'
 const REST = 'https://api.tcgdex.net/v2/ja'
 const PAGE_SIZE = 5000
+/** La liste publique des cartes de Cardmarket : leur nom anglais, pour vérifier l'id de TCGdex. */
+const CARDMARKET_PRODUCTS =
+  'https://downloads.s3.cardmarket.com/productCatalog/productList/products_singles_6.json'
 
 interface RawCard {
   id: string
@@ -145,6 +151,35 @@ const ids = await mapPool(pokemon, 4, async ({ card }) => {
 })
 const withId = ids.filter(Boolean).length
 console.log(`  ${withId} avec un id Cardmarket${failed ? `, ${failed} illisibles` : ''}`)
+
+// Les id de TCGdex ne sont pas tous justes : celui que plusieurs cartes se partagent, ou que la
+// liste des produits de Cardmarket donne à un autre Pokémon (« Slurpuff [Draining Kiss | Magical
+// Shot] » pour une carte de Sucroquin), est retiré : pas de prix plutôt que celui d'une autre
+// carte. Un nom où aucun Pokémon n'est reconnu, ou un id absent de la liste, est gardé.
+const { products: listed } = await fetchJson<{ products: { idProduct: number; name: string }[] }>(
+  CARDMARKET_PRODUCTS,
+  'cardmarket',
+)
+const cardmarketNames = new Map(listed.map(({ idProduct, name }) => [idProduct, name]))
+const sharing = new Map<number, number>()
+for (const id of ids) sharing.set(id, (sharing.get(id) ?? 0) + 1)
+const shared: string[] = []
+const otherPokemon: string[] = []
+for (const [index, { card, dexIds }] of pokemon.entries()) {
+  const id = ids[index]!
+  // Le nom du produit, sans ses attaques entre crochets : « Slurpuff ».
+  const name = cardmarketNames.get(id)?.replace(/\s*\[.*$/, '')
+  const named = name === undefined ? null : speciesInName(name)
+  const code = `${card.set.id} ${card.localId}`
+  if (!id) continue
+  if (sharing.get(id)! > 1) shared.push(code)
+  else if (named !== null && !dexIds.includes(named)) otherPokemon.push(`${code} : ${name}`)
+  else continue
+  ids[index] = 0
+}
+console.log(
+  `  ${shared.length + otherPokemon.length} id retirés : ${shared.length} partagés par plusieurs cartes (${shared.slice(0, 5).join(', ')}…), ${otherPokemon.length} d’un autre Pokémon chez Cardmarket (${otherPokemon.slice(0, 5).join(', ')}…)`,
+)
 
 // Le produit TCGplayer de chaque carte : son image, quand Pokécardex n'a pas la sienne.
 console.log('  produits TCGplayer (pour les images que Pokécardex n’a pas)…')

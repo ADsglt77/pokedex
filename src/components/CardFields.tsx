@@ -5,7 +5,7 @@ import { ImageCredit } from '@/components/ImageCredit'
 import type { CardDraft } from '@/hooks/useCardDraft'
 import { findCardImage } from '@/lib/card-images'
 import { formatEuro } from '@/lib/format'
-import { marketPrice } from '@/lib/prices'
+import { priceOf } from '@/lib/prices'
 import { loadPriceHistory, usePrices } from '@/store/prices'
 import styles from './CardFields.module.css'
 
@@ -51,7 +51,7 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
         />
         {draft.checkedId !== null && (
           <Suspense fallback={<p className="muted">Recherche de la carte chez Cardmarket…</p>}>
-            <CardmarketCheck cardmarket={draft.checkedId} />
+            <CardmarketCheck cardmarket={draft.checkedId} reference={draft.reference} />
           </Suspense>
         )}
         <Input
@@ -126,21 +126,34 @@ function FoundImage({ reference, replaced }: { reference: string; replaced: bool
   )
 }
 
-/** Ce que Cardmarket dit de l'id saisi : le nom de la carte et son prix, pour s'assurer du bon. */
-function CardmarketCheck({ cardmarket }: { cardmarket: number }) {
+/**
+ * Ce que Cardmarket dit de l'id saisi : le nom de la carte et son prix, pour s'assurer du bon. Sans
+ * prix Cardmarket ce jour, celui de TCGplayer que la carte prendra d'après le code de sa référence,
+ * s'il y en a un.
+ */
+function CardmarketCheck({ cardmarket, reference }: { cardmarket: number; reference: string }) {
+  const prices = usePrices()
   const history = use(loadPriceHistory(cardmarket))
-  const price = marketPrice(usePrices(), { cardmarket })
-  if (!history) {
+  const price = priceOf(prices, { cardmarket, reference })
+  // Sans historique, l'id n'a jamais eu de prix depuis le premier relevé ; s'il en a un ce jour,
+  // c'est que l'historique n'a pas répondu (il sera redemandé).
+  if (!history && price?.source !== 'cardmarket') {
     return (
       <p className={styles.warn}>
-        Cet id est inconnu des prix Cardmarket : vérifiez-le (la carte n’aura pas de prix).
+        Pas de prix Cardmarket connu pour cet id : vérifiez-le (un id juste peut aussi n’avoir
+        jamais eu de prix).
+        {price
+          ? ` La carte prendra celui de TCGplayer (${formatEuro(price.price)}), d’après le code de sa référence.`
+          : prices && ' La carte n’aura pas de prix.'}
       </p>
     )
   }
   return (
     <p className={styles.check}>
-      Chez Cardmarket : <strong>{history.name ?? 'carte sans nom'}</strong>
-      {price !== null && ` · ${formatEuro(price)}`}
+      Chez Cardmarket : <strong>{history?.name ?? 'carte sans nom'}</strong>
+      {price?.source === 'cardmarket' && ` · ${formatEuro(price.price)}`}
+      {price?.source === 'tcgplayer' &&
+        ` · pas de prix ce jour, ${formatEuro(price.price)} chez TCGplayer`}
     </p>
   )
 }

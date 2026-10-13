@@ -44,6 +44,19 @@ describe('prochaine commande', () => {
       options(),
     )
     expect(ids(plan.picked)).toEqual(['cheap'])
+    // L'autre reste visible, avec les cartes mises de côté.
+    expect(ids(plan.covered)).toEqual(['other'])
+  })
+
+  test('hors budget, puis son Pokémon pris par une autre carte : « Pokémon déjà prévu »', () => {
+    const plan = planPurchase(
+      [wish('high', [25], 200, { priority: 'high' }), wish('low', [25], 10, { priority: 'low' })],
+      new Set(),
+      options(),
+    )
+    expect(ids(plan.picked)).toEqual(['low'])
+    expect(plan.left).toEqual([])
+    expect(ids(plan.covered)).toEqual(['high'])
   })
 
   test('la priorité passe avant le prix', () => {

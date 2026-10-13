@@ -1,8 +1,7 @@
 import {
-  Alert,
+  Badge,
   Button,
   Combobox,
-  DescriptionList,
   IconButton,
   Input,
   Modal,
@@ -11,13 +10,14 @@ import {
   Textarea,
 } from '@camply/ui'
 import { X } from '@camply/ui/icons'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { EuroField } from '@/components/CommitInput'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SegmentedField } from '@/components/SegmentedField'
-import { ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
+import { BUDGET_LEVELS, ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { useCollectionAction } from '@/hooks/useNotify'
-import { monthOf, spentIn } from '@/lib/budget'
+import { budgetLevel, monthOf, spentIn } from '@/lib/budget'
 import { cardTitle, findCard } from '@/lib/species'
 import {
   euroInput,
@@ -32,9 +32,9 @@ import {
   cardCount,
   cents,
   duplicateReason,
-  linesTotal,
   orderSpent,
   previousOf,
+  refundFits,
   unitCosts,
 } from '@/lib/orders'
 import { priceOf } from '@/lib/prices'
@@ -42,7 +42,9 @@ import { useCollectionStore } from '@/store/collection'
 import { usePrices } from '@/store/prices'
 import { useShoppingStore } from '@/store/shopping'
 import type { CollectionData, Order, OrderLine, OrderState, Supplier } from '@/types'
+import { BudgetMeter } from './BudgetMeter'
 import { CardLine } from './CardLine'
+import { OrderTotals } from './OrderTotals'
 import styles from './ShoppingPage.module.css'
 
 const SUPPLIER_OPTIONS = toOptions(SUPPLIER_LABELS)
@@ -141,10 +143,7 @@ function readDraft(draft: Draft, base: Order, stored: Order | null, collection: 
     link: link || undefined,
     note: draft.note.trim() || undefined,
   }
-  // Un remboursé plus grand que la commande ferait compter une dépense négative dans le budget.
-  if (orderSpent({ ...order, state: 'pending' }) < 0) {
-    errors.refunded = 'Pas plus que le total de la commande.'
-  }
+  if (!refundFits(order)) errors.refunded = 'Pas plus que le total de la commande.'
   return { order, errors }
 }
 
@@ -171,12 +170,17 @@ export function OrderForm({
   // Les erreurs s'affichent après une première tentative, puis suivent la saisie.
   const [submitted, setSubmitted] = useState(false)
   const [overCeiling, setOverCeiling] = useState<{ order: Order; monthTotal: number } | null>(null)
+  const fields = useRef<HTMLElement>(null)
   const set = (change: Partial<Draft>) => setDraft({ ...draft, ...change })
 
   const read = readDraft(draft, base, stored, collection)
   const { order } = read
   const errors = submitted ? read.errors : {}
   const costs = unitCosts(order)
+  // Le mois de la commande avec elle, suivi pendant la saisie.
+  const month = monthOf(order.date)
+  const monthTotal = cents(spentIn(others, month).spent + orderSpent(order))
+  const level = budgetLevel(monthTotal, budget)
   const inLines = new Set(draft.lines.map((line) => line.cardId))
   // Les cartes du Pokédex qui ne sont pas déjà dans la commande.
   const addable = Object.values(collection.customCards)
@@ -212,11 +216,15 @@ export function OrderForm({
   }
 
   const submit = () => {
-    setSubmitted(true)
-    if (Object.keys(read.errors).length > 0) return
+    if (Object.keys(read.errors).length > 0) {
+      // Les erreurs affichées, le premier champ en erreur est mis sous les yeux.
+      flushSync(() => setSubmitted(true))
+      const field = fields.current?.querySelector<HTMLElement>('[aria-invalid="true"]')
+      field?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      field?.focus({ preventScroll: true })
+      return
+    }
     // Le plafond est dépassé par cet enregistrement : on demande, sans interdire.
-    const month = monthOf(order.date)
-    const monthTotal = cents(spentIn(others, month).spent + orderSpent(order))
     if (monthTotal > budget.ceiling && monthTotal > spentIn(orders, month).spent) {
       setOverCeiling({ order, monthTotal })
     } else save(order)
@@ -226,6 +234,8 @@ export function OrderForm({
     <Modal
       open
       onClose={onClose}
+      // Un clic à côté ne perd pas une longue saisie.
+      closeOnBackdrop={false}
       size="lg"
       title={stored ? 'Modifier la commande' : 'Enregistrer une commande'}
       description="Les prix réellement payés : ils font le budget et le prix payé de chaque carte."
@@ -238,7 +248,7 @@ export function OrderForm({
         </>
       }
     >
-      <Stack gap={5}>
+      <Stack gap={5} ref={fields}>
         <div className={styles.formGrid}>
           <Select
             label="Fournisseur"
@@ -290,7 +300,6 @@ export function OrderForm({
 
         <Stack gap={3}>
           <h3 className={styles.formTitle}>Cartes</h3>
-          {errors.lines && <Alert tone="danger" title={errors.lines} />}
           {draft.lines.length > 0 && (
             <ul className={styles.lines}>
               {draft.lines.map((line, index) => {
@@ -363,6 +372,7 @@ export function OrderForm({
             placeholder="Nom ou référence"
             emptyMessage="Aucune carte trouvée."
             options={addable}
+            error={errors.lines}
             // Toujours vide : la carte choisie part dans les lignes, la case repart à zéro.
             value=""
             onChange={addLine}
@@ -381,23 +391,24 @@ export function OrderForm({
           ))}
         </div>
 
-        <DescriptionList
-          className={styles.totals}
-          divided
-          items={[
-            { term: 'Cartes', description: formatEuro(linesTotal(order.lines)) },
-            { term: 'Port et frais', description: formatEuro(order.shipping + order.fees) },
-            ...(order.refunded
-              ? [{ term: 'Remboursé', description: `−${formatEuro(order.refunded)}` }]
-              : []),
-            {
-              term: order.state === 'cancelled' ? 'Total (annulée : ne compte pas)' : 'Total',
-              description: (
-                <strong>{formatEuro(orderSpent({ ...order, state: 'pending' }))}</strong>
-              ),
-            },
-          ]}
-        />
+        <OrderTotals order={order} />
+        {!read.errors.date && (
+          <div className={styles.orderBudget}>
+            <p>
+              En {formatMonth(month)}, avec cette commande&nbsp;:{' '}
+              <strong>{formatEuro(monthTotal)}</strong>
+              {level && (
+                <>
+                  {' '}
+                  <Badge size="sm" tone={BUDGET_LEVELS[level].tone}>
+                    {BUDGET_LEVELS[level].label}
+                  </Badge>
+                </>
+              )}
+            </p>
+            <BudgetMeter spent={monthTotal} budget={budget} />
+          </div>
+        )}
         <p className="muted">
           Le port, les frais et le remboursé sont répartis entre les cartes au prorata de leur prix
           : c’est le prix payé noté sur chaque carte.
