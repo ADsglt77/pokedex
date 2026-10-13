@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { findCardImage, imageLoads } from '@/lib/card-images'
+import { cardImage, findCardImage } from '@/lib/card-images'
 import { isCardmarketImage, parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
 import { parseLink } from '@/lib/format'
 import { loadPriceHistory } from '@/store/prices'
@@ -12,12 +12,11 @@ export interface CardStart {
   page?: string
 }
 
-/** L'image enregistrée est celle que la référence retrouve chez TCGdex : elle la suit. */
-const isFoundImage = (card: PokemonCard) =>
-  findCardImage(card.reference)?.large === card.image?.large
+/** L'image enregistrée est celle que la référence retrouve chez Pokécardex : elle la suit. */
+const isFoundImage = (card: PokemonCard) => cardImage(card.reference)?.large === card.image?.large
 
 /**
- * La saisie d'une carte : l'adresse de son image (vide : celle que TCGdex a d'après la référence),
+ * La saisie d'une carte : l'adresse de son image (vide : celle retrouvée d'après la référence),
  * son id Cardmarket, sa référence, sa page chez Cardmarket. `card` : la carte à corriger ;
  * `start` : ce que le favori a lu de Cardmarket.
  */
@@ -55,13 +54,15 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
   }
   const pasted: CardImage | null =
     imageUrl && !errors.image ? { small: imageUrl.href, large: imageUrl.href } : null
-  const found = image.trim() ? null : findCardImage(searched)
+  // La référence dont on cherche l'image : aucune si une adresse est collée, ou si son extension
+  // est inconnue.
+  const lookup = image.trim() || !cardImage(searched) ? null : searched
 
   /**
    * La carte saisie, pour les Pokémon `dexIds` ; `null` tant qu'un champ est illisible (ses
    * erreurs s'affichent alors). Sans référence notée, le nom de la carte chez Cardmarket, sinon
    * `fallback` ; une référence qui n'était que le nom de l'ancien id suit l'id corrigé. Sans
-   * adresse collée, l'image de TCGdex, si elle existe.
+   * adresse collée, l'image retrouvée d'après la référence, s'il y en a une.
    */
   async function read(dexIds: number[], fallback: string): Promise<PokemonCard | null> {
     setSubmitted(true)
@@ -70,11 +71,11 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
     const previous = card?.cardmarket === undefined ? null : await loadPriceHistory(card.cardmarket)
     const typed = reference.trim()
     const stale = cardmarket !== card?.cardmarket && typed === previous?.name
-    const candidate = image.trim() ? null : findCardImage(typed)
-    // L'image déjà enregistrée reste si TCGdex ne répond pas : elle s'est chargée une fois.
-    const kept = candidate && candidate.large === card?.image?.large ? card.image : null
-    const loads = candidate && (await imageLoads(candidate.small, { retry: true }))
-    const picture = pasted ?? (loads ? candidate : kept)
+    const candidate = image.trim() ? null : cardImage(typed)
+    // L'image déjà enregistrée reste si Pokécardex ne répond pas : elle s'est chargée une fois.
+    const kept = candidate && candidate.large === card?.image?.large ? (card?.image ?? null) : null
+    const picture =
+      pasted ?? (candidate ? ((await findCardImage(typed, { retry: true })) ?? kept) : null)
     return {
       id,
       dexIds,
@@ -88,10 +89,10 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
   return {
     image,
     setImage,
-    /** L'image de l'aperçu : l'adresse collée, sinon celle cherchée chez TCGdex. */
-    picture: pasted ?? found,
-    /** L'image cherchée chez TCGdex d'après la référence, quand aucune adresse n'est collée. */
-    found,
+    /** L'image de l'adresse collée, si elle est lisible. */
+    pasted,
+    /** La référence dont l'image est cherchée (`findCardImage`) ; `null` : rien à chercher. */
+    lookup,
     cardmarketText,
     setCardmarketText,
     /** L'id à vérifier chez Cardmarket, une fois le champ quitté ; `null` sinon. */

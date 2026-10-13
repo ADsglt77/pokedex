@@ -1,10 +1,11 @@
 # Pokédex
 
-Pokédex personnel de cartes Pokémon : pour chacun des 1 025 Pokémon, on ajoute la carte que l'on
-veut (sa référence, d'où son image est retrouvée, et son id Cardmarket pour suivre son prix) ; le
-Pokémon se débloque quand on la possède. React + Vite + TypeScript, interface
+Pokédex personnel de cartes Pokémon japonaises : pour chacun des 1 025 Pokémon, on ajoute la
+carte que l'on veut (sa référence, d'où son image est retrouvée, et son id Cardmarket pour suivre
+son prix) ; le Pokémon se débloque quand on la possède. React + Vite + TypeScript, interface
 [`@camply/ui`](https://www.npmjs.com/package/@camply/ui), espèces [PokéAPI](https://pokeapi.co/),
-images [TCGdex](https://tcgdex.dev/), prix [Cardmarket](https://www.cardmarket.com/).
+images [Pokécardex](https://www.pokecardex.com/) (avec son autorisation), prix
+[Cardmarket](https://www.cardmarket.com/).
 
 ```sh
 bun install
@@ -36,11 +37,10 @@ bun run format   # Prettier
   à copier), les images à chercher pour les cartes qui n'en ont pas, export / import (achats
   compris), effacement.
 
-Les espèces sont embarquées (`bun run data`, depuis PokéAPI), tout comme le dossier d'images de
-chaque extension chez TCGdex (`bun run data:images --refresh` pour les nouvelles extensions) :
-aucune API externe appelée par le navigateur, hormis les images (dessins des Pokémon chez PokéAPI,
-cartes chez TCGdex ou à l'adresse collée ; pas celles de Cardmarket, qui ne s'affichent que sur
-son site). Le favori ne fait que
+Les espèces sont embarquées (`bun run data`, depuis PokéAPI) : aucune API externe appelée par le
+navigateur, hormis les images (dessins des Pokémon chez PokéAPI ; cartes chez Pokécardex, avec son
+autorisation et un lien vers son site sous chaque carte, ou à l'adresse collée ; pas celles de
+Cardmarket, qui ne s'affichent que sur son site). Le favori ne fait que
 lire la page Cardmarket ouverte et l'envoyer à l'app d'où il a été installé : installé depuis
 `bun dev`, il ouvre `localhost`. Les prix sont des fichiers du site
 lui-même (`/prices/`), écrits chaque jour par `bun run prices` d'après les fichiers publics de

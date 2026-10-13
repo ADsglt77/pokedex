@@ -2,16 +2,15 @@ import { Input, Stack } from '@camply/ui'
 import { Suspense, use } from 'react'
 import { CardArt } from '@/components/CardArt'
 import type { CardDraft } from '@/hooks/useCardDraft'
-import { imageLoads } from '@/lib/card-images'
+import { findCardImage } from '@/lib/card-images'
 import { formatEuro } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
 import { loadPriceHistory, usePrices } from '@/store/prices'
-import type { CardImage } from '@/types'
 import styles from './CardFields.module.css'
 
 /**
- * Les champs d'une carte : l'adresse de son image (vide : cherchée chez TCGdex d'après la
- * référence), son id Cardmarket (vérifié dans les prix), sa référence, sa page Cardmarket, et
+ * Les champs d'une carte : sa référence (d'où son image est retrouvée), l'adresse de son image
+ * (vide : celle retrouvée), son id Cardmarket (vérifié dans les prix), sa page Cardmarket, et
  * l'aperçu de la carte. `speciesId` : pour l'aperçu sans image.
  */
 export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: number | null }) {
@@ -28,16 +27,16 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
         />
         <Input
           label="Adresse de l’image"
-          hint="Facultatif : vide, l’image est cherchée chez TCGdex d’après la référence. Sinon, clic droit sur une image en ligne › « Copier l’adresse de l’image » (pas sur Cardmarket : ses images ne s’affichent que chez lui)."
+          hint="Facultatif : vide, l’image est cherchée chez Pokécardex d’après la référence. Sinon, clic droit sur une image en ligne › « Copier l’adresse de l’image » (pas sur Cardmarket : ses images ne s’affichent que chez lui)."
           placeholder="https://…"
           inputMode="url"
           value={draft.image}
           onChange={(event) => draft.setImage(event.target.value)}
           error={errors.image}
         />
-        {draft.found && (
-          <Suspense fallback={<p className="muted">Recherche de l’image chez TCGdex…</p>}>
-            <FoundImage image={draft.found} />
+        {draft.lookup !== null && (
+          <Suspense fallback={<p className="muted">Recherche de l’image…</p>}>
+            <FoundImage reference={draft.lookup} />
           </Suspense>
         )}
         <Input
@@ -64,29 +63,50 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
           error={errors.page}
         />
       </Stack>
-      {/* L'aperçu : sans image, ou si l'adresse ne mène pas à une image, la carte de substitution. */}
       {speciesId !== null && (
-        <CardArt
-          card={{ image: draft.picture, reference: draft.reference }}
-          speciesId={speciesId}
-          alt="Aperçu de la carte"
-          className={styles.preview}
-        />
+        <Suspense fallback={<Preview draft={draft} speciesId={speciesId} searching />}>
+          <Preview draft={draft} speciesId={speciesId} />
+        </Suspense>
       )}
     </div>
   )
 }
 
-/** Ce que TCGdex a pour la référence : l'image, ou rien. */
-function FoundImage({ image }: { image: CardImage }) {
-  return use(imageLoads(image.small)) ? (
+/**
+ * L'aperçu : l'adresse collée, sinon l'image retrouvée ; sans image, ou si l'adresse ne mène pas à
+ * une image, la carte de substitution. `searching` : pendant la recherche.
+ */
+function Preview({
+  draft,
+  speciesId,
+  searching,
+}: {
+  draft: CardDraft
+  speciesId: number
+  searching?: boolean
+}) {
+  const found = searching || draft.lookup === null ? null : use(findCardImage(draft.lookup))
+  return (
+    <CardArt
+      card={{ image: draft.pasted ?? found, reference: draft.reference }}
+      speciesId={speciesId}
+      alt="Aperçu de la carte"
+      className={styles.preview}
+    />
+  )
+}
+
+/** Ce que Pokécardex a pour la référence : l'image, ou rien. */
+function FoundImage({ reference }: { reference: string }) {
+  const image = use(findCardImage(reference))
+  return image ? (
     <p className={styles.check}>
-      Image trouvée chez TCGdex d’après la référence : vérifiez l’aperçu.
+      Image trouvée chez Pokécardex d’après la référence : vérifiez l’aperçu.
     </p>
   ) : (
     <p className={styles.warn}>
-      TCGdex n’a pas l’image de cette carte, ou ne répond pas (elle sera cherchée de nouveau à
-      l’enregistrement) : collez-en une si vous voulez.
+      Pokécardex n’a pas l’image de cette carte, ou ne répond pas (elle sera cherchée de nouveau à
+      l’enregistrement) : vérifiez la référence, ou collez une adresse si vous voulez.
     </p>
   )
 }

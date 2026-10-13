@@ -8,11 +8,11 @@ export function ReferenceSection() {
       <p>
         Les espèces viennent de <ExternalLink href="https://pokeapi.co/">PokéAPI</ExternalLink>,
         embarquées dans l’app. Les cartes sont celles que vous ajoutez. Leur image vient de{' '}
-        <ExternalLink href="https://tcgdex.dev/">TCGdex</ExternalLink>, retrouvée d’après la
-        référence (l’app connaît le dossier d’images de chaque extension), ou de l’adresse que vous
-        collez. Leur prix vient de leur id Cardmarket : celui du guide quotidien de{' '}
-        <ExternalLink href="https://www.cardmarket.com/">Cardmarket</ExternalLink>, relu chaque jour
-        par le serveur, qui en garde l’historique carte par carte.
+        <ExternalLink href="https://www.pokecardex.com/">Pokécardex</ExternalLink>, avec son aimable
+        autorisation, retrouvée d’après la référence (le code de l’extension et le numéro), ou de
+        l’adresse que vous collez. Leur prix vient de leur id Cardmarket : celui du guide quotidien
+        de <ExternalLink href="https://www.cardmarket.com/">Cardmarket</ExternalLink>, relu chaque
+        jour par le serveur, qui en garde l’historique carte par carte.
       </p>
     </DataSection>
   )

@@ -1,67 +1,63 @@
 /**
- * Les images des cartes chez TCGdex, retrouvées d'après la référence : « Bulbizarre (sv2a 166) »,
- * le code de l'extension puis le numéro, comme Cardmarket les écrit. La table des extensions vient
- * de `bun run data:images` ; l'app n'appelle pas TCGdex, elle charge seulement l'image.
+ * Les images des cartes japonaises, chez Pokécardex (avec son autorisation, octobre 2026),
+ * retrouvées d'après la référence : « Bulbizarre (sv2a 166) », le code de l'extension puis le
+ * numéro, comme Cardmarket les écrit. L'app ne lit aucune page de Pokécardex (leurs données sont
+ * chiffrées) : elle charge seulement l'image, à une adresse déduite de la référence, et cite
+ * Pokécardex sous la carte.
  */
 
-import imagesJson from '@/data/card-images.json'
 import type { CardImage } from '@/types'
 
-const ASSETS = 'https://assets.tcgdex.net'
+const SCANS = 'https://pokecardex-scans.b-cdn.net'
+export const POKECARDEX = 'https://www.pokecardex.com/'
 
 /**
- * Code de l'extension → [dossier de ses images, longueur de ses numéros (0 : sans zéro devant)].
- * Une `Map` : un code saisi comme « constructor » ne lit rien d'autre que la table. Le JSON lu par
- * TypeScript ne garde pas les paires : on les retype.
+ * Où Pokécardex range l'image de la carte : `sets_jp/SV2A/6.jpg`, le code de l'extension en
+ * majuscules et sans tiret (SV-P → SVP), le numéro sans zéro devant ; tailles `md` (grille) et
+ * `hd` (fiche). `null` si la référence ne finit pas par un code et un numéro : entre parenthèses
+ * comme chez Cardmarket, ou un code qui a un chiffre (« SV4a 349 », pas « Mon Pikachu 2 »).
+ * Pokécardex ne l'a pas toujours : `findCardImage` vérifie.
  */
-const FOLDERS = new Map(Object.entries(imagesJson.folders) as [string, [string, number]][])
-
-/** Le code et le numéro à la fin d'une référence : « Bulbizarre (sv2a 166) » → sv2a, 166. */
-function cardCode(reference: string): { set: string; number: string } | null {
-  const match = /([\w.-]+)\s+([a-z]*\d+[a-z]*)\)?\s*$/i.exec(reference.trim())
-  return match ? { set: match[1]!, number: match[2]! } : null
+export function cardImage(reference: string): CardImage | null {
+  const match = /(\()?([\w.-]+)\s+([a-z]*\d+[a-z]*)\)?\s*$/i.exec(reference.trim())
+  if (!match) return null
+  const [, parenthesis, set = '', number = ''] = match
+  if (!parenthesis && !/\d/.test(set)) return null
+  const code = set.toUpperCase().replace(/-/g, '')
+  const printed = /^\d+$/.test(number) ? String(Number(number)) : number.toUpperCase()
+  const base = `${SCANS}/sets_jp/${code}/${printed}.jpg`
+  return { small: `${base}?class=md`, large: `${base}?class=hd` }
 }
 
-/**
- * Où TCGdex rangerait l'image de la carte d'après sa référence ; `null` si l'extension lui est
- * inconnue. Il ne l'a pas toujours : `imageLoads` le dit.
- */
-export function findCardImage(reference: string): CardImage | null {
-  const code = cardCode(reference)
-  const folder = code && FOLDERS.get(code.set.toLowerCase())
-  if (!code || !folder) return null
-  const [path, digits] = folder
-  const number = /^\d+$/.test(code.number)
-    ? String(Number(code.number)).padStart(digits, '0')
-    : code.number.toUpperCase()
-  const base = `${ASSETS}/${path}/${number}`
-  return { small: `${base}/low.webp`, large: `${base}/high.webp` }
-}
+/** L'image vient-elle de Pokécardex ? La fiche le cite alors, avec un lien. */
+export const isPokecardexImage = (image: CardImage) => image.small.startsWith(SCANS)
 
-const loads = new Map<string, Promise<boolean>>()
-const failed = new Set<string>()
+const found = new Map<string, Promise<CardImage | null>>()
+const missing = new Set<string>()
 
 /**
- * L'image se charge-t-elle ? La réponse est gardée : la même promesse pour la même adresse (ce
- * qu'attend `use`). `retry` redemande une image qui a échoué : une panne passagère de TCGdex ne
- * doit pas compter pour une image absente au moment d'enregistrer.
+ * L'image de la carte chez Pokécardex, si elle s'y charge ; `null` sinon. La même promesse pour la
+ * même référence (ce qu'attend `use`). `retry`, au moment d'enregistrer, redemande une image qui a
+ * échoué : une panne passagère ne doit pas compter pour une image absente.
  */
-export function imageLoads(src: string, { retry = false } = {}): Promise<boolean> {
-  let promise = loads.get(src)
-  if (!promise || (retry && failed.has(src))) {
-    promise = new Promise((resolve) => {
-      const image = new Image()
-      image.onload = () => {
-        failed.delete(src)
-        resolve(true)
+export function findCardImage(reference: string, { retry = false } = {}) {
+  let promise = found.get(reference)
+  if (!promise || (retry && missing.has(reference))) {
+    const image = cardImage(reference)
+    promise = new Promise<CardImage | null>((resolve) => {
+      if (!image) return resolve(null)
+      const probe = new Image()
+      probe.onload = () => {
+        missing.delete(reference)
+        resolve(image)
       }
-      image.onerror = () => {
-        failed.add(src)
-        resolve(false)
+      probe.onerror = () => {
+        missing.add(reference)
+        resolve(null)
       }
-      image.src = src
+      probe.src = image.small
     })
-    loads.set(src, promise)
+    found.set(reference, promise)
   }
   return promise
 }
