@@ -23,7 +23,9 @@ export function MissingImages() {
 
   const search = async () => {
     setSearching(true)
-    const loaded = await Promise.all(candidates.map(({ image }) => imageLoads(image.small)))
+    const loaded = await Promise.all(
+      candidates.map(({ image }) => imageLoads(image.small, { retry: true })),
+    )
     setSearching(false)
     const found = candidates.filter((_, index) => loaded[index])
     const missing = candidates.length - found.length

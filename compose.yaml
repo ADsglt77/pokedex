@@ -10,7 +10,8 @@ services:
       - prices:/usr/share/nginx/html/prices:ro
 
   # Prix Cardmarket : relus toutes les 6 h (le guide change une fois par jour), écrits dans le
-  # volume que sert nginx. Le code vient du clone : un `git pull` suffit à le mettre à jour.
+  # volume que sert nginx ; après un échec (Cardmarket indisponible…), de nouveau 10 min plus tard.
+  # Le code vient du clone : un `git pull` suffit à le mettre à jour.
   prices:
     image: oven/bun:1-alpine
     restart: unless-stopped
@@ -18,7 +19,10 @@ services:
     volumes:
       - ./scripts:/app/scripts:ro
       - prices:/prices
-    command: sh -c 'while true; do bun scripts/prices.ts /prices; sleep 21600; done'
+    command: >-
+      sh -c 'while true; do
+      if bun scripts/prices.ts /prices; then sleep 21600; else sleep 600; fi;
+      done'
 
 volumes:
   prices:

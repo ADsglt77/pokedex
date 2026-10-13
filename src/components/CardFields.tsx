@@ -85,7 +85,8 @@ function FoundImage({ image }: { image: CardImage }) {
     </p>
   ) : (
     <p className={styles.warn}>
-      TCGdex n’a pas l’image de cette carte : collez-en une si vous voulez.
+      TCGdex n’a pas l’image de cette carte, ou ne répond pas (elle sera cherchée de nouveau à
+      l’enregistrement) : collez-en une si vous voulez.
     </p>
   )
 }

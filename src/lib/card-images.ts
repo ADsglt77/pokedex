@@ -11,9 +11,10 @@ const ASSETS = 'https://assets.tcgdex.net'
 
 /**
  * Code de l'extension → [dossier de ses images, longueur de ses numéros (0 : sans zéro devant)].
- * Le JSON lu par TypeScript ne garde pas les paires : on les retype.
+ * Une `Map` : un code saisi comme « constructor » ne lit rien d'autre que la table. Le JSON lu par
+ * TypeScript ne garde pas les paires : on les retype.
  */
-const FOLDERS = imagesJson.folders as unknown as Record<string, [string, number]>
+const FOLDERS = new Map(Object.entries(imagesJson.folders) as [string, [string, number]][])
 
 /** Le code et le numéro à la fin d'une référence : « Bulbizarre (sv2a 166) » → sv2a, 166. */
 function cardCode(reference: string): { set: string; number: string } | null {
@@ -27,7 +28,7 @@ function cardCode(reference: string): { set: string; number: string } | null {
  */
 export function findCardImage(reference: string): CardImage | null {
   const code = cardCode(reference)
-  const folder = code && FOLDERS[code.set.toLowerCase()]
+  const folder = code && FOLDERS.get(code.set.toLowerCase())
   if (!code || !folder) return null
   const [path, digits] = folder
   const number = /^\d+$/.test(code.number)
@@ -38,15 +39,26 @@ export function findCardImage(reference: string): CardImage | null {
 }
 
 const loads = new Map<string, Promise<boolean>>()
+const failed = new Set<string>()
 
-/** L'image se charge-t-elle ? Une fois par adresse : la réponse est gardée. */
-export function imageLoads(src: string): Promise<boolean> {
+/**
+ * L'image se charge-t-elle ? La réponse est gardée : la même promesse pour la même adresse (ce
+ * qu'attend `use`). `retry` redemande une image qui a échoué : une panne passagère de TCGdex ne
+ * doit pas compter pour une image absente au moment d'enregistrer.
+ */
+export function imageLoads(src: string, { retry = false } = {}): Promise<boolean> {
   let promise = loads.get(src)
-  if (!promise) {
+  if (!promise || (retry && failed.has(src))) {
     promise = new Promise((resolve) => {
       const image = new Image()
-      image.onload = () => resolve(true)
-      image.onerror = () => resolve(false)
+      image.onload = () => {
+        failed.delete(src)
+        resolve(true)
+      }
+      image.onerror = () => {
+        failed.add(src)
+        resolve(false)
+      }
       image.src = src
     })
     loads.set(src, promise)

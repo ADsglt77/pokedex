@@ -91,9 +91,11 @@ Points à connaître :
   chaque extension chez TCGdex (une japonaise par son id, SV2a ; une anglaise par son abréviation
   officielle, MEW ; un code porté par deux extensions est écarté) et la longueur de ses numéros
   (6 → 006). TCGdex n'a pas toutes les images, et en publie qu'il ne déclare pas : l'app vérifie
-  que l'image se charge (`imageLoads`) avant de l'enregistrer, et la saisie le dit. Sans adresse
-  collée, l'image suit la référence (cherchée en quittant le champ). Données : « Chercher les
-  images chez TCGdex » pour les cartes sans image.
+  que l'image se charge (`imageLoads`) avant de l'enregistrer, et la saisie le dit. Un échec est
+  redemandé à l'enregistrement (panne passagère), et une image déjà enregistrée reste si TCGdex ne
+  répond pas. Sans adresse collée, l'image suit la référence (cherchée en quittant le champ).
+  Données : « Chercher les images chez TCGdex » pour les cartes sans image. Pour deviner le
+  Pokémon (`speciesInName`), le « (code numéro) » final est ignoré : « (MEW 166) » n'est pas Mew.
 - Prix (`scripts/prices.ts`) : le guide des prix public de Cardmarket et sa liste des produits
   (pour les noms), une fois par jour, seulement les cartes à l'unité (catégorie 51). Il écrit
   `latest.json` (le prix du jour de chaque carte : `[prix, plus bas, moyenne 30 jours]`, par id
@@ -126,7 +128,9 @@ Points à connaître :
     en place). Un import demande toujours confirmation ; un fichier abîmé (enregistrement ou bloc
     d'achats illisible) est refusé (`lib/transfer.ts`).
 - Deux onglets ouverts restent d'accord : chacun reprend ce que l'autre enregistre (évènement
-  `storage`, `store/persist.ts`, pour les deux clés), sans quoi il l'écraserait.
+  `storage`, `store/persist.ts`, pour les deux clés), sans quoi il l'écraserait. Si le navigateur
+  refuse de lire ou d'écrire (stockage plein ou bloqué), l'app continue en mémoire et un bandeau
+  (`useStorageFailure`, `AppShell`) invite à exporter.
 - « Annuler » (`useCollectionAction`) rétablit collection et achats d'avant, et refuse si quelque
   chose a changé depuis : une modification ultérieure n'est jamais effacée.
 - Filtres du Pokédex dans l'adresse : `q`, `generation`, `possession` (`owned`, `missing`),
@@ -139,14 +143,16 @@ Points à connaître :
 
 ## Déploiement
 
-VPS derrière un tunnel Cloudflare. `Dockerfile` : Bun lance les tests puis construit `dist/`, nginx le sert
-(`deploy/nginx.conf` : toute route inconnue reçoit `index.html`, le routage étant côté client ;
-`/assets/` en cache un an ; `/prices/` toujours revalidé, compressé). `compose.yaml` : le site sur
+VPS derrière un tunnel Cloudflare. `Dockerfile` : Bun lance les tests puis construit `dist/`,
+nginx le sert (`deploy/nginx.conf` : une route inconnue reçoit `index.html`, le routage étant côté
+client ; un fichier manquant de `/assets/` ou `/prices/` répond 404 ; `/assets/` en cache un an ;
+`/prices/` toujours revalidé, compressé). `compose.yaml` : le site sur
 `127.0.0.1:${POKEDEX_PORT:-8080}`, que le tunnel publie, et le service `prices` qui relance
-`scripts/prices.ts` toutes les 6 h dans le volume `prices` (l'historique de chaque carte y vit, un
-fichier par carte : ne pas supprimer le volume). `.github/workflows/deploy.yml` : à chaque push sur
-`main`, SSH sur le VPS (action épinglée sur un commit, empreinte d'hôte `VPS_FINGERPRINT`),
-`git pull --ff-only`, `docker compose build --pull` puis `up -d`. Marche à suivre complète : README.
+`scripts/prices.ts` toutes les 6 h (10 min après un échec) dans le volume `prices` (l'historique
+de chaque carte y vit, un fichier par carte : ne pas supprimer le volume).
+`.github/workflows/deploy.yml` : à chaque push sur `main`, SSH sur le VPS (action épinglée sur un
+commit, empreinte d'hôte `VPS_FINGERPRINT`), `git pull --ff-only`, `docker compose build --pull`
+puis `up -d`. Marche à suivre complète : README.
 
 ## Skills du projet (`.claude/skills/`)
 

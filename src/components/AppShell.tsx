@@ -1,7 +1,9 @@
+import { Banner, Button } from '@camply/ui'
 import { ChartLine, Database, Grid3x3, House, ShoppingCart } from '@camply/ui/icons'
 import { useEffect, useRef } from 'react'
 import { Link, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { cx } from '@/lib/cx'
+import { useStorageFailure } from '@/store/persist'
 import styles from './AppShell.module.css'
 
 const NAV = [
@@ -38,10 +40,12 @@ function Emblem() {
 
 /**
  * La coquille de toutes les pages : lien d'évitement, en-tête et navigation (barre d'onglets en bas
- * sur téléphone), pied de page, focus et défilement à chaque changement de page.
+ * sur téléphone), avertissement si le navigateur n'enregistre plus, pied de page, focus et
+ * défilement à chaque changement de page.
  */
 export function AppShell() {
   const { pathname } = useLocation()
+  const storageFailed = useStorageFailure((state) => state.failed)
   const main = useRef<HTMLElement>(null)
   const shownPath = useRef(pathname)
 
@@ -82,6 +86,20 @@ export function AppShell() {
           </nav>
         </div>
       </header>
+
+      {storageFailed && (
+        <Banner
+          tone="warn"
+          action={
+            <Button asChild size="sm" variant="soft">
+              <Link to="/donnees#exporter">Exporter</Link>
+            </Button>
+          }
+        >
+          Le navigateur n’enregistre plus vos modifications (stockage plein ou bloqué) : elles
+          seront perdues en fermant la page. Exportez votre collection pour les garder.
+        </Banner>
+      )}
 
       <main id="main" ref={main} tabIndex={-1} className={styles.main}>
         {/* Une clé par adresse : chaque page (et chaque fiche) repart d'un état neuf. */}

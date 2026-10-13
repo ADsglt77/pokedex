@@ -98,13 +98,19 @@ export function searchMatcher(search: string): (species: PokemonSpecies) => bool
   return (species) => SEARCH_NAMES.get(species.id)!.includes(needle)
 }
 
-/** En mots simples : sans casse ni accent, ponctuation changée en espaces. « Mr. Mime » → « mr mime ». */
+/**
+ * En mots simples : sans casse, accent ni ligature, ponctuation changée en espaces ; ♀ et ♂ sont
+ * des mots (Nidoran♀ n'est pas Nidoran♂). « Mr. Mime » → « mr mime », « Nidoran♀ » → « nidoran ♀ ».
+ */
 const words = (text: string) =>
   ` ${text
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/œ/g, 'oe')
+    .replace(/æ/g, 'ae')
+    .replace(/[♀♂]/g, ' $& ')
+    .replace(/[^\p{L}\p{N}♀♂]+/gu, ' ')
     .trim()} `
 
 const SPECIES_WORDS = SPECIES.flatMap(({ id, names }) =>
@@ -114,10 +120,11 @@ const SPECIES_WORDS = SPECIES.flatMap(({ id, names }) =>
 /**
  * Le Pokémon d'un nom de carte (« Lillie's Clefairy ex », « Pikachu (30C 034) ») : celui dont le
  * nom français ou anglais y figure en entier, le plus long s'il y en a plusieurs (Porygon-Z avant
- * Porygon) ; `null` si aucun.
+ * Porygon) ; `null` si aucun. Le code et le numéro entre parenthèses n'en font pas partie : « (MEW
+ * 166) » n'est pas Mew.
  */
 export function speciesInName(name: string): number | null {
-  const text = words(name)
+  const text = words(name.replace(/\([^()]*\)\s*$/, ''))
   const found = SPECIES_WORDS.filter((species) => text.includes(species.name))
   return found.sort((a, b) => b.name.length - a.name.length)[0]?.id ?? null
 }

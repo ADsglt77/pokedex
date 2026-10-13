@@ -7,7 +7,7 @@ import { create } from 'zustand'
 import * as rules from '@/lib/collection'
 import { parseStored, readCollection } from '@/lib/transfer'
 import type { CardStatus, CollectionData, PokemonCard } from '@/types'
-import { persist } from './persist'
+import { persist, readStored } from './persist'
 
 const COLLECTION_KEY = 'pokedex-collection.collection'
 
@@ -29,7 +29,7 @@ export const useCollectionStore = create<CollectionStore>()((set, get) => {
     set({ collection: change(get().collection, new Date().toISOString()) })
 
   return {
-    collection: loadCollection(localStorage.getItem(COLLECTION_KEY)),
+    collection: loadCollection(readStored(COLLECTION_KEY)),
 
     setCardStatus: (card, status) =>
       update((collection, now) => rules.setCardStatus(collection, card, status, now)),

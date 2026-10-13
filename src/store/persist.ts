@@ -1,4 +1,21 @@
-import type { StoreApi } from 'zustand'
+import { create, type StoreApi } from 'zustand'
+
+/**
+ * Le navigateur a-t-il refusé d'enregistrer (stockage plein, ou bloqué par ses réglages) ? Les
+ * modifications restent à l'écran mais seraient perdues en fermant la page : l'app le signale
+ * jusqu'au rechargement, et l'export, fait depuis la mémoire, les sauve.
+ */
+export const useStorageFailure = create(() => ({ failed: false }))
+
+/** Ce que le navigateur garde sous `key` ; `null` s'il refuse l'accès à son stockage. */
+export function readStored(key: string): string | null {
+  try {
+    return localStorage.getItem(key)
+  } catch {
+    useStorageFailure.setState({ failed: true })
+    return null
+  }
+}
 
 /**
  * Enregistre une partie d'un store dans le navigateur (`localStorage`, sous `key`) à chaque
@@ -13,7 +30,12 @@ export function persist<S>(
   restore: (text: string | null) => Partial<S>,
 ) {
   store.subscribe((state, previous) => {
-    if (pick(state) !== pick(previous)) localStorage.setItem(key, JSON.stringify(pick(state)))
+    if (pick(state) === pick(previous)) return
+    try {
+      localStorage.setItem(key, JSON.stringify(pick(state)))
+    } catch {
+      useStorageFailure.setState({ failed: true })
+    }
   })
   window.addEventListener('storage', (event) => {
     if (event.key === key) store.setState(restore(event.newValue))

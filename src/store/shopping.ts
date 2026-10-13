@@ -11,7 +11,7 @@ import { parseStored, readShopping } from '@/lib/transfer'
 import * as rules from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
 import type { BudgetSettings, Order, ShoppingData } from '@/types'
-import { persist } from './persist'
+import { persist, readStored } from './persist'
 
 const SHOPPING_KEY = 'pokedex-collection.shopping'
 
@@ -50,7 +50,7 @@ export const useShoppingStore = create<ShoppingStore>()((set, get) => {
   }
 
   return {
-    shopping: loadShopping(localStorage.getItem(SHOPPING_KEY)),
+    shopping: loadShopping(readStored(SHOPPING_KEY)),
 
     setDecision: (cardId, decision) =>
       update((shopping, now) => rules.setDecision(shopping, cardId, decision, now)),

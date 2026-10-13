@@ -71,7 +71,10 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
     const typed = reference.trim()
     const stale = cardmarket !== card?.cardmarket && typed === previous?.name
     const candidate = image.trim() ? null : findCardImage(typed)
-    const picture = pasted ?? (candidate && (await imageLoads(candidate.small)) ? candidate : null)
+    // L'image déjà enregistrée reste si TCGdex ne répond pas : elle s'est chargée une fois.
+    const kept = candidate && candidate.large === card?.image?.large ? card.image : null
+    const loads = candidate && (await imageLoads(candidate.small, { retry: true }))
+    const picture = pasted ?? (loads ? candidate : kept)
     return {
       id,
       dexIds,

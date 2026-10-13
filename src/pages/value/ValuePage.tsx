@@ -126,8 +126,10 @@ export function ValuePage() {
 }
 
 function CollectionChart({ cards }: { cards: PokemonCard[] }) {
-  // Les cartes sans id Cardmarket n'ont pas de prix : elles ne pèsent pas sur la courbe.
-  const ids = [...new Set(cards.flatMap((card) => card.cardmarket ?? []))].sort((a, b) => a - b)
+  // Les cartes sans id Cardmarket n'ont pas de prix : elles ne pèsent pas sur la courbe. La même
+  // carte Cardmarket possédée pour deux Pokémon compte deux fois, comme dans la valeur du jour ;
+  // son historique n'est demandé qu'une fois.
+  const ids = cards.flatMap((card) => card.cardmarket ?? []).sort((a, b) => a - b)
   const histories = use(loadPriceHistories(ids))
   return <PriceChart points={collectionHistory(histories)} label="Valeur de ma collection" />
 }
