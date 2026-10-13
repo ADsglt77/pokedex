@@ -1,5 +1,6 @@
 /** Export et import de la collection, et sa relecture depuis le stockage du navigateur. */
 
+import { PRIORITY_LABELS } from '@/config/shopping'
 import { today } from '@/lib/format'
 import type { CollectionData, CollectionExportFile, ShoppingData } from '@/types'
 
@@ -49,7 +50,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 /**
  * Une collection, telle qu'enregistrée ; `null` si ce n'en est pas une (mauvais fichier). Ce
- * qu'une ancienne version y gardait en plus (illustration choisie, raretés suivies) est ignoré.
+ * qu'une ancienne version y gardait en plus (illustrations choisies) est ignoré.
  */
 export function readCollection(value: unknown): CollectionData | null {
   const isCollection = isRecord(value) && isRecord(value.cards) && isRecord(value.customCards)
@@ -78,10 +79,21 @@ const readable = (collection: CollectionData, shopping: ShoppingData | null) =>
   all(collection.cards, (card) => ['owned', 'ordered', 'wanted'].includes(card.status as string)) &&
   all(
     collection.customCards,
-    (card) => Array.isArray(card.dexIds) && typeof card.reference === 'string',
+    (card) =>
+      Array.isArray(card.dexIds) &&
+      typeof card.reference === 'string' &&
+      (card.image == null ||
+        (isRecord(card.image) &&
+          typeof card.image.small === 'string' &&
+          typeof card.image.large === 'string')),
   ) &&
   (!shopping ||
-    (all(shopping.preferences) &&
+    (all(
+      shopping.preferences,
+      (preference) =>
+        typeof preference.decision === 'string' &&
+        Object.hasOwn(PRIORITY_LABELS, preference.priority as string),
+    ) &&
       all(
         shopping.orders,
         (order) => typeof order.date === 'string' && Array.isArray(order.lines) && all(order.lines),

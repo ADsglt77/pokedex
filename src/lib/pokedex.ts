@@ -4,7 +4,8 @@
  */
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
-import { findCard, SPECIES } from '@/lib/catalog'
+import { monthRange } from '@/lib/format'
+import { findCard, SPECIES } from '@/lib/species'
 import type { CardStatus, CollectionData, PokemonCard, PokemonSpecies } from '@/types'
 
 /** Une carte et ce que l'utilisateur en a fait : prête à afficher. */
@@ -107,6 +108,28 @@ export function summarize(data: CollectionData): CollectionSummary {
 
 export const isEmptySummary = (summary: CollectionSummary) =>
   Object.values(summary).every((count) => count === 0)
+
+/**
+ * Les Pokémon débloqués au fil des mois : à chaque mois (`YYYY-MM-01`), le total débloqué à sa
+ * fin, du mois de la première carte obtenue à `month` (`YYYY-MM`, le mois en cours).
+ */
+export function unlockedByMonth(collection: CollectionData, month: string) {
+  const firstMonth = new Map<number, string>()
+  for (const [cardId, { status, acquiredAt }] of Object.entries(collection.cards)) {
+    const card = status === 'owned' && acquiredAt && findCard(cardId, collection)
+    if (!card) continue
+    for (const id of card.dexIds) {
+      const known = firstMonth.get(id)
+      if (!known || acquiredAt.slice(0, 7) < known) firstMonth.set(id, acquiredAt.slice(0, 7))
+    }
+  }
+  const months = [...firstMonth.values()].sort()
+  if (months.length === 0) return []
+  return monthRange(months[0]!, month).map((current) => ({
+    date: `${current}-01`,
+    value: months.filter((first) => first <= current).length,
+  }))
+}
 
 export interface RecentCard {
   card: PokemonCard

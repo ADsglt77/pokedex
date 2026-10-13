@@ -8,7 +8,7 @@ import {
   spendingBySupplier,
   spentOn,
 } from '@/lib/budget'
-import { findCard } from '@/lib/catalog'
+import { findCard } from '@/lib/species'
 import { details, formatEuro, formatInteger, formatMonth, plural } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'

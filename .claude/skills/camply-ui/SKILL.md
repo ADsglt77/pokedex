@@ -65,7 +65,7 @@ Every component accepts `className` and `style`; single-root components forward 
 - **`Combobox` as an « add » field**: pass `value=""` (controlled and empty) so the field clears after each pick without remounting (a `key` would lose the focus).
 - **`Card` renders a `div`** (no `as`): give it `role="article"` when it stands for one (WishCard).
 - **No chart component**: `src/components/PriceChart.tsx` is a small SVG line chart on camply tokens.
-- **Toast « Annuler »**: `useNotify()` / `useCollectionAction()` (`src/hooks/useNotify.ts`) wrap `toast({ action })` with the app's undo rule (refused if the collection, the settings or the shopping data changed since).
+- **Toast « Annuler »**: `useNotify()` / `useCollectionAction()` (`src/hooks/useNotify.ts`) wrap `toast({ action })` with the app's undo rule (refused if the collection or the shopping data changed since).
 - `Stack` gaps follow `--camply-space-*` (no 7, no 3rem): keep a CSS class for other spacings or grids.
 
 Domain components shared by several pages (card art, possession mark, pokédex tile, progress ruler, price chart, preference fields) live in `src/components/`; a component used by one page lives in that page's folder (e.g. `TypeChip` in `src/pages/pokemon/`). The only generic wrappers allowed here are those camply lacks: `ConfirmDialog`, `PageHeader`, `ExternalLink`, `CommitInput`/`EuroInput`/`EuroField`, `SegmentedField`. Anything else generic belongs in camply.

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { cardImage, findCardImage } from '@/lib/card-images'
 import { isCardmarketImage, parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
 import { parseLink } from '@/lib/format'
@@ -26,15 +26,20 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
   const [image, setImage] = useState(() =>
     card?.image && !isFoundImage(card) ? card.image.large : '',
   )
-  const [cardmarketText, setCardmarketText] = useState(
-    String(card?.cardmarket ?? start.cardmarket ?? ''),
-  )
+  // L'id et la page de départ : ceux de la carte, ou ceux que le favori a lus.
+  const [initial] = useState(() => ({
+    cardmarket: card?.cardmarket ?? start.cardmarket ?? null,
+    page: card?.page ?? start.page ?? '',
+  }))
+  const [cardmarketText, setCardmarketText] = useState(String(initial.cardmarket ?? ''))
   const [reference, setReference] = useState(card?.reference ?? start.reference ?? '')
-  const [page, setPage] = useState(card?.page ?? start.page ?? '')
+  const [page, setPage] = useState(initial.page)
   const [submitted, setSubmitted] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const busy = useRef(false)
   // L'id vérifié chez Cardmarket et la référence dont on cherche l'image : ceux de départ, puis
   // ceux saisis, en quittant le champ (pas à chaque touche).
-  const [checked, setChecked] = useState(card?.cardmarket ?? start.cardmarket ?? null)
+  const [checked, setChecked] = useState(initial.cardmarket)
   const [searched, setSearched] = useState(reference)
 
   const imageUrl = parseLink(image.trim())
@@ -61,8 +66,9 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
   /**
    * La carte saisie, pour les Pokémon `dexIds` ; `null` tant qu'un champ est illisible (ses
    * erreurs s'affichent alors). Sans référence notée, le nom de la carte chez Cardmarket, sinon
-   * `fallback` ; une référence qui n'était que le nom de l'ancien id suit l'id corrigé. Sans
-   * adresse collée, l'image retrouvée d'après la référence, s'il y en a une.
+   * `fallback` ; une référence qui n'était que le nom de l'ancien id suit l'id corrigé, et une
+   * page qui n'était que celle de l'ancien id est oubliée (le lien suit alors l'id). Sans adresse
+   * collée, l'image retrouvée d'après la référence, s'il y en a une.
    */
   async function read(dexIds: number[], fallback: string): Promise<PokemonCard | null> {
     setSubmitted(true)
@@ -71,6 +77,7 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
     const previous = card?.cardmarket === undefined ? null : await loadPriceHistory(card.cardmarket)
     const typed = reference.trim()
     const stale = cardmarket !== card?.cardmarket && typed === previous?.name
+    const stalePage = cardmarket !== initial.cardmarket && page.trim() === initial.page
     const candidate = image.trim() ? null : cardImage(typed)
     // L'image déjà enregistrée reste si Pokécardex ne répond pas : elle s'est chargée une fois.
     const kept = candidate && candidate.large === card?.image?.large ? (card?.image ?? null) : null
@@ -82,7 +89,24 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
       reference: (!stale && typed) || known?.name || fallback,
       image: picture,
       ...(cardmarket !== null && { cardmarket }),
-      ...(pageUrl && { page: pageUrl }),
+      ...(pageUrl && !stalePage && { page: pageUrl }),
+    }
+  }
+
+  /**
+   * Lit la carte saisie et la passe à `done` (l'enregistrer, fermer…). Une seule fois à la fois :
+   * pendant la lecture (prix, image), `saving` est vrai et un second appel ne fait rien.
+   */
+  async function save(dexIds: number[], fallback: string, done: (card: PokemonCard) => void) {
+    if (busy.current) return
+    busy.current = true
+    setSaving(true)
+    try {
+      const saved = await read(dexIds, fallback)
+      if (saved) done(saved)
+    } finally {
+      busy.current = false
+      setSaving(false)
     }
   }
 
@@ -101,11 +125,24 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
     reference,
     setReference,
     searchImage: () => setSearched(reference),
+    /**
+     * Reprend une carte choisie dans le catalogue : sa référence (d'où son image) et son id
+     * Cardmarket. Une adresse d'image ou une page collées pour une autre carte ne lui vont plus.
+     */
+    fill: (chosen: Pick<PokemonCard, 'reference' | 'cardmarket'>) => {
+      setReference(chosen.reference)
+      setSearched(chosen.reference)
+      setCardmarketText(String(chosen.cardmarket ?? ''))
+      setChecked(chosen.cardmarket ?? null)
+      setImage('')
+      setPage('')
+    },
     page,
     setPage,
     // L'id se signale tout de suite ; l'image et la page, à l'enregistrement.
     errors: submitted ? errors : { ...errors, image: undefined, page: undefined },
-    read,
+    save,
+    saving,
   }
 }
 

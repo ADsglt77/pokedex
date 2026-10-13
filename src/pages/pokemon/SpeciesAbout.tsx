@@ -1,7 +1,7 @@
 import { DescriptionList, SkeletonText, Stack } from '@camply/ui'
 import { Suspense, use } from 'react'
 import { artworkUrl, generationById } from '@/config/pokedex'
-import { loadSpeciesDetails } from '@/lib/catalog'
+import { loadSpeciesDetails } from '@/lib/species'
 import { formatDecimal } from '@/lib/format'
 import type { PokemonSpecies, PokemonSpeciesDetails } from '@/types'
 import styles from './SpeciesAbout.module.css'

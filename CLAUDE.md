@@ -1,10 +1,11 @@
 # CLAUDE.md
 
 Pokédex personnel de cartes Pokémon **japonaises** : les 1 025 Pokémon, et pour chacun la carte que
-l'utilisateur veut, qu'il ajoute lui-même (sa référence, d'où son image est retrouvée, et son id
-Cardmarket pour le prix), souvent depuis Cardmarket avec le favori « Ajouter au Pokédex ». Un
-Pokémon est « débloqué » quand sa carte est possédée. React 19 + Vite + TypeScript, UI
-`@camply/ui`, espèces PokéAPI, images Pokécardex, prix Cardmarket.
+l'utilisateur veut, qu'il choisit lui-même : dans le catalogue des cartes japonaises de chaque
+Pokémon, depuis Cardmarket avec le favori « Ajouter au Pokédex », ou à la main (sa référence, d'où
+son image est retrouvée, et son id Cardmarket pour le prix). Un Pokémon est « débloqué » quand sa
+carte est possédée. React 19 + Vite + TypeScript, UI `@camply/ui`, espèces PokéAPI, catalogue
+TCGdex, images Pokécardex, prix Cardmarket.
 
 ## Commandes
 
@@ -17,7 +18,9 @@ bun run build          # tsc -b + vite build (pas `bun build`)
 bun lint               # ESLint
 bun test               # tests de tests/ (logique des achats), relancés par le build Docker
 bun run format         # Prettier sur src/, scripts/ et tests/ (les JSON de src/data sont exclus)
-bun run data           # PokéAPI → src/data (species.json, species-details.json) ; `--refresh` ignore le cache
+bun run data           # src/data : data:species puis data:catalog (sans --refresh : Bun ne le passerait qu'au dernier)
+bun run data:species   # PokéAPI → species.json, species-details.json ; `--refresh` ignore le cache
+bun run data:catalog   # TCGdex → catalog.json ; `--refresh` pour les nouvelles cartes et les nouveaux id Cardmarket
 bun run prices         # prix Cardmarket du jour → prices/, servi par `bun dev` (sur le VPS : service `prices`)
 ```
 
@@ -31,14 +34,16 @@ bun run prices         # prix Cardmarket du jour → prices/, servi par `bun dev
 - Tests : seulement la logique où une erreur coûte de l'argent (`tests/`, `bun test`) : budget,
   registre des commandes, plan de la prochaine commande. Pas de tests d'interface. Le build Docker
   les lance : un test en échec bloque le déploiement.
-- Les cartes viennent de l'utilisateur, une par Pokémon : **aucune** liste de cartes embarquée,
-  aucune recherche ou détection de carte (TCGplayer, catalogue, détection des pleines cartes :
-  retirés à sa demande). Seule aide, ajoutée à sa demande : l'image, retrouvée chez Pokécardex
-  d'après la référence. Pokécardex a donné son autorisation (octobre 2026), en échange d'un lien
-  vers son site sous chaque image qui vient de lui. Pas de scraping : l'adresse de l'image se
-  déduit de la référence, ses pages (aux données chiffrées) ne sont pas lues. TCGdex et Limitless
-  TCG, essayés un temps, ont été retirés : seulement des cartes japonaises. Ne pas réintroduire
-  le reste sans demande.
+- Les cartes viennent de l'utilisateur, une par Pokémon, qu'il **choisit** : aucune détection ni
+  classement automatique (l'ancien index TCGplayer et la détection des pleines cartes ont été
+  retirés à sa demande). Aides, ajoutées à sa demande : le catalogue des cartes japonaises de
+  chaque Pokémon (TCGdex : extension, numéro, id Cardmarket ; toutes ses cartes Pokémon, sans
+  filtre de rareté), et l'image, retrouvée chez Pokécardex d'après la référence. Pokécardex a
+  donné son autorisation (octobre 2026), en échange d'un lien vers son site : sous la carte de la
+  fiche, sous l'aperçu de la saisie, en tête de la grille du catalogue et dans le pied de page.
+  Pas de scraping : l'adresse de l'image se déduit de la référence, ses pages (aux données
+  chiffrées) ne sont pas lues. Seulement des cartes japonaises (images TCGdex et Limitless TCG
+  retirées). Ne pas réintroduire le reste sans demande.
 - UI : **`@camply/ui` d'abord** (skill `camply-ui`), thème camply par défaut (sombre, accent cyan).
   Un composant maison seulement s'il est métier ou absent de la lib.
 - Périmètre volontairement réduit : pas d'image téléversée (on colle une adresse), pas de
@@ -46,13 +51,15 @@ bun run prices         # prix Cardmarket du jour → prices/, servi par `bun dev
   exceptions : les images (dessins des Pokémon chez PokéAPI, cartes chez Pokécardex ou à
   l'adresse collée), et les prix, fichiers du site lui-même (`/prices/`).
 - Cardmarket : seulement les fichiers publics (guide des prix, liste des produits). Pas de
-  scraping, pas d'API (fermée), pas de panier ni de commande à distance. Aucun lien ni adresse
-  Cardmarket fabriqué ou deviné : leur format n'a pas pu être vérifié (le site bloque les robots) ;
-  l'utilisateur colle lui-même la page d'un produit et son id, ou les prend avec le favori, qui lit
-  la page qu'il a ouverte dans son navigateur. Les images de Cardmarket ne s'affichent que sur son
-  site (son serveur refuse les autres) : refusées comme image de carte. Pas d'export « Wants » : le
-  format d'import de Cardmarket pour les cartes japonaises n'est pas confirmé (un CSV et une liste
-  de recherches à copier le remplacent).
+  scraping, pas d'API (fermée), pas de panier ni de commande à distance. Un seul lien Cardmarket
+  construit : la page d'un produit par son id (`cardmarketPage` :
+  `/fr/Pokemon/Products?idProduct=…`, vérifié par l'utilisateur en octobre 2026, le site bloquant
+  les robots ;
+  `/Products/Singles?idProduct=` ne marche pas). Aucune autre adresse devinée. La page exacte vient
+  du favori, qui lit la page ouverte dans le navigateur, ou d'une adresse collée. Les images de
+  Cardmarket ne s'affichent que sur son site (son serveur refuse les autres) : refusées comme image
+  de carte. Pas d'export « Wants » : le format d'import de Cardmarket pour les cartes japonaises
+  n'est pas confirmé (un CSV et une liste de recherches à copier le remplacent).
 - Textes en français (fr-FR pour nombres et dates), vouvoiement.
 - Prettier : pas de point-virgule, guillemets simples, 100 colonnes.
 
@@ -61,25 +68,43 @@ bun run prices         # prix Cardmarket du jour → prices/, servi par `bun dev
 | Dossier | Rôle |
 |---|---|
 | `src/config/` | Générations, couleurs des types, achats (budget par défaut, niveaux de budget, priorités, fournisseurs) : configuration, pas de logique |
-| `src/data/` | JSON écrits par `bun run data` : les espèces et leurs détails (chargés à la demande) |
-| `src/lib/` | Règles **pures** : `catalog` (espèces, carte d'un id), `cardmarket` (page et id saisis, ce que le favori envoie, code du favori), `card-images` (l'image d'une carte chez Pokécardex d'après sa référence), `pokedex` (modèle : la carte de chaque Pokémon, progression, résumé), `collection` (modifications : statut, prix payé, ajout et retrait d'une carte), `filters` (adresse, liens filtrés, recherche), `transfer` (export, import, lecture du stockage), `prices` (prix d'une carte, valeur, coût pour compléter, courbes), `format` ; achats : `wishlist` (préférences, filtres, CSV), `orders` (coût, report sur la collection), `budget` (par mois, par fournisseur), `purchase-planner` (prochaine commande) |
+| `src/data/` | JSON écrits par `bun run data` : les espèces, leurs détails et le catalogue des cartes japonaises (ces deux derniers chargés à la demande) |
+| `src/lib/` | Règles **pures** : `species` (espèces, carte d'un id), `cardmarket` (page et id saisis, ce que le favori envoie, code du favori), `card-images` (l'image d'une carte chez Pokécardex d'après sa référence), `card-catalog` (les cartes japonaises d'un Pokémon), `pokedex` (modèle : la carte de chaque Pokémon, progression, résumé), `collection` (modifications : statut, prix payé, ajout et retrait d'une carte), `filters` (adresse, liens filtrés, recherche), `transfer` (export, import, lecture du stockage), `prices` (prix d'une carte, valeur, coût pour compléter, courbes), `format` ; achats : `wishlist` (préférences, filtres, CSV), `orders` (coût, report sur la collection), `budget` (par mois, par fournisseur), `purchase-planner` (prochaine commande) |
 | `src/store/` | Zustand : `collection` et `shopping` (liste d'achats, commandes, budget), dans `localStorage` ; `prices` (`/prices/`). `persist` les enregistre et les garde d'accord entre onglets |
 | `src/hooks/` | `usePokedex` (modèle partagé par toutes les pages), `useNotify` (toasts + « Annuler »), `usePokedexFilters`, `useCardDraft` (saisie d'une carte) |
 | `src/components/` | Composants métier partagés par plusieurs pages (carte, champs d'une carte, tuile, réglette, courbe, réglages d'achat d'une carte…) et les seuls génériques absents de camply (confirmation, en-tête de page, lien externe, champ enregistré en le quittant, `SegmentedField`) ; le reste vient de camply |
 | `src/pages/` | Une page par route ; les sous-composants d'une page vivent dans son dossier (`pokemon/CardForm` : ajouter ou corriger la carte d'un Pokémon ; `AddCardPage` : `/ajouter`, ouverte par le favori) |
 | `tests/` | Tests `bun test` de la logique des achats (`tsconfig.tests.json`) |
-| `scripts/` | Bun : `species.ts` (PokéAPI → `src/data`, avec `lib/net.ts` : cache disque, requêtes espacées, et `lib/dataFile.ts`) et `prices.ts` (prix Cardmarket) |
+| `scripts/` | Bun : `species.ts` (PokéAPI → `src/data`, avec `lib/net.ts` : cache disque, requêtes espacées, et `lib/dataFile.ts`), `catalog.ts` (TCGdex → `src/data`) et `prices.ts` (prix Cardmarket) |
 
 Points à connaître :
 
 - Une carte (`PokemonCard`) : id `manual:<uuid>`, ses Pokémon (`dexIds`), une référence (vide à la
   saisie : le nom de la carte chez Cardmarket, sinon le nom du Pokémon), son image (`image` :
   celle de Pokécardex, en deux tailles, ou l'adresse collée, `small` = `large` ; `null` sans image),
-  son id Cardmarket (`cardmarket`) et sa page chez Cardmarket (`page`), tous deux facultatifs.
+  son id Cardmarket (`cardmarket`) et sa page chez Cardmarket (`page`), tous deux facultatifs ;
+  sans page notée, le lien « Voir sur Cardmarket » se fait par l'id (`cardmarketPage`).
   Une par Pokémon : on la corrige (« Modifier la carte », même id, son statut et ses achats la
   suivent) ou on la retire (« Retirer la carte » : avec son statut, son prix payé et sa préférence
   d'achat ; impossible tant qu'une commande la contient) avant d'en ajouter une autre. Si une
   ancienne version en a gardé plusieurs, la première compte.
+- Catalogue (`scripts/catalog.ts` → `catalog.json`, `lib/card-catalog.ts`) : les cartes Pokémon
+  japonaises de TCGdex (une requête GraphQL pour la liste, puis l'id Cardmarket carte par carte,
+  gardé en cache : le premier passage prend un quart d'heure). Par Pokémon, des plus récentes aux
+  plus anciennes : `[extension, numéro, id Cardmarket (0 : inconnu), suffixe, Pokémon s'ils sont
+  plusieurs]`. Le Pokémon vient de TCGdex ; quand il n'en donne pas (des ex récentes…), de la
+  correspondance exacte du nom japonais avec `species.json` (`speciesOf`) : les cartes sans
+  correspondance sont laissées de côté, et le script les compte. « Ajouter une carte »
+  (`pokemon/CardForm`) s'ouvre sur l'onglet « Cartes japonaises » (`CatalogPicker` : image
+  Pokécardex, code, prix du jour, tri par date ou par prix) ; choisir une carte remplit la saisie
+  (`fill` : référence « Pikachu ex (SV8 033) », id, d'où l'image, le prix et le lien
+  Cardmarket), qu'on vérifie puis enregistre (« Enregistrer » attend que la carte soit choisie, ou
+  l'onglet de saisie). « Modifier la carte » n'a que la saisie : choisir une autre carte, ce serait
+  lui transmettre le statut, le prix payé et les commandes de celle-ci. Le catalogue n'est qu'une
+  aide : la carte enregistrée est une carte saisie comme les autres (`manual:<uuid>`).
+  L'enregistrement (`useCardDraft.save`) attend le prix et l'image : une seule fois à la fois, la
+  fenêtre ne se ferme pas pendant ce temps. Une page Cardmarket qui n'était que celle de l'id de
+  départ est oubliée quand l'id change (le lien suit alors le nouvel id).
 - Favori « Ajouter au Pokédex » (`bookmarklet`, page Données) : un lien `javascript:` à glisser
   dans la barre de favoris (React refuse ces adresses en attribut : il est posé par une `ref`).
   Sur une page produit de Cardmarket, il lit l'id (`input[name="idProduct"]`), le nom et
@@ -93,8 +118,8 @@ Points à connaître :
   chiffre (« SV4a 349 »). `cardImage` en déduit l'adresse chez Pokécardex :
   `pokecardex-scans.b-cdn.net/sets_jp/SV2A/6.jpg?class=md` (code en majuscules sans tiret, SV-P
   → SVP ; numéro sans zéro ; tailles `md` pour la grille, `hd` pour la fiche). Elle n'est pas
-  sûre : `findCardImage` vérifie qu'elle se charge, la saisie le dit, et la fiche cite
-  Pokécardex sous la carte (`isPokecardexImage`). Un échec est redemandé à l'enregistrement
+  sûre : `findCardImage` vérifie qu'elle se charge, la saisie le dit, et la fiche et l'aperçu
+  citent Pokécardex sous la carte (`isPokecardexImage`). Un échec est redemandé à l'enregistrement
   (panne passagère), et une image déjà enregistrée reste si Pokécardex ne répond pas. Une image
   enregistrée d'ailleurs (adresse collée, ancienne source) s'affiche toujours, sans crédit. Sans
   adresse collée, l'image suit la référence (cherchée en quittant le champ). Données : « Chercher
@@ -117,9 +142,9 @@ Points à connaître :
   `.settings` des raretés suivies, statuts des cartes `tcgdex:ja:…` de l'ancien index) est ignoré.
 - Achats (`/achats`), clé `pokedex-collection.shopping` (`ShoppingData`, à part : la collection
   garde son format) :
-  - préférence par carte (`accepted` : dans la liste d'achats ; `excluded` : jamais proposée), avec
-    priorité, prix maximum, note ; indépendante du statut de la carte (le lien vers Cardmarket
-    est la `page` de la carte) ;
+  - préférence par carte (`accepted` : dans la liste d'achats ; `excluded`, d'une ancienne
+    version, compte comme non décidée), avec priorité, prix maximum, note ; indépendante du statut
+    de la carte (le lien vers Cardmarket est `cardmarketPage` : la page notée, sinon l'id) ;
   - commandes : `applyOrder` (`lib/orders.ts`) reporte chaque enregistrement sur la collection (en
     cours → commandée, reçue → possédée, annulée ou supprimée → l'état d'avant, gardé dans
     `OrderLine.previous`, `previousOf`). Une possession n'est jamais retirée ; le prix payé est le
@@ -130,7 +155,9 @@ Points à connaître :
     confirmation, jamais de blocage ;
   - l'export contient `shopping` (un export plus ancien, sans lui, s'importe et garde les achats
     en place). Un import demande toujours confirmation ; un fichier abîmé (enregistrement ou bloc
-    d'achats illisible) est refusé (`lib/transfer.ts`).
+    d'achats illisible : image, priorité…) est refusé (`lib/transfer.ts`). « Effacer ma
+    collection » efface aussi la liste d'achats, qui renverrait à des cartes disparues ; les
+    commandes et le budget restent.
 - Deux onglets ouverts restent d'accord : chacun reprend ce que l'autre enregistre (évènement
   `storage`, `store/persist.ts`, pour les deux clés), sans quoi il l'écraserait. Si le navigateur
   refuse de lire ou d'écrire (stockage plein ou bloqué), l'app continue en mémoire et un bandeau
@@ -138,7 +165,7 @@ Points à connaître :
 - « Annuler » (`useCollectionAction`) rétablit collection et achats d'avant, et refuse si quelque
   chose a changé depuis : une modification ultérieure n'est jamais effacée.
 - Filtres du Pokédex dans l'adresse : `q`, `generation`, `possession` (`owned`, `missing`),
-  `illustration` (`card` : avec carte, `no-card` : sans), `order=desc` ; un lien filtré se
+  `card` (`with` : avec carte, `without` : sans), `order=desc` ; un lien filtré se
   construit avec `pokedexUrl`. La recherche passe par `flushSync` (le routeur met l'adresse à jour
   dans une transition, le champ suivrait la frappe en retard) ; la grille, mémoïsée, suit par
   `useDeferredValue`.

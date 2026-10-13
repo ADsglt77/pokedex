@@ -1,8 +1,9 @@
 import { Input, Stack } from '@camply/ui'
 import { Suspense, use } from 'react'
 import { CardArt } from '@/components/CardArt'
+import { ExternalLink } from '@/components/ExternalLink'
 import type { CardDraft } from '@/hooks/useCardDraft'
-import { findCardImage } from '@/lib/card-images'
+import { findCardImage, isPokecardexImage, POKECARDEX } from '@/lib/card-images'
 import { formatEuro } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
 import { loadPriceHistory, usePrices } from '@/store/prices'
@@ -55,7 +56,7 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
         )}
         <Input
           label="Page Cardmarket"
-          hint="Facultatif : l’adresse de sa page, pour y retourner l’acheter."
+          hint="Facultatif : vide, le lien se fait par l’id Cardmarket. Le favori y met la page exacte."
           placeholder="https://www.cardmarket.com/…"
           inputMode="url"
           value={draft.page}
@@ -73,8 +74,8 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
 }
 
 /**
- * L'aperçu : l'adresse collée, sinon l'image retrouvée ; sans image, ou si l'adresse ne mène pas à
- * une image, la carte de substitution. `searching` : pendant la recherche.
+ * L'aperçu : l'adresse collée, sinon l'image retrouvée (qui cite Pokécardex) ; sans image, ou si
+ * l'adresse ne mène pas à une image, la carte de substitution. `searching` : pendant la recherche.
  */
 function Preview({
   draft,
@@ -86,13 +87,20 @@ function Preview({
   searching?: boolean
 }) {
   const found = searching || draft.lookup === null ? null : use(findCardImage(draft.lookup))
+  const image = draft.pasted ?? found
   return (
-    <CardArt
-      card={{ image: draft.pasted ?? found, reference: draft.reference }}
-      speciesId={speciesId}
-      alt="Aperçu de la carte"
-      className={styles.preview}
-    />
+    <figure className={styles.preview}>
+      <CardArt
+        card={{ image, reference: draft.reference }}
+        speciesId={speciesId}
+        alt="Aperçu de la carte"
+      />
+      {image && isPokecardexImage(image) && (
+        <figcaption className={styles.credit}>
+          Image : <ExternalLink href={POKECARDEX}>Pokécardex</ExternalLink>
+        </figcaption>
+      )}
+    </figure>
   )
 }
 

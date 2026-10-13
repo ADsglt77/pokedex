@@ -7,7 +7,9 @@ export function ReferenceSection() {
     <DataSection id="reference" title="Données de référence">
       <p>
         Les espèces viennent de <ExternalLink href="https://pokeapi.co/">PokéAPI</ExternalLink>,
-        embarquées dans l’app. Les cartes sont celles que vous ajoutez. Leur image vient de{' '}
+        embarquées dans l’app, tout comme le catalogue des cartes japonaises de chaque Pokémon, tiré
+        de <ExternalLink href="https://tcgdex.dev/">TCGdex</ExternalLink> (extension, numéro, id
+        Cardmarket). Vous y choisissez vos cartes, ou les saisissez. Leur image vient de{' '}
         <ExternalLink href="https://www.pokecardex.com/">Pokécardex</ExternalLink>, avec son aimable
         autorisation, retrouvée d’après la référence (le code de l’extension et le numéro), ou de
         l’adresse que vous collez. Leur prix vient de leur id Cardmarket : celui du guide quotidien

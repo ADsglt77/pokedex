@@ -1,6 +1,6 @@
 import { Table } from '@camply/ui'
 import { Link } from 'react-router'
-import { cardTitle } from '@/lib/catalog'
+import { cardTitle } from '@/lib/species'
 import { cx } from '@/lib/cx'
 import { pokedexUrl } from '@/lib/filters'
 import { formatEuro, formatEuroChange, formatInteger, statusLabel } from '@/lib/format'

@@ -1,9 +1,12 @@
 import { Banner, Button } from '@camply/ui'
 import { ChartLine, Database, Grid3x3, House, ShoppingCart } from '@camply/ui/icons'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, ScrollRestoration, useLocation } from 'react-router'
+import { ExternalLink } from '@/components/ExternalLink'
+import { POKECARDEX } from '@/lib/card-images'
 import { cx } from '@/lib/cx'
-import { useStorageFailure } from '@/store/persist'
+import { useCollectionStore } from '@/store/collection'
+import { useLastExport, useStorageFailure } from '@/store/persist'
 import styles from './AppShell.module.css'
 
 const NAV = [
@@ -101,6 +104,8 @@ export function AppShell() {
         </Banner>
       )}
 
+      {!storageFailed && <BackupReminder />}
+
       <main id="main" ref={main} tabIndex={-1} className={styles.main}>
         {/* Une clé par adresse : chaque page (et chaque fiche) repart d'un état neuf. */}
         <div key={pathname} className={styles.page}>
@@ -109,8 +114,9 @@ export function AppShell() {
       </main>
 
       <footer className={cx('container', styles.footer)}>
-        Données PokéAPI, images Pokécardex, prix Cardmarket. Projet personnel, sans lien avec
-        Nintendo, Creatures, Game Freak ou The Pokémon Company.
+        Données PokéAPI et TCGdex, images <ExternalLink href={POKECARDEX}>Pokécardex</ExternalLink>,
+        prix Cardmarket. Projet personnel, sans lien avec Nintendo, Creatures, Game Freak ou The
+        Pokémon Company.
       </footer>
 
       <nav aria-label="Navigation principale" className={styles.tabbar}>
@@ -124,5 +130,39 @@ export function AppShell() {
         }
       />
     </div>
+  )
+}
+
+const DAY = 24 * 60 * 60 * 1000
+
+/**
+ * Le rappel de sauvegarde : la collection n'existe que dans ce navigateur. Il paraît quand elle a
+ * changé depuis le dernier export et que celui-ci date d'un mois, ou, sans export, dès 5 cartes.
+ * Fermé, il revient au prochain chargement.
+ */
+function BackupReminder() {
+  const lastExport = useLastExport((state) => state.at)
+  const collection = useCollectionStore((state) => state.collection)
+  const [now] = useState(() => Date.now())
+  const last = lastExport ? Date.parse(lastExport) : NaN
+  const changed = collection.updatedAt !== null && !(Date.parse(collection.updatedAt) <= last)
+  const due = Number.isNaN(last)
+    ? Object.keys(collection.customCards).length >= 5
+    : now - last > 30 * DAY
+  if (!changed || !due) return null
+  return (
+    <Banner
+      tone="info"
+      dismissible
+      action={
+        <Button asChild size="sm" variant="soft">
+          <Link to="/donnees#exporter">Exporter</Link>
+        </Button>
+      }
+    >
+      {Number.isNaN(last)
+        ? 'Votre collection n’existe que dans ce navigateur : exportez-la pour en garder une copie.'
+        : 'Votre dernier export date de plus d’un mois, et votre collection a changé depuis.'}
+    </Banner>
   )
 }

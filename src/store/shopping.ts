@@ -1,6 +1,6 @@
 /**
  * Les achats : liste d'achats, commandes et budget. Un store Zustand à part, enregistré sous sa
- * propre clé : la collection et ses réglages gardent leur format. Une commande met aussi à jour
+ * propre clé : la collection garde son format. Une commande met aussi à jour
  * les statuts de ses cartes dans la collection (voir `applyOrder`).
  */
 
@@ -10,7 +10,7 @@ import { applyOrder, sortOrders } from '@/lib/orders'
 import { parseStored, readShopping } from '@/lib/transfer'
 import * as rules from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
-import type { BudgetSettings, Order, ShoppingData } from '@/types'
+import type { BudgetSettings, Order, PokemonCard, ShoppingData } from '@/types'
 import { persist, readStored } from './persist'
 
 const SHOPPING_KEY = 'pokedex-collection.shopping'
@@ -21,6 +21,7 @@ const loadShopping = (text: string | null) =>
 interface ShoppingStore {
   shopping: ShoppingData
   setDecision: (cardId: string, decision: rules.Decision | null) => void
+  acceptCards: (cardIds: readonly string[]) => void
   updatePreference: (cardId: string, change: rules.PreferenceChange) => void
   setBudget: (change: Partial<BudgetSettings>) => void
   /** Enregistre une commande, nouvelle ou modifiée, et la reporte sur la collection. */
@@ -54,6 +55,7 @@ export const useShoppingStore = create<ShoppingStore>()((set, get) => {
 
     setDecision: (cardId, decision) =>
       update((shopping, now) => rules.setDecision(shopping, cardId, decision, now)),
+    acceptCards: (cardIds) => update((shopping, now) => rules.acceptCards(shopping, cardIds, now)),
     updatePreference: (cardId, change) =>
       update((shopping, now) => rules.updatePreference(shopping, cardId, change, now)),
     setBudget: (change) => update((shopping, now) => updateBudget(shopping, change, now)),
@@ -69,3 +71,20 @@ persist(
   (state) => state.shopping,
   (text) => ({ shopping: loadShopping(text) }),
 )
+
+/** Ce qu'on fait d'une carte au moment de l'ajouter. */
+export interface NewCardChoices {
+  owned: boolean
+  toBuy: boolean
+}
+
+/**
+ * Enregistre une carte ajoutée et ce qu'on en fait : possédée, dans la liste d'achats. À lancer
+ * dans le même `act` que l'ajout : « Annuler » défait le tout.
+ */
+export function addCard(card: PokemonCard, choices: NewCardChoices) {
+  const collection = useCollectionStore.getState()
+  collection.saveCard(card)
+  if (choices.owned) collection.setCardStatus(card, 'owned')
+  if (choices.toBuy) useShoppingStore.getState().setDecision(card.id, 'accepted')
+}

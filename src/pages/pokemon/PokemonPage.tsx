@@ -2,7 +2,7 @@ import { Stack } from '@camply/ui'
 import { useParams } from 'react-router'
 import { PossessionMark } from '@/components/PossessionMark'
 import { usePokedex } from '@/hooks/usePokedex'
-import { getSpecies } from '@/lib/catalog'
+import { getSpecies } from '@/lib/species'
 import { formatDexNumber, pageTitle } from '@/lib/format'
 import type { PokedexEntry } from '@/lib/pokedex'
 import { NotFoundPage } from '@/pages/NotFoundPage'
@@ -23,10 +23,17 @@ export function PokemonPage() {
 
 function SpeciesPage({ entry }: { entry: PokedexEntry }) {
   const { species, card } = entry
+  const { entries } = usePokedex()
+  const nextWithoutCard =
+    entries.find((other) => other.species.id > species.id && !other.card)?.species ?? null
   return (
     <div className="container">
       <title>{pageTitle(species.names.fr)}</title>
-      <SpeciesNav previous={getSpecies(species.id - 1)} next={getSpecies(species.id + 1)} />
+      <SpeciesNav
+        previous={getSpecies(species.id - 1)}
+        next={getSpecies(species.id + 1)}
+        nextWithoutCard={nextWithoutCard}
+      />
 
       <div className={styles.layout}>
         <Stack as="header" gap={3} align="start" className={styles.head}>

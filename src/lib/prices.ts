@@ -4,7 +4,7 @@
  */
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
-import { findCard } from '@/lib/catalog'
+import { findCard } from '@/lib/species'
 import { isTaken, type PokedexEntry } from '@/lib/pokedex'
 import type {
   CardPrice,

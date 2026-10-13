@@ -76,7 +76,7 @@ export function ImportSection() {
           <SummaryLedger summary={summarize(imported.collection)} />
           <p className="muted">
             {imported.shopping
-              ? `Achats : ${plural(acceptedCount(imported.shopping), 'carte', 'cartes')} dans la liste d’achats, ${plural(imported.shopping.orders.length, 'commande', 'commandes')}.`
+              ? `Achats : ${plural(acceptedCount(imported.shopping, imported.collection), 'carte', 'cartes')} dans la liste d’achats, ${plural(imported.shopping.orders.length, 'commande', 'commandes')}.`
               : 'Ce fichier date d’avant le module d’achats : votre liste d’achats, vos commandes et votre budget actuels sont conservés.'}
           </p>
           <Stack direction="horizontal" gap={3} wrap>

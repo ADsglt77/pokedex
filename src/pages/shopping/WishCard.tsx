@@ -5,8 +5,9 @@ import { CardArt } from '@/components/CardArt'
 import { ExternalLink } from '@/components/ExternalLink'
 import { PossessionMark } from '@/components/PossessionMark'
 import { PRIORITY_LABELS } from '@/config/shopping'
-import { formatDexNumber, formatEuro, statusLabel } from '@/lib/format'
-import { cardTitle } from '@/lib/catalog'
+import { cardmarketPage } from '@/lib/cardmarket'
+import { formatDexNumber, formatEuro, formatPercent, statusLabel } from '@/lib/format'
+import { cardTitle } from '@/lib/species'
 import { priceVerdict } from '@/lib/purchase-planner'
 import type { WishRow } from '@/lib/wishlist'
 import styles from './ShoppingPage.module.css'
@@ -28,6 +29,16 @@ function PriceVerdict({ price, maxPrice }: { price: number | null; maxPrice?: nu
   )
 }
 
+/** Le prix du marché nettement sous sa moyenne sur 30 jours (10 % et plus) : un bon moment. */
+function PriceDrop({ change }: { change: number | null }) {
+  if (change === null || change > -0.1) return null
+  return (
+    <Badge size="sm" tone="success">
+      {formatPercent(change)} sur 30 jours
+    </Badge>
+  )
+}
+
 /** Une carte de la liste d'achats : ce qu'elle est, ce qu'elle coûte, ce qu'on en attend. */
 export function WishCard({
   row,
@@ -39,6 +50,7 @@ export function WishCard({
   onRemove: () => void
 }) {
   const { card, preference, status, price } = row
+  const page = cardmarketPage(card)
   const speciesId = card.dexIds[0]!
   const title = cardTitle(card)
 
@@ -86,13 +98,14 @@ export function WishCard({
             </Badge>
           )}
           <PriceVerdict price={price} maxPrice={preference.maxPrice} />
+          <PriceDrop change={row.change30} />
         </div>
 
         {preference.note && <p className={styles.wishNote}>{preference.note}</p>}
 
         <div className={styles.wishActions}>
-          {card.page && (
-            <ExternalLink href={card.page} className={styles.wishLink}>
+          {page && (
+            <ExternalLink href={page} className={styles.wishLink}>
               Page Cardmarket <ExternalIcon size={13} aria-hidden="true" />
             </ExternalLink>
           )}

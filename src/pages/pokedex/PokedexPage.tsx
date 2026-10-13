@@ -1,6 +1,7 @@
 import { Button, EmptyState } from '@camply/ui'
 import { SearchX } from '@camply/ui/icons'
 import { useDeferredValue, useMemo } from 'react'
+import { Link } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { usePokedex } from '@/hooks/usePokedex'
 import { usePokedexFilters } from '@/hooks/usePokedexFilters'
@@ -25,7 +26,10 @@ export function PokedexPage() {
   return (
     <div className="container">
       <title>{pageTitle('Pokédex')}</title>
-      <PageHeader title="Pokédex" />
+      <PageHeader title="Pokédex">
+        Les 1 025 Pokémon et leur carte. Pour en choisir plusieurs d’un coup, parcourez le{' '}
+        <Link to="/catalogue">catalogue par extension</Link>.
+      </PageHeader>
 
       <PokedexToolbar
         filters={filters}

@@ -1,4 +1,4 @@
-import { Button, EmptyState, Stack } from '@camply/ui'
+import { Alert, Button, EmptyState, Stack } from '@camply/ui'
 import { WalletCards } from '@camply/ui/icons'
 import { useMemo } from 'react'
 import { Link } from 'react-router'
@@ -6,11 +6,15 @@ import { CardArt } from '@/components/CardArt'
 import { PokedexTile } from '@/components/PokedexTile'
 import { ProgressRuler } from '@/components/ProgressRuler'
 import { usePokedex } from '@/hooks/usePokedex'
-import { cardTitle } from '@/lib/catalog'
+import { useWishlist } from '@/hooks/useWishlist'
+import { isToBuy } from '@/lib/collection'
+import { cardTitle } from '@/lib/species'
 import { pokedexUrl } from '@/lib/filters'
-import { formatDate, formatInteger, pageTitle, plural, unlockedOf } from '@/lib/format'
+import { formatDate, formatInteger, pageTitle, plural, today, unlockedOf } from '@/lib/format'
 import { recentAcquisitions, summarize, type Progress, type RecentCard } from '@/lib/pokedex'
+import { isUnderMax } from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
+import { useShoppingStore } from '@/store/shopping'
 import styles from './HomePage.module.css'
 
 function progressSentence(progress: Progress) {
@@ -48,6 +52,10 @@ export function HomePage() {
   const { ordered, wanted } = summarize(collection)
   const [unlockedText, remainingText] = progressSentence(pokedex.progress)
   const tracking = trackingSentence(ordered, wanted)
+  const month = today().slice(0, 7)
+  const thisMonth = Object.values(collection.cards).filter(
+    (ownership) => ownership.status === 'owned' && ownership.acquiredAt?.startsWith(month),
+  ).length
 
   return (
     <div className="container">
@@ -58,7 +66,13 @@ export function HomePage() {
         <p className={styles.sentence}>
           <span>{unlockedText}</span>
           <span className="muted">{remainingText}</span>
+          {thisMonth > 0 && (
+            <span className="muted">
+              {plural(thisMonth, 'carte obtenue', 'cartes obtenues')} ce mois-ci.
+            </span>
+          )}
         </p>
+        <UnderMaxNotice />
         <Button asChild size="lg" className={styles.cta}>
           <Link to="/pokedex">Ouvrir le Pokédex</Link>
         </Button>
@@ -88,6 +102,31 @@ export function HomePage() {
 
       {recent.length > 0 ? <RecentCards cards={recent} /> : <FirstCards />}
     </div>
+  )
+}
+
+/**
+ * Les cartes de la liste d'achats dont le prix du marché est passé sous le prix maximum. Les prix
+ * ne sont chargés que si une carte de la liste a un prix maximum.
+ */
+function UnderMaxNotice() {
+  const watching = useShoppingStore((state) =>
+    Object.values(state.shopping.preferences).some(
+      (preference) => preference.decision === 'accepted' && preference.maxPrice !== undefined,
+    ),
+  )
+  return watching ? <UnderMaxCount /> : null
+}
+
+function UnderMaxCount() {
+  const { rows } = useWishlist()
+  const count = rows.filter((row) => isToBuy(row) && isUnderMax(row)).length
+  if (count === 0) return null
+  return (
+    <Alert tone="success" title={`${plural(count, 'carte', 'cartes')} sous votre prix maximum`}>
+      Le prix du marché Cardmarket est passé sous le maximum que vous vous êtes fixé.{' '}
+      <Link to="/achats">Voir la liste d’achats</Link>
+    </Alert>
   )
 }
 

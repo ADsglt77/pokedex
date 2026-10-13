@@ -3,6 +3,7 @@ import { ExternalLink as ExternalIcon, Plus } from '@camply/ui/icons'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { ExternalLink } from '@/components/ExternalLink'
+import { cardmarketPage } from '@/lib/cardmarket'
 import { statusCaption } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
 import type { PokemonSpecies } from '@/types'
@@ -15,6 +16,7 @@ import styles from './CardSheet.module.css'
 /** La fiche de la carte du Pokémon : ce qu'elle est, et ce que l'utilisateur en fait. */
 export function CardSheet({ view, species }: { view: CardView; species: PokemonSpecies }) {
   const { card } = view
+  const page = cardmarketPage(card)
   return (
     <Stack as="section" gap={6} className={styles.sheet} aria-labelledby="sheet-title">
       <Stack as="header" gap={2} align="start">
@@ -27,9 +29,9 @@ export function CardSheet({ view, species }: { view: CardView; species: PokemonS
       {card.cardmarket !== undefined && (
         <DescriptionList items={[{ term: 'Id Cardmarket', description: card.cardmarket }]} />
       )}
-      {card.page && (
+      {page && (
         <p>
-          <ExternalLink href={card.page}>
+          <ExternalLink href={page}>
             Voir sur Cardmarket <ExternalIcon size={13} aria-hidden="true" />
           </ExternalLink>
         </p>
@@ -50,10 +52,10 @@ export function EmptySheet({ species }: { species: PokemonSpecies }) {
         Carte à choisir
       </h2>
       <p className="muted">
-        Ajoutez la carte que vous voulez pour {species.names.fr} : sa référence (« Bulbizarre (sv2a
-        166) »), qui sert à trouver son image, et son id Cardmarket pour suivre son prix. Depuis
-        Cardmarket, le favori « Ajouter au Pokédex » (<Link to="/donnees">page Données</Link>)
-        remplit tout.
+        Choisissez la carte que vous voulez pour {species.names.fr} parmi ses cartes japonaises,
+        avec leur image et leur prix, ou saisissez-la à la main. Depuis Cardmarket, le favori
+        «&nbsp;Ajouter au Pokédex&nbsp;» l’ajoute aussi : installez-le depuis la{' '}
+        <Link to="/donnees">page Données</Link>.
       </p>
       <div>
         <Button leftIcon={<Plus size={16} />} onClick={() => setAdding(true)}>

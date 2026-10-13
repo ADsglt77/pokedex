@@ -41,3 +41,24 @@ export function persist<S>(
     if (event.key === key) store.setState(restore(event.newValue))
   })
 }
+
+const LAST_EXPORT_KEY = 'pokedex-collection.lastExport'
+
+/** Le dernier export fait dans ce navigateur (ISO) ; `null` : jamais. Pour le rappel de sauvegarde. */
+export const useLastExport = create(() => ({ at: readStored(LAST_EXPORT_KEY) }))
+
+/** Note qu'un export vient d'être fait. */
+export function markExported(now: string) {
+  useLastExport.setState({ at: now })
+  try {
+    localStorage.setItem(LAST_EXPORT_KEY, now)
+  } catch {
+    // Sans stockage, le bandeau d'échec le dit déjà ; le rappel reviendra.
+  }
+}
+
+/**
+ * Demande au navigateur de garder ces données même quand la place manque (sur téléphone, il peut
+ * effacer le stockage d'un site peu visité). Il peut refuser : rien ne change alors.
+ */
+export const requestPersistentStorage = () => navigator.storage?.persist?.().catch(() => false)

@@ -1,31 +1,40 @@
-import { Button, IconButton, Input, Kbd, SegmentedControl, Select, Stack } from '@camply/ui'
+import { Button, IconButton, Input, Kbd, Select, Stack } from '@camply/ui'
 import { ArrowDown01, ArrowDown10, Search, SlidersHorizontal, X } from '@camply/ui/icons'
 import { useEffect, useRef, useState } from 'react'
 import { ProgressRuler } from '@/components/ProgressRuler'
-import { GENERATION_OPTIONS } from '@/config/pokedex'
+import { GENERATION_OPTIONS, POKEMON_TYPES } from '@/config/pokedex'
 import { cx } from '@/lib/cx'
 import {
   activeFilterCount,
-  type IllustrationFilter,
+  type CardFilter,
   type PokedexFilters,
   type PossessionFilter,
 } from '@/lib/filters'
 import { formatInteger, unlockedOf } from '@/lib/format'
 import type { Pokedex } from '@/lib/pokedex'
-import type { GenerationId } from '@/types'
+import type { GenerationId, PokemonTypeId } from '@/types'
 import styles from './PokedexToolbar.module.css'
 
 const POSSESSION_OPTIONS: { value: PossessionFilter; label: string }[] = [
   { value: 'all', label: 'Tous' },
   { value: 'owned', label: 'Possédés' },
+  { value: 'ordered', label: 'Carte commandée' },
+  { value: 'wanted', label: 'Carte souhaitée' },
   { value: 'missing', label: 'Manquants' },
 ]
 
 // Les listes de camply n'acceptent que des chaînes : '' veut dire « tout ».
-const ILLUSTRATION_OPTIONS: { value: IllustrationFilter | ''; label: string }[] = [
+const CARD_OPTIONS: { value: CardFilter | ''; label: string }[] = [
   { value: '', label: 'Avec ou sans carte' },
-  { value: 'card', label: 'Avec carte' },
-  { value: 'no-card', label: 'Sans carte' },
+  { value: 'with', label: 'Avec carte' },
+  { value: 'without', label: 'Sans carte' },
+]
+
+const TYPE_OPTIONS: { value: PokemonTypeId | ''; label: string }[] = [
+  { value: '', label: 'Tous les types' },
+  ...Object.entries(POKEMON_TYPES)
+    .map(([value, { label }]) => ({ value: value as PokemonTypeId, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'fr')),
 ]
 
 interface PokedexToolbarProps {
@@ -121,7 +130,7 @@ export function PokedexToolbar({
           wrap
           className={cx(styles.filters, filtersOpen && styles.open)}
         >
-          <SegmentedControl
+          <Select
             aria-label="Possession"
             size="sm"
             options={POSSESSION_OPTIONS}
@@ -131,9 +140,16 @@ export function PokedexToolbar({
           <Select
             aria-label="Carte"
             size="sm"
-            options={ILLUSTRATION_OPTIONS}
-            value={filters.illustration ?? ''}
-            onChange={(illustration) => setFilters({ illustration: illustration || null })}
+            options={CARD_OPTIONS}
+            value={filters.card ?? ''}
+            onChange={(card) => setFilters({ card: card || null })}
+          />
+          <Select
+            aria-label="Type"
+            size="sm"
+            options={TYPE_OPTIONS}
+            value={filters.type ?? ''}
+            onChange={(type) => setFilters({ type: type || null })}
           />
           <Select
             className={styles.generationSelect}

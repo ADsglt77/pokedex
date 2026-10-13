@@ -3,12 +3,13 @@ import { useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { pageTitle } from '@/lib/format'
 import { isToBuy } from '@/lib/collection'
+import { isUnderMax } from '@/lib/wishlist'
 import { useShoppingStore } from '@/store/shopping'
 import { BudgetOverview } from './BudgetOverview'
 import { BudgetPanel } from './BudgetPanel'
 import { OrdersPanel } from './OrdersPanel'
 import { PlannerPanel } from './PlannerPanel'
-import { useWishlist } from './useWishlist'
+import { useWishlist } from '@/hooks/useWishlist'
 import { WishlistPanel } from './WishlistPanel'
 import styles from './ShoppingPage.module.css'
 
@@ -23,6 +24,7 @@ export function ShoppingPage() {
   const openView = (next: string) =>
     setParams(next === 'liste' ? {} : { vue: next }, { replace: true, preventScrollReset: true })
   const { rows } = useWishlist()
+  const underMax = rows.filter((row) => isToBuy(row) && isUnderMax(row)).length
   const pending = useShoppingStore(
     (state) => state.shopping.orders.filter((order) => order.state === 'pending').length,
   )
@@ -41,6 +43,11 @@ export function ShoppingPage() {
         <TabList aria-label="Achats" className={styles.tabList}>
           <Tab value="liste">
             Liste d’achats <Badge size="sm">{rows.filter(isToBuy).length}</Badge>
+            {underMax > 0 && (
+              <Badge size="sm" tone="success">
+                {underMax} sous le max
+              </Badge>
+            )}
           </Tab>
           <Tab value="prochaine-commande">Prochaine commande</Tab>
           <Tab value="commandes">Commandes {pending > 0 && <Badge size="sm">{pending}</Badge>}</Tab>

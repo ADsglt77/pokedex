@@ -64,7 +64,7 @@ export const POKEMON_TYPES: Record<PokemonTypeId, { label: string; color: string
 
 const SPRITES_URL = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon'
 
-/** Sprite 96×96, repère discret quand aucune carte n'a de scan. */
+/** Sprite 96×96, sur la carte de substitution d'une carte sans image ou d'un Pokémon sans carte. */
 export const spriteUrl = (speciesId: number) => `${SPRITES_URL}/${speciesId}.png`
 
 /** Illustration officielle 475×475, sur la fiche d'un Pokémon sans carte. */

@@ -1,0 +1,55 @@
+/* Une carte du catalogue à choisir, et la grille qui les range ; la carte choisie entourée. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: 1rem;
+}
+
+.choice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0.375rem;
+  border: 2px solid transparent;
+  border-radius: var(--camply-radius);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.choice:hover {
+  background: var(--camply-surface-2);
+}
+
+.choice[aria-pressed='true'] {
+  border-color: var(--camply-accent);
+}
+
+.code {
+  color: var(--camply-text-strong);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.price {
+  color: var(--camply-text-muted);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.choice:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.choice:disabled:hover {
+  background: none;
+}
+
+.year {
+  color: var(--camply-text-muted);
+  font-weight: 400;
+}

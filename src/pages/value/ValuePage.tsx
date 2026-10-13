@@ -5,7 +5,17 @@ import { PageHeader } from '@/components/PageHeader'
 import { PriceChart } from '@/components/PriceChart'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { usePokedex } from '@/hooks/usePokedex'
-import { details, formatDate, formatEuro, formatInteger, pageTitle, plural } from '@/lib/format'
+import {
+  details,
+  formatDate,
+  formatEuro,
+  formatInteger,
+  monthRange,
+  pageTitle,
+  plural,
+  today,
+} from '@/lib/format'
+import { spendingByMonth } from '@/lib/budget'
 import {
   collectionHistory,
   completionByGeneration,
@@ -15,7 +25,9 @@ import {
   trackedCards,
   type Tally,
 } from '@/lib/prices'
+import { unlockedByMonth } from '@/lib/pokedex'
 import { useCollectionStore } from '@/store/collection'
+import { useShoppingStore } from '@/store/shopping'
 import { loadPriceHistories, usePrices, usePricesMissing } from '@/store/prices'
 import type { PokemonCard } from '@/types'
 import { CardsTable, CompletionTable } from './ValueTables'
@@ -106,6 +118,8 @@ export function ValuePage() {
           )}
         </Stack>
 
+        <MonthlyCharts />
+
         <Stack as="section" gap={4} aria-labelledby="cards-title">
           <h2 id="cards-title">Mes cartes</h2>
           <CardsTable cards={cards} />
@@ -132,4 +146,45 @@ function CollectionChart({ cards }: { cards: PokemonCard[] }) {
   const ids = cards.flatMap((card) => card.cardmarket ?? []).sort((a, b) => a - b)
   const histories = use(loadPriceHistories(ids))
   return <PriceChart points={collectionHistory(histories)} label="Valeur de ma collection" />
+}
+
+/** Au fil des mois : les Pokémon débloqués (cumul) et ce que coûtent les commandes de chaque mois. */
+function MonthlyCharts() {
+  const collection = useCollectionStore((state) => state.collection)
+  const orders = useShoppingStore((state) => state.shopping.orders)
+  const month = today().slice(0, 7)
+  const unlocked = useMemo(() => unlockedByMonth(collection, month), [collection, month])
+  const spent = useMemo(() => {
+    const byMonth = new Map(spendingByMonth(orders).map(({ key, spent }) => [key, spent]))
+    const first = [...byMonth.keys()].sort()[0]
+    return first
+      ? monthRange(first, month).map((key) => ({ date: `${key}-01`, value: byMonth.get(key) ?? 0 }))
+      : []
+  }, [orders, month])
+
+  return (
+    <Stack as="section" gap={4} aria-labelledby="months-title">
+      <h2 id="months-title">Au fil des mois</h2>
+      <div className={styles.months}>
+        <Stack gap={3}>
+          <h3 className={styles.chartTitle}>Pokémon débloqués</h3>
+          {unlocked.length >= 2 ? (
+            <PriceChart points={unlocked} label="Pokémon débloqués" format={formatInteger} />
+          ) : (
+            <p className="muted">
+              La courbe se dessine dès votre deuxième mois de cartes obtenues.
+            </p>
+          )}
+        </Stack>
+        <Stack gap={3}>
+          <h3 className={styles.chartTitle}>Dépenses par mois</h3>
+          {spent.length >= 2 ? (
+            <PriceChart points={spent} label="Dépenses par mois" />
+          ) : (
+            <p className="muted">La courbe se dessine dès votre deuxième mois de commandes.</p>
+          )}
+        </Stack>
+      </div>
+    </Stack>
+  )
 }

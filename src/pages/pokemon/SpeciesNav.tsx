@@ -1,6 +1,7 @@
 import { Button } from '@camply/ui'
-import { ArrowLeft } from '@camply/ui/icons'
-import { Link } from 'react-router'
+import { ArrowLeft, ArrowRight } from '@camply/ui/icons'
+import { useEffect } from 'react'
+import { Link, useNavigate } from 'react-router'
 import { pokedexHref } from '@/hooks/usePokedexFilters'
 import { formatDexNumber } from '@/lib/format'
 import type { PokemonSpecies } from '@/types'
@@ -9,15 +10,47 @@ import styles from './SpeciesNav.module.css'
 interface SpeciesNavProps {
   previous: PokemonSpecies | null
   next: PokemonSpecies | null
+  /** Le prochain Pokémon sans carte, pour en ajouter à la suite ; `null` s'il n'y en a plus. */
+  nextWithoutCard: PokemonSpecies | null
 }
 
-/** Retour au Pokédex (filtres conservés) et Pokémon voisins. */
-export function SpeciesNav({ previous, next }: SpeciesNavProps) {
+/**
+ * Retour au Pokédex (filtres conservés), Pokémon voisins (aussi au clavier, ← et →) et prochain
+ * Pokémon sans carte.
+ */
+export function SpeciesNav({ previous, next, nextWithoutCard }: SpeciesNavProps) {
+  const navigate = useNavigate()
+
+  // ← et → changent de Pokémon, sauf dans un champ ou une fenêtre ouverte.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const busy =
+        event.target instanceof HTMLElement &&
+        event.target.closest('input, textarea, select, [role=dialog], [role=listbox]')
+      if (busy || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
+      const target = event.key === 'ArrowLeft' ? previous : event.key === 'ArrowRight' ? next : null
+      if (!target || document.querySelector('[role=dialog]')) return
+      event.preventDefault()
+      navigate(`/pokemon/${target.id}`)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [previous, next, navigate])
+
   return (
     <nav aria-label="Navigation entre les Pokémon" className={styles.nav}>
-      <Button asChild variant="ghost" size="sm" leftIcon={<ArrowLeft size={16} />}>
-        <Link to={pokedexHref()}>Pokédex</Link>
-      </Button>
+      <div className={styles.links}>
+        <Button asChild variant="ghost" size="sm" leftIcon={<ArrowLeft size={16} />}>
+          <Link to={pokedexHref()}>Pokédex</Link>
+        </Button>
+        {nextWithoutCard && (
+          <Button asChild variant="soft" size="sm" rightIcon={<ArrowRight size={16} />}>
+            <Link to={`/pokemon/${nextWithoutCard.id}`}>
+              Suivant sans carte : {nextWithoutCard.names.fr}
+            </Link>
+          </Button>
+        )}
+      </div>
       <div className={styles.neighbours}>
         <Neighbour species={previous} rel="prev" edge="Début du Pokédex" />
         <Neighbour species={next} rel="next" edge="Fin du Pokédex" />

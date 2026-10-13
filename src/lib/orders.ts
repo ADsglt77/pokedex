@@ -82,9 +82,10 @@ const noonOf = (day: string) => new Date(`${day}T12:00:00`).toISOString()
  * Reporte sur la collection le passage d'une commande de `before` à `after` (`null` : création,
  * suppression). `others` : les autres commandes, pour ne pas défaire ce qu'elles ont fait.
  * - les cartes qui quittent une commande active (annulation, suppression, ligne retirée)
- *   retrouvent leur état d'avant la commande, si elles sont encore « commandée » et qu'aucune
- *   autre commande en cours ne les contient. Un état d'avant « commandée » venait d'une autre
- *   commande, disparue depuis : la carte perd alors son statut ;
+ *   retrouvent leur état d'avant la commande, si elles sont encore « commandée ». Une autre
+ *   commande en cours qui les contient les garde « commandée », à son prix de revient. Un état
+ *   d'avant « commandée » venait d'une autre commande, disparue depuis : la carte perd alors son
+ *   statut ;
  * - les cartes d'une commande en cours deviennent « commandée », sauf si elles sont déjà possédées ;
  * - les cartes d'une commande reçue deviennent « possédée », datées du jour de réception (une date
  *   de réception corrigée les suit) ;
@@ -103,8 +104,15 @@ export function applyOrder(
   const kept = new Set(active?.lines.map((line) => line.cardId))
 
   for (const line of before?.state === 'cancelled' ? [] : (before?.lines ?? [])) {
-    if (kept.has(line.cardId) || cards[line.cardId]?.status !== 'ordered') continue
-    if (pendingWith(others, line.cardId)) continue
+    const current = cards[line.cardId]
+    if (kept.has(line.cardId) || current?.status !== 'ordered') continue
+    // Une autre commande en cours la garde « commandée » : à son prix de revient à elle.
+    const other = pendingWith(others, line.cardId)
+    if (other) {
+      const index = other.lines.findIndex((known) => known.cardId === line.cardId)
+      cards[line.cardId] = { ...current, updatedAt: now, paidPrice: unitCosts(other)[index] }
+      continue
+    }
     if (line.previous && line.previous.status !== 'ordered') cards[line.cardId] = line.previous
     else delete cards[line.cardId]
   }

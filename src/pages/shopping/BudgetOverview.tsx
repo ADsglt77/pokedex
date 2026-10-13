@@ -9,7 +9,7 @@ import { summarize } from '@/lib/pokedex'
 import { wishlistEstimate } from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
-import { useWishlist } from './useWishlist'
+import { useWishlist } from '@/hooks/useWishlist'
 import styles from './ShoppingPage.module.css'
 
 /** Le mois en cours en un coup d'œil : dépensé, restant, liste d'achats, Pokémon à obtenir. */

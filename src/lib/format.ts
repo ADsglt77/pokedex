@@ -61,6 +61,15 @@ export const formatEuro = (value: number) => euroFormat.format(value)
 /** « +12,00 € », « −3,50 € » : un gain ou une perte. */
 export const formatEuroChange = (value: number) => signedEuroFormat.format(value)
 
+const percentChangeFormat = new Intl.NumberFormat('fr-FR', {
+  style: 'percent',
+  maximumFractionDigits: 0,
+  signDisplay: 'exceptZero',
+})
+
+/** « −18 % », « +5 % » : une variation (−0,18 → « −18 % »). */
+export const formatPercent = (value: number) => percentChangeFormat.format(value)
+
 /** Un montant saisi (« 12,50 », « 12.5 € ») ; `null` s'il est illisible. */
 export function parseEuros(text: string): number | null {
   const input = text.replace(/[\s€]/g, '').replace(',', '.')
@@ -119,3 +128,14 @@ export const toOptions = <T extends string>(labels: Record<T, string>) =>
 
 /** Titre de l'onglet : « Pikachu – Mon Pokédex ». */
 export const pageTitle = (name?: string) => (name ? `${name} – Mon Pokédex` : 'Mon Pokédex')
+
+/** Les mois de `first` à `last` compris (`YYYY-MM`) : « 2026-11 », « 2026-12 », « 2027-01 »… */
+export function monthRange(first: string, last: string): string[] {
+  const months: string[] = []
+  for (let month = first; month <= last;) {
+    months.push(month)
+    const [year, index] = month.split('-').map(Number) as [number, number]
+    month = index === 12 ? `${year + 1}-01` : `${year}-${String(index + 1).padStart(2, '0')}`
+  }
+  return months
+}

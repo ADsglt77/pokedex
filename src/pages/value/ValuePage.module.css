@@ -19,3 +19,14 @@
 .down {
   color: var(--camply-danger);
 }
+
+/* Les deux courbes mensuelles, côte à côte sur grand écran. */
+.months {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 2rem;
+}
+
+.chartTitle {
+  font-size: 1rem;
+}

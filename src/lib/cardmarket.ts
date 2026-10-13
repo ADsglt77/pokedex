@@ -2,10 +2,24 @@
  * Ce que l'app sait de Cardmarket, vérifié sur une page produit en octobre 2026 : l'id du produit
  * est dans un champ caché (`input[name="idProduct"]`), le titre (`h1`) donne le nom et le numéro
  * (« Pikachu (30C 034) ») puis l'extension. Ses images ne s'affichent que sur cardmarket.com : le
- * serveur refuse les autres sites. L'app ne fabrique aucun lien : elle garde ceux qu'on lui donne.
+ * serveur refuse les autres sites. Un seul lien construit : la page d'un produit par son id
+ * (`cardmarketPage`) ; aucun autre n'est deviné.
  */
 
 import { parseLink } from '@/lib/format'
+import type { PokemonCard } from '@/types'
+
+/**
+ * La page d'une carte chez Cardmarket : celle notée (favori, adresse collée), sinon celle de son
+ * id, `/fr/Pokemon/Products?idProduct=864066`, qui mène à la page du produit (vérifié par
+ * l'utilisateur en octobre 2026 ; `/Products/Singles?idProduct=` ne marche pas). `null` sans l'un
+ * ni l'autre.
+ */
+export const cardmarketPage = (card: Pick<PokemonCard, 'page' | 'cardmarket'>) =>
+  card.page ??
+  (card.cardmarket === undefined
+    ? null
+    : `https://www.cardmarket.com/fr/Pokemon/Products?idProduct=${card.cardmarket}`)
 
 /** Un lien collé vers une page de Cardmarket ; `null` s'il ne mène pas à www.cardmarket.com. */
 export function parseCardmarketLink(text: string): string | null {

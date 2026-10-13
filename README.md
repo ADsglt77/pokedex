@@ -19,7 +19,8 @@ bun run format   # Prettier
 - **Accueil** : progression, réglette par génération, dernières cartes obtenues.
 - **Pokédex** : les 1 025 espèces, recherche (nom fr/en/ja ou numéro, raccourci `/`), filtres
   partageables dans l'adresse.
-- **Fiche** : la carte du Pokémon (à ajouter, corriger ou retirer), en grand, son statut
+- **Fiche** : la carte du Pokémon, choisie parmi ses cartes japonaises (image, prix du jour, tri
+  par date ou par prix) ou saisie à la main, puis corrigée ou retirée ; en grand, son statut
   (possédée / commandée / souhaitée) et son prix payé, son prix Cardmarket et sa courbe, le lien
   vers sa page Cardmarket, l'achat (à acheter ou exclue, priorité, prix maximum, note), les détails
   de l'espèce.
@@ -37,9 +38,11 @@ bun run format   # Prettier
   à copier), les images à chercher pour les cartes qui n'en ont pas, export / import (achats
   compris), effacement.
 
-Les espèces sont embarquées (`bun run data`, depuis PokéAPI) : aucune API externe appelée par le
+Les espèces et le catalogue des cartes japonaises sont embarqués (`bun run data`, depuis PokéAPI
+et TCGdex ; `bun run data:catalog --refresh` pour les nouvelles cartes) : aucune API externe
+appelée par le
 navigateur, hormis les images (dessins des Pokémon chez PokéAPI ; cartes chez Pokécardex, avec son
-autorisation et un lien vers son site sous chaque carte, ou à l'adresse collée ; pas celles de
+autorisation et un lien vers son site sur chaque page, ou à l'adresse collée ; pas celles de
 Cardmarket, qui ne s'affichent que sur son site). Le favori ne fait que
 lire la page Cardmarket ouverte et l'envoyer à l'app d'où il a été installé : installé depuis
 `bun dev`, il ouvre `localhost`. Les prix sont des fichiers du site

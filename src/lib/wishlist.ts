@@ -1,10 +1,11 @@
 /**
- * La liste d'achats : les cartes acceptées à l'achat (ou exclues), avec leur priorité et leur prix
- * maximum. Une préférence ne touche jamais au statut de la carte (souhaitée, commandée, possédée).
+ * La liste d'achats : les cartes acceptées à l'achat, avec leur priorité et leur prix maximum. Une préférence ne touche jamais au statut de la carte (souhaitée, commandée, possédée).
  */
 
 import { DEFAULT_BUDGET, PRIORITY_LABELS, PRIORITY_RANK } from '@/config/shopping'
-import { cardTitle, findCard, speciesOf } from '@/lib/catalog'
+import { referenceCode } from '@/lib/card-images'
+import { cardmarketPage } from '@/lib/cardmarket'
+import { cardTitle, findCard, speciesOf } from '@/lib/species'
 import { searchForm, searchMatcher } from '@/lib/filters'
 import { isTaken, type PokedexEntry } from '@/lib/pokedex'
 import { isToBuy } from '@/lib/collection'
@@ -29,9 +30,10 @@ export const emptyShopping = (): ShoppingData => ({
   budget: { ...DEFAULT_BUDGET },
 })
 
-export type Decision = PurchasePreference['decision']
+/** Ce qu'on décide d'une carte : l'acheter. (`excluded` n'est plus écrit, seulement lu.) */
+export type Decision = 'accepted'
 
-/** Accepter ou exclure une carte (priorité et prix maximum sont gardés) ; `null` l'oublie. */
+/** Accepter une carte à l'achat (priorité et prix maximum sont gardés) ; `null` l'oublie. */
 export function setDecision(
   data: ShoppingData,
   cardId: string,
@@ -42,6 +44,22 @@ export function setDecision(
   if (decision) preferences[cardId] = { priority: 'normal', ...previous, decision, updatedAt: now }
   return { ...data, preferences, updatedAt: now }
 }
+
+/** Met d'un coup dans la liste d'achats les cartes `cardIds` (priorité normale). */
+export function acceptCards(data: ShoppingData, cardIds: readonly string[], now: string) {
+  return cardIds.reduce((shopping, cardId) => setDecision(shopping, cardId, 'accepted', now), data)
+}
+
+/**
+ * Les cartes du Pokédex qui pourraient entrer dans la liste d'achats : ni dans la liste, ni
+ * possédées, ni commandées.
+ */
+export const cardsToList = (preferences: ShoppingData['preferences'], collection: CollectionData) =>
+  Object.values(collection.customCards).filter(
+    (card) =>
+      preferences[card.id]?.decision !== 'accepted' &&
+      isToBuy({ status: collection.cards[card.id]?.status ?? null }),
+  )
 
 export type PreferenceChange = Partial<Pick<PurchasePreference, 'priority' | 'maxPrice' | 'note'>>
 
@@ -59,9 +77,11 @@ export function updatePreference(
   return { ...data, preferences: { ...data.preferences, [cardId]: updated }, updatedAt: now }
 }
 
-/** Le nombre de cartes de la liste d'achats. */
-export const acceptedCount = (data: ShoppingData) =>
-  Object.values(data.preferences).filter((preference) => preference.decision === 'accepted').length
+/** Le nombre de cartes de la liste d'achats, parmi celles de `collection`. */
+export const acceptedCount = (data: ShoppingData, collection: CollectionData) =>
+  Object.entries(data.preferences).filter(
+    ([cardId, preference]) => preference.decision === 'accepted' && findCard(cardId, collection),
+  ).length
 
 /** Une carte de la liste d'achats, prête à afficher et à planifier. */
 export interface WishRow {
@@ -70,6 +90,8 @@ export interface WishRow {
   status: CardStatus | null
   /** Prix indicatif Cardmarket ; `null` sans prix. */
   price: number | null
+  /** Écart du prix avec sa moyenne sur 30 jours (−0,18 : 18 % en dessous) ; `null` sans les deux. */
+  change30: number | null
 }
 
 /** Les cartes acceptées à l'achat. */
@@ -81,12 +103,14 @@ export function wishlistRows(
   return Object.entries(preferences).flatMap(([cardId, preference]) => {
     const card = findCard(cardId, collection)
     if (preference.decision !== 'accepted' || !card) return []
+    const price = priceOf(prices, card)
     return [
       {
         card,
         preference,
         status: collection.cards[cardId]?.status ?? null,
-        price: priceOf(prices, card)?.price ?? null,
+        price: price?.price ?? null,
+        change30: price?.avg30 ? (price.price - price.avg30) / price.avg30 : null,
       },
     ]
   })
@@ -110,7 +134,7 @@ export function wishlistEstimate(rows: readonly WishRow[], taken: ReadonlySet<nu
   return estimate
 }
 
-export type WishlistSort = 'priority' | 'price' | 'price-desc' | 'gap' | 'dex' | 'recent'
+export type WishlistSort = 'priority' | 'price' | 'price-desc' | 'gap' | 'drop' | 'dex' | 'recent'
 
 export interface WishlistFilters {
   search: string
@@ -132,7 +156,9 @@ export const DEFAULT_WISHLIST_FILTERS: WishlistFilters = {
   sort: 'priority',
 }
 
-const isUnderMax = (row: WishRow) => priceVerdict(row.price, row.preference.maxPrice) === 'under'
+/** Le prix du marché est sous le prix maximum. */
+export const isUnderMax = (row: WishRow) =>
+  priceVerdict(row.price, row.preference.maxPrice) === 'under'
 
 /** Écart entre le prix du marché et le prix maximum ; `null` sans l'un des deux. */
 const gapOf = ({ price, preference }: WishRow) =>
@@ -151,6 +177,7 @@ const SORTS: Record<WishlistSort, (a: WishRow, b: WishRow) => number> = {
   price: (a, b) => ascending(a.price, b.price),
   'price-desc': (a, b) => ascending(negated(a.price), negated(b.price)),
   gap: (a, b) => ascending(gapOf(a), gapOf(b)),
+  drop: (a, b) => ascending(a.change30, b.change30),
   dex: (a, b) => (a.card.dexIds[0] ?? 0) - (b.card.dexIds[0] ?? 0),
   recent: (a, b) => b.preference.updatedAt.localeCompare(a.preference.updatedAt),
 }
@@ -175,8 +202,12 @@ export function filterWishlist(rows: readonly WishRow[], filters: WishlistFilter
 
 const englishNames = (card: PokemonCard) => speciesOf(card).map((species) => species.names.en)
 
-/** Ce qu'on tape dans la recherche de Cardmarket : le nom anglais et la référence. */
-export const searchText = (card: PokemonCard) => [...englishNames(card), card.reference].join(' ')
+/**
+ * Ce qu'on tape dans la recherche de Cardmarket : le nom anglais et le numéro (« Pikachu 764 »),
+ * comme dans une recherche vérifiée par l'utilisateur (« Pikachu ex 764 »).
+ */
+export const searchText = (card: PokemonCard) =>
+  [...englishNames(card), referenceCode(card.reference)?.number ?? ''].join(' ').trim()
 
 const csvNumber = (value: number | null | undefined) =>
   value == null ? '' : value.toFixed(2).replace('.', ',')
@@ -209,7 +240,7 @@ export function wishlistCsv(rows: readonly WishRow[]): string {
     csvNumber(row.price),
     PRIORITY_LABELS[row.preference.priority],
     row.card.cardmarket ?? '',
-    row.card.page ?? '',
+    cardmarketPage(row.card) ?? '',
     row.preference.note ?? '',
   ])
   return [header, ...lines].map((line) => line.map(csvCell).join(';')).join('\r\n')

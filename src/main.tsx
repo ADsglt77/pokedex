@@ -12,6 +12,9 @@ import '@fontsource/space-grotesk/700.css'
 import '@camply/ui/styles.css'
 import './styles/global.css'
 import { router } from './router'
+import { requestPersistentStorage } from './store/persist'
+
+requestPersistentStorage()
 
 // Point d'entrée : polices, styles camply puis ceux de l'app, notifications et routeur.
 createRoot(document.getElementById('root')!).render(

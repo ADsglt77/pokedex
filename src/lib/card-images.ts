@@ -12,20 +12,29 @@ const SCANS = 'https://pokecardex-scans.b-cdn.net'
 export const POKECARDEX = 'https://www.pokecardex.com/'
 
 /**
- * Où Pokécardex range l'image de la carte : `sets_jp/SV2A/6.jpg`, le code de l'extension en
- * majuscules et sans tiret (SV-P → SVP), le numéro sans zéro devant ; tailles `md` (grille) et
- * `hd` (fiche). `null` si la référence ne finit pas par un code et un numéro : entre parenthèses
- * comme chez Cardmarket, ou un code qui a un chiffre (« SV4a 349 », pas « Mon Pikachu 2 »).
- * Pokécardex ne l'a pas toujours : `findCardImage` vérifie.
+ * Le code de l'extension et le numéro à la fin d'une référence : « Bulbizarre (sv2a 166) » → sv2a,
+ * 166. Entre parenthèses comme chez Cardmarket, ou un code qui a un chiffre (« SV4a 349 », pas
+ * « Mon Pikachu 2 ») ; `null` sinon.
  */
-export function cardImage(reference: string): CardImage | null {
+export function referenceCode(reference: string): { set: string; number: string } | null {
   const match = /(\()?([\w.-]+)\s+([a-z]*\d+[a-z]*)\)?\s*$/i.exec(reference.trim())
   if (!match) return null
   const [, parenthesis, set = '', number = ''] = match
-  if (!parenthesis && !/\d/.test(set)) return null
-  const code = set.toUpperCase().replace(/-/g, '')
-  const printed = /^\d+$/.test(number) ? String(Number(number)) : number.toUpperCase()
-  const base = `${SCANS}/sets_jp/${code}/${printed}.jpg`
+  return parenthesis || /\d/.test(set) ? { set, number } : null
+}
+
+/**
+ * Où Pokécardex range l'image de la carte : `sets_jp/SV2A/6.jpg`, le code de l'extension en
+ * majuscules et sans tiret (SV-P → SVP), le numéro sans zéro devant ; tailles `md` (grille) et
+ * `hd` (fiche). `null` sans code ni numéro dans la référence. Pokécardex ne l'a pas toujours :
+ * `findCardImage` vérifie.
+ */
+export function cardImage(reference: string): CardImage | null {
+  const code = referenceCode(reference)
+  if (!code) return null
+  const set = code.set.toUpperCase().replace(/-/g, '')
+  const number = /^\d+$/.test(code.number) ? String(Number(code.number)) : code.number.toUpperCase()
+  const base = `${SCANS}/sets_jp/${set}/${number}.jpg`
   return { small: `${base}?class=md`, large: `${base}?class=hd` }
 }
 

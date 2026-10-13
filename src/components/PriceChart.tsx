@@ -8,10 +8,19 @@ const HEIGHT = 40
 const MARGIN = 3
 
 /**
- * Une courbe de prix dans le temps, sans bibliothèque : ligne, aire, extrêmes et dates. Le
- * résumé lu par les lecteurs d'écran donne le début, la fin et les extrêmes.
+ * Une courbe dans le temps, sans bibliothèque : ligne, aire, extrêmes et dates. Le résumé lu par
+ * les lecteurs d'écran donne le début, la fin et les extrêmes. `format` : des euros, sinon autre
+ * chose (un nombre de Pokémon).
  */
-export function PriceChart({ points, label }: { points: PricePoint[]; label: string }) {
+export function PriceChart({
+  points,
+  label,
+  format = formatEuro,
+}: {
+  points: PricePoint[]
+  label: string
+  format?: (value: number) => string
+}) {
   const first = points[0]
   const last = points.at(-1)
   if (!first || !last || points.length < 2) {
@@ -36,7 +45,7 @@ export function PriceChart({ points, label }: { points: PricePoint[]; label: str
   const line = points
     .map((point, index) => `${index ? 'L' : 'M'}${x(point.date)},${y(point.value)}`)
     .join(' ')
-  const summary = `${label} : ${formatEuro(first.value)} le ${formatDate(first.date)}, ${formatEuro(last.value)} le ${formatDate(last.date)} ; au plus bas ${formatEuro(min)}, au plus haut ${formatEuro(max)}.`
+  const summary = `${label} : ${format(first.value)} le ${formatDate(first.date)}, ${format(last.value)} le ${formatDate(last.date)} ; au plus bas ${format(min)}, au plus haut ${format(max)}.`
 
   return (
     <figure className={styles.chart}>
@@ -51,12 +60,12 @@ export function PriceChart({ points, label }: { points: PricePoint[]; label: str
           <path className={styles.line} d={line} />
         </svg>
         <span className={styles.max} aria-hidden="true">
-          {formatEuro(max)}
+          {format(max)}
         </span>
         {/* Une série plate n'a qu'une valeur à étiqueter. */}
         {min !== max && (
           <span className={styles.min} aria-hidden="true">
-            {formatEuro(min)}
+            {format(min)}
           </span>
         )}
       </div>

@@ -18,7 +18,7 @@ import { SegmentedField } from '@/components/SegmentedField'
 import { ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { monthOf, spentIn } from '@/lib/budget'
-import { cardTitle, findCard } from '@/lib/catalog'
+import { cardTitle, findCard } from '@/lib/species'
 import {
   euroInput,
   formatEuro,
@@ -163,7 +163,7 @@ export function OrderForm({
 }) {
   const act = useCollectionAction()
   const collection = useCollectionStore((state) => state.collection)
-  const { orders, preferences, budget } = useShoppingStore((state) => state.shopping)
+  const { orders, budget } = useShoppingStore((state) => state.shopping)
   const prices = usePrices()
   const stored = orders.find((known) => known.id === base.id) ?? null
   const others = orders.filter((known) => known.id !== base.id)
@@ -178,9 +178,9 @@ export function OrderForm({
   const errors = submitted ? read.errors : {}
   const costs = unitCosts(order)
   const inLines = new Set(draft.lines.map((line) => line.cardId))
-  // Les cartes du Pokédex, sauf celles exclues des achats.
+  // Les cartes du Pokédex qui ne sont pas déjà dans la commande.
   const addable = Object.values(collection.customCards)
-    .filter((card) => !inLines.has(card.id) && preferences[card.id]?.decision !== 'excluded')
+    .filter((card) => !inLines.has(card.id))
     .map((card) => ({ value: card.id, label: `${cardTitle(card)} · ${card.reference}` }))
     .sort((a, b) => a.label.localeCompare(b.label, 'fr'))
 
@@ -298,7 +298,22 @@ export function OrderForm({
                 const duplicate = duplicateReason(order.lines[index]!, others)
                 const unreadable =
                   read.errors[`quantity-${line.cardId}`] || read.errors[`price-${line.cardId}`]
-                if (!card) return <li key={line.cardId}>Carte retirée du Pokédex</li>
+                const remove = () => set({ lines: draft.lines.filter((_, i) => i !== index) })
+                if (!card) {
+                  return (
+                    <li key={line.cardId} className={styles.line}>
+                      <span className="muted">Carte retirée du Pokédex</span>
+                      <IconButton
+                        label="Retirer cette carte de la commande"
+                        size="sm"
+                        variant="ghost"
+                        onClick={remove}
+                      >
+                        <X size={15} />
+                      </IconButton>
+                    </li>
+                  )
+                }
                 return (
                   <li key={line.cardId}>
                     <CardLine
@@ -332,7 +347,7 @@ export function OrderForm({
                         label={`Retirer ${card.reference} de la commande`}
                         size="sm"
                         variant="ghost"
-                        onClick={() => set({ lines: draft.lines.filter((_, i) => i !== index) })}
+                        onClick={remove}
                       >
                         <X size={15} />
                       </IconButton>

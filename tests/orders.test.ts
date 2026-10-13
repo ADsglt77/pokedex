@@ -155,4 +155,15 @@ describe('report sur la collection', () => {
     collection = applyOrder(collection, first, null, [second], NOW)
     expect(collection.cards.a?.status).toBe('ordered')
   })
+
+  test('annuler l’une de deux commandes en cours : la carte prend le prix de l’autre', () => {
+    const first = order({ id: 'first', lines: [line('a', 20)] })
+    const second = order({ id: 'second', lines: [line('a', 15)], shipping: 2 })
+    let collection = applyOrder(collectionWith(), null, first, [], NOW)
+    collection = applyOrder(collection, null, second, [first], NOW)
+    expect(collection.cards.a?.paidPrice).toBe(17)
+    const cancelled = { ...second, state: 'cancelled' as const }
+    collection = applyOrder(collection, second, cancelled, [first], NOW)
+    expect(collection.cards.a).toMatchObject({ status: 'ordered', paidPrice: 20 })
+  })
 })

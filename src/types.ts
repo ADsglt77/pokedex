@@ -55,13 +55,13 @@ export interface PokemonCard {
   id: string
   /** Le Pokémon de la carte (plusieurs pour une carte TAG TEAM d'une ancienne version). */
   dexIds: number[]
-  /** Ce qu'on en dit : « SV4a 349 », le nom Cardmarket… */
+  /** « Bulbizarre (SV2a 166) » : son nom, puis le code de l'extension et le numéro (d'où l'image). */
   reference: string
-  /** L'adresse de l'image collée (la même pour les deux tailles) ; `null` sans image. */
+  /** Son image : chez Pokécardex en deux tailles, ou l'adresse collée (la même pour les deux) ; `null` sans image. */
   image: CardImage | null
-  /** Id du produit Cardmarket (`idProduct`), pour son prix. */
+  /** Id du produit Cardmarket (`idProduct`), pour son prix et le lien vers sa page. */
   cardmarket?: number
-  /** Sa page chez Cardmarket, collée ou reprise par le favori : l'app n'invente aucun lien. */
+  /** Sa page chez Cardmarket, collée ou reprise par le favori ; sans elle, le lien suit l'id. */
   page?: string
 }
 
@@ -103,7 +103,7 @@ export type Priority = 'high' | 'normal' | 'low'
 
 /** Ce que l'utilisateur pense d'une carte à l'achat ; indépendant de son statut. */
 export interface PurchasePreference {
-  /** `accepted` : dans la liste d'achats ; `excluded` : jamais proposée. */
+  /** `accepted` : dans la liste d'achats ; `excluded` (ancienne version) : compte comme non décidée. */
   decision: 'accepted' | 'excluded'
   priority: Priority
   /** Prix maximum, en euros. */

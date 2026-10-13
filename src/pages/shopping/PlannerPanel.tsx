@@ -15,6 +15,7 @@ import { Receipt, Sparkles } from '@camply/ui/icons'
 import { useState, type ReactNode } from 'react'
 import { PRIORITY_LABELS } from '@/config/shopping'
 import { spentThisMonth } from '@/lib/budget'
+import { isToBuy } from '@/lib/collection'
 import { details, formatEuro, plural, today } from '@/lib/format'
 import { cents, newOrder } from '@/lib/orders'
 import { planPurchase } from '@/lib/purchase-planner'
@@ -25,7 +26,7 @@ import { BudgetField } from './BudgetField'
 import { CardLine } from './CardLine'
 import { OrderForm } from './OrderForm'
 import { ExportButtons } from './ExportButtons'
-import { useWishlist } from './useWishlist'
+import { useWishlist } from '@/hooks/useWishlist'
 import styles from './ShoppingPage.module.css'
 
 const ALL_PRIORITIES = Object.keys(PRIORITY_LABELS) as Priority[]
@@ -183,9 +184,11 @@ export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
           </ul>
         ) : (
           <p className="muted">
-            {plan.left.length > 0
-              ? 'Aucune carte ne tient dans ce budget avec ces règles. Augmentez le budget, ou regardez ci-dessous les cartes mises de côté.'
-              : 'Aucune carte à proposer avec ces règles : regardez ci-dessous les cartes mises de côté.'}
+            {!rows.some(isToBuy)
+              ? 'Toutes les cartes de votre liste d’achats sont possédées ou commandées : rien à commander.'
+              : plan.left.length > 0
+                ? 'Aucune carte ne tient dans ce budget avec ces règles. Augmentez le budget, ou regardez ci-dessous les cartes mises de côté.'
+                : 'Aucune carte à proposer avec ces règles : regardez ci-dessous les cartes mises de côté.'}
           </p>
         )}
 

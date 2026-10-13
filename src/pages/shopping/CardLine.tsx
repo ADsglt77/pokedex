@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { CardArt } from '@/components/CardArt'
-import { cardTitle } from '@/lib/catalog'
+import { cardTitle } from '@/lib/species'
 import type { PokemonCard } from '@/types'
 import styles from './ShoppingPage.module.css'
 

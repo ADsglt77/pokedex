@@ -3,15 +3,17 @@ import { Plus } from '@camply/ui/icons'
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { CardFields } from '@/components/CardFields'
+import { NewCardOptions } from '@/components/NewCardOptions'
 import { PageHeader } from '@/components/PageHeader'
 import { useCardDraft } from '@/hooks/useCardDraft'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { usePokedex } from '@/hooks/usePokedex'
 import { readCardmarketCard, type CardmarketCard } from '@/lib/cardmarket'
-import { getSpecies, SPECIES } from '@/lib/catalog'
+import { getSpecies, SPECIES } from '@/lib/species'
 import { searchMatcher, speciesInName } from '@/lib/filters'
 import { formatDexNumber, pageTitle } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'
+import { addCard } from '@/store/shopping'
 
 /**
  * Ajouter une carte depuis Cardmarket (`/ajouter`) : le favori « Ajouter au Pokédex » ouvre cette
@@ -45,6 +47,7 @@ function AddCard({ imported }: { imported: CardmarketCard }) {
   const [guessed] = useState(() => speciesInName(imported.name))
   const [speciesId, setSpeciesId] = useState(guessed)
   const [submitted, setSubmitted] = useState(false)
+  const [choices, setChoices] = useState({ owned: false, toBuy: false })
   const draft = useCardDraft(null, {
     cardmarket: imported.cardmarket,
     reference: imported.name,
@@ -61,13 +64,13 @@ function AddCard({ imported }: { imported: CardmarketCard }) {
       card.cardmarket === imported.cardmarket && !(species && card.dexIds.includes(species.id)),
   )
 
-  const add = async () => {
+  const add = () => {
     setSubmitted(true)
     if (!species || taken) return
-    const saved = await draft.read([species.id], species.names.fr)
-    if (!saved) return
-    act(() => useCollectionStore.getState().saveCard(saved), `Carte ajoutée à ${species.names.fr}.`)
-    navigate(`/pokemon/${species.id}`)
+    draft.save([species.id], species.names.fr, (saved) => {
+      act(() => addCard(saved, choices), `Carte ajoutée à ${species.names.fr}.`)
+      navigate(`/pokemon/${species.id}`)
+    })
   }
 
   return (
@@ -133,9 +136,15 @@ function AddCard({ imported }: { imported: CardmarketCard }) {
         )}
 
         <CardFields draft={draft} speciesId={species?.id ?? null} />
+        <NewCardOptions choices={choices} onChange={setChoices} />
 
         <div>
-          <Button leftIcon={<Plus size={16} />} onClick={add} disabled={Boolean(taken)}>
+          <Button
+            leftIcon={<Plus size={16} />}
+            onClick={add}
+            loading={draft.saving}
+            disabled={Boolean(taken)}
+          >
             {species ? `Ajouter à ${species.names.fr}` : 'Ajouter'}
           </Button>
         </div>

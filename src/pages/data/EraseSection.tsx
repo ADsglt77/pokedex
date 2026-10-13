@@ -6,6 +6,7 @@ import { useCollectionAction } from '@/hooks/useNotify'
 import { emptyCollection } from '@/lib/collection'
 import { isEmptySummary, summarize } from '@/lib/pokedex'
 import { useCollectionStore } from '@/store/collection'
+import { useShoppingStore } from '@/store/shopping'
 import { DataSection } from './DataSection'
 import { SummaryLedger } from './SummaryLedger'
 import { useExportCollection } from './useExportCollection'
@@ -21,8 +22,8 @@ export function EraseSection() {
   return (
     <DataSection id="effacer" title="Effacer ma collection" apart>
       <p>
-        Supprime de ce navigateur vos cartes ajoutées, leurs statuts et leurs prix payés. La liste
-        d’achats, les commandes et le budget sont conservés.
+        Supprime de ce navigateur vos cartes ajoutées, leurs statuts, leurs prix payés et la liste
+        d’achats. Les commandes et le budget sont conservés : ils gardent ce que vous avez dépensé.
       </p>
       <Button
         tone="danger"
@@ -40,7 +41,12 @@ export function EraseSection() {
         onClose={() => setConfirming(false)}
         onConfirm={() =>
           act(
-            () => useCollectionStore.getState().replaceCollection(emptyCollection()),
+            () => {
+              useCollectionStore.getState().replaceCollection(emptyCollection())
+              // La liste d'achats renvoie à des cartes qui ne reviendront pas : elle part avec elles.
+              const { shopping, replaceShopping } = useShoppingStore.getState()
+              replaceShopping({ ...shopping, preferences: {}, updatedAt: new Date().toISOString() })
+            },
             'Collection effacée.',
             'info',
           )
