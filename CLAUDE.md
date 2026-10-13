@@ -1,10 +1,10 @@
 # CLAUDE.md
 
 Pokédex personnel de cartes Pokémon : les 1 025 Pokémon, et pour chacun la carte que l'utilisateur
-veut, qu'il ajoute lui-même (son id Cardmarket pour le prix, l'adresse d'une image s'il en a une),
-souvent depuis Cardmarket avec le favori « Ajouter au Pokédex ». Un Pokémon est « débloqué » quand
-sa carte est possédée. React 19 + Vite + TypeScript, UI `@camply/ui`, espèces
-PokéAPI, prix Cardmarket.
+veut, qu'il ajoute lui-même (sa référence, d'où son image est retrouvée, et son id Cardmarket pour
+le prix), souvent depuis Cardmarket avec le favori « Ajouter au Pokédex ». Un Pokémon est
+« débloqué » quand sa carte est possédée. React 19 + Vite + TypeScript, UI `@camply/ui`, espèces
+PokéAPI, images TCGdex, prix Cardmarket.
 
 ## Commandes
 
@@ -17,7 +17,9 @@ bun run build          # tsc -b + vite build (pas `bun build`)
 bun lint               # ESLint
 bun test               # tests de tests/ (logique des achats), relancés par le build Docker
 bun run format         # Prettier sur src/, scripts/ et tests/ (les JSON de src/data sont exclus)
-bun run data           # PokéAPI → src/data (species.json, species-details.json) ; `--refresh` ignore le cache
+bun run data           # src/data : data:species puis data:images
+bun run data:species   # PokéAPI → species.json, species-details.json ; `--refresh` ignore le cache
+bun run data:images    # TCGdex → card-images.json ; `--refresh` pour voir les nouvelles extensions
 bun run prices         # prix Cardmarket du jour → prices/, servi par `bun dev` (sur le VPS : service `prices`)
 ```
 
@@ -32,14 +34,15 @@ bun run prices         # prix Cardmarket du jour → prices/, servi par `bun dev
   registre des commandes, plan de la prochaine commande. Pas de tests d'interface. Le build Docker
   les lance : un test en échec bloque le déploiement.
 - Les cartes viennent de l'utilisateur, une par Pokémon : **aucune** liste de cartes embarquée,
-  aucune recherche ou détection de carte ni d'image (TCGplayer, TCGdex, catalogue, détection des
-  pleines cartes : retirés à sa demande). Ne pas les réintroduire sans demande.
+  aucune recherche ou détection de carte (TCGplayer, catalogue, détection des pleines cartes :
+  retirés à sa demande). Seule aide, ajoutée à sa demande : l'image, retrouvée chez TCGdex d'après
+  la référence. Ne pas réintroduire le reste sans demande.
 - UI : **`@camply/ui` d'abord** (skill `camply-ui`), thème camply par défaut (sombre, accent cyan).
   Un composant maison seulement s'il est métier ou absent de la lib.
 - Périmètre volontairement réduit : pas d'image téléversée (on colle une adresse), pas de
   comparaison ni de fusion à l'import ; aucune API externe appelée par le navigateur. Seules
-  exceptions : les images (dessins des Pokémon chez PokéAPI, cartes dont l'utilisateur colle
-  l'adresse), et les prix, fichiers du site lui-même (`/prices/`).
+  exceptions : les images (dessins des Pokémon chez PokéAPI, cartes chez TCGdex ou à l'adresse
+  collée), et les prix, fichiers du site lui-même (`/prices/`).
 - Cardmarket : seulement les fichiers publics (guide des prix, liste des produits). Pas de
   scraping, pas d'API (fermée), pas de panier ni de commande à distance. Aucun lien ni adresse
   Cardmarket fabriqué ou deviné : leur format n'a pas pu être vérifié (le site bloque les robots) ;
@@ -56,25 +59,25 @@ bun run prices         # prix Cardmarket du jour → prices/, servi par `bun dev
 | Dossier | Rôle |
 |---|---|
 | `src/config/` | Générations, couleurs des types, achats (budget par défaut, niveaux de budget, priorités, fournisseurs) : configuration, pas de logique |
-| `src/data/` | JSON écrits par `bun run data` : les espèces et leurs détails (chargés à la demande) |
-| `src/lib/` | Règles **pures** : `catalog` (espèces, carte d'un id), `cardmarket` (page et id saisis, ce que le favori envoie, code du favori), `pokedex` (modèle : la carte de chaque Pokémon, progression, résumé), `collection` (modifications : statut, prix payé, ajout et retrait d'une carte), `filters` (adresse, liens filtrés, recherche), `transfer` (export, import, lecture du stockage), `prices` (prix d'une carte, valeur, coût pour compléter, courbes), `format` ; achats : `wishlist` (préférences, filtres, CSV), `orders` (coût, report sur la collection), `budget` (par mois, par fournisseur), `purchase-planner` (prochaine commande) |
+| `src/data/` | JSON écrits par `bun run data` : les espèces et leurs détails (chargés à la demande), le dossier d'images TCGdex de chaque extension |
+| `src/lib/` | Règles **pures** : `catalog` (espèces, carte d'un id), `cardmarket` (page et id saisis, ce que le favori envoie, code du favori), `card-images` (l'image d'une carte d'après sa référence), `pokedex` (modèle : la carte de chaque Pokémon, progression, résumé), `collection` (modifications : statut, prix payé, ajout et retrait d'une carte), `filters` (adresse, liens filtrés, recherche), `transfer` (export, import, lecture du stockage), `prices` (prix d'une carte, valeur, coût pour compléter, courbes), `format` ; achats : `wishlist` (préférences, filtres, CSV), `orders` (coût, report sur la collection), `budget` (par mois, par fournisseur), `purchase-planner` (prochaine commande) |
 | `src/store/` | Zustand : `collection` et `shopping` (liste d'achats, commandes, budget), dans `localStorage` ; `prices` (`/prices/`). `persist` les enregistre et les garde d'accord entre onglets |
 | `src/hooks/` | `usePokedex` (modèle partagé par toutes les pages), `useNotify` (toasts + « Annuler »), `usePokedexFilters`, `useCardDraft` (saisie d'une carte) |
 | `src/components/` | Composants métier partagés par plusieurs pages (carte, champs d'une carte, tuile, réglette, courbe, réglages d'achat d'une carte…) et les seuls génériques absents de camply (confirmation, en-tête de page, lien externe, champ enregistré en le quittant, `SegmentedField`) ; le reste vient de camply |
 | `src/pages/` | Une page par route ; les sous-composants d'une page vivent dans son dossier (`pokemon/CardForm` : ajouter ou corriger la carte d'un Pokémon ; `AddCardPage` : `/ajouter`, ouverte par le favori) |
 | `tests/` | Tests `bun test` de la logique des achats (`tsconfig.tests.json`) |
-| `scripts/` | Bun : `species.ts` (PokéAPI → `src/data`, avec `lib/net.ts` : cache disque, requêtes espacées, et `lib/dataFile.ts`) et `prices.ts` (prix Cardmarket) |
+| `scripts/` | Bun : `species.ts` (PokéAPI → `src/data`, avec `lib/net.ts` : cache disque, requêtes espacées, et `lib/dataFile.ts`), `card-images.ts` (TCGdex → `src/data`) et `prices.ts` (prix Cardmarket) |
 
 Points à connaître :
 
 - Une carte (`PokemonCard`) : id `manual:<uuid>`, ses Pokémon (`dexIds`), une référence (vide à la
-  saisie : le nom de la carte chez Cardmarket, sinon le nom du Pokémon), l'adresse de son image
-  collée (`image.small` = `image.large` ; `null` sans image), son id Cardmarket (`cardmarket`) et
-  sa page chez Cardmarket (`page`), tous deux facultatifs. Une par
-  Pokémon : on la corrige (« Modifier la carte », même id, son statut et ses achats la suivent) ou
-  on la retire (« Retirer la carte » : avec son statut, son prix payé et sa préférence d'achat ;
-  impossible tant qu'une commande la contient) avant d'en ajouter une autre. Si une ancienne
-  version en a gardé plusieurs, la première compte.
+  saisie : le nom de la carte chez Cardmarket, sinon le nom du Pokémon), son image (`image` :
+  celle de TCGdex, `low` et `high`, ou l'adresse collée, `small` = `large` ; `null` sans image),
+  son id Cardmarket (`cardmarket`) et sa page chez Cardmarket (`page`), tous deux facultatifs.
+  Une par Pokémon : on la corrige (« Modifier la carte », même id, son statut et ses achats la
+  suivent) ou on la retire (« Retirer la carte » : avec son statut, son prix payé et sa préférence
+  d'achat ; impossible tant qu'une commande la contient) avant d'en ajouter une autre. Si une
+  ancienne version en a gardé plusieurs, la première compte.
 - Favori « Ajouter au Pokédex » (`bookmarklet`, page Données) : un lien `javascript:` à glisser
   dans la barre de favoris (React refuse ces adresses en attribut : il est posé par une `ref`).
   Sur une page produit de Cardmarket, il lit l'id (`input[name="idProduct"]`), le nom et
@@ -83,6 +86,14 @@ Points à connaître :
   relit ces paramètres comme une saisie (`readCardmarketCard`), devine le Pokémon d'après le nom
   (`speciesInName`, modifiable) et n'ajoute rien à un Pokémon qui a déjà sa carte. Page vérifiée
   en octobre 2026 : si Cardmarket la change, le favori affiche son message d'aide.
+- Images (`lib/card-images.ts`) : la référence finit par le code de l'extension et le numéro,
+  comme Cardmarket les écrit (« Bulbizarre (sv2a 166) »). `card-images.json` donne le dossier de
+  chaque extension chez TCGdex (une japonaise par son id, SV2a ; une anglaise par son abréviation
+  officielle, MEW ; un code porté par deux extensions est écarté) et la longueur de ses numéros
+  (6 → 006). TCGdex n'a pas toutes les images, et en publie qu'il ne déclare pas : l'app vérifie
+  que l'image se charge (`imageLoads`) avant de l'enregistrer, et la saisie le dit. Sans adresse
+  collée, l'image suit la référence (cherchée en quittant le champ). Données : « Chercher les
+  images chez TCGdex » pour les cartes sans image.
 - Prix (`scripts/prices.ts`) : le guide des prix public de Cardmarket et sa liste des produits
   (pour les noms), une fois par jour, seulement les cartes à l'unité (catégorie 51). Il écrit
   `latest.json` (le prix du jour de chaque carte : `[prix, plus bas, moyenne 30 jours]`, par id

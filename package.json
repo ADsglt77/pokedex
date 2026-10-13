@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "test": "bun test",
     "format": "prettier --write src/ scripts/ tests/",
-    "data": "bun scripts/species.ts",
+    "data": "bun scripts/species.ts && bun scripts/card-images.ts",
+    "data:species": "bun scripts/species.ts",
+    "data:images": "bun scripts/card-images.ts",
     "prices": "bun scripts/prices.ts"
   },
   "dependencies": {

@@ -1,10 +1,10 @@
 # Pokédex
 
 Pokédex personnel de cartes Pokémon : pour chacun des 1 025 Pokémon, on ajoute la carte que l'on
-veut (son id Cardmarket pour suivre son prix, une image si l'on en a une) ; le Pokémon se débloque
-quand on la possède. React + Vite + TypeScript, interface
+veut (sa référence, d'où son image est retrouvée, et son id Cardmarket pour suivre son prix) ; le
+Pokémon se débloque quand on la possède. React + Vite + TypeScript, interface
 [`@camply/ui`](https://www.npmjs.com/package/@camply/ui), espèces [PokéAPI](https://pokeapi.co/),
-prix [Cardmarket](https://www.cardmarket.com/).
+images [TCGdex](https://tcgdex.dev/), prix [Cardmarket](https://www.cardmarket.com/).
 
 ```sh
 bun install
@@ -24,7 +24,8 @@ bun run format   # Prettier
   de l'espèce.
 - **Ajouter depuis Cardmarket** : sur la page d'une carte chez Cardmarket, le favori « Ajouter au
   Pokédex » ouvre l'app avec son id, son nom et l'adresse de la page ; le Pokémon est reconnu
-  d'après le nom (à vérifier), il reste à valider.
+  d'après le nom et l'image retrouvée d'après le code de la carte (« sv2a 166 »), à vérifier ; il
+  reste à valider.
 - **Valeur** : prix Cardmarket du jour, valeur de la collection (et gain par rapport au prix
   payé), commandes, souhaits, coût pour compléter le Pokédex, courbes de prix au fil des jours.
 - **Achats** : liste d'achats (les cartes acceptées, avec priorité et prix maximum),
@@ -32,11 +33,14 @@ bun run format   # Prettier
   registre des commandes (Cardmarket, Myutsu, Hikaru…) qui met à jour les statuts, suivi du
   budget par mois et par fournisseur. Export CSV et recherches à coller dans Cardmarket.
 - **Données** : le favori Cardmarket à installer (à glisser dans la barre de favoris, ou son code
-  à copier), export / import (achats compris), effacement.
+  à copier), les images à chercher pour les cartes qui n'en ont pas, export / import (achats
+  compris), effacement.
 
-Les espèces sont embarquées (`bun run data`, depuis PokéAPI) : aucune API externe appelée par le
-navigateur, hormis les images (dessins des Pokémon, chez PokéAPI, et cartes dont vous collez
-l'adresse ; pas celles de Cardmarket, qui ne s'affichent que sur son site). Le favori ne fait que
+Les espèces sont embarquées (`bun run data`, depuis PokéAPI), tout comme le dossier d'images de
+chaque extension chez TCGdex (`bun run data:images --refresh` pour les nouvelles extensions) :
+aucune API externe appelée par le navigateur, hormis les images (dessins des Pokémon chez PokéAPI,
+cartes chez TCGdex ou à l'adresse collée ; pas celles de Cardmarket, qui ne s'affichent que sur
+son site). Le favori ne fait que
 lire la page Cardmarket ouverte et l'envoyer à l'app d'où il a été installé : installé depuis
 `bun dev`, il ouvre `localhost`. Les prix sont des fichiers du site
 lui-même (`/prices/`), écrits chaque jour par `bun run prices` d'après les fichiers publics de

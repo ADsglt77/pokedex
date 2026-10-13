@@ -40,7 +40,7 @@ export function CardForm({
           ? `Modifier la carte de ${species.names.fr}`
           : `Ajouter une carte à ${species.names.fr}`
       }
-      description="La carte que vous voulez pour ce Pokémon : son id Cardmarket pour suivre son prix, et une image si vous en avez une."
+      description="La carte que vous voulez pour ce Pokémon : sa référence, qui sert à trouver son image, et son id Cardmarket pour suivre son prix."
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>

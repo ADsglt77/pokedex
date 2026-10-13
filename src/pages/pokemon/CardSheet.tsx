@@ -50,9 +50,10 @@ export function EmptySheet({ species }: { species: PokemonSpecies }) {
         Carte à choisir
       </h2>
       <p className="muted">
-        Ajoutez la carte que vous voulez pour {species.names.fr} : son id Cardmarket pour suivre son
-        prix, et l’adresse d’une image si vous en avez une. Depuis Cardmarket, le favori « Ajouter
-        au Pokédex » (<Link to="/donnees">page Données</Link>) remplit l’id et la page de la carte.
+        Ajoutez la carte que vous voulez pour {species.names.fr} : sa référence (« Bulbizarre (sv2a
+        166) »), qui sert à trouver son image, et son id Cardmarket pour suivre son prix. Depuis
+        Cardmarket, le favori « Ajouter au Pokédex » (<Link to="/donnees">page Données</Link>)
+        remplit tout.
       </p>
       <div>
         <Button leftIcon={<Plus size={16} />} onClick={() => setAdding(true)}>

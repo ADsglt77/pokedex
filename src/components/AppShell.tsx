@@ -91,8 +91,8 @@ export function AppShell() {
       </main>
 
       <footer className={cx('container', styles.footer)}>
-        Données PokéAPI, prix Cardmarket. Projet personnel, sans lien avec Nintendo, Creatures, Game
-        Freak ou The Pokémon Company.
+        Données PokéAPI, images TCGdex, prix Cardmarket. Projet personnel, sans lien avec Nintendo,
+        Creatures, Game Freak ou The Pokémon Company.
       </footer>
 
       <nav aria-label="Navigation principale" className={styles.tabbar}>

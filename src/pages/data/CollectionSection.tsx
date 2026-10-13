@@ -6,6 +6,7 @@ import { isEmptySummary, summarize } from '@/lib/pokedex'
 import { formatDateTime, formatDecimal, unlockedOf } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'
 import { DataSection } from './DataSection'
+import { MissingImages } from './MissingImages'
 import { SummaryLedger } from './SummaryLedger'
 
 /** Où en est la collection, ou comment la commencer quand elle est vide. */
@@ -40,6 +41,7 @@ export function CollectionSection() {
             {unlockedOf(progress, 'Pokémon')}, soit {formatDecimal(progress.percent)} % du Pokédex.
           </p>
           <SummaryLedger summary={summary} />
+          <MissingImages />
         </>
       )}
       <p>
