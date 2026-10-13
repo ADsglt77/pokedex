@@ -11,7 +11,7 @@ import { isToBuy } from '@/lib/collection'
 import { cardTitle } from '@/lib/species'
 import { pokedexUrl } from '@/lib/filters'
 import { formatDate, formatInteger, pageTitle, plural, today, unlockedOf } from '@/lib/format'
-import { recentAcquisitions, summarize, type Progress, type RecentCard } from '@/lib/pokedex'
+import { acquisitions, summarize, type Progress, type RecentCard } from '@/lib/pokedex'
 import { isUnderMax } from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
@@ -48,14 +48,12 @@ function trackingSentence(ordered: number, wanted: number): string | null {
 export function HomePage() {
   const pokedex = usePokedex()
   const collection = useCollectionStore((state) => state.collection)
-  const recent = useMemo(() => recentAcquisitions(collection, 6), [collection])
+  const obtained = useMemo(() => acquisitions(collection), [collection])
   const { ordered, wanted } = summarize(collection)
   const [unlockedText, remainingText] = progressSentence(pokedex.progress)
   const tracking = trackingSentence(ordered, wanted)
   const month = today().slice(0, 7)
-  const thisMonth = Object.values(collection.cards).filter(
-    (ownership) => ownership.status === 'owned' && ownership.acquiredAt?.startsWith(month),
-  ).length
+  const thisMonth = obtained.filter(({ acquiredAt }) => acquiredAt?.startsWith(month)).length
 
   return (
     <div className="container">
@@ -100,7 +98,7 @@ export function HomePage() {
         {tracking && <p className="muted">{tracking}</p>}
       </Stack>
 
-      {recent.length > 0 ? <RecentCards cards={recent} /> : <FirstCards />}
+      {obtained.length > 0 ? <RecentCards cards={obtained.slice(0, 6)} /> : <FirstCards />}
     </div>
   )
 }

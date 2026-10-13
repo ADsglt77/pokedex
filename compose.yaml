@@ -9,20 +9,25 @@ services:
     volumes:
       - prices:/usr/share/nginx/html/prices:ro
 
-  # Prix Cardmarket : relus toutes les 6 h (le guide change une fois par jour), écrits dans le
-  # volume que sert nginx ; après un échec (Cardmarket indisponible…), de nouveau 10 min plus tard.
-  # Le code vient du clone : un `git pull` suffit à le mettre à jour.
+  # Prix Cardmarket (et TCGplayer pour les cartes du catalogue sans id Cardmarket) : regardés toutes
+  # les 6 h (ils changent une fois par jour ; le script ne les retélécharge que s'ils ont changé),
+  # écrits dans le volume que sert nginx. Après un échec (Cardmarket indisponible…), de nouveau
+  # 10 min plus tard, puis 20, 40… jusqu'à 6 h : une panne qui dure ne fait pas télécharger
+  # Cardmarket toutes les 10 min. (`$$` : un `$` pour le shell.)
+  # Le code et le catalogue (`src/`) viennent du clone : un `git pull` suffit à les mettre à jour.
   prices:
     image: oven/bun:1-alpine
     restart: unless-stopped
     working_dir: /app
     volumes:
       - ./scripts:/app/scripts:ro
+      - ./src:/app/src:ro
       - prices:/prices
     command: >-
-      sh -c 'while true; do
-      if bun scripts/prices.ts /prices; then sleep 21600; else sleep 600; fi;
-      done'
+      sh -c 'delay=600; while true; do
+      if bun scripts/prices.ts /prices; then delay=600; sleep 21600;
+      else sleep $$delay; delay=$$((delay * 2)); [ $$delay -gt 21600 ] && delay=21600;
+      fi; done'
 
 volumes:
   prices:

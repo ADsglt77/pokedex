@@ -1,10 +1,8 @@
 import { SegmentedControl, Select, Stack, Switch } from '@camply/ui'
 import { use, useState } from 'react'
 import { Link } from 'react-router'
-import { CatalogGrid, CatalogTile } from '@/components/CatalogTile'
-import { ExternalLink } from '@/components/ExternalLink'
-import { loadCatalog, type CatalogCard } from '@/lib/card-catalog'
-import { POKECARDEX } from '@/lib/card-images'
+import { CatalogCredit, CatalogGrid, CatalogTile } from '@/components/CatalogTile'
+import { loadCatalog, setOption, type CatalogCard } from '@/lib/card-catalog'
 import { plural } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
 import { usePrices } from '@/store/prices'
@@ -16,8 +14,9 @@ const ORDERS = [
 ] as const
 
 /**
- * Les cartes japonaises du Pokémon, à choisir : leur image (Pokécardex), leur extension, leur
- * numéro et leur année, leur prix du jour ; à filtrer par extension ou aux cartes qui ont un prix.
+ * Les cartes japonaises du Pokémon, à choisir : leur image (Pokécardex, sinon TCGplayer), leur
+ * extension, leur numéro et leur année, leur prix du jour (Cardmarket, sinon TCGplayer) ; à
+ * filtrer par extension ou aux cartes qui ont un prix.
  * `selected` : la clé de la carte choisie (« SV2a 166 »).
  */
 export function CatalogPicker({
@@ -46,19 +45,15 @@ export function CatalogPicker({
 
   // Les extensions de ses cartes, dans l'ordre du catalogue (des plus récentes).
   const sets = [...new Map(cards.map((card) => [card.set.id, card.set])).values()]
-  const setOptions = [
-    { value: '', label: 'Toutes les extensions' },
-    ...sets.map(({ id, name, year }) => ({
-      value: id,
-      label: `${id} · ${name}${year ? ` (${year})` : ''}`,
-    })),
-  ]
+  const setOptions = [{ value: '', label: 'Toutes les extensions' }, ...sets.map(setOption)]
   const priced = cards
-    .map((card) => ({ card, price: priceOf(prices, card)?.price ?? null }))
+    .map((card) => ({ card, price: priceOf(prices, card) }))
     .filter(({ card, price }) => (!set || card.set.id === set) && (!pricedOnly || price !== null))
   // Les plus chères d'abord, celles sans prix à la fin.
   const shown =
-    order === 'price' ? [...priced].sort((a, b) => (b.price ?? -1) - (a.price ?? -1)) : priced
+    order === 'price'
+      ? [...priced].sort((a, b) => (b.price?.price ?? -1) - (a.price?.price ?? -1))
+      : priced
 
   return (
     <Stack gap={4}>
@@ -84,8 +79,7 @@ export function CatalogPicker({
         />
       </Stack>
       <p className="muted">
-        {plural(shown.length, 'carte japonaise', 'cartes japonaises')} · images{' '}
-        <ExternalLink href={POKECARDEX}>Pokécardex</ExternalLink>
+        {plural(shown.length, 'carte japonaise', 'cartes japonaises')} · <CatalogCredit />
         {set && (
           <>
             {' '}

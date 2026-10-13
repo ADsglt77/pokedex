@@ -1,9 +1,10 @@
 /**
- * La liste d'achats : les cartes acceptées à l'achat, avec leur priorité et leur prix maximum. Une préférence ne touche jamais au statut de la carte (souhaitée, commandée, possédée).
+ * La liste d'achats : les cartes acceptées à l'achat, avec leur priorité et leur prix maximum. Une
+ * préférence ne touche jamais au statut de la carte (souhaitée, commandée, possédée).
  */
 
 import { DEFAULT_BUDGET, PRIORITY_LABELS, PRIORITY_RANK } from '@/config/shopping'
-import { referenceCode } from '@/lib/card-images'
+import { referenceCode } from '@/lib/card-code'
 import { cardmarketPage } from '@/lib/cardmarket'
 import { cardTitle, findCard, speciesOf } from '@/lib/species'
 import { searchForm, searchMatcher } from '@/lib/filters'
@@ -16,7 +17,8 @@ import type {
   CollectionData,
   GenerationId,
   PokemonCard,
-  PriceFile,
+  Prices,
+  PriceSource,
   Priority,
   PurchasePreference,
   ShoppingData,
@@ -30,24 +32,26 @@ export const emptyShopping = (): ShoppingData => ({
   budget: { ...DEFAULT_BUDGET },
 })
 
-/** Ce qu'on décide d'une carte : l'acheter. (`excluded` n'est plus écrit, seulement lu.) */
-export type Decision = 'accepted'
-
-/** Accepter une carte à l'achat (priorité et prix maximum sont gardés) ; `null` l'oublie. */
-export function setDecision(
+/**
+ * Met une carte dans la liste d'achats (priorité et prix maximum d'avant gardés), ou l'en retire
+ * avec ses réglages. Seul `accepted` s'écrit : `excluded`, d'une ancienne version, n'est que lu.
+ */
+export function setAccepted(
   data: ShoppingData,
   cardId: string,
-  decision: Decision | null,
+  accepted: boolean,
   now: string,
 ): ShoppingData {
   const { [cardId]: previous, ...preferences } = data.preferences
-  if (decision) preferences[cardId] = { priority: 'normal', ...previous, decision, updatedAt: now }
+  if (accepted) {
+    preferences[cardId] = { priority: 'normal', ...previous, decision: 'accepted', updatedAt: now }
+  }
   return { ...data, preferences, updatedAt: now }
 }
 
 /** Met d'un coup dans la liste d'achats les cartes `cardIds` (priorité normale). */
 export function acceptCards(data: ShoppingData, cardIds: readonly string[], now: string) {
-  return cardIds.reduce((shopping, cardId) => setDecision(shopping, cardId, 'accepted', now), data)
+  return cardIds.reduce((shopping, cardId) => setAccepted(shopping, cardId, true, now), data)
 }
 
 /**
@@ -88,8 +92,9 @@ export interface WishRow {
   card: PokemonCard
   preference: PurchasePreference
   status: CardStatus | null
-  /** Prix indicatif Cardmarket ; `null` sans prix. */
+  /** Prix indicatif (Cardmarket, sinon TCGplayer) ; `null` sans prix. */
   price: number | null
+  source: PriceSource | null
   /** Écart du prix avec sa moyenne sur 30 jours (−0,18 : 18 % en dessous) ; `null` sans les deux. */
   change30: number | null
 }
@@ -98,7 +103,7 @@ export interface WishRow {
 export function wishlistRows(
   preferences: ShoppingData['preferences'],
   collection: CollectionData,
-  prices: PriceFile | null,
+  prices: Prices | null,
 ): WishRow[] {
   return Object.entries(preferences).flatMap(([cardId, preference]) => {
     const card = findCard(cardId, collection)
@@ -110,6 +115,7 @@ export function wishlistRows(
         preference,
         status: collection.cards[cardId]?.status ?? null,
         price: price?.price ?? null,
+        source: price?.source ?? null,
         change30: price?.avg30 ? (price.price - price.avg30) / price.avg30 : null,
       },
     ]

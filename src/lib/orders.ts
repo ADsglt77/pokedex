@@ -47,7 +47,9 @@ export const orderSpent = (order: Order) =>
 /**
  * Le prix de revient d'une carte de chaque ligne : son prix, plus sa part du port et des frais,
  * moins sa part du remboursé, au prorata de son prix (à parts égales si les cartes sont
- * gratuites), au centime près.
+ * gratuites), au centime. Les centimes que l'arrondi perd ou ajoute vont aux lignes d'une seule
+ * carte, la plus grosse part d'arrondi d'abord : les prix de revient font le total de la commande.
+ * (Une ligne de plusieurs cartes ne peut pas prendre un centime sans le multiplier.)
  */
 export function unitCosts(
   order: Pick<Order, 'lines' | 'shipping' | 'fees' | 'refunded'>,
@@ -55,9 +57,24 @@ export function unitCosts(
   const extra = order.shipping + order.fees - order.refunded
   const subtotal = linesTotal(order.lines)
   const count = cardCount(order.lines)
-  return order.lines.map((line) =>
-    cents(line.unitPrice + (subtotal > 0 ? (extra * line.unitPrice) / subtotal : extra / count)),
+  // En centimes, pour compter juste.
+  const exact = order.lines.map(
+    (line) =>
+      (line.unitPrice + (subtotal > 0 ? (extra * line.unitPrice) / subtotal : extra / count)) * 100,
   )
+  const costs = exact.map(Math.round)
+  const total = Math.round((subtotal + extra) * 100)
+  let rest = order.lines.reduce((sum, line, index) => sum - line.quantity * costs[index]!, total)
+  const step = Math.sign(rest)
+  const singles = order.lines
+    .flatMap((line, index) => (line.quantity === 1 ? [index] : []))
+    .sort((a, b) => step * (exact[b]! - costs[b]! - (exact[a]! - costs[a]!)))
+  for (const index of singles) {
+    if (rest === 0) break
+    costs[index] = costs[index]! + step
+    rest -= step
+  }
+  return costs.map((cost) => cost / 100)
 }
 
 /**

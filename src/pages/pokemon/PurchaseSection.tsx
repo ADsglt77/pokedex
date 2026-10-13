@@ -3,12 +3,11 @@ import { Link } from 'react-router'
 import { PreferenceFields } from '@/components/PreferenceFields'
 import { useCollectionAction } from '@/hooks/useNotify'
 import type { CardView } from '@/lib/pokedex'
-import { formatEuro } from '@/lib/format'
-import { priceOf } from '@/lib/prices'
+import { priceLabel, priceOf } from '@/lib/prices'
 import { priceVerdict } from '@/lib/purchase-planner'
 import { usePrices } from '@/store/prices'
 import { useShoppingStore } from '@/store/shopping'
-import type { PurchasePreference } from '@/types'
+import type { CardPrice, PurchasePreference } from '@/types'
 import styles from './CardActions.module.css'
 
 type Choice = 'accepted' | 'none'
@@ -31,12 +30,12 @@ export function PurchaseSection({ view }: { view: CardView }) {
   const act = useCollectionAction()
   const { card, status } = view
   const preference = useShoppingStore((state) => state.shopping.preferences[card.id])
-  const price = priceOf(usePrices(), card)?.price ?? null
+  const price = priceOf(usePrices(), card)
   const choice: Choice = preference?.decision === 'accepted' ? 'accepted' : 'none'
 
   const decide = (next: Choice) =>
     act(
-      () => useShoppingStore.getState().setDecision(card.id, next === 'none' ? null : next),
+      () => useShoppingStore.getState().setAccepted(card.id, next === 'accepted'),
       `Carte ${card.reference} ${MESSAGES[next]}.`,
       next === 'accepted' ? 'success' : 'info',
     )
@@ -73,7 +72,7 @@ function purchaseHint(
   choice: Choice,
   status: CardView['status'],
   preference: PurchasePreference | undefined,
-  price: number | null,
+  price: CardPrice | null,
 ): string {
   if (choice === 'none') {
     return 'À acheter : la carte entre dans votre liste d’achats.'
@@ -81,7 +80,7 @@ function purchaseHint(
   if (status === 'owned') return 'Dans votre liste d’achats. Possédée : elle n’est plus proposée.'
   if (status === 'ordered')
     return 'Dans votre liste d’achats. Commandée : elle n’est plus proposée.'
-  const verdict = priceVerdict(price, preference?.maxPrice)
+  const verdict = priceVerdict(price?.price ?? null, preference?.maxPrice)
   if (!verdict) return 'Dans votre liste d’achats.'
-  return `Prix du marché ${formatEuro(price!)} : ${verdict === 'under' ? 'sous' : 'au-dessus de'} votre prix maximum.`
+  return `Prix du marché ${priceLabel(price!.price, price!.source)} : ${verdict === 'under' ? 'sous' : 'au-dessus de'} votre prix maximum.`
 }

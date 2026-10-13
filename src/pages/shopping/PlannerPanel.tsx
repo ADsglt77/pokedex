@@ -17,6 +17,7 @@ import { PRIORITY_LABELS } from '@/config/shopping'
 import { spentThisMonth } from '@/lib/budget'
 import { isToBuy } from '@/lib/collection'
 import { details, formatEuro, plural, today } from '@/lib/format'
+import { priceLabel } from '@/lib/prices'
 import { cents, newOrder } from '@/lib/orders'
 import { planPurchase } from '@/lib/purchase-planner'
 import type { WishRow } from '@/lib/wishlist'
@@ -226,7 +227,7 @@ export function PlannerPanel({ onOrderSaved }: { onOrderSaved: () => void }) {
           />
           <PlanGroup
             value="unpriced"
-            title="Sans prix Cardmarket"
+            title="Sans prix"
             rows={plan.unpriced}
             empty="Toutes les cartes possibles ont un prix."
             hint="Aucun prix n’est inventé : chiffrez-les vous-même sur Cardmarket."
@@ -299,7 +300,7 @@ function PlanLine({ row, children }: { row: WishRow; children?: ReactNode }) {
     <CardLine
       card={row.card}
       detail={details(
-        price === null ? 'sans prix' : formatEuro(price),
+        price === null ? 'sans prix' : priceLabel(price, row.source),
         preference.maxPrice !== undefined && `max ${formatEuro(preference.maxPrice)}`,
         `priorité ${PRIORITY_LABELS[preference.priority].toLowerCase()}`,
       )}

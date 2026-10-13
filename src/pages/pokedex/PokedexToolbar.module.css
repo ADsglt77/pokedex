@@ -6,8 +6,8 @@
   margin-inline: calc(-1 * var(--gutter));
   padding: 0.75rem var(--gutter) 0.5rem;
   border-bottom: 1px solid var(--camply-border-soft);
-  background: color-mix(in srgb, var(--camply-bg) 88%, transparent);
-  backdrop-filter: blur(12px);
+  /* Presque opaque, sans flou : flouter la grille d'images à chaque image du défilement coûte cher. */
+  background: color-mix(in srgb, var(--camply-bg) 96%, transparent);
 }
 
 .search {

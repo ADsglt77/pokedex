@@ -2,18 +2,23 @@
  * Construit le catalogue des cartes Pokémon japonaises à partir de TCGdex : `src/data/catalog.json`.
  * Pour chaque Pokémon, ses cartes, des plus récentes aux plus anciennes (dans une extension, du plus
  * grand numéro au plus petit) : extension, numéro, id Cardmarket (pour le prix, 0 si TCGdex ne le
- * connaît pas), suffixe (ex, V, GX…) et, pour une carte de plusieurs Pokémon (TAG TEAM), tous ses
- * Pokémon ; et chaque extension, avec son nom japonais et sa date de sortie. L'app y choisit une
- * carte ; ses images viennent de Pokécardex, ses prix du guide de Cardmarket. Aucun tri par
- * rareté ni détection des pleines cartes : toutes les cartes Pokémon.
+ * connaît pas), suffixe (ex, V, GX…), produit TCGplayer (son image quand Pokécardex n'a pas la
+ * sienne, `lib/tcgplayer.ts` ; 0 : aucun) et, pour une carte de plusieurs Pokémon (TAG TEAM), tous
+ * ses Pokémon ; et chaque extension, avec son nom japonais, sa date de sortie et les groupes
+ * TCGplayer de ses cartes (où `prices.ts` lit le prix de celles sans id Cardmarket). L'app y
+ * choisit une carte ; ses images viennent de Pokécardex (sinon TCGplayer), ses prix du guide de
+ * Cardmarket (sinon de TCGplayer).
+ * Aucun tri par rareté ni détection des pleines cartes : toutes les cartes Pokémon.
  *
  *   bun run data:catalog [--refresh]   (--refresh : nouvelles cartes et nouveaux id Cardmarket)
  */
 
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import speciesFile from '@/data/species.json'
+import type { CatalogFile, CatalogRow } from '@/types'
 import { writeDataFile } from './lib/dataFile'
 import { fetchJson, mapPool } from './lib/net'
+import { tcgplayerProducts } from './lib/tcgplayer'
 
 const GRAPHQL = 'https://api.tcgdex.net/v2/graphql'
 const REST = 'https://api.tcgdex.net/v2/ja'
@@ -141,11 +146,15 @@ const ids = await mapPool(pokemon, 4, async ({ card }) => {
 const withId = ids.filter(Boolean).length
 console.log(`  ${withId} avec un id Cardmarket${failed ? `, ${failed} illisibles` : ''}`)
 
-/** Une carte : [extension, numéro, id Cardmarket, suffixe, ses Pokémon s'ils sont plusieurs]. */
-type Row = [string, string, number, string, number[]?]
+// Le produit TCGplayer de chaque carte : son image, quand Pokécardex n'a pas la sienne.
+console.log('  produits TCGplayer (pour les images que Pokécardex n’a pas)…')
+const products = await tcgplayerProducts(
+  pokemon.map(({ card, dexIds }) => ({ setId: card.set.id, number: card.localId, dexIds })),
+)
+console.log(`  ${products.filter(Boolean).length} reliées à un produit TCGplayer`)
 
 const order = pokemon
-  .map((entry, index) => ({ ...entry, id: ids[index]! }))
+  .map((entry, index) => ({ ...entry, id: ids[index]!, product: products[index]! }))
   .sort(
     (a, b) =>
       (released.get(b.card.set.id) ?? '').localeCompare(released.get(a.card.set.id) ?? '') ||
@@ -154,21 +163,34 @@ const order = pokemon
   )
 
 // Des clés numériques : l'objet les garde dans l'ordre des numéros du Pokédex.
-const bySpecies: Record<string, Row[]> = {}
-for (const { card, dexIds, id } of order) {
+const bySpecies: Record<string, CatalogRow[]> = {}
+for (const { card, dexIds, id, product } of order) {
   const suffix = SUFFIX.exec(card.name)?.[1] ?? ''
-  const row: Row = [card.set.id, card.localId, id, suffix]
+  const row: CatalogRow = [card.set.id, card.localId, id, suffix, product?.productId ?? 0]
   if (dexIds.length > 1) row.push(dexIds)
   for (const dexId of dexIds) (bySpecies[dexId] ??= []).push(row)
 }
 
-// Les extensions des cartes gardées, des plus récentes aux plus anciennes : [nom, date de sortie].
+// Les groupes TCGplayer des cartes de chaque extension.
+const groups = new Map<string, Set<number>>()
+for (const [index, { card }] of pokemon.entries()) {
+  const product = products[index]
+  if (!product) continue
+  groups.set(card.set.id, (groups.get(card.set.id) ?? new Set<number>()).add(product.groupId))
+}
+
+// Les extensions des cartes gardées, des plus récentes aux plus anciennes : [nom, date de sortie,
+// groupes TCGplayer s'il y en a].
 const usedSets = new Set(pokemon.map(({ card }) => card.set.id))
-const setInfo = Object.fromEntries(
+const setInfo: CatalogFile['sets'] = Object.fromEntries(
   sets
     .filter((set) => usedSets.has(set.id))
     .sort((a, b) => (b.releaseDate ?? '').localeCompare(a.releaseDate ?? ''))
-    .map((set) => [set.id, [set.name, set.releaseDate ?? '']]),
+    .map((set) => {
+      const ids = groups.get(set.id)
+      const released = set.releaseDate ?? ''
+      return [set.id, ids ? [set.name, released, [...ids]] : [set.name, released]]
+    }),
 )
 
 await writeDataFile('catalog.json', (generatedAt) => ({

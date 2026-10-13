@@ -54,14 +54,12 @@ export function WishlistPanel() {
   const toList = cardsToList(preferences, collection)
 
   // Les cartes choisies, ni possédées ni commandées, d'un coup dans la liste : « Annuler » les retire.
-  const listAll =
-    toList.length > 0 &&
-    (() =>
-      act(
-        () => useShoppingStore.getState().acceptCards(toList.map((card) => card.id)),
-        `${plural(toList.length, 'carte ajoutée', 'cartes ajoutées')} à la liste d’achats.`,
-      ))
-  const listAllButton = listAll && (
+  const listAll = () =>
+    act(
+      () => useShoppingStore.getState().acceptCards(toList.map((card) => card.id)),
+      `${plural(toList.length, 'carte ajoutée', 'cartes ajoutées')} à la liste d’achats.`,
+    )
+  const listAllButton = toList.length > 0 && (
     <Button variant="secondary" onClick={listAll}>
       Ajouter {plural(toList.length, 'carte à obtenir', 'cartes à obtenir')}
     </Button>
@@ -78,7 +76,7 @@ export function WishlistPanel() {
         actions={
           <>
             {listAllButton}
-            <Button asChild variant={listAll ? 'ghost' : 'primary'}>
+            <Button asChild variant={listAllButton ? 'ghost' : 'primary'}>
               <Link to={pokedexUrl({ possession: 'missing' })}>Voir les Pokémon à débloquer</Link>
             </Button>
           </>
@@ -89,7 +87,7 @@ export function WishlistPanel() {
 
   const remove = (card: PokemonCard) =>
     act(
-      () => useShoppingStore.getState().setDecision(card.id, null),
+      () => useShoppingStore.getState().setAccepted(card.id, false),
       `Carte ${card.reference} retirée de la liste d’achats.`,
       'info',
     )
@@ -140,8 +138,8 @@ export function WishlistPanel() {
 
       {filters.underMax && (
         <Alert tone="info" title="Un indicateur de marché, pas une offre.">
-          Le prix du marché Cardmarket de ces cartes est sous votre prix maximum. Les annonces
-          réelles varient selon l’état et le vendeur : vérifiez-les sur Cardmarket.
+          Le prix du marché de ces cartes (Cardmarket, sinon TCGplayer) est sous votre prix maximum.
+          Les annonces réelles varient selon l’état et le vendeur : vérifiez-les.
         </Alert>
       )}
 

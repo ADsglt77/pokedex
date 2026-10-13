@@ -1,13 +1,12 @@
 import { Select, Stack, Switch } from '@camply/ui'
 import { Suspense, use, useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { CatalogGrid, CatalogTile } from '@/components/CatalogTile'
-import { ExternalLink } from '@/components/ExternalLink'
+import { CatalogCredit, CatalogGrid, CatalogTile } from '@/components/CatalogTile'
 import { PageHeader } from '@/components/PageHeader'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { usePokedex } from '@/hooks/usePokedex'
-import { loadCatalog, setCards, type CatalogCard } from '@/lib/card-catalog'
-import { findCardImage, POKECARDEX } from '@/lib/card-images'
+import { loadCatalog, setCards, setOption, type CatalogCard } from '@/lib/card-catalog'
+import { findCardImage } from '@/lib/card-images'
 import { pageTitle, plural } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
 import { getSpecies } from '@/lib/species'
@@ -45,21 +44,18 @@ function SetBrowser() {
 
   // L'extension de l'adresse, sinon la plus récente.
   const set = catalog.sets.find((known) => known.id === params.get('set')) ?? catalog.sets[0]!
-  const setOptions = catalog.sets.map(({ id, name, year }) => ({
-    value: id,
-    label: `${id} · ${name}${year ? ` (${year})` : ''}`,
-  }))
+  const setOptions = catalog.sets.map(setOption)
   // Pour chaque carte, le Pokémon qui la recevrait : le premier des siens qui n'a pas de carte.
   const rows = setCards(catalog, set.id).map((card) => ({
     card,
     open: card.dexIds.find((id) => !entryById.get(id)?.card) ?? null,
-    price: priceOf(prices, card)?.price ?? null,
+    price: priceOf(prices, card),
   }))
   const shown = missingOnly ? rows.filter((row) => row.open !== null) : rows
 
   const choose = async (card: CatalogCard, speciesId: number) => {
     setAdding(card.key)
-    const image = await findCardImage(card.reference, { retry: true })
+    const image = (await findCardImage(card.reference, { retry: true })) ?? card.fallback
     setAdding(null)
     const name = getSpecies(speciesId)!.names.fr
     act(
@@ -94,8 +90,7 @@ function SetBrowser() {
         />
       </Stack>
       <p className="muted">
-        {plural(shown.length, 'carte', 'cartes')} · images{' '}
-        <ExternalLink href={POKECARDEX}>Pokécardex</ExternalLink>
+        {plural(shown.length, 'carte', 'cartes')} · <CatalogCredit />
       </p>
       {shown.length === 0 ? (
         <p className="muted">Tous les Pokémon de cette extension ont déjà leur carte.</p>

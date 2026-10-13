@@ -60,8 +60,10 @@ export function ValuePage() {
     <div className="container">
       <title>{pageTitle('Valeur')}</title>
       <PageHeader title="Valeur">
-        Prix du marché Cardmarket{prices && ` du ${formatDate(prices.date)}`}, en euros. Une
-        estimation : l’état de la carte et le vendeur font varier le prix réel.
+        Prix du marché Cardmarket
+        {prices?.cardmarket && ` du ${formatDate(prices.cardmarket.date)}`}, en euros ; pour les
+        cartes sans id Cardmarket, celui de TCGplayer, converti. Une estimation : l’état de la carte
+        et le vendeur font varier le prix réel.
       </PageHeader>
 
       {pricesMissing && (

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Link } from 'react-router'
 import { formatDexNumber } from '@/lib/format'
 import type { PokedexEntry } from '@/lib/pokedex'
@@ -13,8 +14,18 @@ const SPECIES_LABELS: Record<CardStatus | 'none', string> = {
   none: 'Non possédé',
 }
 
-/** Une pochette du classeur : la carte de l'espèce (ou son dessin), son numéro et son nom. */
-export function PokedexTile({ entry, eager }: { entry: PokedexEntry; eager?: boolean }) {
+/**
+ * Une pochette du classeur : la carte de l'espèce (ou son dessin), son numéro et son nom.
+ * Mémoïsée : quand la recherche ou un filtre change la grille, les pochettes restées ne se
+ * redessinent pas (leur entrée est la même tant que la collection ne change pas).
+ */
+export const PokedexTile = memo(function PokedexTile({
+  entry,
+  eager,
+}: {
+  entry: PokedexEntry
+  eager?: boolean
+}) {
   const { species, card } = entry
   const status = card?.status ?? null
   const label = `${formatDexNumber(species.id)} ${species.names.fr}, ${SPECIES_LABELS[status ?? 'none']}`
@@ -35,4 +46,4 @@ export function PokedexTile({ entry, eager }: { entry: PokedexEntry; eager?: boo
       <span className={styles.name}>{species.names.fr}</span>
     </Link>
   )
-}
+})

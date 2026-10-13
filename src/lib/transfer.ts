@@ -1,7 +1,8 @@
 /** Export et import de la collection, et sa relecture depuis le stockage du navigateur. */
 
-import { PRIORITY_LABELS } from '@/config/shopping'
-import { today } from '@/lib/format'
+import { ORDER_STATE_LABELS, PRIORITY_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
+import { parseCardmarketLink } from '@/lib/cardmarket'
+import { parseLink, today } from '@/lib/format'
 import type { CollectionData, CollectionExportFile, ShoppingData } from '@/types'
 
 export function buildExportFile(
@@ -71,33 +72,74 @@ export function readShopping(value: unknown): ShoppingData | null {
 const all = (values: object, ok: (value: Record<string, unknown>) => boolean = () => true) =>
   Object.values(values).every((value) => isRecord(value) && ok(value))
 
+/** Un montant en euros : un nombre, positif ou nul (pas « 5 » en texte, qui fausserait les sommes). */
+const isAmount = (value: unknown) =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0
+
+const isOptional = (value: unknown, ok: (value: unknown) => boolean) =>
+  value === undefined || ok(value)
+
+/** Un jour (YYYY-MM-DD) : le budget en tire le mois, la réception la date d'obtention. */
+const isDay = (value: unknown) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+
+const isOwnership = (ownership: Record<string, unknown>) =>
+  ['owned', 'ordered', 'wanted'].includes(ownership.status as string) &&
+  isOptional(ownership.paidPrice, isAmount)
+
+const isCard = (card: Record<string, unknown>) =>
+  typeof card.id === 'string' &&
+  Array.isArray(card.dexIds) &&
+  card.dexIds.every(Number.isInteger) &&
+  typeof card.reference === 'string' &&
+  (card.image == null ||
+    (isRecord(card.image) &&
+      typeof card.image.small === 'string' &&
+      typeof card.image.large === 'string')) &&
+  isOptional(card.cardmarket, Number.isInteger) &&
+  isOptional(card.page, (page) => typeof page === 'string' && parseCardmarketLink(page) !== null)
+
+const isPreference = (preference: Record<string, unknown>) =>
+  typeof preference.decision === 'string' &&
+  Object.hasOwn(PRIORITY_LABELS, preference.priority as string) &&
+  typeof preference.updatedAt === 'string' &&
+  isOptional(preference.maxPrice, isAmount)
+
+const isLine = (line: Record<string, unknown>) =>
+  typeof line.cardId === 'string' &&
+  Number.isInteger(line.quantity) &&
+  (line.quantity as number) >= 1 &&
+  isAmount(line.unitPrice) &&
+  (line.previous === null || (isRecord(line.previous) && isOwnership(line.previous)))
+
+const isOrder = (order: Record<string, unknown>) =>
+  isDay(order.date) &&
+  isOptional(order.receivedAt, isDay) &&
+  typeof order.updatedAt === 'string' &&
+  Object.hasOwn(SUPPLIER_LABELS, order.supplier as string) &&
+  Object.hasOwn(ORDER_STATE_LABELS, order.state as string) &&
+  isAmount(order.shipping) &&
+  isAmount(order.fees) &&
+  isAmount(order.refunded) &&
+  isOptional(order.link, (link) => typeof link === 'string' && parseLink(link) !== null) &&
+  Array.isArray(order.lines) &&
+  all(order.lines, isLine)
+
+const isBudget = (budget: Record<string, unknown>) =>
+  ['monthly', 'ceiling', 'shippingReserve'].every((key) => isAmount(budget[key]))
+
 /**
  * Les enregistrements d'un fichier, là où l'app les lit sans garde : un fichier retouché à la main
- * ne doit pas faire planter toutes les pages une fois importé (puis enregistré).
+ * ne doit ni faire planter les pages une fois importé (puis enregistré), ni fausser le budget
+ * (un montant en texte), ni glisser un lien qui ne serait pas une adresse web.
  */
 const readable = (collection: CollectionData, shopping: ShoppingData | null) =>
-  all(collection.cards, (card) => ['owned', 'ordered', 'wanted'].includes(card.status as string)) &&
-  all(
-    collection.customCards,
-    (card) =>
-      Array.isArray(card.dexIds) &&
-      typeof card.reference === 'string' &&
-      (card.image == null ||
-        (isRecord(card.image) &&
-          typeof card.image.small === 'string' &&
-          typeof card.image.large === 'string')),
-  ) &&
+  all(collection.cards, isOwnership) &&
+  all(collection.customCards, isCard) &&
   (!shopping ||
-    (all(
-      shopping.preferences,
-      (preference) =>
-        typeof preference.decision === 'string' &&
-        Object.hasOwn(PRIORITY_LABELS, preference.priority as string),
-    ) &&
-      all(
-        shopping.orders,
-        (order) => typeof order.date === 'string' && Array.isArray(order.lines) && all(order.lines),
-      )))
+    (all(shopping.preferences, isPreference) &&
+      all(shopping.orders, isOrder) &&
+      isRecord(shopping.budget) &&
+      isBudget(shopping.budget)))
 
 /**
  * Le contenu d'un fichier d'export ; `null` si ce n'en est pas un, ou s'il est abîmé. `shopping`

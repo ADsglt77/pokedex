@@ -5,15 +5,11 @@
  * l'utilisateur choisit, l'app ne propose rien seule.
  */
 
+import { codeKey, referenceCode } from '@/lib/card-code'
+import { tcgplayerImage } from '@/lib/card-images'
+import { settled } from '@/lib/settled'
 import { getSpecies } from '@/lib/species'
-
-/** [extension, numéro, id Cardmarket (0 : inconnu), suffixe, ses Pokémon s'ils sont plusieurs] */
-type Row = [string, string, number, string, number[]?]
-
-interface CatalogFile {
-  sets: Record<string, [name: string, released: string]>
-  cards: Partial<Record<string, Row[]>>
-}
+import type { CardImage, CatalogFile } from '@/types'
 
 /** Une extension du catalogue. */
 export interface CatalogSet {
@@ -35,6 +31,8 @@ export interface CatalogCard {
   cardmarket?: number
   /** « Pikachu ex (SV8 033) », « Pikachu & Zekrom GX (SM9 031) » : d'où son image est retrouvée. */
   reference: string
+  /** Son image chez TCGplayer, quand Pokécardex n'a pas la sienne ; `null` sans produit relié. */
+  fallback: CardImage | null
 }
 
 /** Tout le catalogue, lu une fois : les extensions et les cartes par Pokémon. */
@@ -42,6 +40,8 @@ export interface Catalog {
   /** Les extensions, des plus récentes aux plus anciennes. */
   sets: CatalogSet[]
   bySpecies: Map<number, CatalogCard[]>
+  /** Clé : `codeKey` (« SV2A 166 »). */
+  byCode: Map<string, CatalogCard>
 }
 
 function readCatalog(file: CatalogFile): Catalog {
@@ -52,33 +52,51 @@ function readCatalog(file: CatalogFile): Catalog {
     ]),
   )
   const bySpecies = new Map<number, CatalogCard[]>()
+  const byCode = new Map<string, CatalogCard>()
   for (const [speciesId, rows] of Object.entries(file.cards)) {
     const id = Number(speciesId)
     bySpecies.set(
       id,
-      rows!.map(([set, number, cardmarket, suffix, dexIds = [id]]) => {
+      rows!.map(([set, number, cardmarket, suffix, product, dexIds = [id]]) => {
         const names = dexIds.map((dexId) => getSpecies(dexId)!.names.fr).join(' & ')
-        return {
+        const card = {
           key: `${set} ${number}`,
           set: sets.get(set) ?? { id: set, name: set, year: null },
           dexIds,
           cardmarket: cardmarket || undefined,
           reference: `${names}${suffix && ` ${suffix}`} (${set} ${number})`,
+          fallback: product ? tcgplayerImage(product) : null,
         }
+        byCode.set(codeKey({ set, number }), card)
+        return card
       }),
     )
   }
-  return { sets: [...sets.values()], bySpecies }
+  return { sets: [...sets.values()], bySpecies, byCode }
 }
 
 let catalog: Promise<Catalog> | null = null
 
 /** Le catalogue. Toujours la même promesse, lue par `use()`. */
 export function loadCatalog() {
-  catalog ??= import('@/data/catalog.json').then(({ default: file }) =>
-    readCatalog(file as unknown as CatalogFile),
+  catalog ??= settled(
+    import('@/data/catalog.json').then(({ default: file }) =>
+      readCatalog(file as unknown as CatalogFile),
+    ),
   )
   return catalog
+}
+
+/** Une extension dans une liste de choix : « SV2a · ポケモンカード151 (2023) ». */
+export const setOption = ({ id, name, year }: CatalogSet) => ({
+  value: id,
+  label: `${id} · ${name}${year ? ` (${year})` : ''}`,
+})
+
+/** La carte du catalogue d'une référence (« Herbizarre (PMCG1 008) ») ; `null` si aucune. */
+export function catalogCard(catalog: Catalog, reference: string): CatalogCard | null {
+  const code = referenceCode(reference)
+  return (code && catalog.byCode.get(codeKey(code))) ?? null
 }
 
 /** Les cartes d'une extension, tous Pokémon confondus, dans l'ordre des numéros (une fois chacune). */

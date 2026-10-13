@@ -4,6 +4,7 @@
  */
 
 import speciesJson from '@/data/species.json'
+import { settled } from '@/lib/settled'
 import type {
   CollectionData,
   PokemonCard,
@@ -40,9 +41,11 @@ let speciesDetails: Promise<Map<number, PokemonSpeciesDetails>> | null = null
  * la même promesse, lue par `use()`.
  */
 export function loadSpeciesDetails() {
-  speciesDetails ??= import('@/data/species-details.json').then(
-    ({ default: file }) =>
-      new Map((file as SpeciesDetailsFile).details.map((details) => [details.id, details])),
+  speciesDetails ??= settled(
+    import('@/data/species-details.json').then(
+      ({ default: file }) =>
+        new Map((file as SpeciesDetailsFile).details.map((details) => [details.id, details])),
+    ),
   )
   return speciesDetails
 }

@@ -40,6 +40,24 @@ describe('ce que coûte une commande', () => {
     const lines = [line('a', 0), line('b', 0, { quantity: 3 })]
     expect(unitCosts({ lines, shipping: 4, fees: 0, refunded: 0 })).toEqual([1, 1])
   })
+
+  test('les centimes d’arrondi vont à une carte : les prix de revient font la commande', () => {
+    const lines = [line('a', 10), line('b', 10), line('c', 10)]
+    const costs = unitCosts({ lines, shipping: 1, fees: 0, refunded: 0 })
+    expect(costs).toEqual([10.34, 10.33, 10.33])
+    expect(Math.round((costs[0]! + costs[1]! + costs[2]!) * 100)).toBe(3100)
+    // Arrondis vers le haut (9,666… → 9,67) : le centime de trop est retiré.
+    const refunded = unitCosts({ lines, shipping: 0, fees: 0, refunded: 1 })
+    expect(refunded).toEqual([9.66, 9.67, 9.67])
+    expect(Math.round((refunded[0]! + refunded[1]! + refunded[2]!) * 100)).toBe(2900)
+  })
+
+  test('les centimes vont aux cartes seules, pas aux lignes de plusieurs cartes', () => {
+    const lines = [line('a', 10, { quantity: 2 }), line('b', 10)]
+    const costs = unitCosts({ lines, shipping: 1, fees: 0, refunded: 0 })
+    expect(costs).toEqual([10.33, 10.34])
+    expect(Math.round((2 * costs[0]! + costs[1]!) * 100)).toBe(3100)
+  })
 })
 
 describe('report sur la collection', () => {

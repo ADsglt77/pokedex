@@ -1,28 +1,53 @@
 /**
- * Les prix Cardmarket appliqués à la collection : prix d'une carte, totaux par statut, coût pour
- * compléter le Pokédex, courbes au fil des jours.
+ * Les prix du jour appliqués à la collection : prix d'une carte, totaux par statut, coût pour
+ * compléter le Pokédex, courbes au fil des jours. Les prix de Cardmarket ; pour une carte sans id
+ * Cardmarket (vieilles séries, decks que TCGdex ne relie pas à Cardmarket), ceux de TCGplayer,
+ * convertis en euros.
  */
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
-import { findCard } from '@/lib/species'
-import { isTaken, type PokedexEntry } from '@/lib/pokedex'
+import { codeKey, referenceCode } from '@/lib/card-code'
+import { formatEuro } from '@/lib/format'
+import { cardsWithStatus, isTaken, type PokedexEntry } from '@/lib/pokedex'
 import type {
   CardPrice,
   CardPriceHistory,
   CardStatus,
   CollectionData,
   PokemonCard,
-  PriceFile,
+  Prices,
+  PriceSource,
 } from '@/types'
 
-/** Le prix du jour d'une carte, par son id Cardmarket ; `null` sans id, sans prix ou sans fichier. */
-export function priceOf(
-  prices: PriceFile | null,
-  card: Pick<PokemonCard, 'cardmarket'>,
-): CardPrice | null {
-  const row = card.cardmarket === undefined ? undefined : prices?.cards[card.cardmarket]
-  return row ? { price: row[0], low: row[1], avg30: row[2] } : null
+/** Ce qu'il faut d'une carte pour son prix : son id Cardmarket, sinon le code de sa référence. */
+interface Priced {
+  cardmarket?: number
+  reference?: string
 }
+
+/**
+ * Le prix du jour d'une carte : celui de Cardmarket, par son id ; sans id, celui de TCGplayer, par
+ * le code de sa référence (« (E1 097) »). `null` sans prix ou sans fichier.
+ */
+export function priceOf(prices: Prices | null, card: Priced): CardPrice | null {
+  if (card.cardmarket !== undefined) {
+    const row = prices?.cardmarket?.cards[card.cardmarket]
+    return row ? { price: row[0], low: row[1], avg30: row[2], source: 'cardmarket' } : null
+  }
+  const code = card.reference === undefined ? null : referenceCode(card.reference)
+  const row = code && prices?.tcgplayer?.cards[codeKey(code)]
+  return row ? { price: row[0], low: row[1], avg30: null, source: 'tcgplayer' } : null
+}
+
+/** Le prix du marché d'une carte ; `null` sans prix. */
+export const marketPrice = (prices: Prices | null, card: Priced) =>
+  priceOf(prices, card)?.price ?? null
+
+/** « 12,40 € », « 12,40 € (TCGplayer) » ou « Sans prix ». */
+export const priceLabel = (price: number | null, source?: PriceSource | null) =>
+  price === null
+    ? 'Sans prix'
+    : `${formatEuro(price)}${source === 'tcgplayer' ? ' (TCGplayer)' : ''}`
 
 /** L'écart en % entre ce que vaut une carte (ou une collection) et ce qu'elle a coûté. */
 export const gainPercent = (value: number, paid: number) =>
@@ -34,16 +59,20 @@ export interface TrackedCard {
   status: CardStatus
   paid: number | null
   value: number | null
+  source: PriceSource | null
 }
 
-export function trackedCards(collection: CollectionData, prices: PriceFile | null): TrackedCard[] {
-  return Object.entries(collection.cards).flatMap(([cardId, ownership]) => {
-    const card = findCard(cardId, collection)
-    if (!card) return []
-    const value = priceOf(prices, card)?.price ?? null
-    return [{ card, status: ownership.status, paid: ownership.paidPrice ?? null, value }]
+export const trackedCards = (collection: CollectionData, prices: Prices | null): TrackedCard[] =>
+  cardsWithStatus(collection).map(({ card, ownership }) => {
+    const price = priceOf(prices, card)
+    return {
+      card,
+      status: ownership.status,
+      paid: ownership.paidPrice ?? null,
+      value: price?.price ?? null,
+      source: price?.source ?? null,
+    }
   })
-}
 
 export interface Tally {
   count: number
@@ -93,7 +122,7 @@ export interface CompletionCost {
  */
 export function completionCost(
   entries: readonly PokedexEntry[],
-  prices: PriceFile | null,
+  prices: Prices | null,
 ): CompletionCost {
   const cost = { value: 0, priced: 0, unpriced: 0, noCard: 0 }
   const counted = new Set<string>()
@@ -102,8 +131,8 @@ export function completionCost(
       cost.noCard++
       continue
     }
-    const price = priceOf(prices, card.card)?.price
-    if (price === undefined) {
+    const price = marketPrice(prices, card.card)
+    if (price === null) {
       cost.unpriced++
       continue
     }
@@ -116,7 +145,7 @@ export function completionCost(
 
 export const completionByGeneration = (
   entries: readonly PokedexEntry[],
-  prices: PriceFile | null,
+  prices: Prices | null,
 ): { generation: Generation; cost: CompletionCost }[] =>
   GENERATIONS.map((generation) => ({
     generation,

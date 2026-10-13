@@ -20,7 +20,7 @@ const loadShopping = (text: string | null) =>
 
 interface ShoppingStore {
   shopping: ShoppingData
-  setDecision: (cardId: string, decision: rules.Decision | null) => void
+  setAccepted: (cardId: string, accepted: boolean) => void
   acceptCards: (cardIds: readonly string[]) => void
   updatePreference: (cardId: string, change: rules.PreferenceChange) => void
   setBudget: (change: Partial<BudgetSettings>) => void
@@ -53,8 +53,8 @@ export const useShoppingStore = create<ShoppingStore>()((set, get) => {
   return {
     shopping: loadShopping(readStored(SHOPPING_KEY)),
 
-    setDecision: (cardId, decision) =>
-      update((shopping, now) => rules.setDecision(shopping, cardId, decision, now)),
+    setAccepted: (cardId, accepted) =>
+      update((shopping, now) => rules.setAccepted(shopping, cardId, accepted, now)),
     acceptCards: (cardIds) => update((shopping, now) => rules.acceptCards(shopping, cardIds, now)),
     updatePreference: (cardId, change) =>
       update((shopping, now) => rules.updatePreference(shopping, cardId, change, now)),
@@ -86,5 +86,5 @@ export function addCard(card: PokemonCard, choices: NewCardChoices) {
   const collection = useCollectionStore.getState()
   collection.saveCard(card)
   if (choices.owned) collection.setCardStatus(card, 'owned')
-  if (choices.toBuy) useShoppingStore.getState().setDecision(card.id, 'accepted')
+  if (choices.toBuy) useShoppingStore.getState().setAccepted(card.id, true)
 }

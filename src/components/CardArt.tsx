@@ -1,12 +1,14 @@
 import { useState, type ReactNode } from 'react'
 import { spriteUrl } from '@/config/pokedex'
 import { cx } from '@/lib/cx'
-import type { PokemonCard } from '@/types'
+import type { CardImage, PokemonCard } from '@/types'
 import styles from './CardArt.module.css'
 
 interface CardArtProps {
   /** `null` : aucune carte connue, on montre une pochette vide. */
   card: Pick<PokemonCard, 'image' | 'reference'> | null
+  /** L'image à prendre si celle de la carte ne se charge pas (TCGplayer, quand Pokécardex ne l'a pas). */
+  fallback?: CardImage | null
   speciesId: number
   alt: string
   /** `large` charge le scan haute définition. */
@@ -26,6 +28,7 @@ interface CardArtProps {
  */
 export function CardArt({
   card,
+  fallback,
   speciesId,
   alt,
   large,
@@ -34,11 +37,13 @@ export function CardArt({
   children,
   className,
 }: CardArtProps) {
-  // Une image qui ne se charge pas retombe sur la carte de substitution.
-  const [failedSrc, setFailedSrc] = useState<string | null>(null)
-  const image = card?.image
-  const src = image ? (large ? image.large : image.small) : null
-  const showScan = src !== null && src !== failedSrc
+  // Une image qui ne se charge pas laisse place à la suivante, puis à la carte de substitution.
+  const [failed, setFailed] = useState<string[]>([])
+  const src =
+    [card?.image, fallback]
+      .flatMap((image) => (image ? [large ? image.large : image.small] : []))
+      .find((source) => !failed.includes(source)) ?? null
+  const showScan = src !== null
 
   return (
     <span
@@ -56,7 +61,7 @@ export function CardArt({
           alt={alt}
           loading={eager ? 'eager' : 'lazy'}
           decoding="async"
-          onError={() => setFailedSrc(src)}
+          onError={() => setFailed((list) => [...list, src])}
           className={styles.scan}
         />
       ) : (

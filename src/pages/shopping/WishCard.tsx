@@ -8,6 +8,7 @@ import { PRIORITY_LABELS } from '@/config/shopping'
 import { cardmarketPage } from '@/lib/cardmarket'
 import { formatDexNumber, formatEuro, formatPercent, statusLabel } from '@/lib/format'
 import { cardTitle } from '@/lib/species'
+import { priceLabel } from '@/lib/prices'
 import { priceVerdict } from '@/lib/purchase-planner'
 import type { WishRow } from '@/lib/wishlist'
 import styles from './ShoppingPage.module.css'
@@ -80,7 +81,7 @@ export function WishCard({
         <dl className={styles.wishPrices}>
           <div>
             <dt>Marché</dt>
-            <dd>{price === null ? 'Sans prix' : formatEuro(price)}</dd>
+            <dd>{priceLabel(price, row.source)}</dd>
           </div>
           <div>
             <dt>Maximum</dt>

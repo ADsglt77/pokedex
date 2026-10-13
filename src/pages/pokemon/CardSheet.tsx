@@ -1,8 +1,9 @@
 import { Button, DescriptionList, Stack } from '@camply/ui'
 import { ExternalLink as ExternalIcon, Plus } from '@camply/ui/icons'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { ExternalLink } from '@/components/ExternalLink'
+import { loadCatalog } from '@/lib/card-catalog'
 import { cardmarketPage } from '@/lib/cardmarket'
 import { statusCaption } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
@@ -46,6 +47,13 @@ export function CardSheet({ view, species }: { view: CardView; species: PokemonS
 /** Pas encore de carte : l'utilisateur ajoute celle qu'il veut pour ce Pokémon. */
 export function EmptySheet({ species }: { species: PokemonSpecies }) {
   const [adding, setAdding] = useState(false)
+  // Le catalogue, préparé quand le navigateur a le temps (au plus tard 2 s après) : la fenêtre
+  // d'ajout s'ouvre sans attendre. Safari n'a pas `requestIdleCallback`.
+  useEffect(() => {
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => void loadCatalog(), { timeout: 2000 })
+    } else setTimeout(() => void loadCatalog(), 1000)
+  }, [])
   return (
     <Stack as="section" gap={6} className={styles.sheet} aria-labelledby="sheet-title">
       <h2 id="sheet-title" className={styles.title}>

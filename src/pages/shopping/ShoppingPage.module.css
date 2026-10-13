@@ -9,10 +9,9 @@
   margin-top: 2.5rem;
 }
 
-/* Les onglets défilent sur téléphone, sur une ligne, plutôt que de déborder. */
+/* Sur téléphone, les onglets passent à la ligne : tous restent visibles. */
 .tabList {
-  overflow-x: auto;
-  scrollbar-width: none;
+  flex-wrap: wrap;
 }
 
 .tabList > * {
@@ -80,6 +79,9 @@
   grid-template-columns: 7.5rem minmax(0, 1fr);
   gap: 1rem;
   width: 100%;
+  /* La liste peut compter des centaines de cartes : le navigateur ne dessine que celles à l'écran. */
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 13rem;
 }
 
 .wishArt {

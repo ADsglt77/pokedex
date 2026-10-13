@@ -4,8 +4,8 @@ Pokédex personnel de cartes Pokémon japonaises : pour chacun des 1 025 Pokémo
 carte que l'on veut (sa référence, d'où son image est retrouvée, et son id Cardmarket pour suivre
 son prix) ; le Pokémon se débloque quand on la possède. React + Vite + TypeScript, interface
 [`@camply/ui`](https://www.npmjs.com/package/@camply/ui), espèces [PokéAPI](https://pokeapi.co/),
-images [Pokécardex](https://www.pokecardex.com/) (avec son autorisation), prix
-[Cardmarket](https://www.cardmarket.com/).
+images [Pokécardex](https://www.pokecardex.com/) (avec son autorisation), sinon
+[TCGplayer](https://www.tcgplayer.com/), prix [Cardmarket](https://www.cardmarket.com/).
 
 ```sh
 bun install
@@ -42,12 +42,14 @@ Les espèces et le catalogue des cartes japonaises sont embarqués (`bun run dat
 et TCGdex ; `bun run data:catalog --refresh` pour les nouvelles cartes) : aucune API externe
 appelée par le
 navigateur, hormis les images (dessins des Pokémon chez PokéAPI ; cartes chez Pokécardex, avec son
-autorisation et un lien vers son site sur chaque page, ou à l'adresse collée ; pas celles de
-Cardmarket, qui ne s'affichent que sur son site). Le favori ne fait que
+autorisation et un lien vers son site sur chaque page, sinon celle du produit chez TCGplayer, ou
+à l'adresse collée ; pas celles de Cardmarket, qui ne s'affichent que sur son site). Le favori ne fait que
 lire la page Cardmarket ouverte et l'envoyer à l'app d'où il a été installé : installé depuis
 `bun dev`, il ouvre `localhost`. Les prix sont des fichiers du site
 lui-même (`/prices/`), écrits chaque jour par `bun run prices` d'après les fichiers publics de
-Cardmarket : le prix du jour de toutes ses cartes à l'unité, et l'historique de chacune. En
+Cardmarket : le prix du jour de toutes ses cartes à l'unité, et l'historique de chacune ; pour les
+cartes du catalogue que Cardmarket ne relie pas (vieilles séries, decks), le prix TCGplayer
+(export de tcgcsv.com), converti en euros au cours de la BCE. En
 développement, lancer `bun run prices` une fois (le premier passage écrit quelque 60 000 fichiers
 dans `prices/`). La collection reste dans le navigateur (`localStorage`) : l'export est sa seule
 sauvegarde.
@@ -57,9 +59,10 @@ sauvegarde.
 Le site est statique. L'image Docker le construit avec Bun et le sert avec nginx
 (`deploy/nginx.conf` renvoie `index.html` pour les adresses du routage côté client).
 `compose.yaml` l'expose sur `127.0.0.1:8080` (variable `POKEDEX_PORT`), joignable seulement par le
-tunnel. Le service `prices` du même fichier relit les prix Cardmarket toutes les 6 h et en garde
-l'historique (un fichier par carte, quelques centaines de Mo) dans le volume Docker `prices` : ne
-pas lancer `docker compose down -v`, qui l'effacerait.
+tunnel. Le service `prices` du même fichier regarde toutes les 6 h si Cardmarket a publié un
+nouveau guide des prix, et TCGplayer de nouveaux prix (il ne les télécharge qu'une fois par jour) et en garde l'historique (un
+fichier par carte, quelques centaines de Mo) dans le volume Docker `prices` : ne pas lancer
+`docker compose down -v`, qui l'effacerait.
 
 **Une fois, sur le VPS**
 

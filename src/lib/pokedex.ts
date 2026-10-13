@@ -86,6 +86,16 @@ export function buildPokedex(collection: CollectionData): Pokedex {
   }
 }
 
+/**
+ * Les cartes qui ont un statut. Un statut dont la carte n'existe plus (retirée, ancien index)
+ * reste enregistré, mais ne compte nulle part : toute l'app passe par ici.
+ */
+export const cardsWithStatus = (collection: CollectionData) =>
+  Object.entries(collection.cards).flatMap(([cardId, ownership]) => {
+    const card = findCard(cardId, collection)
+    return card ? [{ card, ownership }] : []
+  })
+
 export interface CollectionSummary {
   /** Les cartes ajoutées au Pokédex. */
   cards: number
@@ -94,20 +104,27 @@ export interface CollectionSummary {
   wanted: number
 }
 
-/**
- * Ce que contient la collection. Un statut dont la carte a été retirée n'y compte plus, comme
- * partout ailleurs dans l'app.
- */
+/** Ce que contient la collection. */
 export function summarize(data: CollectionData): CollectionSummary {
   const summary = { cards: Object.keys(data.customCards).length, owned: 0, ordered: 0, wanted: 0 }
-  for (const [cardId, ownership] of Object.entries(data.cards)) {
-    if (findCard(cardId, data)) summary[ownership.status]++
-  }
+  for (const { ownership } of cardsWithStatus(data)) summary[ownership.status]++
   return summary
 }
 
 export const isEmptySummary = (summary: CollectionSummary) =>
   Object.values(summary).every((count) => count === 0)
+
+export interface RecentCard {
+  card: PokemonCard
+  acquiredAt: string | null
+}
+
+/** Les cartes obtenues, la plus récente d'abord. */
+export const acquisitions = (collection: CollectionData): RecentCard[] =>
+  cardsWithStatus(collection)
+    .filter(({ ownership }) => ownership.status === 'owned')
+    .map(({ card, ownership }) => ({ card, acquiredAt: ownership.acquiredAt }))
+    .sort((a, b) => (b.acquiredAt ?? '').localeCompare(a.acquiredAt ?? ''))
 
 /**
  * Les Pokémon débloqués au fil des mois : à chaque mois (`YYYY-MM-01`), le total débloqué à sa
@@ -115,13 +132,10 @@ export const isEmptySummary = (summary: CollectionSummary) =>
  */
 export function unlockedByMonth(collection: CollectionData, month: string) {
   const firstMonth = new Map<number, string>()
-  for (const [cardId, { status, acquiredAt }] of Object.entries(collection.cards)) {
-    const card = status === 'owned' && acquiredAt && findCard(cardId, collection)
-    if (!card) continue
-    for (const id of card.dexIds) {
-      const known = firstMonth.get(id)
-      if (!known || acquiredAt.slice(0, 7) < known) firstMonth.set(id, acquiredAt.slice(0, 7))
-    }
+  // Des plus récentes aux plus anciennes : le mois noté en dernier est le premier.
+  for (const { card, acquiredAt } of acquisitions(collection)) {
+    if (!acquiredAt) continue
+    for (const id of card.dexIds) firstMonth.set(id, acquiredAt.slice(0, 7))
   }
   const months = [...firstMonth.values()].sort()
   if (months.length === 0) return []
@@ -129,20 +143,4 @@ export function unlockedByMonth(collection: CollectionData, month: string) {
     date: `${current}-01`,
     value: months.filter((first) => first <= current).length,
   }))
-}
-
-export interface RecentCard {
-  card: PokemonCard
-  acquiredAt: string | null
-}
-
-/** Les dernières cartes obtenues, la plus récente d'abord. */
-export function recentAcquisitions(collection: CollectionData, limit: number): RecentCard[] {
-  return Object.entries(collection.cards)
-    .flatMap(([cardId, { status, acquiredAt }]) => {
-      const card = status === 'owned' && findCard(cardId, collection)
-      return card ? [{ card, acquiredAt }] : []
-    })
-    .sort((a, b) => (b.acquiredAt ?? '').localeCompare(a.acquiredAt ?? ''))
-    .slice(0, limit)
 }

@@ -1,11 +1,11 @@
 import { Input, Stack } from '@camply/ui'
 import { Suspense, use } from 'react'
 import { CardArt } from '@/components/CardArt'
-import { ExternalLink } from '@/components/ExternalLink'
+import { ImageCredit } from '@/components/ImageCredit'
 import type { CardDraft } from '@/hooks/useCardDraft'
-import { findCardImage, isPokecardexImage, POKECARDEX } from '@/lib/card-images'
+import { findCardImage } from '@/lib/card-images'
 import { formatEuro } from '@/lib/format'
-import { priceOf } from '@/lib/prices'
+import { marketPrice } from '@/lib/prices'
 import { loadPriceHistory, usePrices } from '@/store/prices'
 import styles from './CardFields.module.css'
 
@@ -37,7 +37,7 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
         />
         {draft.lookup !== null && (
           <Suspense fallback={<p className="muted">Recherche de l’image…</p>}>
-            <FoundImage reference={draft.lookup} />
+            <FoundImage reference={draft.lookup} replaced={draft.fallback !== null} />
           </Suspense>
         )}
         <Input
@@ -74,8 +74,9 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
 }
 
 /**
- * L'aperçu : l'adresse collée, sinon l'image retrouvée (qui cite Pokécardex) ; sans image, ou si
- * l'adresse ne mène pas à une image, la carte de substitution. `searching` : pendant la recherche.
+ * L'aperçu : l'adresse collée, sinon l'image retrouvée chez Pokécardex, sinon celle de TCGplayer
+ * (chacune citée) ; sans image, ou si l'adresse ne mène pas à une image, la carte de substitution.
+ * `searching` : pendant la recherche.
  */
 function Preview({
   draft,
@@ -87,7 +88,7 @@ function Preview({
   searching?: boolean
 }) {
   const found = searching || draft.lookup === null ? null : use(findCardImage(draft.lookup))
-  const image = draft.pasted ?? found
+  const image = draft.pasted ?? found ?? (searching ? null : draft.fallback)
   return (
     <figure className={styles.preview}>
       <CardArt
@@ -95,21 +96,27 @@ function Preview({
         speciesId={speciesId}
         alt="Aperçu de la carte"
       />
-      {image && isPokecardexImage(image) && (
-        <figcaption className={styles.credit}>
-          Image : <ExternalLink href={POKECARDEX}>Pokécardex</ExternalLink>
-        </figcaption>
-      )}
+      <ImageCredit image={image} className={styles.credit} />
     </figure>
   )
 }
 
-/** Ce que Pokécardex a pour la référence : l'image, ou rien. */
-function FoundImage({ reference }: { reference: string }) {
+/**
+ * Ce que Pokécardex a pour la référence : l'image, ou rien (`replaced` : l'image de TCGplayer la
+ * remplace alors).
+ */
+function FoundImage({ reference, replaced }: { reference: string; replaced: boolean }) {
   const image = use(findCardImage(reference))
-  return image ? (
+  if (image) {
+    return (
+      <p className={styles.check}>
+        Image trouvée chez Pokécardex d’après la référence : vérifiez l’aperçu.
+      </p>
+    )
+  }
+  return replaced ? (
     <p className={styles.check}>
-      Image trouvée chez Pokécardex d’après la référence : vérifiez l’aperçu.
+      Pokécardex n’a pas l’image de cette carte : celle de TCGplayer la remplace. Vérifiez l’aperçu.
     </p>
   ) : (
     <p className={styles.warn}>
@@ -122,7 +129,7 @@ function FoundImage({ reference }: { reference: string }) {
 /** Ce que Cardmarket dit de l'id saisi : le nom de la carte et son prix, pour s'assurer du bon. */
 function CardmarketCheck({ cardmarket }: { cardmarket: number }) {
   const history = use(loadPriceHistory(cardmarket))
-  const price = priceOf(usePrices(), { cardmarket })
+  const price = marketPrice(usePrices(), { cardmarket })
   if (!history) {
     return (
       <p className={styles.warn}>
@@ -133,7 +140,7 @@ function CardmarketCheck({ cardmarket }: { cardmarket: number }) {
   return (
     <p className={styles.check}>
       Chez Cardmarket : <strong>{history.name ?? 'carte sans nom'}</strong>
-      {price && ` · ${formatEuro(price.price)}`}
+      {price !== null && ` · ${formatEuro(price)}`}
     </p>
   )
 }

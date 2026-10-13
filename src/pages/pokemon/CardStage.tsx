@@ -1,13 +1,12 @@
 import { CardArt } from '@/components/CardArt'
-import { ExternalLink } from '@/components/ExternalLink'
-import { isPokecardexImage, POKECARDEX } from '@/lib/card-images'
+import { ImageCredit } from '@/components/ImageCredit'
 import type { CardView } from '@/lib/pokedex'
 import type { PokemonSpecies } from '@/types'
 import styles from './CardStage.module.css'
 
 /**
- * La carte du Pokémon en grand, ou une pochette vide tant qu'il n'en a pas. Une image de Pokécardex
- * le cite, avec un lien : la condition de son autorisation.
+ * La carte du Pokémon en grand, ou une pochette vide tant qu'il n'en a pas. Son image cite sa
+ * source (Pokécardex, la condition de son autorisation, ou TCGplayer), avec un lien.
  */
 export function CardStage({ view, species }: { view: CardView | null; species: PokemonSpecies }) {
   if (!view) {
@@ -32,11 +31,7 @@ export function CardStage({ view, species }: { view: CardView | null; species: P
         eager
         className={styles.card}
       />
-      {card.image && isPokecardexImage(card.image) && (
-        <figcaption className={styles.caption}>
-          Image : <ExternalLink href={POKECARDEX}>Pokécardex</ExternalLink>
-        </figcaption>
-      )}
+      <ImageCredit image={card.image} className={styles.caption} />
     </figure>
   )
 }

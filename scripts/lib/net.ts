@@ -20,7 +20,8 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const USER_AGENT = 'pokedex-perso/1.0 (bun run data)'
 
-async function politeFetch(url: string, init?: RequestInit) {
+/** Une requête identifiée, après 100 ms d'attente : pour une API qui le demande (tcgcsv). */
+export async function politeFetch(url: string, init?: RequestInit) {
   await wait(100)
   return fetch(url, { ...init, headers: { 'User-Agent': USER_AGENT, ...init?.headers } })
 }

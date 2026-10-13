@@ -177,13 +177,32 @@ export interface SpeciesDetailsFile {
   details: PokemonSpeciesDetails[]
 }
 
-/* Prix Cardmarket : `/prices/`, écrits chaque jour par `scripts/prices.ts` */
+/**
+ * Une carte de `catalog.json` : [extension, numéro, id Cardmarket (0 : inconnu), suffixe, produit
+ * TCGplayer (0 : aucun), ses Pokémon s'ils sont plusieurs].
+ */
+export type CatalogRow = [string, string, number, string, number, number[]?]
+
+/** `catalog.json` : les cartes Pokémon japonaises de TCGdex (`scripts/catalog.ts`). */
+export interface CatalogFile {
+  /** [nom japonais, date de sortie, groupes TCGplayer de ses cartes s'il y en a]. */
+  sets: Record<string, [name: string, released: string, tcgplayerGroups?: number[]]>
+  /** Clé : numéro du Pokémon ; ses cartes, des plus récentes aux plus anciennes. */
+  cards: Partial<Record<string, CatalogRow[]>>
+}
+
+/* Prix : `/prices/`, écrits chaque jour par `scripts/prices.ts` */
+
+/** D'où vient un prix : Cardmarket ; TCGplayer pour une carte sans id Cardmarket. */
+export type PriceSource = 'cardmarket' | 'tcgplayer'
 
 export interface CardPrice {
-  /** Prix du marché : la tendance Cardmarket, sinon sa moyenne sur 30 jours. */
+  /** Prix du marché, en euros : la tendance Cardmarket, sinon sa moyenne sur 30 jours. */
   price: number
   low: number | null
+  /** Moyenne sur 30 jours (Cardmarket seulement). */
   avg30: number | null
+  source: PriceSource
 }
 
 /** Le prix du jour d'une carte, en court : prix du marché, plus bas, moyenne sur 30 jours. */
@@ -195,6 +214,28 @@ export interface PriceFile {
   date: string
   /** Clé : id Cardmarket (`idProduct`). */
   cards: Record<string, CardPriceRow>
+}
+
+/** Le prix du jour d'une carte chez TCGplayer, converti en euros : prix du marché, plus bas. */
+export type TcgplayerPriceRow = [price: number, low: number | null]
+
+/**
+ * `tcgplayer.json` : le prix du jour, chez TCGplayer, des cartes du catalogue sans id Cardmarket
+ * (vieilles séries, decks), converti en euros.
+ */
+export interface TcgplayerPriceFile {
+  /** Jour des prix (YYYY-MM-DD). */
+  date: string
+  /** Dollars pour un euro, au cours de référence de la Banque centrale européenne. */
+  usdPerEur: number
+  /** Clé : le code de la carte (`codeKey` : « E1 97 »). */
+  cards: Record<string, TcgplayerPriceRow>
+}
+
+/** Les prix du jour, chacun `null` si son fichier manque. */
+export interface Prices {
+  cardmarket: PriceFile | null
+  tcgplayer: TcgplayerPriceFile | null
 }
 
 /** `history/<idProduct>.json` : l'historique d'une carte (Cardmarket n'en garde pas). */
