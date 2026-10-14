@@ -1,16 +1,20 @@
 /**
- * Construit le catalogue des espèces à partir de PokéAPI : `src/data/species.json` et
- * `src/data/species-details.json`. L'app n'appelle jamais PokéAPI elle-même.
- *
- *   bun run data:species [--refresh]   (bun run data : les espèces puis le catalogue, sans --refresh)
+ * Tâche `species` : les 1 025 espèces, d'après PokéAPI (nom en français, anglais et japonais,
+ * types, génération ; catégorie, description, taille, poids…), une fois par mois : elles ne
+ * changent qu'avec une nouvelle génération (à ajouter alors dans `GENERATIONS`). En fin de tâche,
+ * les réponses de `/api/species` et `/api/species/details` sont recalculées. Les autres tâches les
+ * lisent en base (`useSpecies`).
  */
 
+import type { Database } from 'bun:sqlite'
 import { GENERATIONS, TOTAL_SPECIES } from '@/config/pokedex'
+import { setSpecies } from '@/lib/species'
 import type { PokemonSpecies, PokemonSpeciesDetails, PokemonTypeId } from '@/types'
-import { writeDataFile } from './lib/dataFile'
-import { fetchJson, mapPool } from '../server/lib/net'
+import { fetchJson, mapPool } from '../lib/net'
+import { saveSnapshot } from '../snapshots'
 
 const API = 'https://pokeapi.co/api/v2'
+const MONTH = 30 * 86_400_000
 
 interface Localized {
   language: { name: string }
@@ -91,20 +95,41 @@ function normalize(species: RawSpecies, pokemon: RawPokemon) {
   return { entry, details }
 }
 
-const ids = Array.from({ length: TOTAL_SPECIES }, (_, index) => index + 1)
-console.log(`Lecture des ${TOTAL_SPECIES} espèces sur PokéAPI…`)
-const catalogue = await mapPool(ids, 8, async (id) =>
-  normalize(
-    await fetchJson<RawSpecies>(`${API}/pokemon-species/${id}`, 'pokeapi'),
-    await fetchJson<RawPokemon>(`${API}/pokemon/${id}`, 'pokeapi'),
-  ),
-)
+/** Les espèces en base, dans l'ordre du Pokédex. */
+export const readSpecies = (db: Database) =>
+  (db.query('SELECT data FROM species ORDER BY id').all() as { data: string }[]).map(
+    ({ data }) => JSON.parse(data) as PokemonSpecies,
+  )
 
-await writeDataFile('species.json', (generatedAt) => ({
-  generatedAt,
-  species: catalogue.map((row) => row.entry),
-}))
-await writeDataFile('species-details.json', (generatedAt) => ({
-  generatedAt,
-  details: catalogue.map((row) => row.details),
-}))
+/** Donne les espèces en base aux règles de `src/lib` (`speciesInName`…) ; `false` sans espèces. */
+export function loadSpecies(db: Database) {
+  const species = readSpecies(db)
+  setSpecies(species)
+  return species.length > 0
+}
+
+export async function species(db: Database) {
+  const ids = Array.from({ length: TOTAL_SPECIES }, (_, index) => index + 1)
+  console.log(`Lecture des ${TOTAL_SPECIES} espèces sur PokéAPI…`)
+  const rows = await mapPool(ids, 8, async (id) => {
+    const [raw, pokemon] = await Promise.all([
+      fetchJson<RawSpecies>(`${API}/pokemon-species/${id}`, 'pokeapi', undefined, MONTH),
+      fetchJson<RawPokemon>(`${API}/pokemon/${id}`, 'pokeapi', undefined, MONTH),
+    ])
+    return normalize(raw, pokemon)
+  })
+
+  const write = db.query(
+    `INSERT INTO species (id, data, details) VALUES (?, ?, ?)
+     ON CONFLICT (id) DO UPDATE SET data = excluded.data, details = excluded.details`,
+  )
+  db.transaction(() => {
+    for (const { entry, details } of rows) {
+      write.run(entry.id, JSON.stringify(entry), JSON.stringify(details))
+    }
+    saveSnapshot(db, 'species', { species: rows.map(({ entry }) => entry) })
+    saveSnapshot(db, 'species-details', { details: rows.map(({ details }) => details) })
+  })()
+  setSpecies(rows.map(({ entry }) => entry))
+  console.log(`${rows.length} espèces enregistrées`)
+}

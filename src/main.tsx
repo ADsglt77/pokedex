@@ -1,4 +1,4 @@
-import { ToastProvider } from '@camply/ui'
+import { Button, EmptyState, ToastProvider } from '@camply/ui'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router/dom'
@@ -11,16 +11,33 @@ import '@fontsource/space-grotesk/600.css'
 import '@fontsource/space-grotesk/700.css'
 import '@camply/ui/styles.css'
 import './styles/global.css'
+import { loadSpecies } from './lib/species'
 import { router } from './router'
 import { requestPersistentStorage } from './store/persist'
 
 requestPersistentStorage()
 
-// Point d'entrée : polices, styles camply puis ceux de l'app, notifications et routeur.
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ToastProvider position="bottom-left">
-      <RouterProvider router={router} />
-    </ToastProvider>
-  </StrictMode>,
+const root = createRoot(document.getElementById('root')!)
+
+// Point d'entrée : polices, styles camply puis ceux de l'app. Les espèces viennent du serveur
+// avant tout affichage (toutes les pages en ont besoin) ; puis notifications et routeur.
+loadSpecies().then((loaded) =>
+  root.render(
+    <StrictMode>
+      {loaded ? (
+        <ToastProvider position="bottom-left">
+          <RouterProvider router={router} />
+        </ToastProvider>
+      ) : (
+        <main className="container">
+          <EmptyState
+            title="Le Pokédex ne peut pas s’afficher"
+            description="Le serveur ne répond pas, ou ses données ne sont pas encore prêtes (premier démarrage). Réessayez dans un instant."
+            headingLevel={2}
+            actions={<Button onClick={() => location.reload()}>Réessayer</Button>}
+          />
+        </main>
+      )}
+    </StrictMode>,
+  ),
 )

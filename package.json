@@ -10,8 +10,7 @@
     "dev:server": "bun --watch server/index.ts",
     "lint": "eslint .",
     "test": "bun test",
-    "format": "prettier --write src/ scripts/ server/ tests/",
-    "data:species": "bun scripts/species.ts",
+    "format": "prettier --write src/ server/ tests/",
     "ingest": "bun server/ingest.ts"
   },
   "dependencies": {

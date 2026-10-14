@@ -23,13 +23,17 @@ import { backups } from './jobs/backups'
 import { catalog, catalogSnapshot } from './jobs/catalog'
 import { images } from './jobs/images'
 import { prices, pricesSnapshot } from './jobs/prices'
+import { species } from './jobs/species'
 import { hasHistory, importLegacyPrices } from './legacy-prices'
 import { saveSnapshot } from './snapshots'
 
 const HOUR = 3_600_000
 
-// Dans l'ordre où elles passent : les prix TCGplayer et les images suivent le catalogue.
+// Dans l'ordre où elles passent : le catalogue suit les espèces, les prix TCGplayer et les images
+// suivent le catalogue.
 const JOBS: Record<string, { every: number; run: (db: Database) => Promise<void> }> = {
+  // Les espèces ne changent qu'avec une nouvelle génération ; le catalogue en a besoin.
+  species: { every: 30 * 24 * HOUR, run: species },
   // De nouvelles cartes quelques fois par mois.
   catalog: { every: 24 * HOUR, run: catalog },
   // Les prix changent une fois par jour ; la tâche ne retélécharge que ce qui a changé.

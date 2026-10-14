@@ -1,12 +1,13 @@
 /**
- * Crée le compte, le seul (le site n'a pas d'inscription), ou change son mot de passe.
+ * Crée un compte administrateur (le vôtre : il invite les autres, qui s'inscrivent avec une
+ * invitation), ou change son mot de passe ; un compte existant devient administrateur.
  *
  *   bun server/create-user.ts <e-mail>
  *   sur le VPS : docker compose run --rm server bun server/create-user.ts <e-mail>
  *
  * Le mot de passe est demandé deux fois au clavier, sans s'afficher ; ou lu sur l'entrée standard
  * (`… | bun server/create-user.ts <e-mail>`) : jamais en argument, il resterait dans l'historique
- * du terminal. Le changer ferme les sessions ouvertes sur tous les appareils.
+ * du terminal. Le changer ferme les sessions ouvertes.
  */
 
 import { createAuth } from './auth'
@@ -47,7 +48,7 @@ if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
   process.exit(1)
 }
 
-const auth = await createAuth(openApp(), { signUp: true })
+const auth = await createAuth(openApp(), { trusted: true })
 const context = await auth.$context
 const { minPasswordLength, maxPasswordLength } = context.password.config
 
@@ -65,8 +66,13 @@ const found = await context.internalAdapter.findUserByEmail(email)
 if (found) {
   await context.internalAdapter.updatePassword(found.user.id, await context.password.hash(password))
   await context.internalAdapter.deleteUserSessions(found.user.id)
-  console.log(`Mot de passe de ${email} changé ; ses sessions sont fermées.`)
+  await context.internalAdapter.updateUser(found.user.id, { role: 'admin' })
+  console.log(`Mot de passe de ${email} changé (administrateur) ; ses sessions sont fermées.`)
 } else {
-  await auth.api.signUpEmail({ body: { email, password, name: email.split('@')[0]! } })
-  console.log(`Compte ${email} créé.`)
+  const { user } = await auth.api.signUpEmail({
+    body: { email, password, name: email.split('@')[0]! },
+  })
+  await context.internalAdapter.updateUser(user.id, { role: 'admin' })
+  console.log(`Compte administrateur ${email} créé : il peut inviter d’autres personnes.`)
 }
+process.exit(0)

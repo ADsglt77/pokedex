@@ -5,7 +5,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { authClient } from '@/lib/auth-client'
 import { pageTitle } from '@/lib/format'
 import { sync } from '@/store/sync'
-import styles from './LoginPage.module.css'
+import styles from './AuthPage.module.css'
 
 /** L'adresse où revenir : une page du site (« /achats »), jamais un autre site (« //exemple.fr »). */
 const returnPath = (path: string | null) =>
@@ -89,6 +89,10 @@ export function LoginPage() {
               <Button type="submit" fullWidth loading={busy} leftIcon={<LogIn size={16} />}>
                 Se connecter
               </Button>
+              <p className="muted">
+                Pas de compte ? L’inscription se fait sur invitation : demandez un lien à
+                l’administrateur du site.
+              </p>
             </Stack>
           </form>
         )}

@@ -23,10 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# Réponses des API gardées par les scripts de données
-scripts/.cache
-
-# Prix Cardmarket, écrits par `bun run prices` et servis par `bun dev` (sur le VPS : volume du service `prices`)
+# Anciens prix en fichiers, à reprendre dans la base : `bun run ingest legacy-prices ./prices`
 /prices
 
 # Bases SQLite et images du serveur en développement (`DATA_DIR`, sur le VPS : volumes Docker)

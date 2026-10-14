@@ -1,5 +1,13 @@
 import { Button, DropdownMenu, MenuItem, MenuLabel, MenuSeparator } from '@camply/ui'
-import { CloudAlert, CloudCheck, CloudOff, LogIn, LogOut, RefreshCw } from '@camply/ui/icons'
+import {
+  CloudAlert,
+  CloudCheck,
+  CloudOff,
+  LogIn,
+  LogOut,
+  RefreshCw,
+  UserPlus,
+} from '@camply/ui/icons'
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -39,7 +47,7 @@ const STATUS: Record<
   expired: {
     label: 'Reconnectez-vous',
     icon: CloudAlert,
-    text: 'Votre session a expiré : vos modifications restent sur cet appareil.',
+    text: 'Vous êtes déconnecté (session expirée, ou connexion sur un autre appareil : un seul à la fois) : vos modifications restent sur cet appareil.',
   },
   conflict: {
     label: 'À choisir',
@@ -125,6 +133,11 @@ export function AccountMenu() {
         ) : (
           <MenuItem icon={<RefreshCw size={16} />} onSelect={() => void sync()}>
             Synchroniser maintenant
+          </MenuItem>
+        )}
+        {(session.user as { role?: string }).role === 'admin' && (
+          <MenuItem icon={<UserPlus size={16} />} onSelect={() => navigate('/donnees#invitations')}>
+            Inviter quelqu’un
           </MenuItem>
         )}
         <MenuItem

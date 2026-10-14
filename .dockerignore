@@ -2,7 +2,6 @@
 .claude
 node_modules
 dist
-scripts/.cache
 prices
 *.local
 .data

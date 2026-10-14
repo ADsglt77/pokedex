@@ -16,13 +16,13 @@
 
 import type { Database } from 'bun:sqlite'
 import { TOTAL_SPECIES } from '@/config/pokedex'
-import speciesFile from '@/data/species.json'
 import { speciesInName } from '@/lib/filters'
-import type { CatalogFile, CatalogImage, CatalogRow } from '@/types'
+import type { CatalogFile, CatalogImage, CatalogRow, PokemonSpecies } from '@/types'
 import { readSource, writeSource } from '../db'
 import { fetchJson, mapPool } from '../lib/net'
 import { tcgplayerCatalog } from '../lib/tcgplayer'
 import { saveSnapshot } from '../snapshots'
+import { loadSpecies, readSpecies } from './species'
 
 const GRAPHQL = 'https://api.tcgdex.net/v2/graphql'
 const REST = 'https://api.tcgdex.net/v2/ja'
@@ -63,9 +63,8 @@ async function graphql<T>(query: string): Promise<T> {
 const SUFFIX = /(VSTAR|VMAX|V-UNION|V|GX|EX|Ex|ex|BREAK)$/
 
 // Les Pokémon par leur nom japonais : « リーフィア » → 470.
-const BY_JAPANESE_NAME = new Map(
-  speciesFile.species.flatMap(({ id, names }) => (names.ja ? [[names.ja, id] as const] : [])),
-)
+const byJapaneseName = (species: readonly PokemonSpecies[]) =>
+  new Map(species.flatMap(({ id, names }) => (names.ja ? [[names.ja, id] as const] : [])))
 
 /**
  * Les Pokémon d'une carte : ceux de TCGdex ; sinon (il n'en donne pas pour certaines cartes, dont
@@ -76,7 +75,7 @@ const BY_JAPANESE_NAME = new Map(
  * suit « の » (« ヒビキのホウオウ » : le Ho-Oh d'Ethan). « リーフィアex » → Phyllali. Une
  * correspondance de noms, pas une détection : un nom qui ne correspond pas laisse la carte de côté.
  */
-function speciesOf(card: RawCard): number[] {
+function speciesOf(card: RawCard, byName: ReadonlyMap<string, number>): number[] {
   const known = [...new Set(card.dexId ?? [])].filter(
     (id): id is number => id !== null && Number.isInteger(id) && id >= 1 && id <= TOTAL_SPECIES,
   )
@@ -92,7 +91,7 @@ function speciesOf(card: RawCard): number[] {
     name.replace(/^(メガ|かがやく|ブラック|ホワイト)/, ''),
     name.split('の').at(-1)!,
   ]
-  const named = candidates.map((candidate) => BY_JAPANESE_NAME.get(candidate)).find(Boolean)
+  const named = candidates.map((candidate) => byName.get(candidate)).find(Boolean)
   return named ? [named] : []
 }
 
@@ -154,6 +153,9 @@ export function catalogSnapshot(db: Database): CatalogFile {
 }
 
 export async function catalog(db: Database) {
+  // Les espèces en base (tâche `species`, passée avant) : le Pokémon des cartes vient de leur nom.
+  if (!loadSpecies(db)) throw new Error('Pas encore d’espèces en base : la tâche species d’abord')
+  const byName = byJapaneseName(readSpecies(db))
   console.log('Cartes Pokémon japonaises de TCGdex…')
   const cards: RawCard[] = []
   // Jusqu'à une page vide : une page plus courte que demandé ne dit pas que c'est la dernière.
@@ -178,7 +180,7 @@ export async function catalog(db: Database) {
   const released = new Map(sets.map((set) => [set.id, set.releaseDate ?? '']))
 
   const pokemon = cards.flatMap((card) => {
-    const dexIds = speciesOf(card)
+    const dexIds = speciesOf(card, byName)
     return dexIds.length ? [{ card, dexIds }] : []
   })
   const recognized = new Set(pokemon.map(({ card }) => card))

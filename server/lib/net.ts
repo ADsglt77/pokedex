@@ -1,6 +1,6 @@
 /**
  * Réseau des tâches d'ingestion et des scripts de données : un `fetch` JSON avec un cache disque
- * (`CACHE_DIR`, sinon `scripts/.cache` : pour relancer une tâche sans solliciter les API à nouveau)
+ * (`CACHE_DIR`, sinon `.data/cache` : pour relancer une tâche sans solliciter les API à nouveau)
  * et une file à concurrence limitée. Chaque requête s'identifie et attend 100 ms avant de partir.
  * Un 404 arrête la tâche. Une réponse en cache sert tant qu'elle a moins de `maxAge` ms (sans
  * limite par défaut) ; `--refresh` redemande tout.
@@ -9,9 +9,9 @@
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { DATA_DIR } from '../db'
 
-const CACHE_ROOT =
-  process.env.CACHE_DIR ?? join(import.meta.dirname, '..', '..', 'scripts', '.cache')
+const CACHE_ROOT = process.env.CACHE_DIR ?? join(DATA_DIR, 'cache')
 
 /** `--refresh` : ignore le cache et redemande tout. */
 const refresh = process.argv.includes('--refresh')

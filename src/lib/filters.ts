@@ -93,21 +93,12 @@ export const searchForm = (text: string) =>
     .replace(/[\u3041-\u3096]/g, (kana) => String.fromCharCode(kana.charCodeAt(0) + 0x60))
     .replace(/[^\p{L}\p{N}]/gu, '')
 
-// Les noms fr, en et ja de chaque espèce, une ligne chacun : une recherche ne déborde pas d'un nom
-// sur le suivant.
-const SEARCH_NAMES = new Map(
-  SPECIES.map(({ id, names }) => [
-    id,
-    [names.fr, names.en, names.ja ?? ''].map(searchForm).join('\n'),
-  ]),
-)
-
 /** « 25 », « #25 », « n°25 » : les numéros qui commencent par 25. Sinon : les noms. */
 export function searchMatcher(search: string): (species: PokemonSpecies) => boolean {
   const digits = /^(?:#|n°)?\s*(\d+)$/i.exec(search.trim())?.[1]
   if (digits) return (species) => String(species.id).startsWith(String(Number(digits)))
   const needle = searchForm(search)
-  return (species) => SEARCH_NAMES.get(species.id)!.includes(needle)
+  return (species) => speciesIndex().searchNames.get(species.id)!.includes(needle)
 }
 
 /**
@@ -120,9 +111,34 @@ const words = (text: string) =>
     .replace(/[^\p{L}\p{N}♀♂]+/gu, ' ')
     .trim()} `
 
-const SPECIES_WORDS = SPECIES.flatMap(({ id, names }) =>
-  [names.fr, names.en].map((name) => ({ id, name: words(name) })),
-)
+let index: {
+  species: readonly PokemonSpecies[]
+  searchNames: Map<number, string>
+  words: { id: number; name: string }[]
+} | null = null
+
+/**
+ * Les noms des espèces prêts pour la recherche, faits à la première recherche (les espèces arrivent
+ * du serveur après le chargement de ce module) : pour chacune, ses noms fr, en et ja, une ligne
+ * chacun (une recherche ne déborde pas d'un nom sur le suivant), et ses noms fr et en en mots.
+ */
+function speciesIndex() {
+  if (index?.species !== SPECIES) {
+    index = {
+      species: SPECIES,
+      searchNames: new Map(
+        SPECIES.map(({ id, names }) => [
+          id,
+          [names.fr, names.en, names.ja ?? ''].map(searchForm).join('\n'),
+        ]),
+      ),
+      words: SPECIES.flatMap(({ id, names }) =>
+        [names.fr, names.en].map((name) => ({ id, name: words(name) })),
+      ),
+    }
+  }
+  return index
+}
 
 /**
  * Le Pokémon d'un nom de carte (« Lillie's Clefairy ex », « Pikachu (30C 034) ») : celui dont le
@@ -132,7 +148,7 @@ const SPECIES_WORDS = SPECIES.flatMap(({ id, names }) =>
  */
 export function speciesInName(name: string): number | null {
   const text = words(name.replace(/\([^()]*\)\s*$/, ''))
-  const found = SPECIES_WORDS.filter((species) => text.includes(species.name))
+  const found = speciesIndex().words.filter((species) => text.includes(species.name))
   return found.sort((a, b) => b.name.length - a.name.length)[0]?.id ?? null
 }
 

@@ -19,13 +19,13 @@ bun dev                # serveur Vite (lancé par Bun, pas par Node : `bun --bun
 bun run build          # tsc -b + vite build (pas `bun build`)
 bun lint               # ESLint
 bun test               # tests de tests/ (logique des achats), relancés par le build Docker
-bun run format         # Prettier sur src/, scripts/, server/ et tests/ (les JSON de src/data sont exclus)
+bun run format         # Prettier sur src/, server/ et tests/
 bun run dev:server     # le serveur de l'app (API, server/index.ts) sur le port 3000 ; `bun dev` lui renvoie /api
 bun run ingest catalog # une tâche d'ingestion : catalogue (TCGdex, Cardmarket, TCGplayer) → .data/data.db
 bun run ingest prices  # prix du jour (Cardmarket, TCGplayer, BCE) ; `--refresh` après le nom : ignore le cache
 bun run ingest legacy-prices ./prices   # une fois : reprise des anciens fichiers de prix dans la base
-bun server/create-user.ts <e-mail>       # crée le compte (ou change son mot de passe) ; en local : .env.local
-bun run data:species   # PokéAPI → species.json, species-details.json ; `--refresh` ignore le cache
+bun run ingest species # les espèces (PokéAPI) → .data/data.db : la première tâche à lancer
+bun server/create-user.ts <e-mail>       # crée un compte administrateur (ou change son mot de passe) ; en local : .env.local
 ```
 
 ## Principes
@@ -64,6 +64,11 @@ bun run data:species   # PokéAPI → species.json, species-details.json ; `--re
   (`/api/…` : catalogue, prix) et les images copiées (`/images/…`) ; seule exception, une image à
   l'adresse collée. Les sources (PokéAPI, TCGdex, Pokécardex, Cardmarket, TCGplayer, BCE) ne sont
   lues que par les tâches d'ingestion du serveur.
+- Sources : on peut lire (scraper) n'importe quel site, ou contourner une protection (données
+  chiffrées…), mais **toujours demander d'abord à l'utilisateur**, qui obtient l'accord du site ;
+  dire précisément quoi (pages, rythme, méthode). Jamais de CAPTCHA ni de défi anti-robot
+  (Cloudflare…), même avec un accord. Sources déjà convenues : PokéAPI, TCGdex, tcgcsv
+  (TCGplayer), les fichiers publics de Cardmarket, la BCE, les images de Pokécardex.
 - Cardmarket : seulement les fichiers publics (guide des prix, liste des produits). Pas de
   scraping, pas d'API (fermée), pas de panier ni de commande à distance. Un seul lien Cardmarket
   construit : la page d'un produit par son id (`cardmarketPage` :
@@ -83,15 +88,13 @@ bun run data:species   # PokéAPI → species.json, species-details.json ; `--re
 | Dossier | Rôle |
 |---|---|
 | `src/config/` | Générations, couleurs des types, achats (budget par défaut, niveaux de budget, priorités, fournisseurs) : configuration, pas de logique |
-| `src/data/` | JSON écrits par `bun run data:species` : les espèces et leurs détails (chargés à la demande) ; le catalogue vient de l'API |
-| `src/lib/` | Règles **pures** : `species` (espèces, carte d'un id), `cardmarket` (page et id saisis, ce que le favori envoie, code du favori), `card-code` (le code d'une carte dans sa référence, sa clé ; sans import, `prices.ts` s'en sert), `card-images` (l'image d'une carte chez Pokécardex d'après sa référence, celle de TCGplayer, d'où vient une image), `card-catalog` (les cartes japonaises d'un Pokémon, la carte d'une référence), `pokedex` (modèle : la carte de chaque Pokémon, progression, résumé), `collection` (modifications : statut, prix payé, ajout et retrait d'une carte), `filters` (adresse, liens filtrés, recherche), `transfer` (export, import, CSV, lecture du stockage), `prices` (prix d'une carte, Cardmarket sinon TCGplayer, valeur, coût pour compléter, courbes, plus fortes hausses et baisses : `priceMovers`), `format`, `settled` (une promesse que `use()` lit sans attendre), `api` (lecture de l'API, mémoïsée), `auth-client` (client Better Auth), `sync` (la règle de la synchronisation) ; achats : `wishlist` (préférences, filtres, CSV de la liste), `orders` (coût, report sur la collection, doublons, commandes en retard), `budget` (par mois, par fournisseur), `purchase-planner` (prochaine commande) |
+| `src/lib/` | Règles **pures** : `species` (espèces, données par le serveur avant le premier affichage ; carte d'un id), `cardmarket` (page et id saisis, ce que le favori envoie, code du favori), `card-code` (le code d'une carte dans sa référence, sa clé ; sans import, `prices.ts` s'en sert), `card-images` (l'image d'une carte chez Pokécardex d'après sa référence, celle de TCGplayer, d'où vient une image), `card-catalog` (les cartes japonaises d'un Pokémon, la carte d'une référence), `pokedex` (modèle : la carte de chaque Pokémon, progression, résumé), `collection` (modifications : statut, prix payé, ajout et retrait d'une carte), `filters` (adresse, liens filtrés, recherche), `transfer` (export, import, CSV, lecture du stockage), `prices` (prix d'une carte, Cardmarket sinon TCGplayer, valeur, coût pour compléter, courbes, plus fortes hausses et baisses : `priceMovers`), `format`, `settled` (une promesse que `use()` lit sans attendre), `api` (lecture de l'API, mémoïsée), `auth-client` (client Better Auth), `sync` (la règle de la synchronisation) ; achats : `wishlist` (préférences, filtres, CSV de la liste), `orders` (coût, report sur la collection, doublons, commandes en retard), `budget` (par mois, par fournisseur), `purchase-planner` (prochaine commande) |
 | `src/store/` | Zustand : `collection` et `shopping` (liste d'achats, commandes, budget), dans `localStorage` ; `prices` (`/api/prices`) ; `sync` (la collection du compte connecté, `/api/collection`). `persist` les enregistre et les garde d'accord entre onglets |
 | `src/hooks/` | `usePokedex` (modèle partagé par toutes les pages), `useNotify` (toasts + « Annuler »), `usePokedexFilters`, `useCardDraft` (saisie d'une carte), `useExportCollection` |
 | `src/components/` | Composants métier partagés par plusieurs pages (carte, champs d'une carte, tuile, réglette, courbe, réglages d'achat d'une carte…) et les seuls génériques absents de camply (confirmation, en-tête de page, lien externe, crédit d'une image, champ enregistré en le quittant, `SegmentedField`), le compte dans l'en-tête (`AccountMenu`) et la question d'un conflit (`SyncConflictDialog`) ; le reste vient de camply |
 | `src/pages/` | Une page par route ; les sous-composants d'une page vivent dans son dossier (`pokemon/CardForm` : ajouter ou corriger la carte d'un Pokémon ; `AddCardPage` : `/ajouter`, ouverte par le favori ; `LoginPage` : `/connexion`) |
 | `tests/` | Tests `bun test` de la logique des achats et de la synchronisation (`tsconfig.tests.json`) |
-| `server/` | Bun, le serveur (`tsconfig.server.json`) : `index.ts` (l'API, `Bun.serve`), `db.ts` (SQLite dans `DATA_DIR`, `.data/` en local : `data.db`, les données de référence, et `app.db`, le compte et la collection ; schéma par étapes, `PRAGMA user_version`), `auth.ts` (Better Auth), `collection.ts` (`/api/collection`), `create-user.ts`, `ingest.ts` (les tâches d'ingestion, une à la demande ou `--loop`), `jobs/catalog.ts`, `jobs/prices.ts`, `jobs/images.ts`, `jobs/backups.ts`, `images.ts` (les images copiées, dans `IMAGES_DIR` : leur adresse d'origine, la copie, la copie à la demande), `history.ts` (l'historique des prix, une ligne par carte et par année), `snapshots.ts` (les grosses réponses, calculées en fin de tâche et gardées compressées), `legacy-prices.ts` (reprise des anciens fichiers de prix), `lib/net.ts` (cache disque, requêtes espacées), `lib/tcgplayer.ts` (le produit TCGplayer de chaque carte) |
-| `scripts/` | Bun : `species.ts` (PokéAPI → `src/data`, avec `server/lib/net.ts` et `lib/dataFile.ts`) |
+| `server/` | Bun, le serveur (`tsconfig.server.json`) : `index.ts` (l'API, `Bun.serve`), `db.ts` (SQLite dans `DATA_DIR`, `.data/` en local : `data.db`, les données de référence, et `app.db`, le compte et la collection ; schéma par étapes, `PRAGMA user_version`), `auth.ts` (Better Auth : invitations, une session par compte), `invitations.ts` (`/api/invitations`), `collection.ts` (`/api/collection`), `create-user.ts`, `jobs/species.ts`, `ingest.ts` (les tâches d'ingestion, une à la demande ou `--loop`), `jobs/catalog.ts`, `jobs/prices.ts`, `jobs/images.ts`, `jobs/backups.ts`, `images.ts` (les images copiées, dans `IMAGES_DIR` : leur adresse d'origine, la copie, la copie à la demande), `history.ts` (l'historique des prix, une ligne par carte et par année), `snapshots.ts` (les grosses réponses, calculées en fin de tâche et gardées compressées), `legacy-prices.ts` (reprise des anciens fichiers de prix), `lib/net.ts` (cache disque, requêtes espacées), `lib/tcgplayer.ts` (le produit TCGplayer de chaque carte) |
 
 Points à connaître :
 
@@ -119,7 +122,7 @@ Points à connaître :
   plusieurs cartes, ou d'un autre Pokémon dans la liste publique des produits de Cardmarket (nom
   anglais, `speciesInName`, attaques ôtées ; en cache un jour), il est retiré
   (16 en octobre 2026). Le Pokémon vient de TCGdex ; quand il n'en donne pas
-  (des ex récentes…), de la correspondance exacte du nom japonais avec `species.json`
+  (des ex récentes…), de la correspondance exacte du nom japonais avec les espèces en base
   (`speciesOf`) : les cartes sans correspondance sont laissées de côté, et la tâche les compte.
   Le produit TCGplayer (`server/lib/tcgplayer.ts`, export de tcgcsv.com, tous ses groupes, requêtes
   une à une, User-Agent identifié, cache d'un jour) : dans le groupe de l'extension (même code,
@@ -255,28 +258,37 @@ Points à connaître :
   partagent aussi la dernière version échangée avec le serveur. Si le navigateur
   refuse de lire ou d'écrire (stockage plein ou bloqué), l'app continue en mémoire et un bandeau
   (`useStorageFailure`, `AppShell`) invite à exporter.
-- Compte et synchronisation (`server/auth.ts`, `server/collection.ts`, `lib/sync.ts`,
-  `store/sync.ts`) : un seul compte, le vôtre (Better Auth, e-mail et mot de passe, pas
-  d'inscription : `server/create-user.ts` le crée ou change son mot de passe, ce qui ferme ses
-  sessions). Sessions de 60 jours dans un cookie (`__Secure-` en https, SameSite Lax) ; en
-  production, 5 tentatives de connexion par minute et par visiteur (`cf-connecting-ip`). Sans
-  connexion, l'app marche comme avant : la collection reste dans le navigateur, le Pokédex est
-  public. Connecté, la collection et les achats forment un seul document (une commande modifie les
-  deux), dans `app.db`, numéroté par le serveur (`/api/collection` : `PUT` refusé, 409, si
-  l'appareil part d'une version dépassée ; le document passe les contrôles d'un import,
-  `readDocument`). Le navigateur garde sa copie (hors ligne, l'app marche ; l'envoi part au retour
-  du réseau) et note la dernière version échangée (`pokedex-collection.sync` : version et
-  empreinte SHA-256 ; les deux autres clés gardent leur format) : il synchronise une seconde après
-  une modification, au retour de la page et du réseau, un onglet à la fois (`navigator.locks`).
-  La règle (`decide`, testée) : seul cet appareil a changé, il envoie ; seul le serveur, il reprend ;
-  les deux, une fenêtre fait choisir la version à garder (`SyncConflictDialog`, avec un export de
-  celle de l'appareil ; jamais de fusion, comme à l'import). À la première connexion d'un appareil,
-  celui qui a quelque chose l'envoie (ou le reçoit). Le serveur garde une version remplacée par
-  heure, 30 jours (`collection_versions`, à reprendre à la main). Se déconnecter vide la copie de
-  ce navigateur (appareil partagé), après avoir proposé l'export si un envoi a échoué. « Annuler »,
-  l'import, « Effacer » sont des modifications comme les autres : connecté, elles valent pour tous
-  les appareils (les textes de la page Données le disent). L'en-tête montre l'état (`AccountMenu` :
-  synchronisée, hors ligne, reconnectez-vous, à choisir) ; `/connexion` (`LoginPage`) ramène à la
+- Comptes et synchronisation (`server/auth.ts`, `server/invitations.ts`, `server/collection.ts`,
+  `lib/sync.ts`, `store/sync.ts`) : Better Auth, e-mail et mot de passe. Inscription
+  (`/inscription`, `SignUpPage`) seulement avec une invitation valable (lien
+  `?invitation=…`, en-tête `X-Invitation`, prise au moment de créer le compte : une seule
+  inscription, 7 jours) ; un administrateur les crée et les retire (Données › Invitations,
+  `/api/invitations`, réservé au rôle `admin`, champ `role` du compte, jamais donné à
+  l'inscription). `server/create-user.ts` crée un compte administrateur (le vôtre) ou change son
+  mot de passe (ce qui ferme ses sessions). **Une seule session par compte** : se connecter sur un
+  appareil déconnecte les autres (crochet `session.create.after`) ; l'appareil déconnecté garde
+  ses modifications et affiche « Reconnectez-vous ». Sessions de 60 jours dans un cookie
+  (`__Secure-` en https, SameSite Lax) ; en production, 5 tentatives de connexion ou d'inscription
+  par minute et par visiteur (`cf-connecting-ip`). Sans connexion, l'app marche comme avant : la
+  collection reste dans le navigateur, le Pokédex est public. Connecté, la collection et les achats
+  forment un seul document par compte (une commande modifie les deux), dans `app.db`, numéroté par
+  le serveur (`/api/collection` : `PUT` refusé, 409, si l'appareil part d'une version dépassée ; le
+  document passe les contrôles d'un import, `readDocument`). Le navigateur garde sa copie (hors
+  ligne, l'app marche ; l'envoi part au retour du réseau) et note la dernière version échangée
+  (`pokedex-collection.sync` : version et empreinte SHA-256 ; les deux autres clés gardent leur
+  format) : il synchronise une seconde après une modification, au retour de la page et du réseau,
+  un onglet à la fois (`navigator.locks`). La règle (`decide`, testée) : seul cet appareil a
+  changé, il envoie ; seul le serveur, il reprend ; les deux, une fenêtre fait choisir la version à
+  garder (`SyncConflictDialog`, avec un export de celle de l'appareil ; jamais de fusion, comme à
+  l'import). Avec une seule session, ce cas ne vient plus que d'un appareil déconnecté avec des
+  modifications pas encore envoyées, qui se reconnecte : la fenêtre reste le filet de sécurité. À
+  la première connexion d'un appareil, celui qui a quelque chose l'envoie (ou le reçoit). Le
+  serveur garde une version remplacée par heure, 30 jours (`collection_versions`, à reprendre à la
+  main). Se déconnecter vide la copie de ce navigateur (appareil partagé), après avoir proposé
+  l'export si un envoi a échoué. « Annuler », l'import, « Effacer » sont des modifications comme
+  les autres : connecté, elles valent pour tous les appareils (les textes de la page Données le
+  disent). L'en-tête montre l'état (`AccountMenu` : synchronisée, hors ligne, reconnectez-vous, à
+  choisir ; « Inviter quelqu'un » pour un administrateur) ; `/connexion` (`LoginPage`) ramène à la
   page d'où l'on venait (`?retour=`, seulement une page du site). Le rappel de sauvegarde ne paraît
   que sans connexion.
 - « Annuler » (`useCollectionAction`) rétablit collection et achats d'avant, et refuse si quelque
@@ -302,7 +314,7 @@ Points à connaître :
   même fichier (outil, formateur) peuvent lui échapper : il sert alors l'ancienne version (page
   blanche, « … is not defined ») jusqu'à ce que le fichier soit de nouveau enregistré.
 - `noUncheckedIndexedAccess` est actif ; alias `@/` → `src/` (vite.config.ts, tsconfig.base.json
-  dont héritent tsconfig.app, .scripts, .server et .tests, et tsconfig.json pour Bun).
+  dont héritent tsconfig.app, .server et .tests, et tsconfig.json pour Bun).
 
 ## Déploiement
 
@@ -321,8 +333,8 @@ jour arrivent déjà compressés). `compose.yaml` :
   publique en https, et `BETTER_AUTH_SECRET`) viennent du `.env` du clone (ignoré par git) : sans
   eux, docker compose refuse de démarrer. Le compte : `docker compose run --rm server bun
   server/create-user.ts <e-mail>` ;
-- `ingest` : `server/ingest.ts --loop`, les tâches à leur rythme (catalogue chaque jour, puis prix
-  toutes les 6 h, puis images et sauvegardes chaque jour ; après un échec : 10 min, puis 20, 40…
+- `ingest` : `server/ingest.ts --loop`, les tâches à leur rythme (espèces chaque mois, catalogue
+  chaque jour, puis prix toutes les 6 h, puis images et sauvegardes chaque jour ; après un échec : 10 min, puis 20, 40…
   jusqu'à 6 h), dans les volumes `db`, `images` et `backups`. À chaque démarrage, il refait les
   réponses calculées de l'API (leur forme a pu changer avec le code) ; au premier, il reprend
   l'historique de l'ancien volume `prices` (`LEGACY_PRICES`, l'ancien service des prix, retiré)

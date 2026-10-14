@@ -1,4 +1,4 @@
-/* Une carte seule, centrée, à la largeur d'un formulaire. */
+/* Connexion et inscription : une carte seule, centrée, à la largeur d'un formulaire. */
 .page {
   display: grid;
   place-items: center;

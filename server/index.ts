@@ -8,6 +8,7 @@
 
 import { appOrigin, createAuth } from './auth'
 import { collectionRoutes } from './collection'
+import { invitationRoutes } from './invitations'
 import { openApp, openData } from './db'
 import { readHistory } from './history'
 import { serveImage } from './images'
@@ -21,6 +22,7 @@ const data = openData({ readonly: true })
 const app = openApp()
 const auth = await createAuth(app)
 const collection = collectionRoutes(app, auth)
+const invitations = invitationRoutes(app, auth)
 
 const notFound = () => Response.json(null, { status: 404 })
 
@@ -40,6 +42,9 @@ const server = Bun.serve({
   port: Number(process.env.PORT ?? 3000),
   routes: {
     '/api/status': () => Response.json(status(), { headers: { 'Cache-Control': 'no-cache' } }),
+    // Les espèces (noms, types, génération), et leurs détails (description, taille…).
+    '/api/species': (request) => serveSnapshot(data, 'species', request),
+    '/api/species/details': (request) => serveSnapshot(data, 'species-details', request),
     // Le catalogue des cartes japonaises : extensions, et cartes par Pokémon.
     '/api/catalog': (request) => serveSnapshot(data, 'catalog', request),
     // Les prix du jour : Cardmarket, et TCGplayer pour les cartes sans prix Cardmarket.
@@ -54,6 +59,9 @@ const server = Bun.serve({
     // La connexion (Better Auth) et la collection synchronisée du compte connecté.
     '/api/auth/*': (request) => auth.handler(request),
     '/api/collection': collection,
+    // Les invitations à créer un compte (administrateur seulement).
+    '/api/invitations': invitations.list,
+    '/api/invitations/:token': invitations.one,
     '/api/*': notFound,
     // Les images copiées chez nous (sur le VPS, nginx ne renvoie ici que celles qu'il n'a pas).
     '/images/*': (request) => serveImage(data, request),

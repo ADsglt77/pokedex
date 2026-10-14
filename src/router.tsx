@@ -45,6 +45,11 @@ export const router = createBrowserRouter([
           import('@/pages/AddCardPage').then(({ AddCardPage }) => ({ Component: AddCardPage })),
       },
       {
+        path: 'inscription',
+        lazy: () =>
+          import('@/pages/SignUpPage').then(({ SignUpPage }) => ({ Component: SignUpPage })),
+      },
+      {
         path: 'connexion',
         lazy: () => import('@/pages/LoginPage').then(({ LoginPage }) => ({ Component: LoginPage })),
       },

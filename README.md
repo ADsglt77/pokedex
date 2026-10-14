@@ -52,14 +52,14 @@ ne parle qu'à lui. Des tâches d'ingestion lisent les sources et remplissent la
   TCGplayer ; sprites et illustrations des Pokémon chez PokéAPI. Une image qui manque encore est
   copiée à la demande.
 
-Les espèces restent embarquées dans le site (`bun run data:species`, depuis PokéAPI). Seule une
+Les espèces (PokéAPI) viennent aussi du serveur (tâche `species`, chaque mois). Seule une
 image à l'adresse collée se charge ailleurs ; pas celles de Cardmarket, qui ne s'affichent que sur
 son site. Le favori ne fait que lire la page Cardmarket ouverte et l'envoyer à l'app d'où il a été
 installé : installé depuis `bun dev`, il ouvre `localhost`.
 
 En développement : `bun run dev:server` (l'API, sur le port 3000) à côté de `bun dev`, qui lui
 renvoie `/api` et `/images` ; la base vit dans `.data/`. La remplir une fois :
-`bun run ingest catalog`, puis `bun run ingest prices` (et `bun run ingest legacy-prices ./prices`
+`bun run ingest species`, `bun run ingest catalog`, puis `bun run ingest prices` (et `bun run ingest legacy-prices ./prices`
 pour reprendre un ancien dossier `prices/`). Inutile de lancer `bun run ingest images` (1 Go) : le
 serveur copie à la demande les images affichées. Pour la connexion, un fichier `.env.local` (ignoré
 par git) :
@@ -69,13 +69,15 @@ BETTER_AUTH_URL=http://localhost:5173
 BETTER_AUTH_SECRET=…        # openssl rand -base64 32
 ```
 
-puis `bun server/create-user.ts moi@exemple.fr` pour créer le compte (le mot de passe est demandé
-au clavier).
+puis `bun server/create-user.ts moi@exemple.fr` pour créer votre compte, administrateur (le mot de
+passe est demandé au clavier).
 
 Votre collection : sans connexion, elle reste dans le navigateur (`localStorage`), et l'export est
-sa seule sauvegarde. Connecté (bouton « Se connecter » en haut à droite), elle est synchronisée
-entre vos appareils et gardée sur le serveur ; si deux appareils l'ont modifiée chacun de leur
-côté, l'app vous fait choisir la version à garder.
+sa seule sauvegarde. Connecté (bouton « Se connecter » en haut à droite), elle est gardée sur le
+serveur et vous suit d'un appareil à l'autre : un seul connecté à la fois (se connecter ailleurs
+déconnecte le précédent, qui garde ses modifications). Les autres personnes s'inscrivent avec une
+invitation que vous créez (Données › Invitations) : un lien pour une seule inscription, valable 7
+jours.
 
 ## Déploiement (VPS + tunnel Cloudflare)
 
@@ -117,8 +119,9 @@ peut partir : `docker volume rm pokedex_prices` (le nom exact : `docker volume l
    chmod 600 .env
    docker compose up -d --build
    ```
-3. Créer votre compte (le seul : le site n'a pas d'inscription). Le mot de passe est demandé deux
-   fois, sans s'afficher ; relancer la même commande le change (et ferme les sessions ouvertes) :
+3. Créer votre compte, administrateur : lui seul crée des invitations (Données › Invitations),
+   sans lesquelles personne ne peut s'inscrire. Le mot de passe est demandé deux fois, sans
+   s'afficher ; relancer la même commande le change (et ferme les sessions ouvertes) :
    ```sh
    docker compose run --rm server bun server/create-user.ts moi@exemple.fr
    ```

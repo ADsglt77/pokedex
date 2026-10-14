@@ -166,10 +166,9 @@ export interface ShoppingData {
   budget: BudgetSettings
 }
 
-/* Fichiers de `src/data`, écrits par `bun run data:species` ; et le catalogue, servi par l'API */
+/* Réponses de l'API : les espèces (`/api/species`, `/api/species/details`) et le catalogue */
 
 export interface SpeciesFile {
-  generatedAt: string
   species: PokemonSpecies[]
 }
 

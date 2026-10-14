@@ -108,6 +108,11 @@ const DATA_STEPS = [
   -- pas (decks, promos…).
   ALTER TABLE cards ADD COLUMN source TEXT NOT NULL DEFAULT 'tcgdex';
   `,
+  `
+  -- Les espèces (tâche \`species\`, d'après PokéAPI) : \`data\`, ce que l'app affiche partout (noms,
+  -- types, génération) ; \`details\`, ce que montre la fiche (catégorie, description, taille…).
+  CREATE TABLE species (id INTEGER PRIMARY KEY, data TEXT NOT NULL, details TEXT NOT NULL);
+  `,
 ]
 
 /**
@@ -136,6 +141,18 @@ const APP_STEPS = [
     body BLOB NOT NULL,
     PRIMARY KEY (user_id, version)
   ) WITHOUT ROWID;
+  `,
+  `
+  -- Les invitations à créer un compte : l'inscription n'en accepte pas sans (\`auth.ts\`). Un
+  -- administrateur les crée (\`invitations.ts\`) ; chacune sert une fois, avant \`expires_at\`.
+  CREATE TABLE invitations (
+    token TEXT PRIMARY KEY,
+    created_by TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    used_at TEXT,
+    used_email TEXT
+  );
   `,
 ]
 
