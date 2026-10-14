@@ -85,5 +85,5 @@ function purchaseHint(
     return 'Dans votre liste d’achats. Commandée : elle n’est plus proposée.'
   const verdict = priceVerdict(price?.price ?? null, preference?.maxPrice)
   if (!verdict) return 'Dans votre liste d’achats.'
-  return `Prix du marché ${priceLabel(price!.price, price!.source)} : ${verdict === 'under' ? 'sous' : 'au-dessus de'} votre prix maximum.`
+  return `Prix du marché ${priceLabel(price!.price)} : ${verdict === 'under' ? 'sous' : 'au-dessus de'} votre prix maximum.`
 }

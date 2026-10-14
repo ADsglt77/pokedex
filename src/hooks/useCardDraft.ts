@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
-import type { CatalogCard } from '@/lib/card-catalog'
-import { cardImage, findCardImage, isTcgplayerImage } from '@/lib/card-images'
+import { findCardImage, type CatalogCard } from '@/lib/card-catalog'
+import { isPokecardexImage, isTcgplayerImage } from '@/lib/card-images'
+import { referenceCode } from '@/lib/card-code'
 import { isCardmarketImage, parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
 import { parseLink } from '@/lib/format'
 import { loadPriceHistory } from '@/store/prices'
@@ -14,12 +15,11 @@ export interface CardStart {
 }
 
 /**
- * L'image enregistrée est celle que la référence retrouve chez Pokécardex, ou celle de TCGplayer
- * qui la remplaçait : elle suit la référence, ce n'est pas une adresse collée.
+ * L'image enregistrée vient de Pokécardex (ou de TCGplayer, d'une ancienne version) : elle suit la
+ * référence, ce n'est pas une adresse collée.
  */
 const isFoundImage = (card: PokemonCard) =>
-  cardImage(card.reference)?.large === card.image?.large ||
-  (card.image !== null && isTcgplayerImage(card.image))
+  card.image !== null && (isPokecardexImage(card.image) || isTcgplayerImage(card.image))
 
 /**
  * La saisie d'une carte : l'adresse de son image (vide : celle retrouvée d'après la référence),
@@ -47,13 +47,6 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
   // ceux saisis, en quittant le champ (pas à chaque touche).
   const [checked, setChecked] = useState(initial.cardmarket)
   const [searched, setSearched] = useState(reference)
-  // L'image TCGplayer d'une référence (la carte choisie dans le catalogue, ou celle enregistrée) :
-  // prise quand Pokécardex n'a pas la sienne, tant que la référence ne change pas.
-  const [spare, setSpare] = useState(() =>
-    card?.image && isTcgplayerImage(card.image)
-      ? { reference: card.reference, image: card.image }
-      : null,
-  )
 
   const imageUrl = parseLink(image.trim())
   const cardmarket = readCardmarketId(cardmarketText)
@@ -72,9 +65,9 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
   }
   const pasted: CardImage | null =
     imageUrl && !errors.image ? { small: imageUrl.href, large: imageUrl.href } : null
-  // La référence dont on cherche l'image : aucune si une adresse est collée, ou si son extension
-  // est inconnue.
-  const lookup = image.trim() || !cardImage(searched) ? null : searched
+  // La référence dont on cherche l'image : aucune si une adresse est collée, ou sans code de série
+  // et numéro.
+  const lookup = image.trim() || !referenceCode(searched) ? null : searched
 
   /**
    * La carte saisie, pour les Pokémon `dexIds` ; `null` tant qu'un champ est illisible (ses
@@ -91,14 +84,12 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
     const typed = reference.trim()
     const stale = cardmarket !== card?.cardmarket && typed === previous?.name
     const stalePage = cardmarket !== initial.cardmarket && page.trim() === initial.page
-    const candidate = image.trim() ? null : cardImage(typed)
-    // L'image déjà enregistrée reste si Pokécardex ne répond pas : elle s'est chargée une fois.
-    const kept = candidate && candidate.large === card?.image?.large ? (card?.image ?? null) : null
-    const backup = !image.trim() && spare?.reference === typed ? spare.image : null
+    const search = !image.trim() && referenceCode(typed) !== null
+    // L'image déjà enregistrée reste si elle ne répond pas, pour la même référence : elle s'est
+    // chargée une fois.
+    const kept = card && typed === card.reference && isFoundImage(card) ? card.image : null
     const picture =
-      pasted ??
-      (candidate ? ((await findCardImage(typed, { retry: true })) ?? kept) : null) ??
-      backup
+      pasted ?? (search ? ((await findCardImage(typed, { retry: true })) ?? kept) : null)
     return {
       id,
       dexIds,
@@ -133,8 +124,6 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
     pasted,
     /** La référence dont l'image est cherchée (`findCardImage`) ; `null` : rien à chercher. */
     lookup,
-    /** L'image TCGplayer de la référence cherchée, si Pokécardex n'a pas la sienne. */
-    fallback: spare?.reference === searched ? spare.image : null,
     cardmarketText,
     setCardmarketText,
     /** L'id à vérifier chez Cardmarket, une fois le champ quitté ; `null` sinon. */
@@ -144,18 +133,12 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
     setReference,
     searchImage: () => setSearched(reference),
     /**
-     * Reprend une carte choisie dans le catalogue : sa référence (d'où son image), son image
-     * TCGplayer de secours et son id Cardmarket. Une adresse d'image ou une page collées pour une
-     * autre carte ne lui vont plus.
+     * Reprend une carte choisie dans le catalogue : sa référence (d'où son image) et son id
+     * Cardmarket. Une adresse d'image ou une page collées pour une autre carte ne lui vont plus.
      */
-    fill: (chosen: Pick<CatalogCard, 'reference' | 'cardmarket' | 'image'>) => {
+    fill: (chosen: Pick<CatalogCard, 'reference' | 'cardmarket'>) => {
       setReference(chosen.reference)
       setSearched(chosen.reference)
-      setSpare(
-        chosen.image && isTcgplayerImage(chosen.image)
-          ? { reference: chosen.reference, image: chosen.image }
-          : null,
-      )
       setCardmarketText(String(chosen.cardmarket ?? ''))
       setChecked(chosen.cardmarket ?? null)
       setImage('')

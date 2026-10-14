@@ -6,7 +6,7 @@ import { pokedexUrl } from '@/lib/filters'
 import { formatEuro, formatEuroChange, formatInteger, statusLabel } from '@/lib/format'
 import { priceLabel, type CompletionCost, type TrackedCard } from '@/lib/prices'
 import { type Generation, generationLabel } from '@/config/pokedex'
-import type { CardStatus, PriceSource } from '@/types'
+import type { CardStatus } from '@/types'
 import styles from './ValuePage.module.css'
 
 const money = (value: number | null) => (value === null ? '—' : formatEuro(value))
@@ -21,14 +21,13 @@ interface CardRow {
   status: CardStatus
   paid: number | null
   value: number | null
-  source: PriceSource | null
   /** Valeur moins prix payé, quand les deux sont connus. */
   gain: number | null
 }
 
 /** Les cartes suivies : ce qu'elles ont coûté et ce qu'elles valent, la plus chère d'abord. */
 export function CardsTable({ cards }: { cards: TrackedCard[] }) {
-  const rows: CardRow[] = cards.map(({ card, status, paid, value, source }) => ({
+  const rows: CardRow[] = cards.map(({ card, status, paid, value }) => ({
     id: card.id,
     name: cardTitle(card),
     speciesId: card.dexIds[0] ?? null,
@@ -36,7 +35,6 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
     status,
     paid,
     value,
-    source,
     gain: paid !== null && value !== null ? value - paid : null,
   }))
 
@@ -77,7 +75,7 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
           header: 'Valeur',
           align: 'right',
           sortValue: (row) => row.value ?? -1,
-          cell: (row) => (row.value === null ? '—' : priceLabel(row.value, row.source)),
+          cell: (row) => (row.value === null ? '—' : priceLabel(row.value)),
         },
         {
           key: 'gain',

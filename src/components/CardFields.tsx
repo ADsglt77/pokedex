@@ -3,7 +3,7 @@ import { Suspense, use } from 'react'
 import { CardArt } from '@/components/CardArt'
 import { ImageCredit } from '@/components/ImageCredit'
 import type { CardDraft } from '@/hooks/useCardDraft'
-import { findCardImage } from '@/lib/card-images'
+import { findCardImage } from '@/lib/card-catalog'
 import { formatEuro } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
 import { loadPriceHistory, usePrices } from '@/store/prices'
@@ -21,7 +21,7 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
       <Stack gap={4}>
         <Input
           label="Référence"
-          hint="Le nom, puis le code de l’extension et le numéro, comme chez Cardmarket : « Bulbizarre (sv2a 166) ». Il sert à trouver l’image. Vide : le nom de la carte chez Cardmarket."
+          hint="Le nom, puis le code de la série et le numéro : « Bulbizarre (SV2A 166) ». Il sert à trouver l’image chez Pokécardex. Vide : le nom de la carte chez Cardmarket."
           value={draft.reference}
           onChange={(event) => draft.setReference(event.target.value)}
           onBlur={draft.searchImage}
@@ -37,7 +37,7 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
         />
         {draft.lookup !== null && (
           <Suspense fallback={<p className="muted">Recherche de l’image…</p>}>
-            <FoundImage reference={draft.lookup} replaced={draft.fallback !== null} />
+            <FoundImage reference={draft.lookup} />
           </Suspense>
         )}
         <Input
@@ -51,7 +51,7 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
         />
         {draft.checkedId !== null && (
           <Suspense fallback={<p className="muted">Recherche de la carte chez Cardmarket…</p>}>
-            <CardmarketCheck cardmarket={draft.checkedId} reference={draft.reference} />
+            <CardmarketCheck cardmarket={draft.checkedId} />
           </Suspense>
         )}
         <Input
@@ -74,8 +74,8 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
 }
 
 /**
- * L'aperçu : l'adresse collée, sinon l'image retrouvée chez Pokécardex, sinon celle de TCGplayer
- * (chacune citée) ; sans image, ou si l'adresse ne mène pas à une image, la carte de substitution.
+ * L'aperçu : l'adresse collée, sinon l'image retrouvée chez Pokécardex (citée) ; sans image, ou si
+ * l'adresse ne mène pas à une image, la carte de substitution.
  * `searching` : pendant la recherche.
  */
 function Preview({
@@ -88,7 +88,7 @@ function Preview({
   searching?: boolean
 }) {
   const found = searching || draft.lookup === null ? null : use(findCardImage(draft.lookup))
-  const image = draft.pasted ?? found ?? (searching ? null : draft.fallback)
+  const image = draft.pasted ?? found
   return (
     <figure className={styles.preview}>
       <CardArt
@@ -101,11 +101,8 @@ function Preview({
   )
 }
 
-/**
- * Ce que Pokécardex a pour la référence : l'image, ou rien (`replaced` : l'image de TCGplayer la
- * remplace alors).
- */
-function FoundImage({ reference, replaced }: { reference: string; replaced: boolean }) {
+/** Ce que Pokécardex a pour la référence : l'image, ou rien. */
+function FoundImage({ reference }: { reference: string }) {
   const image = use(findCardImage(reference))
   if (image) {
     return (
@@ -114,11 +111,7 @@ function FoundImage({ reference, replaced }: { reference: string; replaced: bool
       </p>
     )
   }
-  return replaced ? (
-    <p className={styles.check}>
-      Pokécardex n’a pas l’image de cette carte : celle de TCGplayer la remplace. Vérifiez l’aperçu.
-    </p>
-  ) : (
+  return (
     <p className={styles.warn}>
       Pokécardex n’a pas l’image de cette carte, ou ne répond pas (elle sera cherchée de nouveau à
       l’enregistrement) : vérifiez la référence, ou collez une adresse si vous voulez.
@@ -126,34 +119,25 @@ function FoundImage({ reference, replaced }: { reference: string; replaced: bool
   )
 }
 
-/**
- * Ce que Cardmarket dit de l'id saisi : le nom de la carte et son prix, pour s'assurer du bon. Sans
- * prix Cardmarket ce jour, celui de TCGplayer que la carte prendra d'après le code de sa référence,
- * s'il y en a un.
- */
-function CardmarketCheck({ cardmarket, reference }: { cardmarket: number; reference: string }) {
+/** Ce que Cardmarket dit de l'id saisi : le nom de la carte et son prix, pour s'assurer du bon. */
+function CardmarketCheck({ cardmarket }: { cardmarket: number }) {
   const prices = usePrices()
   const history = use(loadPriceHistory(cardmarket))
-  const price = priceOf(prices, { cardmarket, reference })
+  const price = priceOf(prices, { cardmarket })
   // Sans historique, l'id n'a jamais eu de prix depuis le premier relevé ; s'il en a un ce jour,
   // c'est que l'historique n'a pas répondu (il sera redemandé).
-  if (!history && price?.source !== 'cardmarket') {
+  if (!history && !price) {
     return (
       <p className={styles.warn}>
         Pas de prix Cardmarket connu pour cet id : vérifiez-le (un id juste peut aussi n’avoir
-        jamais eu de prix).
-        {price
-          ? ` La carte prendra celui de TCGplayer (${formatEuro(price.price)}), d’après le code de sa référence.`
-          : prices && ' La carte n’aura pas de prix.'}
+        jamais eu de prix).{prices && ' La carte n’aura pas de prix.'}
       </p>
     )
   }
   return (
     <p className={styles.check}>
       Chez Cardmarket : <strong>{history?.name ?? 'carte sans nom'}</strong>
-      {price?.source === 'cardmarket' && ` · ${formatEuro(price.price)}`}
-      {price?.source === 'tcgplayer' &&
-        ` · pas de prix ce jour, ${formatEuro(price.price)} chez TCGplayer`}
+      {price && ` · ${formatEuro(price.price)}`}
     </p>
   )
 }

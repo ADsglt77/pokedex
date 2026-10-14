@@ -1,5 +1,5 @@
 /**
- * Les prix Cardmarket, et TCGplayer pour les cartes sans prix Cardmarket : l'API du site
+ * Les prix Cardmarket : l'API du site
  * (`/api/prices`), que la tâche d'ingestion `prices` met à jour (`server/jobs/prices.ts`).
  * Facultatifs : sans eux (serveur arrêté, base encore vide), `null`, et l'app s'affiche sans prix.
  */
@@ -28,7 +28,7 @@ function requestPrices() {
     // La réponse d'une demande refaite depuis ne compte plus.
     if (requested !== response) return
     usePriceStore.setState({
-      prices: prices?.cardmarket || prices?.tcgplayer ? prices : null,
+      prices: prices?.cardmarket ? prices : null,
       loaded: true,
     })
   })

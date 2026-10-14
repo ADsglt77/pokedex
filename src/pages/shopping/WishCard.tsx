@@ -81,7 +81,7 @@ export function WishCard({
         <dl className={styles.wishPrices}>
           <div>
             <dt>Marché</dt>
-            <dd>{priceLabel(price, row.source)}</dd>
+            <dd>{priceLabel(price)}</dd>
           </div>
           <div>
             <dt>Maximum</dt>

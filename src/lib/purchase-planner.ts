@@ -1,7 +1,6 @@
 /**
  * Préparer la prochaine commande : quelles cartes de la liste d'achats prendre avec un budget.
- * Un plan indicatif : les prix sont ceux du marché (Cardmarket, sinon TCGplayer), pas des offres
- * de vendeurs.
+ * Un plan indicatif : les prix sont ceux du marché (Cardmarket), pas des offres de vendeurs.
  *
  * 1. Candidates : les cartes acceptées, ni possédées ni commandées, d'une priorité retenue, d'un
  *    Pokémon pas encore débloqué ni commandé.

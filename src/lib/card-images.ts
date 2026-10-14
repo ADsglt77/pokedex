@@ -1,36 +1,28 @@
 /**
- * Les images des cartes japonaises, chez Pokécardex (avec son autorisation, octobre 2026),
- * retrouvées d'après la référence : « Bulbizarre (sv2a 166) », le code de l'extension puis le
- * numéro, comme Cardmarket les écrit. L'app ne lit aucune page de Pokécardex (leurs données sont
- * chiffrées) : l'adresse de l'image se déduit de la référence, et la carte cite Pokécardex. Quand
- * Pokécardex n'a pas l'image (vieilles séries, decks), celle du produit chez TCGplayer, que le
- * catalogue relie à la carte, citée de même.
+ * Les images des cartes japonaises, chez Pokécardex (avec son accord, octobre 2026 : copiées et
+ * hébergées chez nous, citées avec un lien vers son site). L'adresse exacte vient du catalogue
+ * (la série et le rang de la carte chez Pokécardex) ; pour une référence hors du catalogue, elle se
+ * déduit de la référence : « Bulbizarre (sv2a 166) », le code de la série puis le numéro.
  * La collection garde l'adresse d'origine ; le navigateur charge la copie qu'en a le serveur
  * (`localSrc`, `server/images.ts`), jamais l'original.
  */
 
 import { numberKey, referenceCode, setKey } from '@/lib/card-code'
-import { settled } from '@/lib/settled'
 import type { CardImage } from '@/types'
 
 const SCANS = 'https://pokecardex-scans.b-cdn.net'
 export const POKECARDEX = 'https://www.pokecardex.com/'
 
+/** Une ancienne image de TCGplayer (retiré) : encore affichée si le serveur en a la copie. */
 const TCGPLAYER_PRODUCTS = 'https://tcgplayer-cdn.tcgplayer.com/product/'
-export const TCGPLAYER = 'https://www.tcgplayer.com/'
-
-/** L'image d'un produit TCGplayer : 200 px de large pour les grilles, 500 environ en grand. */
-export const tcgplayerImage = (productId: number): CardImage => ({
-  small: `${TCGPLAYER_PRODUCTS}${productId}_200w.jpg`,
-  large: `${TCGPLAYER_PRODUCTS}${productId}_in_1000x1000.jpg`,
-})
+const TCGPLAYER = 'https://www.tcgplayer.com/'
 
 export const isTcgplayerImage = (image: CardImage) => image.small.startsWith(TCGPLAYER_PRODUCTS)
 
-/** Les adresses d'origine que le serveur copie, et le chemin de leur copie. */
+/** Les adresses d'origine dont le serveur a la copie, et le chemin de cette copie. */
 const MIRRORED: [RegExp, string][] = [
   [
-    /^https:\/\/pokecardex-scans\.b-cdn\.net\/sets_jp\/(\w+)\/(\w+)\.jpg\?class=(md|hd)$/,
+    /^https:\/\/pokecardex-scans\.b-cdn\.net\/sets_jp\/([\w-]+)\/(\w+)\.jpg\?class=(md|hd)$/,
     '/images/cards/pokecardex/$1/$2-$3.webp',
   ],
   [
@@ -40,8 +32,8 @@ const MIRRORED: [RegExp, string][] = [
 ]
 
 /**
- * Ce que charge le navigateur pour une image : la copie du serveur pour une image de Pokécardex ou
- * de TCGplayer (`/images/…`, copiée à la demande si besoin) ; une adresse collée, telle quelle.
+ * Ce que charge le navigateur pour une image : la copie du serveur pour une image de Pokécardex
+ * (`/images/…`, copiée à la demande si besoin) ; une adresse collée, telle quelle.
  */
 export function localSrc(url: string) {
   for (const [pattern, path] of MIRRORED) {
@@ -57,58 +49,24 @@ export function imageSource(image: CardImage): { name: string; href: string } | 
   return null
 }
 
+/** Une image de Pokécardex, et non une adresse collée. */
+export const isPokecardexImage = (image: CardImage) => image.small.startsWith(SCANS)
+
 /**
- * Où Pokécardex range l'image de la carte : `sets_jp/SV2A/6.jpg`, le code de l'extension en
- * majuscules et sans tiret (SV-P → SVP), le numéro sans zéro devant ; tailles `md` (grille) et
- * `hd` (fiche). `null` sans code ni numéro dans la référence. Pokécardex ne l'a pas toujours :
- * `findCardImage` vérifie.
+ * L'image d'une carte chez Pokécardex : `sets_jp/SV2A/6.jpg`, le code de sa série et son rang ;
+ * tailles `md` (grille) et `hd` (fiche).
  */
-export function cardImage(reference: string): CardImage | null {
-  const code = referenceCode(reference)
-  if (!code) return null
-  const base = `${SCANS}/sets_jp/${setKey(code.set)}/${numberKey(code.number)}.jpg`
+export function pokecardexImage(set: string, number: number | string): CardImage {
+  const base = `${SCANS}/sets_jp/${set}/${number}.jpg`
   return { small: `${base}?class=md`, large: `${base}?class=hd` }
 }
 
-const found = new Map<string, Promise<CardImage | null>>()
-const missing = new Set<string>()
-
 /**
- * L'image de la carte chez Pokécardex, si sa copie se charge (le serveur la copie à la première
- * demande) ; `null` si Pokécardex ne l'a pas. La même promesse pour la
- * même référence (ce qu'attend `use`). `retry`, au moment d'enregistrer, redemande une image qui a
- * échoué : une panne passagère ne doit pas compter pour une image absente. Sans réponse en 10 s,
- * elle compte pour absente : l'enregistrement, qui l'attend, ne reste pas bloqué.
+ * L'image que la référence désigne chez Pokécardex, d'après son code : la série en majuscules et
+ * sans tiret (SV-P → SVP), le numéro sans zéro devant. `null` sans code dans la référence.
+ * Pokécardex ne l'a pas toujours : `findCardImage` (`card-catalog.ts`) vérifie.
  */
-export function findCardImage(reference: string, { retry = false } = {}) {
-  let promise = found.get(reference)
-  if (!promise || (retry && missing.has(reference))) {
-    const image = cardImage(reference)
-    promise = settled(
-      new Promise<CardImage | null>((resolve) => {
-        if (!image) return resolve(null)
-        const probe = new Image()
-        const fail = () => {
-          missing.add(reference)
-          resolve(null)
-        }
-        const timer = setTimeout(() => {
-          probe.onload = probe.onerror = null
-          fail()
-        }, 10_000)
-        probe.onload = () => {
-          clearTimeout(timer)
-          missing.delete(reference)
-          resolve(image)
-        }
-        probe.onerror = () => {
-          clearTimeout(timer)
-          fail()
-        }
-        probe.src = localSrc(image.small)
-      }),
-    )
-    found.set(reference, promise)
-  }
-  return promise
+export function cardImage(reference: string): CardImage | null {
+  const code = referenceCode(reference)
+  return code && pokecardexImage(setKey(code.set), numberKey(code.number))
 }

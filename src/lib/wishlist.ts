@@ -19,7 +19,6 @@ import type {
   GenerationId,
   PokemonCard,
   Prices,
-  PriceSource,
   Priority,
   PurchasePreference,
   ShoppingData,
@@ -93,9 +92,8 @@ export interface WishRow {
   card: PokemonCard
   preference: PurchasePreference
   status: CardStatus | null
-  /** Prix indicatif (Cardmarket, sinon TCGplayer) ; `null` sans prix. */
+  /** Prix indicatif (Cardmarket) ; `null` sans prix. */
   price: number | null
-  source: PriceSource | null
   /** Écart du prix avec sa moyenne sur 30 jours (−0,18 : 18 % en dessous) ; `null` sans les deux. */
   change30: number | null
 }
@@ -116,7 +114,6 @@ export function wishlistRows(
         preference,
         status: collection.cards[cardId]?.status ?? null,
         price: price?.price ?? null,
-        source: price?.source ?? null,
         change30: price?.avg30 ? (price.price - price.avg30) / price.avg30 : null,
       },
     ]

@@ -3,8 +3,8 @@
  * - `GET /api/status` : la dernière réussite et le dernier passage de chaque tâche ;
  * - `GET /api/species`, `/api/species/details` : les espèces, et ce qu'en montre la fiche ;
  * - `GET /api/catalog` : le catalogue des cartes japonaises ;
- * - `GET /api/prices` : les prix du jour (Cardmarket, et TCGplayer pour les cartes sans prix
- *   Cardmarket) ; `GET /api/prices/:id` : l'historique d'une carte Cardmarket, par son id produit.
+ * - `GET /api/prices` : les prix Cardmarket du jour ; `GET /api/prices/:id` : l'historique d'une
+ *   carte Cardmarket, par son id produit.
  * Les grosses réponses sont servies telles que calculées en fin de tâche (`snapshots.ts`).
  */
 

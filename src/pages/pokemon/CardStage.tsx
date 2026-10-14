@@ -6,7 +6,7 @@ import styles from './CardStage.module.css'
 
 /**
  * La carte du Pokémon en grand, ou une pochette vide tant qu'il n'en a pas. Son image cite sa
- * source (Pokécardex, la condition de son autorisation, ou TCGplayer), avec un lien.
+ * source (Pokécardex, la condition de son autorisation), avec un lien.
  */
 export function CardStage({ view, species }: { view: CardView | null; species: PokemonSpecies }) {
   if (!view) {

@@ -138,8 +138,8 @@ function UnderMaxCount() {
   if (count === 0) return null
   return (
     <Alert tone="success" title={`${plural(count, 'carte', 'cartes')} sous votre prix maximum`}>
-      Le prix du marché (Cardmarket, sinon TCGplayer) est passé sous le maximum que vous vous êtes
-      fixé. <Link to="/achats">Voir la liste d’achats</Link>
+      Le prix du marché (Cardmarket) est passé sous le maximum que vous vous êtes fixé.{' '}
+      <Link to="/achats">Voir la liste d’achats</Link>
     </Alert>
   )
 }

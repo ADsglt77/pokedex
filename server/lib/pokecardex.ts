@@ -1,0 +1,122 @@
+/**
+ * Pokécardex (pokecardex.com), avec son accord (octobre 2026 : lire ce qu'on veut sur son site,
+ * copier ses images chez nous, le citer avec un lien). Il ne fournit ni export ni API : chaque page
+ * porte ses données chiffrées (AES-CBC, `__INITIAL_DATA_ENCRYPTED__`), que son propre JavaScript
+ * déchiffre. On fait de même, avec la clé relue dans ce JavaScript à chaque passage (son adresse
+ * change à chaque mise en ligne du site), jamais recopiée ici.
+ * Une page toutes les 3 s, User-Agent identifié. S'il présentait un défi anti-robot (Cloudflare),
+ * la lecture échouerait : on ne le contourne pas.
+ */
+
+import { politeFetch } from './net'
+
+const SITE = 'https://www.pokecardex.com'
+/** Une requête toutes les 3 s au plus. */
+const PACE = 3000
+
+/** Une carte d'une série, telle que Pokécardex la donne (ce qu'on en lit). */
+export interface PokecardexCard {
+  id_card: number
+  /** « 001/165 », « 001/SV-P », « — » (séries sans numéros), « SV-P ». */
+  num_card: string
+  /** Son rang dans la série, et le numéro de son image (`sets_jp/SV2A/1.jpg`). */
+  sort: number
+  name_card_fr: string | null
+  name_card_en: string | null
+  /** Ses Pokémon (numéros du Pokédex) ; vide pour un dresseur ou une énergie. */
+  id_pokedex_list: number[] | null
+  id_cardmarket: number | null
+}
+
+/** Une série japonaise : sa page (`/series/jp/SV2A`). */
+export interface PokecardexSeries {
+  currentSeries: {
+    shortName: string
+    fullName: string
+    /** « 2023-06-16 00:00:00 » : sa sortie au Japon. */
+    releaseDateFR: string | null
+  }
+  cartes: PokecardexCard[]
+  /** Le menu des séries, par bloc (« Scarlet & Violet », « Asia Exclusive »…). */
+  seriesMenu?: {
+    blocksByRegion?: { JP?: { nameUS: string; series: { shortName: string }[] }[] }
+  }
+}
+
+/**
+ * Les séries du bloc « Asia Exclusive » du menu (Chine, Hong Kong et Taïwan, Indonésie,
+ * Thaïlande, Corée) : rangées avec les japonaises, mais pas japonaises.
+ */
+export const asiaExclusive = (page: PokecardexSeries) =>
+  new Set(
+    (page.seriesMenu?.blocksByRegion?.JP ?? [])
+      .filter((block) => /asia exclusive/i.test(block.nameUS))
+      .flatMap((block) => block.series.map((series) => series.shortName)),
+  )
+
+let last = 0
+
+/** Le texte d'une adresse de Pokécardex, au plus une requête toutes les 3 s. */
+async function read(url: string) {
+  const wait = last + PACE - Date.now()
+  if (wait > 0) await Bun.sleep(wait)
+  last = Date.now()
+  const response = await politeFetch(url)
+  if (!response.ok) throw new Error(`HTTP ${response.status} pour ${url}`)
+  return response.text()
+}
+
+/** Les codes des séries japonaises (« SV2A », « OR1 »…), d'après le plan du site. */
+export async function japaneseSeries() {
+  const sitemap = await read(`${SITE}/sitemap_fr.xml`)
+  const codes = [...sitemap.matchAll(/\/series\/jp\/([\w-]+)<\/loc>/g)].map((match) => match[1]!)
+  if (!codes.length) throw new Error('Pokécardex : aucune série japonaise dans son plan du site')
+  return [...new Set(codes)]
+}
+
+/** La clé de déchiffrement, et le script d'où elle vient. */
+let decryption: { script: string; key: CryptoKey } | null = null
+
+/** La clé du script de la page : relue seulement quand le script change. */
+async function keyOf(script: string) {
+  if (decryption?.script === script) return decryption.key
+  const code = await read(new URL(script, SITE).href)
+  // La constante que la fonction de déchiffrement passe à `TextEncoder().encode(…)`.
+  const name =
+    /new TextEncoder\(\)\.encode\((\w+)\),\w+=await crypto\.subtle\.importKey\("raw"/.exec(
+      code,
+    )?.[1]
+  const secret = name && new RegExp(`const ${name}="([^"]+)"`).exec(code)?.[1]
+  if (!secret) throw new Error('Pokécardex : clé de ses données introuvable (le site a changé ?)')
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'AES-CBC' },
+    false,
+    ['decrypt'],
+  )
+  decryption = { script, key }
+  return key
+}
+
+const bytes = (base64: string) => Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
+
+/** Les données d'une page, déchiffrées comme le fait le site. */
+async function pageData<T>(path: string): Promise<T> {
+  const html = await read(`${SITE}${path}`)
+  const script = /<script type="module" crossorigin src="([^"]+)"/
+    .exec(html)?.[1]
+    ?.replaceAll('&#x2F;', '/')
+  const found = /__INITIAL_DATA_ENCRYPTED__ = \{"iv":"([^"]+)","data":"([^"]+)"\}/.exec(html)
+  if (!script || !found) throw new Error(`Pokécardex : pas de données dans ${path}`)
+  const [iv, data] = [found[1]!, found[2]!].map((text) => bytes(text.replaceAll('\\/', '/')))
+  const plain = await crypto.subtle.decrypt(
+    { name: 'AES-CBC', iv: iv! },
+    await keyOf(script),
+    data!,
+  )
+  return JSON.parse(new TextDecoder().decode(plain)) as T
+}
+
+/** La page d'une série japonaise : son nom, sa date, ses cartes. */
+export const readSeries = (code: string) => pageData<PokecardexSeries>(`/series/jp/${code}`)

@@ -1,13 +1,10 @@
 /**
  * Les prix du jour appliqués à la collection : prix d'une carte, totaux par statut, coût pour
  * compléter le Pokédex, courbes au fil des jours, plus fortes hausses et baisses. Les prix de
- * Cardmarket ; pour une carte sans prix Cardmarket ce jour (sans id Cardmarket : vieilles séries,
- * decks que TCGdex ne relie pas à Cardmarket ; ou un id sans prix dans le guide du jour : promos…),
- * ceux de TCGplayer, convertis en euros.
+ * Cardmarket, par l'id Cardmarket de chaque carte.
  */
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
-import { codeKey, referenceCode } from '@/lib/card-code'
 import { formatEuro } from '@/lib/format'
 import { cardsWithStatus, isTaken, type PokedexEntry } from '@/lib/pokedex'
 import type {
@@ -17,41 +14,29 @@ import type {
   CollectionData,
   PokemonCard,
   Prices,
-  PriceSource,
 } from '@/types'
 
-/** Ce qu'il faut d'une carte pour son prix : son id Cardmarket, et le code de sa référence. */
+/** Ce qu'il faut d'une carte pour son prix : son id Cardmarket. */
 interface Priced {
   cardmarket?: number
-  reference?: string
 }
 
 /**
- * Le prix du jour d'une carte : celui de Cardmarket, par son id ; sans prix Cardmarket ce jour (pas
- * d'id, ou pas de prix pour cet id), celui de TCGplayer, par le code de sa référence (« (E1 097) »).
- * `null` sans prix ou sans fichier.
+ * Le prix du jour d'une carte chez Cardmarket, par son id ; `null` sans id, sans prix pour cet id
+ * ce jour, ou sans fichier.
  */
 export function priceOf(prices: Prices | null, card: Priced): CardPrice | null {
-  const cardmarket = card.cardmarket && prices?.cardmarket?.cards[card.cardmarket]
-  if (cardmarket) {
-    return { price: cardmarket[0], low: cardmarket[1], avg30: cardmarket[2], source: 'cardmarket' }
-  }
-  const code = card.reference === undefined ? null : referenceCode(card.reference)
-  const tcgplayer = code && prices?.tcgplayer?.cards[codeKey(code)]
-  return tcgplayer
-    ? { price: tcgplayer[0], low: tcgplayer[1], avg30: null, source: 'tcgplayer' }
-    : null
+  const row = card.cardmarket && prices?.cardmarket?.cards[card.cardmarket]
+  return row ? { price: row[0], low: row[1], avg30: row[2] } : null
 }
 
 /** Le prix du marché d'une carte ; `null` sans prix. */
 export const marketPrice = (prices: Prices | null, card: Priced) =>
   priceOf(prices, card)?.price ?? null
 
-/** « 12,40 € », « 12,40 € (TCGplayer) » ou « Sans prix ». */
-export const priceLabel = (price: number | null, source?: PriceSource | null) =>
-  price === null
-    ? 'Sans prix'
-    : `${formatEuro(price)}${source === 'tcgplayer' ? ' (TCGplayer)' : ''}`
+/** « 12,40 € » ou « Sans prix ». */
+export const priceLabel = (price: number | null) =>
+  price === null ? 'Sans prix' : formatEuro(price)
 
 /** L'écart en % entre ce que vaut une carte (ou une collection) et ce qu'elle a coûté. */
 export const gainPercent = (value: number, paid: number) =>
@@ -63,18 +48,15 @@ export interface TrackedCard {
   status: CardStatus
   paid: number | null
   value: number | null
-  source: PriceSource | null
 }
 
 export const trackedCards = (collection: CollectionData, prices: Prices | null): TrackedCard[] =>
   cardsWithStatus(collection).map(({ card, ownership }) => {
-    const price = priceOf(prices, card)
     return {
       card,
       status: ownership.status,
       paid: ownership.paidPrice ?? null,
-      value: price?.price ?? null,
-      source: price?.source ?? null,
+      value: marketPrice(prices, card),
     }
   })
 
@@ -120,9 +102,8 @@ export interface PriceMove {
 /**
  * Les cartes possédées dont le prix a le plus bougé : l'écart du prix du jour à la moyenne sur 30
  * jours de Cardmarket, les `limit` plus fortes hausses et les `limit` plus fortes baisses, en %.
- * Un écart de moins de 5 % ou de moins de 0,50 € n'est que le bruit du marché : il n'y est pas ;
- * les prix TCGplayer, sans moyenne, non plus. Une carte Cardmarket possédée pour deux Pokémon n'y
- * est qu'une fois.
+ * Un écart de moins de 5 % ou de moins de 0,50 € n'est que le bruit du marché : il n'y est pas.
+ * Une carte possédée pour deux Pokémon n'y est qu'une fois.
  */
 export function priceMovers(
   cards: readonly TrackedCard[],
@@ -154,7 +135,7 @@ export interface CompletionCost {
   value: number
   /** Pokémon dont la carte a un prix. */
   priced: number
-  /** Pokémon dont la carte n'a de prix ni chez Cardmarket ni chez TCGplayer ce jour. */
+  /** Pokémon dont la carte n'a pas de prix Cardmarket ce jour. */
   unpriced: number
   /** Pokémon sans carte. */
   noCard: number

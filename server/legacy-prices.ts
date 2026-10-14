@@ -1,9 +1,9 @@
 /**
  * Reprise, une seule fois, des prix écrits par l'ancien service `prices` (retiré : des fichiers) dans
- * `data.db` : l'historique de chaque carte (irremplaçable : Cardmarket n'en garde pas), les prix
- * du jour et ceux de TCGplayer. Le service `ingest` la fait de lui-même avant sa première tâche,
- * si la base n'a pas encore d'historique et que l'ancien dossier est là (`LEGACY_PRICES`) ; en
- * local : `bun run ingest legacy-prices ./prices`.
+ * `data.db` : l'historique de chaque carte (irremplaçable : Cardmarket n'en garde pas) et les prix
+ * du jour (pas ceux de TCGplayer, retiré). Le service `ingest` la fait de lui-même avant sa
+ * première tâche, si la base n'a pas encore d'historique et que l'ancien dossier est là
+ * (`LEGACY_PRICES`) ; en local : `bun run ingest legacy-prices ./prices`.
  *
  * Avant d'enregistrer, vérifie que rien ne s'est perdu : même nombre de cartes, même somme des
  * prix, et un échantillon relu tel que l'API le servira ; au moindre écart, rien n'est gardé.
@@ -12,7 +12,7 @@
 import type { Database } from 'bun:sqlite'
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { CardPriceHistory, PriceFile, TcgplayerPriceFile } from '@/types'
+import type { CardPriceHistory, PriceFile } from '@/types'
 import { writeSource } from './db'
 import { readHistory, splitYears } from './history'
 import { pricesSnapshot } from './jobs/prices'
@@ -35,7 +35,6 @@ export async function importLegacyPrices(db: Database, dir: string) {
       () => null,
     )
   const latest = await readJson<PriceFile>('latest.json')
-  const tcgplayer = await readJson<TcgplayerPriceFile>('tcgplayer.json')
   const files = (await readdir(join(dir, 'history'))).filter((file) => file.endsWith('.json'))
   const histories = new Map<number, CardPriceHistory>()
   for (const file of files) {
@@ -65,19 +64,6 @@ export async function importLegacyPrices(db: Database, dir: string) {
       }
       // Sans date de mise à jour : la prochaine tâche `prices` relit le guide du jour.
       writeSource(db, 'cardmarket', { stamp: '', date: latest.date })
-    }
-    if (tcgplayer) {
-      const writeTcgplayer = db.query(
-        'INSERT INTO tcgplayer_prices (code, price, low) VALUES (?, ?, ?)',
-      )
-      for (const [code, [price, low]] of Object.entries(tcgplayer.cards)) {
-        writeTcgplayer.run(code, price, low)
-      }
-      db.query('INSERT OR REPLACE INTO rates (date, usd_per_eur) VALUES (?, ?)').run(
-        tcgplayer.date,
-        tcgplayer.usdPerEur,
-      )
-      writeSource(db, 'tcgplayer', { stamp: '', date: tcgplayer.date })
     }
 
     // Les vérifications, avant de valider : une erreur annule tout.
@@ -122,7 +108,6 @@ export async function importLegacyPrices(db: Database, dir: string) {
   saveSnapshot(db, 'prices', pricesSnapshot(db))
   console.log(
     `Repris : ${histories.size} historiques` +
-      (latest ? `, prix Cardmarket du ${latest.date}` : '') +
-      (tcgplayer ? `, prix TCGplayer du ${tcgplayer.date}` : ''),
+      (latest ? `, prix Cardmarket du ${latest.date}` : ''),
   )
 }

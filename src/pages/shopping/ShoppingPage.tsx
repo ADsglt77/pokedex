@@ -37,7 +37,7 @@ export function ShoppingPage() {
       <title>{pageTitle('Achats')}</title>
       <PageHeader title="Achats">
         Votre liste d’achats, votre budget et vos commandes. Les prix sont ceux du marché
-        (Cardmarket, sinon TCGplayer) : une indication, pas une offre de vendeur.
+        (Cardmarket) : une indication, pas une offre de vendeur.
       </PageHeader>
 
       <BudgetOverview />

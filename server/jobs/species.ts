@@ -2,13 +2,11 @@
  * Tâche `species` : les 1 025 espèces, d'après PokéAPI (nom en français, anglais et japonais,
  * types, génération ; catégorie, description, taille, poids…), une fois par mois : elles ne
  * changent qu'avec une nouvelle génération (à ajouter alors dans `GENERATIONS`). En fin de tâche,
- * les réponses de `/api/species` et `/api/species/details` sont recalculées. Les autres tâches les
- * lisent en base (`useSpecies`).
+ * les réponses de `/api/species` et `/api/species/details` sont recalculées.
  */
 
 import type { Database } from 'bun:sqlite'
 import { GENERATIONS, TOTAL_SPECIES } from '@/config/pokedex'
-import { setSpecies } from '@/lib/species'
 import type { PokemonSpecies, PokemonSpeciesDetails, PokemonTypeId } from '@/types'
 import { fetchJson, mapPool } from '../lib/net'
 import { saveSnapshot } from '../snapshots'
@@ -95,19 +93,6 @@ function normalize(species: RawSpecies, pokemon: RawPokemon) {
   return { entry, details }
 }
 
-/** Les espèces en base, dans l'ordre du Pokédex. */
-export const readSpecies = (db: Database) =>
-  (db.query('SELECT data FROM species ORDER BY id').all() as { data: string }[]).map(
-    ({ data }) => JSON.parse(data) as PokemonSpecies,
-  )
-
-/** Donne les espèces en base aux règles de `src/lib` (`speciesInName`…) ; `false` sans espèces. */
-export function loadSpecies(db: Database) {
-  const species = readSpecies(db)
-  setSpecies(species)
-  return species.length > 0
-}
-
 export async function species(db: Database) {
   const ids = Array.from({ length: TOTAL_SPECIES }, (_, index) => index + 1)
   console.log(`Lecture des ${TOTAL_SPECIES} espèces sur PokéAPI…`)
@@ -130,6 +115,5 @@ export async function species(db: Database) {
     saveSnapshot(db, 'species', { species: rows.map(({ entry }) => entry) })
     saveSnapshot(db, 'species-details', { details: rows.map(({ details }) => details) })
   })()
-  setSpecies(rows.map(({ entry }) => entry))
   console.log(`${rows.length} espèces enregistrées`)
 }

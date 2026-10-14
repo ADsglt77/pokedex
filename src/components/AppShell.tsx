@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { AccountMenu } from '@/components/AccountMenu'
 import { ExternalLink } from '@/components/ExternalLink'
-import { POKECARDEX, TCGPLAYER } from '@/lib/card-images'
+import { POKECARDEX } from '@/lib/card-images'
 import { cx } from '@/lib/cx'
 import { useCollectionStore } from '@/store/collection'
 import { useLastExport, useStorageFailure } from '@/store/persist'
@@ -118,10 +118,9 @@ export function AppShell() {
       </main>
 
       <footer className={cx('container', styles.footer)}>
-        Données PokéAPI, TCGdex et TCGplayer, images{' '}
-        <ExternalLink href={POKECARDEX}>Pokécardex</ExternalLink> et{' '}
-        <ExternalLink href={TCGPLAYER}>TCGplayer</ExternalLink>, prix Cardmarket. Projet personnel,
-        sans lien avec Nintendo, Creatures, Game Freak ou The Pokémon Company.
+        Espèces PokéAPI, cartes et images <ExternalLink href={POKECARDEX}>Pokécardex</ExternalLink>,
+        prix Cardmarket. Projet personnel, sans lien avec Nintendo, Creatures, Game Freak ou The
+        Pokémon Company.
       </footer>
 
       <nav aria-label="Navigation principale" className={styles.tabbar}>

@@ -65,9 +65,8 @@ export function ValuePage() {
       <title>{pageTitle('Valeur')}</title>
       <PageHeader title="Valeur">
         Prix du marché Cardmarket
-        {prices?.cardmarket && ` du ${formatDate(prices.cardmarket.date)}`}, en euros ; pour les
-        cartes sans prix Cardmarket, celui de TCGplayer, converti. Une estimation : l’état de la
-        carte et le vendeur font varier le prix réel.
+        {prices?.cardmarket && ` du ${formatDate(prices.cardmarket.date)}`}, en euros. Une
+        estimation : l’état de la carte et le vendeur font varier le prix réel.
       </PageHeader>
 
       {pricesMissing && (
@@ -148,10 +147,9 @@ export function ValuePage() {
 }
 
 function CollectionChart({ cards }: { cards: PokemonCard[] }) {
-  // Les cartes sans id Cardmarket n'ont pas d'historique (le prix TCGplayer n'en garde pas) : elles
-  // ne pèsent pas sur la courbe. La même
-  // carte Cardmarket possédée pour deux Pokémon compte deux fois, comme dans la valeur du jour ;
-  // son historique n'est demandé qu'une fois.
+  // Les cartes sans id Cardmarket n'ont pas d'historique : elles ne pèsent pas sur la courbe. La
+  // même carte Cardmarket possédée pour deux Pokémon compte deux fois, comme dans la valeur du
+  // jour ; son historique n'est demandé qu'une fois.
   const ids = cards.flatMap((card) => card.cardmarket ?? []).sort((a, b) => a - b)
   const histories = use(loadPriceHistories(ids))
   return <PriceChart points={collectionHistory(histories)} label="Valeur de ma collection" />

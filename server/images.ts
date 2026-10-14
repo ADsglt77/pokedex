@@ -1,13 +1,12 @@
 /**
  * Les images, copiées chez nous (`IMAGES_DIR`, le volume `images` sur le VPS ; nginx les sert à
- * `/images/…`) : les cartes chez Pokécardex (avec son autorisation) ou TCGplayer, les sprites et
- * illustrations des Pokémon chez PokéAPI. Chaque chemin local correspond à une seule adresse
+ * `/images/…`) : les cartes chez Pokécardex (avec son accord, qui demande de les héberger chez
+ * nous), les sprites et illustrations des Pokémon chez PokéAPI. Chaque chemin local correspond à une seule adresse
  * d'origine (`upstreamUrl`) : le navigateur garde les adresses d'origine dans la collection et ne
  * demande que leur chemin local (`localSrc`, `src/lib/card-images.ts`). Seuls ces chemins-là sont
  * copiés : le serveur n'est pas un relais ouvert.
  */
 
-import type { Database } from 'bun:sqlite'
 import { mkdir, rename, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { DATA_DIR } from './db'
@@ -20,13 +19,9 @@ const SPRITES = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprite
 /** Les chemins locaux connus, et l'adresse d'origine de chacun. */
 const UPSTREAMS: [RegExp, (...parts: string[]) => string][] = [
   [
-    /^\/images\/cards\/pokecardex\/([A-Z0-9_]+)\/([A-Z0-9]+)-(md|hd)\.webp$/,
+    /^\/images\/cards\/pokecardex\/([A-Z0-9_-]+)\/([A-Z0-9]+)-(md|hd)\.webp$/,
     (set, number, size) =>
       `https://pokecardex-scans.b-cdn.net/sets_jp/${set}/${number}.jpg?class=${size}`,
-  ],
-  [
-    /^\/images\/cards\/tcgplayer\/(\d{1,9})_(200w|in_1000x1000)\.jpg$/,
-    (id, size) => `https://tcgplayer-cdn.tcgplayer.com/product/${id}_${size}.jpg`,
   ],
   [/^\/images\/species\/(\d{1,4})\.png$/, (id) => `${SPRITES}/${id}.png`],
   [
@@ -43,6 +38,12 @@ export function upstreamUrl(path: string) {
   }
   return null
 }
+
+/**
+ * Les images de TCGplayer qu'une ancienne version a copiées (TCGplayer est retiré) : servies si le
+ * volume les a, jamais plus copiées.
+ */
+const LEGACY = /^\/images\/cards\/tcgplayer\/\d{1,9}_(200w|in_1000x1000)\.jpg$/
 
 /** Le fichier d'un chemin local (`/images/cards/…` → `IMAGES_DIR/cards/…`). */
 export const imageFile = (path: string) => join(IMAGES_DIR, path.slice('/images/'.length))
@@ -87,22 +88,16 @@ const copies = new Map<string, Promise<boolean>>()
 /**
  * `/images/…` : la copie de l'image (en développement ; sur le VPS, nginx la sert lui-même), sinon
  * copiée à la demande — une référence saisie hors du catalogue, une image que la tâche `images`
- * n'a pas encore copiée. Chez TCGplayer, seulement les produits du catalogue : il répond par une
- * image pour n'importe quel numéro.
+ * n'a pas encore copiée.
  */
-export async function serveImage(data: Database, request: Request) {
+export async function serveImage(request: Request) {
   const path = new URL(request.url).pathname
   const notFound = () =>
     new Response(null, { status: 404, headers: { 'Cache-Control': 'no-cache' } })
-  const product = /^\/images\/cards\/tcgplayer\/(\d+)_/.exec(path)?.[1]
-  if (
-    !upstreamUrl(path) ||
-    (product && !data.query('SELECT 1 FROM cards WHERE tcgplayer = ?').get(Number(product)))
-  ) {
-    return notFound()
-  }
+  if (!upstreamUrl(path) && !LEGACY.test(path)) return notFound()
   const file = Bun.file(imageFile(path))
   if (await file.exists()) return new Response(file, { headers: IMAGE_HEADERS })
+  if (!upstreamUrl(path)) return notFound()
   if (Date.now() - (misses.get(path) ?? 0) < WEEK) return notFound()
 
   let copy = copies.get(path)

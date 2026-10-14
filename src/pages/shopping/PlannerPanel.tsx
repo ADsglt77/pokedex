@@ -337,7 +337,7 @@ function PlanLine({ row, children }: { row: WishRow; children?: ReactNode }) {
     <CardLine
       card={row.card}
       detail={details(
-        price === null ? 'sans prix' : priceLabel(price, row.source),
+        price === null ? 'sans prix' : priceLabel(price),
         preference.maxPrice !== undefined && `max ${formatEuro(preference.maxPrice)}`,
         `priorité ${PRIORITY_LABELS[preference.priority].toLowerCase()}`,
       )}

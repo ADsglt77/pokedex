@@ -48,7 +48,7 @@ export function createApp({ data, app, accounts }: Databases) {
         api.use(account).use(referenceRoutes(data)).use(collectionRoutes(app, account)),
       )
       // Les images copiées chez nous (sur le VPS, nginx ne renvoie ici que celles qu'il n'a pas).
-      .get('/images/*', ({ request }) => serveImage(data, request), { detail: { hide: true } })
+      .get('/images/*', ({ request }) => serveImage(request), { detail: { hide: true } })
   )
 }
 

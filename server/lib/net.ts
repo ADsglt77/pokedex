@@ -14,7 +14,7 @@ import { DATA_DIR } from '../db'
 const CACHE_ROOT = process.env.CACHE_DIR ?? join(DATA_DIR, 'cache')
 
 /** `--refresh` : ignore le cache et redemande tout. */
-const refresh = process.argv.includes('--refresh')
+export const refresh = process.argv.includes('--refresh')
 
 class NotFoundError extends Error {}
 

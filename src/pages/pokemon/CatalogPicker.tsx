@@ -22,10 +22,9 @@ export interface PickerView {
 }
 
 /**
- * Les cartes japonaises du Pokémon, à choisir : leur image (Pokécardex, sinon TCGplayer), leur
- * extension, leur numéro et leur année, leur prix du jour (Cardmarket, sinon TCGplayer) ; à
- * filtrer par extension ou aux cartes qui ont un prix.
- * `selected` : la clé de la carte choisie (« SV2a 166 »).
+ * Les cartes japonaises du Pokémon, à choisir : leur image (Pokécardex), leur série, leur numéro
+ * et leur année, leur prix Cardmarket du jour ; à filtrer par série ou aux cartes qui ont un prix.
+ * `selected` : la clé de la carte choisie (« SV2A 166 »).
  */
 export function CatalogPicker({
   species,

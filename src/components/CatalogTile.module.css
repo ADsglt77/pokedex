@@ -43,12 +43,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Un prix TCGplayer (carte sans id Cardmarket) : dit sous le prix, toujours à la ligne. */
-.source {
-  display: block;
-  font-size: 0.75rem;
-}
-
 .choice:disabled {
   cursor: default;
   opacity: 0.55;

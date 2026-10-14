@@ -1,7 +1,6 @@
 /**
- * Le code d'une carte : le code de l'extension et le numéro qui finissent sa référence
- * (« Bulbizarre (sv2a 166) »), comme Cardmarket les écrit. Sans import : le serveur s'en sert aussi
- * (catalogue, prix TCGplayer, images).
+ * Le code d'une carte : le code de la série et le numéro qui finissent sa référence
+ * (« Bulbizarre (SV2A 166) »). Sans import : le serveur s'en sert aussi.
  */
 
 export interface CardCode {

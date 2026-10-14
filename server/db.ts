@@ -113,6 +113,52 @@ const DATA_STEPS = [
   -- types, génération) ; \`details\`, ce que montre la fiche (catégorie, description, taille…).
   CREATE TABLE species (id INTEGER PRIMARY KEY, data TEXT NOT NULL, details TEXT NOT NULL);
   `,
+  `
+  -- Le catalogue vient de Pokécardex (octobre 2026) : TCGdex et TCGplayer sont retirés, avec la BCE
+  -- qui convertissait les prix de TCGplayer. La tâche \`catalog\` le refait entièrement.
+  DROP TABLE card_species;
+  DROP TABLE cards;
+  DROP TABLE sets;
+  DROP TABLE tcgplayer_prices;
+  DROP TABLE rates;
+  DELETE FROM sources WHERE name IN ('catalog', 'tcgplayer');
+  DELETE FROM snapshots WHERE name = 'catalog';
+
+  -- Les séries japonaises de Pokécardex : leur code (« SV2A »), leur nom, leur sortie au Japon
+  -- (YYYY-MM-DD, '' si inconnue), et la dernière lecture de leur page.
+  CREATE TABLE sets (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    released TEXT NOT NULL,
+    read_at TEXT NOT NULL
+  );
+
+  -- Leurs cartes Pokémon, par leur id chez Pokécardex : le numéro imprimé (« 001 » ; sans numéro,
+  -- leur rang), leur rang dans la série (\`sort\`, aussi le numéro de leur image), leur nom
+  -- français, leur id Cardmarket (0 : aucun), la lecture qui les a vues (\`seen\` : une carte
+  -- qu'une lecture de sa série ne voit plus est retirée). \`image\` : \`pokecardex\` ou \`none\`, nulle
+  -- tant qu'elle n'a pas été cherchée par la tâche \`images\` ; \`image_checked\` : quand.
+  CREATE TABLE cards (
+    id INTEGER PRIMARY KEY,
+    set_id TEXT NOT NULL REFERENCES sets (id),
+    number TEXT NOT NULL,
+    sort INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    cardmarket INTEGER NOT NULL,
+    seen TEXT NOT NULL,
+    image TEXT,
+    image_checked TEXT
+  );
+  CREATE INDEX cards_by_set ON cards (set_id);
+
+  -- Leurs Pokémon, dans l'ordre (plusieurs pour une carte TAG TEAM).
+  CREATE TABLE card_species (
+    card INTEGER NOT NULL REFERENCES cards (id) ON DELETE CASCADE,
+    rank INTEGER NOT NULL,
+    dex_id INTEGER NOT NULL,
+    PRIMARY KEY (card, rank)
+  ) WITHOUT ROWID;
+  `,
 ]
 
 /**

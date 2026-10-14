@@ -1,4 +1,4 @@
-/* Référence : les espèces (PokéAPI), embarquées dans `src/data` */
+/* Référence : les espèces (PokéAPI), lues sur le serveur (`/api/species`) */
 
 export type PokemonTypeId =
   | 'normal'
@@ -177,37 +177,28 @@ export interface SpeciesDetailsFile {
 }
 
 /**
- * L'image d'une carte du catalogue : chez Pokécardex, chez TCGplayer (celle de son produit), ou
- * aucune (ni l'un ni l'autre ne l'a).
+ * Une carte du catalogue : [série, numéro (sans numéro imprimé : son rang), id Cardmarket (0 :
+ * aucun), nom français, numéro de son image chez Pokécardex (0 : aucune), ses Pokémon s'ils sont
+ * plusieurs].
  */
-export type CatalogImage = 'pokecardex' | { tcgplayer: number } | null
+export type CatalogRow = [string, string, number, string, number, number[]?]
 
-/**
- * Une carte du catalogue : [extension, numéro, id Cardmarket (0 : inconnu ou douteux), suffixe,
- * image, ses Pokémon s'ils sont plusieurs].
- */
-export type CatalogRow = [string, string, number, string, CatalogImage, number[]?]
-
-/** `/api/catalog` : les cartes Pokémon japonaises de TCGdex (tâche `catalog`, `server/jobs/catalog.ts`). */
+/** `/api/catalog` : les cartes Pokémon japonaises de Pokécardex (tâche `catalog`, `server/jobs/catalog.ts`). */
 export interface CatalogFile {
-  /** [nom japonais, date de sortie, groupes TCGplayer de ses cartes s'il y en a]. */
-  sets: Record<string, [name: string, released: string, tcgplayerGroups?: number[]]>
+  /** Clé : le code de la série chez Pokécardex (« SV2A ») ; [nom, date de sortie au Japon]. */
+  sets: Record<string, [name: string, released: string]>
   /** Clé : numéro du Pokémon ; ses cartes, des plus récentes aux plus anciennes. */
   cards: Partial<Record<string, CatalogRow[]>>
 }
 
 /* Prix : `/api/prices`, mis à jour par la tâche d'ingestion `prices` (`server/jobs/prices.ts`) */
 
-/** D'où vient un prix : Cardmarket ; TCGplayer pour une carte sans prix Cardmarket ce jour. */
-export type PriceSource = 'cardmarket' | 'tcgplayer'
-
 export interface CardPrice {
   /** Prix du marché, en euros : la tendance Cardmarket, sinon sa moyenne sur 30 jours. */
   price: number
   low: number | null
-  /** Moyenne sur 30 jours (Cardmarket seulement). */
+  /** Moyenne sur 30 jours. */
   avg30: number | null
-  source: PriceSource
 }
 
 /** Le prix du jour d'une carte, en court : prix du marché, plus bas, moyenne sur 30 jours. */
@@ -221,26 +212,9 @@ export interface PriceFile {
   cards: Record<string, CardPriceRow>
 }
 
-/** Le prix du jour d'une carte chez TCGplayer, converti en euros : prix du marché, plus bas. */
-export type TcgplayerPriceRow = [price: number, low: number | null]
-
-/**
- * Les prix TCGplayer du jour des cartes du catalogue sans prix Cardmarket
- * (pas d'id, ou pas de prix pour cet id : vieilles séries, decks, promos), converti en euros.
- */
-export interface TcgplayerPriceFile {
-  /** Jour des prix (YYYY-MM-DD). */
-  date: string
-  /** Dollars pour un euro, au cours de référence de la Banque centrale européenne. */
-  usdPerEur: number
-  /** Clé : le code de la carte (`codeKey` : « E1 97 »). */
-  cards: Record<string, TcgplayerPriceRow>
-}
-
-/** Les prix du jour (`/api/prices`), chacun `null` tant que sa source n'a jamais été lue. */
+/** Les prix du jour (`/api/prices`) : `null` tant que le guide n'a jamais été lu. */
 export interface Prices {
   cardmarket: PriceFile | null
-  tcgplayer: TcgplayerPriceFile | null
 }
 
 /** `/api/prices/<idProduct>` : l'historique d'une carte (Cardmarket n'en garde pas). */

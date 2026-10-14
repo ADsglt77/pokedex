@@ -138,8 +138,8 @@ export function WishlistPanel() {
 
       {filters.underMax && (
         <Alert tone="info" title="Un indicateur de marché, pas une offre.">
-          Le prix du marché de ces cartes (Cardmarket, sinon TCGplayer) est sous votre prix maximum.
-          Les annonces réelles varient selon l’état et le vendeur : vérifiez-les.
+          Le prix du marché de ces cartes (Cardmarket) est sous votre prix maximum. Les annonces
+          réelles varient selon l’état et le vendeur : vérifiez-les.
         </Alert>
       )}
 

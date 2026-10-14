@@ -29,12 +29,11 @@ import { saveSnapshot } from './snapshots'
 
 const HOUR = 3_600_000
 
-// Dans l'ordre où elles passent : le catalogue suit les espèces, les prix TCGplayer et les images
-// suivent le catalogue.
+// Dans l'ordre où elles passent : les images suivent le catalogue.
 const JOBS: Record<string, { every: number; run: (db: Database) => Promise<void> }> = {
-  // Les espèces ne changent qu'avec une nouvelle génération ; le catalogue en a besoin.
+  // Les espèces ne changent qu'avec une nouvelle génération.
   species: { every: 30 * 24 * HOUR, run: species },
-  // De nouvelles cartes quelques fois par mois.
+  // De nouvelles cartes quelques fois par mois (Pokécardex : une page par série, toutes les 3 s).
   catalog: { every: 24 * HOUR, run: catalog },
   // Les prix changent une fois par jour ; la tâche ne retélécharge que ce qui a changé.
   prices: { every: 6 * HOUR, run: prices },

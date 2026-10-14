@@ -4,8 +4,8 @@ Pokédex personnel de cartes Pokémon japonaises : pour chacun des 1 025 Pokémo
 carte que l'on veut (sa référence, d'où son image est retrouvée, et son id Cardmarket pour suivre
 son prix) ; le Pokémon se débloque quand on la possède. React + Vite + TypeScript, interface
 [`@camply/ui`](https://www.npmjs.com/package/@camply/ui), espèces [PokéAPI](https://pokeapi.co/),
-images [Pokécardex](https://www.pokecardex.com/) (avec son autorisation), sinon
-[TCGplayer](https://www.tcgplayer.com/), prix [Cardmarket](https://www.cardmarket.com/).
+cartes et images [Pokécardex](https://www.pokecardex.com/) (avec son autorisation), prix
+[Cardmarket](https://www.cardmarket.com/).
 
 ```sh
 bun install
@@ -26,7 +26,7 @@ bun run format   # Prettier
   de l'espèce.
 - **Ajouter depuis Cardmarket** : sur la page d'une carte chez Cardmarket, le favori « Ajouter au
   Pokédex » ouvre l'app avec son id, son nom et l'adresse de la page ; le Pokémon est reconnu
-  d'après le nom et l'image retrouvée d'après le code de la carte (« sv2a 166 »), à vérifier ; il
+  d'après le nom et l'image retrouvée d'après le code de la carte (« SV2A 166 »), à vérifier ; il
   reste à valider.
 - **Valeur** : prix Cardmarket du jour, valeur de la collection (et gain par rapport au prix
   payé), commandes, souhaits, coût pour compléter le Pokédex, courbes de prix au fil des jours.
@@ -38,19 +38,18 @@ bun run format   # Prettier
   à copier), les images à chercher pour les cartes qui n'en ont pas, export / import (achats
   compris), effacement.
 
-Toutes les données passent par le serveur de l'app (`server/`, une base SQLite) : le navigateur
-ne parle qu'à lui. Des tâches d'ingestion lisent les sources et remplissent la base :
-- `catalog`, chaque jour : le catalogue des cartes japonaises, d'après TCGdex, complété par les
-  cartes de TCGplayer qu'il n'a pas (decks, promos, sets spéciaux : environ 19 000 cartes en tout ;
-  `/api/catalog`) ;
+Toutes les données passent par le serveur de l'app (`server/`, Elysia et une base SQLite) : le
+navigateur ne parle qu'à lui. Des tâches d'ingestion lisent les sources et remplissent la base :
+- `catalog`, chaque jour : le catalogue des cartes japonaises, d'après Pokécardex (avec son
+  accord) : ses ≈ 450 séries japonaises depuis 1996, decks et promos compris, avec le numéro, le
+  nom, les Pokémon et l'id Cardmarket de chaque carte (`/api/catalog`). Une page par série, une
+  toutes les 3 s : le premier passage prend une vingtaine de minutes ;
 - `prices`, toutes les 6 h : les prix d'après les fichiers publics de Cardmarket (le prix du jour
-  de toutes ses cartes à l'unité, et l'historique de chacune) ; pour les cartes du catalogue sans
-  prix Cardmarket (vieilles séries, decks, promos), le prix TCGplayer (export de tcgcsv.com),
-  converti en euros au cours de la BCE (`/api/prices`) ;
+  de toutes ses cartes à l'unité, et l'historique de chacune ; `/api/prices`) ;
 - `images`, chaque jour : les images copiées chez nous (`/images/…`) — cartes chez Pokécardex,
-  avec son autorisation et un lien vers son site sur chaque page, sinon celle du produit chez
-  TCGplayer ; sprites et illustrations des Pokémon chez PokéAPI. Une image qui manque encore est
-  copiée à la demande.
+  qui demande qu'elles soient hébergées chez nous, avec un lien vers son site sur chaque page ;
+  sprites et illustrations des Pokémon chez PokéAPI. Une image qui manque encore est copiée à la
+  demande.
 
 Les espèces (PokéAPI) viennent aussi du serveur (tâche `species`, chaque mois). Seule une
 image à l'adresse collée se charge ailleurs ; pas celles de Cardmarket, qui ne s'affichent que sur
@@ -87,10 +86,10 @@ L'image Docker construit le site avec Bun et le sert avec nginx (`deploy/nginx.c
 copiées). `compose.yaml` l'expose sur `127.0.0.1:8080` (variable `POKEDEX_PORT`), joignable
 seulement par le tunnel. À côté :
 - le service `server` : l'API, et la copie à la demande d'une image qui manque encore ;
-- le service `ingest` : il refait le catalogue des cartes chaque jour (le premier passage, carte
-  par carte, prend un quart d'heure ; la page Catalogue dit en attendant qu'il n'est pas
-  disponible), regarde toutes les 6 h si Cardmarket a publié un nouveau guide des prix et
-  TCGplayer de nouveaux prix (il ne les télécharge qu'une fois par jour) et en garde l'historique
+- le service `ingest` : il refait le catalogue des cartes chaque jour (le premier passage, série
+  par série, prend une vingtaine de minutes ; la page Catalogue dit en attendant qu'il n'est pas
+  disponible), regarde toutes les 6 h si Cardmarket a publié un nouveau guide des prix (il ne le
+  télécharge qu'une fois par jour) et en garde l'historique
   dans une base SQLite (volume Docker `db`), puis copie chaque jour les images manquantes (volume
   `images` ; le premier passage, environ 1 Go, prend une heure ou plus, et le serveur copie en
   attendant celles qui s'affichent), et sauvegarde les deux bases chaque jour (volume `backups`).
