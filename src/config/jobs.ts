@@ -3,10 +3,9 @@
  * rythme, et leur nom sur la page Données (qui dit où elles en sont, `/api/status`).
  */
 
-export type IngestJob = 'species' | 'catalog' | 'prices' | 'images' | 'backups'
+import { DAY, HOUR } from '@/lib/time'
 
-const HOUR = 3_600_000
-const DAY = 24 * HOUR
+export type IngestJob = 'species' | 'catalog' | 'prices' | 'images' | 'backups'
 
 export const INGEST_JOBS: Record<
   IngestJob,

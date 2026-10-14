@@ -51,10 +51,6 @@
   gap: var(--camply-space-1) var(--camply-space-2);
 }
 
-.groupTitle {
-  font-size: 1rem;
-}
-
 /* Les étapes d'installation du favori. */
 .steps {
   max-width: 62ch;

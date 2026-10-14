@@ -9,7 +9,7 @@ import { cardTitle } from '@/lib/species'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { isToBuy } from '@/lib/collection'
 import { pokedexUrl } from '@/lib/filters'
-import { plural, toOptions } from '@/lib/format'
+import { formatInteger, plural, toOptions } from '@/lib/format'
 import {
   cardsToList,
   DEFAULT_WISHLIST_FILTERS,
@@ -61,7 +61,7 @@ export function WishlistPanel() {
     )
   const listAllButton = toList.length > 0 && (
     <Button variant="secondary" onClick={listAll}>
-      Ajouter {plural(toList.length, 'carte à obtenir', 'cartes à obtenir')}
+      Ajouter vos autres cartes ({formatInteger(toList.length)})
     </Button>
   )
 
@@ -99,7 +99,7 @@ export function WishlistPanel() {
           className={styles.search}
           type="search"
           aria-label="Rechercher dans la liste d’achats"
-          placeholder="Nom, numéro ou référence"
+          placeholder="Nom, numéro ou référence…"
           leftIcon={<Search size={16} />}
           value={filters.search}
           onChange={(event) => set({ search: event.target.value })}

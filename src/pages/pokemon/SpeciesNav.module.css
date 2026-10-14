@@ -42,7 +42,7 @@
 
 .number {
   color: var(--camply-text-muted-2);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -54,17 +54,23 @@
 
 .edge {
   justify-content: center;
-  color: var(--camply-text-disabled);
-  font-size: 0.8125rem;
+  color: var(--camply-text-muted-2);
+  font-size: var(--text-sm);
 }
 
+/* Sur téléphone, les voisins prennent toute la ligne : le précédent à gauche, le suivant à droite. */
 @media (max-width: 40rem) {
+  .neighbours {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+
   .neighbour,
   .edge {
     min-width: 0;
   }
 
   .edge {
-    display: none;
+    visibility: hidden;
   }
 }

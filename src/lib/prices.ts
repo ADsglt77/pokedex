@@ -7,6 +7,7 @@
 import { GENERATIONS, type Generation } from '@/config/pokedex'
 import { formatEuro } from '@/lib/format'
 import { cardsWithStatus, isTaken, type PokedexEntry } from '@/lib/pokedex'
+import { addDays, daysBetween } from '@/lib/time'
 import type {
   CardPrice,
   CardPriceHistory,
@@ -37,6 +38,12 @@ export const marketPrice = (prices: Prices | null, card: Priced) =>
 /** « 12,40 € » ou « Sans prix ». */
 export const priceLabel = (price: number | null) =>
   price === null ? 'Sans prix' : formatEuro(price)
+
+/**
+ * L'écart du prix du jour à la moyenne sur 30 jours : 0,12 pour +12 %, −0,2 pour −20 % ; `null`
+ * sans moyenne.
+ */
+export const priceChange = ({ price, avg30 }: CardPrice) => (avg30 ? (price - avg30) / avg30 : null)
 
 /** L'écart en % entre ce que vaut une carte (ou une collection) et ce qu'elle a coûté. */
 export const gainPercent = (value: number, paid: number) =>
@@ -113,9 +120,9 @@ export function priceMovers(
   const seen = new Set<number>()
   const moves = cards.flatMap(({ card, status }): PriceMove[] => {
     const price = status === 'owned' ? priceOf(prices, card) : null
-    if (!price?.avg30 || seen.has(card.cardmarket!)) return []
+    const change = price && priceChange(price)
+    if (!price?.avg30 || !change || seen.has(card.cardmarket!)) return []
     seen.add(card.cardmarket!)
-    const change = (price.price - price.avg30) / price.avg30
     return Math.abs(change) < 0.05 || Math.abs(price.price - price.avg30) < 0.5
       ? []
       : [{ card, price: price.price, avg30: price.avg30, change }]
@@ -186,20 +193,11 @@ export interface PricePoint {
   value: number
 }
 
-const DAY = 86_400_000
-
-/** Le jour (YYYY-MM-DD) `day` jours après `from`. */
-const dayAfter = (from: string, day: number) =>
-  new Date(Date.parse(from) + day * DAY).toISOString().slice(0, 10)
-
-const daysBetween = (from: string, to: string) =>
-  Math.round((Date.parse(to) - Date.parse(from)) / DAY)
-
 /** La courbe d'une carte : un point par jour où elle avait un prix. */
 export function cardHistory(history: CardPriceHistory | null): PricePoint[] {
   if (!history) return []
   return history.prices.flatMap((value, day) =>
-    value === null ? [] : [{ date: dayAfter(history.from, day), value }],
+    value === null ? [] : [{ date: addDays(history.from, day), value }],
   )
 }
 
@@ -232,7 +230,7 @@ export function collectionHistory(histories: readonly CardPriceHistory[]): Price
     )
   })
   return Array.from({ length: days }, (_, day) => ({
-    date: dayAfter(first, day),
+    date: addDays(first, day),
     value: series.reduce((sum, values) => sum + values[day]!, 0),
   }))
 }

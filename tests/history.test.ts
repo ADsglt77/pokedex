@@ -21,15 +21,15 @@ describe('prix du jour ajouté à une année', () => {
   const known: HistoryYear = { year: 2026, first: 10, prices: [5, 6] }
 
   test('le même prix le même jour : rien à réécrire', () => {
-    expect(withPrice(known, 11, 6)).toBe(known)
+    expect(withPrice(known, 2026, 11, 6)).toBe(known)
   })
 
   test('relancée le même jour, la tâche remplace le prix du jour', () => {
-    expect(withPrice(known, 11, 7)).toEqual({ year: 2026, first: 10, prices: [5, 7] })
+    expect(withPrice(known, 2026, 11, 7)).toEqual({ year: 2026, first: 10, prices: [5, 7] })
   })
 
   test('des jours sans prix entre deux relevés restent vides', () => {
-    expect(withPrice(known, 14, 8)).toEqual({
+    expect(withPrice(known, 2026, 14, 8)).toEqual({
       year: 2026,
       first: 10,
       prices: [5, 6, null, null, 8],
@@ -37,12 +37,12 @@ describe('prix du jour ajouté à une année', () => {
   })
 
   test('un prix avant le premier jour connu le devance, sans décaler les autres', () => {
-    expect(withPrice(known, 8, 4)).toEqual({ year: 2026, first: 8, prices: [4, null, 5, 6] })
+    expect(withPrice(known, 2026, 8, 4)).toEqual({ year: 2026, first: 8, prices: [4, null, 5, 6] })
   })
 
   test('l’année reçue n’est jamais modifiée', () => {
-    withPrice(known, 14, 8)
-    withPrice(known, 8, 4)
+    withPrice(known, 2026, 14, 8)
+    withPrice(known, 2026, 8, 4)
     expect(known).toEqual({ year: 2026, first: 10, prices: [5, 6] })
   })
 })
@@ -84,7 +84,7 @@ describe('historique rangé par année, puis relu', () => {
     ] as const) {
       const [year, day] = yearDay(date)
       const known = years.find((row) => row.year === year)
-      const next = known ? withPrice(known, day, price) : { year, first: day, prices: [price] }
+      const next = withPrice(known, year, day, price)
       years = [...years.filter((row) => row.year !== year), next].sort((a, b) => a.year - b.year)
     }
     expect(joinYears(years)).toEqual({ from: '2025-12-30', prices: [10, null, 12, 11] })

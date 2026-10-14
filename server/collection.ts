@@ -12,10 +12,9 @@
 
 import type { Database } from 'bun:sqlite'
 import { Elysia, t } from 'elysia'
+import { DAY, HOUR } from '@/lib/time'
 import { readDocument } from '@/lib/transfer'
 import type { accountRoutes } from './auth'
-
-const HOUR = 3_600_000
 
 interface Row {
   version: number
@@ -49,7 +48,7 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
       .run(userId, row.version, now.toISOString(), Bun.gzipSync(documentText(row)))
     app
       .query('DELETE FROM collection_versions WHERE user_id = ? AND saved_at < ?')
-      .run(userId, new Date(now.getTime() - 30 * 24 * HOUR).toISOString())
+      .run(userId, new Date(now.getTime() - 30 * DAY).toISOString())
   }
 
   return new Elysia({ name: 'collection' })

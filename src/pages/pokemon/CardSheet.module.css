@@ -2,14 +2,8 @@
   min-width: 0;
 }
 
-.title {
-  font-size: 1.625rem;
-}
-
-.status {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--camply-text-muted);
+/* Le prix et l'achat : deux temps de la fiche, chacun sous un filet. */
+.sheet > section {
+  padding-top: var(--camply-space-6);
+  border-top: 1px solid var(--camply-border-soft);
 }

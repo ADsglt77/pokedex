@@ -18,12 +18,11 @@
 import type { Database } from 'bun:sqlite'
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { localSrc, pokecardexImage } from '@/lib/card-images'
+import { WEEK } from '@/lib/time'
 import { mirror } from '../images'
 import { mapPool } from '../lib/net'
-import { saveSnapshot } from '../snapshots'
-import { catalogSnapshot } from './catalog'
+import { saveCatalog } from './catalog'
 
-const WEEK = 7 * 86_400_000
 /** Au-delà, la source est sans doute en panne : on ne la sollicite pas davantage. */
 const MAX_FAILURES = 20
 
@@ -75,7 +74,7 @@ export async function images(db: Database) {
     })
     console.log(`Images de ${cards.length} cartes cherchées : ${found} chez Pokécardex`)
   } finally {
-    saveSnapshot(db, 'catalog', catalogSnapshot(db))
+    saveCatalog(db)
   }
   if (failed.length) {
     throw new Error(

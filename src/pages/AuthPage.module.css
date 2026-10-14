@@ -11,12 +11,9 @@
   max-width: 26rem;
 }
 
-/* Le titre de la page (camply n'a pas de `CardTitle` de niveau 1). */
+/* Le titre de la page (camply n'a pas de `CardTitle` de niveau 1) : un `h1` à la taille d'un `h2`. */
 .title {
-  margin: 0;
-  color: var(--camply-text-strong);
-  font-family: var(--camply-font-display);
-  font-size: 1.5rem;
+  font-size: var(--title-md);
 }
 
 .form {

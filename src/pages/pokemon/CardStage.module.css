@@ -17,9 +17,22 @@
   }
 }
 
-.card {
+/* Ce que tient la main : la perspective de la carte qui s'incline (`tilt`, CardStage.tsx). */
+.holder {
+  width: 100%;
+  perspective: 60rem;
+}
+
+.holder .card {
   box-shadow: var(--camply-shadow-lg);
+  transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  /* Lâchée, elle revient doucement à plat ; tenue, elle suit la souris sans traîner. */
+  transition: transform 0.6s var(--camply-ease);
   animation: drop 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.holder[data-tilting] .card {
+  transition-duration: 0.12s;
 }
 
 @keyframes drop {
@@ -29,8 +42,27 @@
   }
 }
 
+/* La lumière qui glisse sur la carte, là où se trouve la souris. */
+.glare {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--glare-x, 50%) var(--glare-y, 50%),
+    rgb(255 255 255 / 0.35),
+    transparent 55%
+  );
+  mix-blend-mode: soft-light;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+
+.holder[data-tilting] .glare {
+  opacity: 1;
+}
+
 .caption {
   color: var(--camply-text-muted);
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   text-align: center;
 }

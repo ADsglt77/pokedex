@@ -9,6 +9,13 @@
 :root {
   /* La marge latérale des pages ; la barre collante du Pokédex l'annule pour déborder. */
   --gutter: clamp(1rem, 0.4rem + 2.5vw, 2.5rem);
+  /* Les tailles de texte de l'app, de la mention au titre de section (les titres de page ont la
+     leur, fluide). Une taille hors de cette échelle doit avoir une raison. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.875rem;
+  --title-sm: 1.125rem;
+  --title-md: 1.5rem;
 }
 
 html {
@@ -40,13 +47,19 @@ h4 {
   text-wrap: balance;
 }
 
-/* Les intertitres de section ; ceux de camply ont leur propre classe. */
+/* Les intertitres : section, puis bloc dans une section ; ceux de camply ont leur propre classe. */
 h2 {
-  font-size: 1.5rem;
+  font-size: var(--title-md);
+}
+
+h3 {
+  font-size: var(--title-sm);
 }
 
 p {
   margin: 0;
+  /* Pas de mot seul sur la dernière ligne d'un paragraphe. */
+  text-wrap: pretty;
 }
 
 /* Les listes de l'app sont des grilles et des piles de cartes, pas des listes à puces. */
@@ -56,8 +69,36 @@ ul {
   list-style: none;
 }
 
+/* Un soulignement fin et détaché du texte, plein au survol. */
 a {
   color: var(--camply-accent);
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  text-underline-offset: 0.2em;
+  transition: text-decoration-color 0.15s;
+}
+
+a:hover {
+  text-decoration-color: currentColor;
+}
+
+/* Pas d'attente au toucher sur ce qui se clique ; pas de voile gris non plus (les tuiles et les
+   boutons ont leur propre retour). */
+a,
+button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Arrivée au bout d'une fenêtre (catalogue d'un Pokémon…), le défilement n'emporte pas la page
+   derrière elle. */
+.camply-modal__panel {
+  overscroll-behavior: contain;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--camply-accent) 35%, transparent);
+  color: var(--camply-text-strong);
 }
 
 img {
@@ -85,15 +126,29 @@ img {
   max-width: 50rem;
 }
 
-/* Une rangée de statistiques (`Stat`), qui passe sur plusieurs lignes quand la place manque. */
+/* Une rangée de quatre statistiques (`Stat`) ; deux par ligne quand la place manque (tablette,
+   téléphone) : jamais trois et une seule en dessous, ni une pile qui cache la page. */
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (min-width: 56rem) {
+  .stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+  }
 }
 
 .muted {
   color: var(--camply-text-muted);
+}
+
+/* Un texte d'aide sous un réglage : discret et petit. */
+.hint {
+  color: var(--camply-text-muted);
+  font-size: var(--text-sm);
 }
 
 .numeric {

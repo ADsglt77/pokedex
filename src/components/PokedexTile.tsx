@@ -8,10 +8,10 @@ import { PossessionMark } from './PossessionMark'
 import styles from './PokedexTile.module.css'
 
 const SPECIES_LABELS: Record<CardStatus | 'none', string> = {
-  owned: 'Possédé',
-  ordered: 'Non possédé, carte commandée',
-  wanted: 'Non possédé, carte souhaitée',
-  none: 'Non possédé',
+  owned: 'Débloqué',
+  ordered: 'À débloquer, carte commandée',
+  wanted: 'À débloquer, carte souhaitée',
+  none: 'À débloquer',
 }
 
 /**

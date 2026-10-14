@@ -48,6 +48,7 @@ export function CardArt({
         styles.card,
         !showScan && styles.proxy,
         !card && styles.empty,
+        large && styles.large,
         locked && styles.locked,
         className,
       )}

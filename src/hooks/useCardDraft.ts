@@ -3,6 +3,7 @@ import { findCardImage, type CatalogCard } from '@/lib/card-catalog'
 import { isPokecardexImage, isTcgplayerImage } from '@/lib/card-images'
 import { referenceCode } from '@/lib/card-code'
 import { isCardmarketImage, parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
+import { newCardId } from '@/lib/collection'
 import { parseLink } from '@/lib/format'
 import { loadPriceHistory } from '@/store/prices'
 import type { CardImage, PokemonCard } from '@/types'
@@ -28,7 +29,7 @@ const isFoundImage = (card: PokemonCard) =>
  */
 export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
   // Tiré une fois : deux clics sur « Enregistrer » écrivent la même carte, pas deux.
-  const [id] = useState(() => card?.id ?? `manual:${crypto.randomUUID()}`)
+  const [id] = useState(() => card?.id ?? newCardId())
   const [image, setImage] = useState(() =>
     card?.image && !isFoundImage(card) ? card.image.large : '',
   )
@@ -79,17 +80,21 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
   async function read(dexIds: number[], fallback: string): Promise<PokemonCard | null> {
     setSubmitted(true)
     if (cardmarket === undefined || errors.image || errors.page) return null
-    const known = cardmarket === null ? null : await loadPriceHistory(cardmarket)
-    const previous = card?.cardmarket === undefined ? null : await loadPriceHistory(card.cardmarket)
+    const changedId = cardmarket !== card?.cardmarket
+    // Le nom de l'id saisi, et celui de l'ancien id s'il a changé (la référence le reprenait-elle ?).
+    const [known, previous] = await Promise.all([
+      cardmarket === null ? null : loadPriceHistory(cardmarket),
+      card?.cardmarket === undefined || !changedId ? null : loadPriceHistory(card.cardmarket),
+    ])
     const typed = reference.trim()
-    const stale = cardmarket !== card?.cardmarket && typed === previous?.name
+    const stale = changedId && typed === previous?.name
     const stalePage = cardmarket !== initial.cardmarket && page.trim() === initial.page
     const search = !image.trim() && referenceCode(typed) !== null
-    // L'image déjà enregistrée reste si elle ne répond pas, pour la même référence : elle s'est
-    // chargée une fois.
+    // L'image déjà retrouvée reste, pour la même référence : si elle ne répond pas cette fois, ou
+    // si la référence n'a pas de code où la chercher (une image d'une ancienne version).
     const kept = card && typed === card.reference && isFoundImage(card) ? card.image : null
-    const picture =
-      pasted ?? (search ? ((await findCardImage(typed, { retry: true })) ?? kept) : null)
+    const found = search ? await findCardImage(typed, { retry: true }) : null
+    const picture = pasted ?? found ?? kept
     return {
       id,
       dexIds,

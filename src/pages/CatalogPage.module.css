@@ -3,3 +3,9 @@
   flex: 1 1 22rem;
   max-width: 36rem;
 }
+
+/* Le libellé de « Ajouter comme », à la taille de celui de l'interrupteur voisin. */
+.label {
+  color: var(--camply-text-muted);
+  font-size: var(--text-md);
+}

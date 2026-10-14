@@ -38,7 +38,8 @@ export const budgetLevel = (spent: number, budget: BudgetSettings) =>
 function spendingBy(orders: readonly Order[], keyOf: (order: Order) => string) {
   const groups = new Map<string, Order[]>()
   for (const order of orders.filter((order) => order.state !== 'cancelled')) {
-    groups.set(keyOf(order), [...(groups.get(keyOf(order)) ?? []), order])
+    const key = keyOf(order)
+    groups.set(key, [...(groups.get(key) ?? []), order])
   }
   return [...groups].map(([key, group]) => ({ key, ...spentOn(group) }))
 }

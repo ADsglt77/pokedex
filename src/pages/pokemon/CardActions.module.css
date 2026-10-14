@@ -6,15 +6,6 @@
   justify-content: flex-start;
 }
 
-.hint {
-  color: var(--camply-text-muted);
-  font-size: 0.8125rem;
-}
-
-.groupTitle {
-  font-size: 1rem;
-}
-
 /* Rien n'est suivi : « Je possède cette carte » a l'allure d'un bouton principal. */
 .expected {
   border-color: var(--camply-accent);

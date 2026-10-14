@@ -28,9 +28,7 @@ export function SpeciesAbout({
 }) {
   return (
     <Stack as="aside" gap={5} className={styles.about} aria-labelledby="about-title">
-      <h2 id="about-title" className={styles.title}>
-        Dans le Pokédex
-      </h2>
+      <h2 id="about-title">Dans le Pokédex</h2>
 
       {/* Sans carte, l'illustration officielle — clairement présentée comme telle. */}
       {showArtwork && (

@@ -1,5 +1,5 @@
 /**
- * Réseau des tâches d'ingestion et des scripts de données : un `fetch` JSON avec un cache disque
+ * Réseau des tâches d'ingestion : un `fetch` JSON avec un cache disque
  * (`CACHE_DIR`, sinon `.data/cache` : pour relancer une tâche sans solliciter les API à nouveau)
  * et une file à concurrence limitée. Chaque requête s'identifie, attend 100 ms avant de partir et
  * échoue au bout de 2 min sans réponse complète. Un 404 arrête la tâche. Une réponse en cache sert
@@ -20,7 +20,7 @@ class NotFoundError extends Error {}
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const USER_AGENT = 'pokedex-perso/1.0 (bun run data)'
+const USER_AGENT = 'pokedex-perso/1.0 (bun run ingest)'
 
 /**
  * Au-delà, une requête échoue, lecture de la réponse comprise : une connexion qui ne répond plus ne
@@ -39,20 +39,20 @@ export async function politeFetch(url: string, init?: RequestInit) {
   })
 }
 
+/** Une requête identifiée qui a réussi ; sinon (404 compris), une erreur. */
+export async function download(url: string, init?: RequestInit) {
+  const response = await politeFetch(url, init)
+  if (!response.ok) throw new Error(`HTTP ${response.status} pour ${url}`)
+  return response
+}
+
 /**
  * Document JSON, lu dans le cache s'il y a été mis il y a moins de `maxAge` ms. `namespace` : un
  * dossier par API.
  */
-export async function fetchJson<T>(
-  url: string,
-  namespace: string,
-  init?: RequestInit,
-  maxAge = Infinity,
-): Promise<T> {
-  const body = typeof init?.body === 'string' ? init.body : ''
-  const key = createHash('sha1')
-    .update(`${init?.method ?? 'GET'} ${url}\n${body}`)
-    .digest('hex')
+export async function fetchJson<T>(url: string, namespace: string, maxAge = Infinity): Promise<T> {
+  // La clé des fichiers déjà en cache : celle d'une requête GET sans corps.
+  const key = createHash('sha1').update(`GET ${url}\n`).digest('hex')
   const file = join(CACHE_ROOT, namespace, `${key}.json`)
 
   if (!refresh) {
@@ -67,7 +67,7 @@ export async function fetchJson<T>(
 
   for (let attempt = 0; ; attempt++) {
     try {
-      const response = await politeFetch(url, init)
+      const response = await politeFetch(url)
       // Un 404 est une réponse : réessayer n'y changerait rien.
       if (response.status === 404) throw new NotFoundError(`404 pour ${url}`)
       if (!response.ok) throw new Error(`HTTP ${response.status} pour ${url}`)

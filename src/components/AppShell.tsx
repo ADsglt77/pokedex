@@ -6,6 +6,7 @@ import { AccountMenu } from '@/components/AccountMenu'
 import { ExternalLink } from '@/components/ExternalLink'
 import { POKECARDEX } from '@/lib/card-images'
 import { cx } from '@/lib/cx'
+import { DAY } from '@/lib/time'
 import { useCollectionStore } from '@/store/collection'
 import { useLastExport, useStorageFailure } from '@/store/persist'
 import { useSyncStore } from '@/store/sync'
@@ -19,6 +20,13 @@ const NAV = [
   { to: '/achats', label: 'Achats', icon: ShoppingCart },
   { to: '/donnees', label: 'Données', icon: Database },
 ]
+
+/** L'action des avertissements de l'app (stockage, sauvegarde) : la section Exporter des Données. */
+const exportAction = (
+  <Button asChild size="sm" variant="soft">
+    <Link to="/donnees#exporter">Exporter</Link>
+  </Button>
+)
 
 /** L'onglet de la page : la fiche d'un Pokémon fait partie du Pokédex. */
 const isCurrent = (to: string, path: string) =>
@@ -94,21 +102,16 @@ export function AppShell() {
         </div>
       </header>
 
-      {storageFailed && (
-        <Banner
-          tone="warn"
-          action={
-            <Button asChild size="sm" variant="soft">
-              <Link to="/donnees#exporter">Exporter</Link>
-            </Button>
-          }
-        >
-          Le navigateur n’enregistre plus vos modifications (stockage plein ou bloqué) : elles
-          seront perdues en fermant la page. Exportez votre collection pour les garder.
-        </Banner>
+      {storageFailed ? (
+        <div className={cx('container', styles.notice)}>
+          <Banner tone="warn" action={exportAction}>
+            Le navigateur n’enregistre plus vos modifications (stockage plein ou bloqué) : elles
+            seront perdues en fermant la page. Exportez votre collection pour les garder.
+          </Banner>
+        </div>
+      ) : (
+        <BackupReminder />
       )}
-
-      {!storageFailed && <BackupReminder />}
 
       <main id="main" ref={main} tabIndex={-1} className={styles.main}>
         {/* Une clé par adresse : chaque page (et chaque fiche) repart d'un état neuf. */}
@@ -137,8 +140,6 @@ export function AppShell() {
   )
 }
 
-const DAY = 24 * 60 * 60 * 1000
-
 /**
  * Le rappel de sauvegarde, sans compte connecté : la collection n'existe que dans ce navigateur
  * (connecté, elle est sur le serveur, sauvegardé). Il paraît quand elle a changé depuis le dernier
@@ -157,18 +158,12 @@ function BackupReminder() {
     : now - last > 30 * DAY
   if (synced || !changed || !due) return null
   return (
-    <Banner
-      tone="info"
-      dismissible
-      action={
-        <Button asChild size="sm" variant="soft">
-          <Link to="/donnees#exporter">Exporter</Link>
-        </Button>
-      }
-    >
-      {Number.isNaN(last)
-        ? 'Votre collection n’existe que dans ce navigateur : exportez-la pour en garder une copie.'
-        : 'Votre dernier export date de plus d’un mois, et votre collection a changé depuis.'}
-    </Banner>
+    <div className={cx('container', styles.notice)}>
+      <Banner tone="info" dismissible action={exportAction}>
+        {Number.isNaN(last)
+          ? 'Votre collection n’existe que dans ce navigateur : exportez-la pour en garder une copie.'
+          : 'Votre dernier export date de plus d’un mois, et votre collection a changé depuis.'}
+      </Banner>
+    </div>
   )
 }

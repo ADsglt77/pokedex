@@ -9,10 +9,11 @@
 
 import { mkdir, rename, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { WEEK } from '@/lib/time'
 import { DATA_DIR } from './db'
 import { politeFetch } from './lib/net'
 
-export const IMAGES_DIR = process.env.IMAGES_DIR ?? join(DATA_DIR, 'images')
+const IMAGES_DIR = process.env.IMAGES_DIR ?? join(DATA_DIR, 'images')
 
 const SPRITES = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon'
 
@@ -31,7 +32,7 @@ const UPSTREAMS: [RegExp, (...parts: string[]) => string][] = [
 ]
 
 /** L'adresse d'origine d'un chemin local (`/images/…`) ; `null` s'il n'en est pas un. */
-export function upstreamUrl(path: string) {
+function upstreamUrl(path: string) {
   for (const [pattern, url] of UPSTREAMS) {
     const match = pattern.exec(path)
     if (match) return url(...match.slice(1))
@@ -46,7 +47,7 @@ export function upstreamUrl(path: string) {
 const LEGACY = /^\/images\/cards\/tcgplayer\/\d{1,9}_(200w|in_1000x1000)\.jpg$/
 
 /** Le fichier d'un chemin local (`/images/cards/…` → `IMAGES_DIR/cards/…`). */
-export const imageFile = (path: string) => join(IMAGES_DIR, path.slice('/images/'.length))
+const imageFile = (path: string) => join(IMAGES_DIR, path.slice('/images/'.length))
 
 const exists = (file: string) =>
   stat(file).then(
@@ -77,7 +78,6 @@ export async function mirror(path: string): Promise<boolean> {
   return true
 }
 
-const WEEK = 7 * 86_400_000
 /** Gardées un mois par les navigateurs (et Cloudflare) : une image ne change pas. */
 const IMAGE_HEADERS = { 'Cache-Control': 'public, max-age=2592000' }
 /** Les images que la source n'a pas, et quand on l'a appris : pas redemandées avant une semaine. */
@@ -94,10 +94,11 @@ export async function serveImage(request: Request) {
   const path = new URL(request.url).pathname
   const notFound = () =>
     new Response(null, { status: 404, headers: { 'Cache-Control': 'no-cache' } })
-  if (!upstreamUrl(path) && !LEGACY.test(path)) return notFound()
+  const upstream = upstreamUrl(path)
+  if (!upstream && !LEGACY.test(path)) return notFound()
   const file = Bun.file(imageFile(path))
   if (await file.exists()) return new Response(file, { headers: IMAGE_HEADERS })
-  if (!upstreamUrl(path)) return notFound()
+  if (!upstream) return notFound()
   if (Date.now() - (misses.get(path) ?? 0) < WEEK) return notFound()
 
   let copy = copies.get(path)

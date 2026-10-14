@@ -27,7 +27,7 @@ export function SpeciesNav({ previous, next, nextWithoutCard }: SpeciesNavProps)
     const onKeyDown = (event: KeyboardEvent) => {
       const busy =
         event.target instanceof HTMLElement &&
-        event.target.closest('input, textarea, select, [role=dialog], [role=listbox]')
+        event.target.closest('input, textarea, select, [role=listbox]')
       if (
         busy ||
         event.defaultPrevented ||

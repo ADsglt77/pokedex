@@ -37,7 +37,7 @@ import {
   refundFits,
   unitCosts,
 } from '@/lib/orders'
-import { priceOf } from '@/lib/prices'
+import { marketPrice } from '@/lib/prices'
 import { useCollectionStore } from '@/store/collection'
 import { usePrices } from '@/store/prices'
 import { useShoppingStore } from '@/store/shopping'
@@ -190,11 +190,11 @@ export function OrderForm({
 
   const addLine = (cardId: string) => {
     const card = findCard(cardId, collection)!
-    const price = priceOf(prices, card)?.price
+    const price = marketPrice(prices, card)
     set({
       lines: [
         ...draft.lines,
-        { cardId, quantity: '1', unitPrice: price === undefined ? '' : euroInput(price) },
+        { cardId, quantity: '1', unitPrice: price === null ? '' : euroInput(price) },
       ],
     })
   }
@@ -310,16 +310,17 @@ export function OrderForm({
                 const remove = () => set({ lines: draft.lines.filter((_, i) => i !== index) })
                 if (!card) {
                   return (
-                    <li key={line.cardId} className={styles.line}>
-                      <span className="muted">Carte retirée du Pokédex</span>
-                      <IconButton
-                        label="Retirer cette carte de la commande"
-                        size="sm"
-                        variant="ghost"
-                        onClick={remove}
-                      >
-                        <X size={15} />
-                      </IconButton>
+                    <li key={line.cardId}>
+                      <CardLine card={null}>
+                        <IconButton
+                          label="Retirer cette carte de la commande"
+                          size="sm"
+                          variant="ghost"
+                          onClick={remove}
+                        >
+                          <X size={15} />
+                        </IconButton>
+                      </CardLine>
                     </li>
                   )
                 }
@@ -369,7 +370,7 @@ export function OrderForm({
           <Combobox
             label="Ajouter une carte"
             hint="Une carte de votre Pokédex. Pour une autre, ajoutez-la d’abord sur la fiche de son Pokémon."
-            placeholder="Nom ou référence"
+            placeholder="Nom ou référence…"
             emptyMessage="Aucune carte trouvée."
             options={addable}
             error={errors.lines}

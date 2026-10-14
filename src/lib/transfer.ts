@@ -5,7 +5,7 @@
 
 import { ORDER_STATE_LABELS, PRIORITY_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { parseCardmarketLink } from '@/lib/cardmarket'
-import { parseLink, today } from '@/lib/format'
+import { euroInput, parseLink, today } from '@/lib/format'
 import { cardCount, linesTotal, orderSpent, refundFits, supplierLabel } from '@/lib/orders'
 import type { CollectionData, CollectionExportFile, Order, ShoppingData } from '@/types'
 
@@ -45,7 +45,7 @@ export function downloadExport(file: CollectionExportFile): string {
 
 /** « 12,50 » ; vide sans montant. */
 export const csvNumber = (value: number | null | undefined) =>
-  value == null ? '' : value.toFixed(2).replace('.', ',')
+  value == null ? '' : euroInput(value)
 
 /** `2026-10-05` → « 05/10/2026 » ; vide sans date. */
 const csvDay = (day: string | undefined) => (day ? day.split('-').reverse().join('/') : '')

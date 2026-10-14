@@ -1,0 +1,5 @@
+.credit {
+  color: var(--camply-text-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}

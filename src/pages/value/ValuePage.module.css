@@ -27,23 +27,26 @@
   gap: 2rem;
 }
 
-.chartTitle {
-  font-size: 1rem;
-}
-
-/* Les cartes qui bougent : la carte à gauche, son prix et son écart à droite. */
+/* Les cartes qui bougent : la carte à gauche, son prix et son écart à droite, une par ligne. */
 .movers {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
 .movers li {
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
   justify-content: space-between;
   gap: 0.25rem 1rem;
+  padding-block: 0.5rem;
+  border-bottom: 1px solid var(--camply-border-soft);
+  font-size: var(--text-md);
+}
+
+/* Le prix et l'écart restent à droite, même passés à la ligne sur un écran étroit. */
+.moverPrice {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }

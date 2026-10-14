@@ -7,6 +7,9 @@ import { createAuthClient } from 'better-auth/react'
 
 export const authClient = createAuthClient()
 
+/** La page de connexion, qui ramène ensuite à `back` (une page du site, filtres compris). */
+export const loginPath = (back: string) => `/connexion?retour=${encodeURIComponent(back)}`
+
 /**
  * Le site a-t-il son compte ? Sinon, c'est la première visite : toute page mène à `/bienvenue`,
  * qui le crée. Lu au démarrage (`loadAccount`) ; sans réponse du serveur, on le suppose créé.

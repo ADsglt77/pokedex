@@ -5,19 +5,14 @@
  */
 
 import type { Database } from 'bun:sqlite'
+import { addDays, DAY, daysBetween } from '@/lib/time'
 import type { CardPriceHistory } from '@/types'
-
-const DAY = 86_400_000
 
 /** `2026-10-14` → [2026, 286] : l'année et le jour de l'année (0 : 1er janvier). */
 export function yearDay(date: string): [number, number] {
   const year = Number(date.slice(0, 4))
   return [year, (Date.parse(date) - Date.UTC(year, 0, 1)) / DAY]
 }
-
-/** Le jour qui suit `date` de `days` jours. */
-const addDays = (date: string, days: number) =>
-  new Date(Date.parse(date) + days * DAY).toISOString().slice(0, 10)
 
 /** Une année d'historique, telle qu'enregistrée : les prix à partir du jour de l'année `first`. */
 export interface HistoryYear {
@@ -26,14 +21,23 @@ export interface HistoryYear {
   prices: (number | null)[]
 }
 
-/** L'année avec le prix du jour `day` : la même si elle l'avait déjà, sinon une copie. */
-export function withPrice(known: HistoryYear, day: number, price: number): HistoryYear {
+/**
+ * L'année `year` avec le prix du jour `day` : `known` (l'année enregistrée) si elle l'avait déjà,
+ * rien à réécrire ; sinon une copie, ou une nouvelle année sans `known`.
+ */
+export function withPrice(
+  known: HistoryYear | undefined,
+  year: number,
+  day: number,
+  price: number,
+): HistoryYear {
+  if (!known) return { year, first: day, prices: [price] }
   if (known.prices[day - known.first] === price) return known
   const first = Math.min(known.first, day)
   const prices = [...Array<null>(known.first - first).fill(null), ...known.prices]
   while (prices.length < day - first) prices.push(null)
   prices[day - first] = price
-  return { year: known.year, first, prices }
+  return { year, first, prices }
 }
 
 /** Les années d'un historique (`from`, un prix par jour) : sa forme en base. */
@@ -42,8 +46,7 @@ export function splitYears({ from, prices }: Pick<CardPriceHistory, 'from' | 'pr
   prices.forEach((price, index) => {
     if (price === null) return
     const [year, day] = yearDay(addDays(from, index))
-    const known = years.get(year)
-    years.set(year, known ? withPrice(known, day, price) : { year, first: day, prices: [price] })
+    years.set(year, withPrice(years.get(year), year, day, price))
   })
   return [...years.values()]
 }
@@ -59,7 +62,7 @@ export function joinYears(years: HistoryYear[]): Pick<CardPriceHistory, 'from' |
   const prices: (number | null)[] = []
   for (const { year, first, prices: list } of years) {
     // Les jours sans prix entre deux années restent `null`.
-    const offset = (Date.parse(addDays(`${year}-01-01`, first)) - Date.parse(from)) / DAY
+    const offset = daysBetween(from, addDays(`${year}-01-01`, first))
     while (prices.length < offset) prices.push(null)
     prices.push(...list)
   }

@@ -19,6 +19,9 @@ const TCGPLAYER = 'https://www.tcgplayer.com/'
 
 export const isTcgplayerImage = (image: CardImage) => image.small.startsWith(TCGPLAYER_PRODUCTS)
 
+/** Une image de Pokécardex, et non une adresse collée. */
+export const isPokecardexImage = (image: CardImage) => image.small.startsWith(SCANS)
+
 /** Les adresses d'origine dont le serveur a la copie, et le chemin de cette copie. */
 const MIRRORED: [RegExp, string][] = [
   [
@@ -44,13 +47,10 @@ export function localSrc(url: string) {
 
 /** D'où vient une image, pour la citer sous la carte ; `null` : une adresse collée. */
 export function imageSource(image: CardImage): { name: string; href: string } | null {
-  if (image.small.startsWith(SCANS)) return { name: 'Pokécardex', href: POKECARDEX }
+  if (isPokecardexImage(image)) return { name: 'Pokécardex', href: POKECARDEX }
   if (isTcgplayerImage(image)) return { name: 'TCGplayer', href: TCGPLAYER }
   return null
 }
-
-/** Une image de Pokécardex, et non une adresse collée. */
-export const isPokecardexImage = (image: CardImage) => image.small.startsWith(SCANS)
 
 /**
  * L'image d'une carte chez Pokécardex : `sets_jp/SV2A/6.jpg`, le code de sa série et son rang ;

@@ -225,7 +225,7 @@ function migrate(db: Database, steps: string[]) {
 }
 
 /** Ce qu'on a lu d'une source à son dernier passage (table `sources`). */
-export interface Source {
+interface Source {
   /** Sa date de mise à jour, telle qu'elle la donne : inchangée, rien n'est retéléchargé. */
   stamp: string
   /** Le jour de ses données (YYYY-MM-DD). */

@@ -41,8 +41,9 @@ export function ProgressRuler({ generations, selected = null, onSelect }: Progre
         const props = {
           className: cx(styles.segment, selected === generation.id && styles.selected),
           style: { flexGrow: total },
-          // Le nom reste quand la place manque et que les libellés disparaissent.
-          'aria-label': tip,
+          // Le nom reste quand la place manque et que les libellés disparaissent ; le compte vient
+          // de la bulle (sa description), sans répéter la région.
+          'aria-label': generation.region,
         }
 
         return (

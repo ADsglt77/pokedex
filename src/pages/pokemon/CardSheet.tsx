@@ -1,10 +1,8 @@
-import { Button, DescriptionList, Stack } from '@camply/ui'
-import { ExternalLink as ExternalIcon, Plus } from '@camply/ui/icons'
+import { Button, Stack } from '@camply/ui'
+import { Plus } from '@camply/ui/icons'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { ExternalLink } from '@/components/ExternalLink'
 import { loadCatalog } from '@/lib/card-catalog'
-import { cardmarketPage } from '@/lib/cardmarket'
 import { statusCaption } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
 import type { PokemonSpecies } from '@/types'
@@ -14,32 +12,21 @@ import { CardPrice } from './CardPrice'
 import { PurchaseSection } from './PurchaseSection'
 import styles from './CardSheet.module.css'
 
-/** La fiche de la carte du Pokémon : ce que l'utilisateur en fait, ce qu'elle est et vaut, son achat. */
+/**
+ * La fiche de la carte du Pokémon, en trois temps séparés d'un filet : ce que l'utilisateur en
+ * fait (statut, prix payé), ce qu'elle vaut chez Cardmarket, son achat.
+ */
 export function CardSheet({ view, species }: { view: CardView; species: PokemonSpecies }) {
   const { card } = view
-  const page = cardmarketPage(card)
   return (
     <Stack as="section" gap={6} className={styles.sheet} aria-labelledby="sheet-title">
       <Stack as="header" gap={2} align="start">
-        <h2 id="sheet-title" className={styles.title}>
-          Carte {card.reference}
-        </h2>
-        <p className={styles.status}>{statusCaption(view.status, view.acquiredAt)}</p>
+        <h2 id="sheet-title">Carte {card.reference}</h2>
+        <p className="muted">{statusCaption(view.status, view.acquiredAt)}</p>
       </Stack>
 
       {/* Les actions d'abord : sur téléphone, « Je possède cette carte » reste près de l'écran. */}
       <CardActions view={view} species={species} />
-
-      {card.cardmarket !== undefined && (
-        <DescriptionList items={[{ term: 'Id Cardmarket', description: card.cardmarket }]} />
-      )}
-      {page && (
-        <p>
-          <ExternalLink href={page}>
-            Voir sur Cardmarket <ExternalIcon size={13} aria-hidden="true" />
-          </ExternalLink>
-        </p>
-      )}
       <CardPrice card={card} />
       <PurchaseSection view={view} />
     </Stack>
@@ -58,9 +45,7 @@ export function EmptySheet({ species }: { species: PokemonSpecies }) {
   }, [])
   return (
     <Stack as="section" gap={6} className={styles.sheet} aria-labelledby="sheet-title">
-      <h2 id="sheet-title" className={styles.title}>
-        Carte à choisir
-      </h2>
+      <h2 id="sheet-title">Carte à choisir</h2>
       <p className="muted">
         Choisissez la carte que vous voulez pour {species.names.fr} parmi ses cartes japonaises,
         avec leur image et leur prix, ou saisissez-la à la main. Depuis Cardmarket, le favori

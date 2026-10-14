@@ -5,7 +5,7 @@ import { Link, useLocation, useNavigate } from 'react-router'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SyncConflictDialog } from '@/components/SyncConflictDialog'
 import { useNotify } from '@/hooks/useNotify'
-import { authClient } from '@/lib/auth-client'
+import { authClient, loginPath } from '@/lib/auth-client'
 import {
   hasUnsentChanges,
   setSyncUser,
@@ -63,7 +63,9 @@ export function AccountMenu() {
   const status = useSyncStore((state) => state.status)
   const conflict = useSyncStore((state) => state.conflict)
   const navigate = useNavigate()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
+  // Après la connexion, retour à la page ouverte, filtres compris.
+  const login = loginPath(pathname + search)
   const notify = useNotify()
   // Le conflit dont la question a été fermée (« Plus tard ») ; un nouveau la rouvre.
   const [closedConflict, setClosedConflict] = useState<typeof conflict>(null)
@@ -78,7 +80,9 @@ export function AccountMenu() {
   if (!session) {
     return pathname === '/connexion' ? null : (
       <Button asChild size="sm" variant="ghost" leftIcon={<LogIn size={16} />}>
-        <Link to={`/connexion?retour=${encodeURIComponent(pathname)}`}>Se connecter</Link>
+        <Link to={login}>
+          <span className={styles.signIn}>Se connecter</span>
+        </Link>
       </Button>
     )
   }
@@ -116,10 +120,7 @@ export function AccountMenu() {
           <MenuItem onSelect={() => setClosedConflict(null)}>Choisir la version à garder</MenuItem>
         )}
         {status === 'expired' ? (
-          <MenuItem
-            icon={<LogIn size={16} />}
-            onSelect={() => navigate(`/connexion?retour=${encodeURIComponent(pathname)}`)}
-          >
+          <MenuItem icon={<LogIn size={16} />} onSelect={() => navigate(login)}>
             Se reconnecter
           </MenuItem>
         ) : (

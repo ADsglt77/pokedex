@@ -96,7 +96,7 @@ function Preview({
         speciesId={speciesId}
         alt="Aperçu de la carte"
       />
-      <ImageCredit image={image} className={styles.credit} />
+      <ImageCredit image={image} />
     </figure>
   )
 }

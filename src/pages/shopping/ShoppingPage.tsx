@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { pageTitle } from '@/lib/format'
 import { isToBuy } from '@/lib/collection'
-import { isUnderMax } from '@/lib/wishlist'
+import { underMaxCount } from '@/lib/wishlist'
 import { useShoppingStore } from '@/store/shopping'
 import { BudgetOverview } from './BudgetOverview'
 import { BudgetPanel } from './BudgetPanel'
@@ -27,7 +27,7 @@ export function ShoppingPage() {
     setParams(next === 'liste' ? {} : { vue: next }, { replace: true, preventScrollReset: true })
   const { rows } = useWishlist()
   const [planner, setPlanner] = useState<PlannerSettings>({})
-  const underMax = rows.filter((row) => isToBuy(row) && isUnderMax(row)).length
+  const underMax = underMaxCount(rows)
   const pending = useShoppingStore(
     (state) => state.shopping.orders.filter((order) => order.state === 'pending').length,
   )

@@ -113,7 +113,10 @@ async function push(document: SyncDocument, hash: string, baseVersion: number) {
   if (!response) return setStatus('offline')
   if (response.status === 401) return setStatus('expired')
   if (response.status === 409) return false
-  if (!response.ok) return setStatus('refused')
+  // Refusé : le document ne passe pas les contrôles du serveur. Toute autre erreur (502 pendant
+  // un redémarrage…) est une panne passagère : l'envoi repartira.
+  if (response.status === 400 || response.status === 422) return setStatus('refused')
+  if (!response.ok) return setStatus('offline')
   const { version } = (await response.json()) as { version: number }
   writeBase(version, hash)
   setStatus('synced')
@@ -123,6 +126,12 @@ async function push(document: SyncDocument, hash: string, baseVersion: number) {
 /** Une synchronisation à la fois, tous onglets confondus (sans `navigator.locks` : cet onglet). */
 const exclusive = (task: () => Promise<void>) =>
   navigator.locks ? navigator.locks.request('pokedex-sync', task) : task()
+
+/** La collection ou les achats ont changé depuis `document` (une modification pendant l'échange). */
+function changedSince(document: SyncDocument) {
+  const current = localDocument()
+  return current.collection !== document.collection || current.shopping !== document.shopping
+}
 
 /** Compare la collection de cet appareil à celle du serveur, et fait ce que dit `decide`. */
 export function sync(): Promise<void> {
@@ -135,6 +144,8 @@ export function sync(): Promise<void> {
       const document = localDocument()
       const hash = await documentHash(document)
       const response = await call('GET', { etag: base ? `"v${base.version}"` : undefined })
+      // Déconnecté pendant l'échange : plus rien à synchroniser.
+      if (!user) return
       if (!response) return setStatus('offline')
       if (response.status === 401) return setStatus('expired')
       if (response.status !== 304 && !response.ok) return setStatus('offline')
@@ -151,6 +162,9 @@ export function sync(): Promise<void> {
       const step = decide({ hash, empty: isEmptyDocument(document) }, base, current)
       if (step === 'noop') return setStatus('synced')
       if (step === 'adopt') {
+        // Modifiée pendant l'échange : reprendre celle du serveur l'effacerait, on compare de
+        // nouveau.
+        if (changedSince(document)) continue
         writeBase(server!.version, server!.hash)
         if (server!.hash !== hash) apply(server!.document)
         return setStatus('synced')
@@ -169,11 +183,10 @@ export async function keepThisDevice() {
   useSyncStore.setState({ status: 'syncing', conflict: null })
   await exclusive(async () => {
     const document = localDocument()
-    // Le serveur a encore changé depuis : on compare de nouveau.
-    if ((await push(document, await documentHash(document), conflict.version)) === false) {
-      setStatus('syncing')
-    }
+    await push(document, await documentHash(document), conflict.version)
   })
+  // Le serveur a encore changé depuis (409, le statut est resté « syncing ») : on compare de
+  // nouveau.
   if (useSyncStore.getState().status === 'syncing') await sync()
 }
 
@@ -216,13 +229,17 @@ export async function signOut() {
   const { error } = await authClient.signOut().catch(() => ({ error: true }))
   if (error) return false
   user = null
-  try {
-    localStorage.removeItem(BASE_KEY)
-  } catch {
-    // Sans stockage, rien n'était gardé.
-  }
-  apply({ collection: emptyCollection(), shopping: emptyShopping() })
-  useSyncStore.setState({ status: 'local', conflict: null })
+  // Une synchronisation en cours finit d'abord (elle s'arrête, sans compte) : rien ne passe après
+  // l'effacement.
+  await exclusive(async () => {
+    try {
+      localStorage.removeItem(BASE_KEY)
+    } catch {
+      // Sans stockage, rien n'était gardé.
+    }
+    apply({ collection: emptyCollection(), shopping: emptyShopping() })
+    useSyncStore.setState({ status: 'local', conflict: null })
+  })
   return true
 }
 

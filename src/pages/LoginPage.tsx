@@ -1,10 +1,11 @@
-import { Alert, Button, Card, CardDescription, CardHeader, Input, Stack } from '@camply/ui'
+import { Alert, Button, Input, Stack } from '@camply/ui'
 import { LogIn } from '@camply/ui/icons'
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { authClient } from '@/lib/auth-client'
 import { pageTitle } from '@/lib/format'
 import { sync } from '@/store/sync'
+import { AuthCard, TOO_MANY_ATTEMPTS } from './AuthCard'
 import styles from './AuthPage.module.css'
 
 /** L'adresse où revenir : une page du site (« /achats »), jamais un autre site (« //exemple.fr »). */
@@ -16,7 +17,7 @@ const failure = (status: number) =>
   status === 401
     ? 'E-mail ou mot de passe incorrect.'
     : status === 429
-      ? 'Trop de tentatives : réessayez dans une minute.'
+      ? TOO_MANY_ATTEMPTS
       : 'Connexion impossible pour le moment : réessayez plus tard.'
 
 /**
@@ -49,50 +50,44 @@ export function LoginPage() {
   }
 
   return (
-    <div className={styles.page}>
+    <AuthCard
+      title="Connexion"
+      description="Pour retrouver votre collection, vos achats et votre budget sur tous vos appareils. Sans compte, le Pokédex marche aussi : la collection reste alors dans ce navigateur."
+    >
       <title>{pageTitle('Connexion')}</title>
-      <Card padding="lg" className={styles.card}>
-        <CardHeader>
-          <h1 className={styles.title}>Connexion</h1>
-          <CardDescription>
-            Pour retrouver votre collection, vos achats et votre budget sur tous vos appareils. Sans
-            compte, le Pokédex marche aussi : la collection reste alors dans ce navigateur.
-          </CardDescription>
-        </CardHeader>
-        {session ? (
+      {session ? (
+        <Stack gap={4}>
+          <p>Vous êtes connecté avec {session.user.email}.</p>
+          <Button asChild>
+            <Link to={back}>Continuer</Link>
+          </Button>
+        </Stack>
+      ) : (
+        <form onSubmit={submit} className={styles.form}>
           <Stack gap={4}>
-            <p>Vous êtes connecté avec {session.user.email}.</p>
-            <Button asChild>
-              <Link to={back}>Continuer</Link>
+            {error && <Alert tone="danger" title={error} />}
+            <Input
+              label="E-mail"
+              type="email"
+              autoComplete="username"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+            <Input
+              label="Mot de passe"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+            <Button type="submit" fullWidth loading={busy} leftIcon={<LogIn size={16} />}>
+              Se connecter
             </Button>
           </Stack>
-        ) : (
-          <form onSubmit={submit} className={styles.form}>
-            <Stack gap={4}>
-              {error && <Alert tone="danger" title={error} />}
-              <Input
-                label="E-mail"
-                type="email"
-                autoComplete="username"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-              <Input
-                label="Mot de passe"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-              <Button type="submit" fullWidth loading={busy} leftIcon={<LogIn size={16} />}>
-                Se connecter
-              </Button>
-            </Stack>
-          </form>
-        )}
-      </Card>
-    </div>
+        </form>
+      )}
+    </AuthCard>
   )
 }

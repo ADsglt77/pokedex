@@ -42,29 +42,30 @@ export function PurchaseSection({ view }: { view: CardView }) {
     )
 
   return (
-    <Stack as="section" gap={3} className={styles.group} aria-labelledby="purchase-title">
-      <h3 id="purchase-title" className={styles.groupTitle}>
-        Achat
-      </h3>
-      <SegmentedControl
-        aria-labelledby="purchase-title"
-        size="sm"
-        fullWidth
-        options={CHOICES}
-        value={choice}
-        onChange={decide}
-      />
-      <p className={styles.hint}>{purchaseHint(choice, status, preference, price)}</p>
-      {preference?.decision === 'accepted' && (
-        <>
-          <PreferenceFields card={card} preference={preference} />
-          <div>
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/achats">Voir la liste d’achats</Link>
-            </Button>
-          </div>
-        </>
-      )}
+    // La section prend la largeur de la fiche (son filet aussi), ses réglages celle des statuts.
+    <Stack as="section" gap={3} aria-labelledby="purchase-title">
+      <h3 id="purchase-title">Achat</h3>
+      <Stack gap={3} className={styles.group}>
+        <SegmentedControl
+          aria-labelledby="purchase-title"
+          size="sm"
+          fullWidth
+          options={CHOICES}
+          value={choice}
+          onChange={decide}
+        />
+        <p className="hint">{purchaseHint(choice, status, preference, price)}</p>
+        {preference?.decision === 'accepted' && (
+          <>
+            <PreferenceFields card={card} preference={preference} />
+            <div>
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/achats">Voir la liste d’achats</Link>
+              </Button>
+            </div>
+          </>
+        )}
+      </Stack>
     </Stack>
   )
 }

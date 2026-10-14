@@ -3,6 +3,7 @@ import { Download, Eye, PackageCheck, Pencil, Plus, Receipt, Trash2 } from '@cam
 import { useState } from 'react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExternalLink } from '@/components/ExternalLink'
+import { LateOrdersAlert } from '@/components/LateOrdersAlert'
 import { useCollectionAction, useNotify } from '@/hooks/useNotify'
 import { formatDate, formatEuro, formatInteger, plural, today } from '@/lib/format'
 import {
@@ -16,7 +17,7 @@ import {
 import { downloadCsv, ordersCsv } from '@/lib/transfer'
 import { useShoppingStore } from '@/store/shopping'
 import type { Order } from '@/types'
-import { LateAlert, OrderDetail, OrderStateBadge } from './OrderDetail'
+import { OrderDetail, OrderStateBadge } from './OrderDetail'
 import { OrderForm } from './OrderForm'
 import styles from './ShoppingPage.module.css'
 
@@ -73,7 +74,7 @@ export function OrdersPanel() {
       </div>
 
       {late.size > 0 && (
-        <LateAlert
+        <LateOrdersAlert
           title={`${plural(late.size, 'commande en cours', 'commandes en cours')} depuis plus de ${LATE_AFTER_DAYS} jours`}
         />
       )}

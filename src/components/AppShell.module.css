@@ -35,8 +35,10 @@
 
 .brand {
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: 0.625rem;
+  white-space: nowrap;
   color: var(--camply-text-strong);
   font-family: var(--camply-font-display);
   font-size: 1.125rem;
@@ -81,6 +83,16 @@
   color: var(--camply-accent-hover);
 }
 
+/* Un avertissement de l'app (export, stockage) : aligné sur les pages, sous l'en-tête. */
+.notice {
+  margin-top: var(--camply-space-4);
+}
+
+/* Fermé, il ne laisse pas de marge vide. */
+.notice:empty {
+  display: none;
+}
+
 .main {
   flex: 1;
   outline: none;
@@ -101,15 +113,27 @@
   padding-block: 1.5rem;
   border-top: 1px solid var(--camply-border-soft);
   color: var(--camply-text-muted-2);
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
 }
 
-/* Sur téléphone, la navigation passe dans une barre d'onglets en bas de l'écran. */
+/* Sur tablette, les six onglets se serrent pour tenir à côté du nom et du compte. */
+@media (max-width: 64rem) {
+  .headerInner {
+    gap: 1rem;
+  }
+
+  .navLink {
+    padding-inline: 0.625rem;
+  }
+}
+
+/* Sur téléphone et petite tablette, la navigation passe dans une barre d'onglets en bas de
+   l'écran : en haut, les six onglets ne tiendraient pas à côté du nom et du compte. */
 .tabbar {
   display: none;
 }
 
-@media (max-width: 40rem) {
+@media (max-width: 52rem) {
   .nav {
     display: none;
   }
@@ -149,7 +173,7 @@
     gap: 0.25rem;
     height: 4rem;
     color: var(--camply-text-muted);
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     font-weight: 600;
     text-decoration: none;
   }

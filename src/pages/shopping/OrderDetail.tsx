@@ -1,6 +1,7 @@
-import { Alert, Badge, Button, Modal, Stack } from '@camply/ui'
+import { Badge, Button, Modal, Stack } from '@camply/ui'
 import { PackageCheck, Pencil, Trash2 } from '@camply/ui/icons'
 import { ExternalLink } from '@/components/ExternalLink'
+import { LateOrdersAlert } from '@/components/LateOrdersAlert'
 import { ORDER_STATE_LABELS } from '@/config/shopping'
 import { details, formatDate, formatEuro, formatInteger, today } from '@/lib/format'
 import { LATE_AFTER_DAYS, latePendingOrders, supplierLabel, unitCosts } from '@/lib/orders'
@@ -19,16 +20,6 @@ export function OrderStateBadge({ state }: { state: OrderState }) {
     <Badge size="sm" tone={STATE_TONES[state]}>
       {ORDER_STATE_LABELS[state]}
     </Badge>
-  )
-}
-
-/** Une commande en cours depuis trop longtemps : que faire. */
-export function LateAlert({ title }: { title: string }) {
-  return (
-    <Alert tone="warn" title={title}>
-      Si rien n’est arrivé, contactez le vendeur ; sur Cardmarket, ouvrez un litige depuis la page
-      de la commande.
-    </Alert>
   )
 }
 
@@ -78,7 +69,9 @@ export function OrderDetail({
           {order.receivedAt && <span className="muted">le {formatDate(order.receivedAt)}</span>}
         </Stack>
         {late && (
-          <LateAlert title={`Achetée il y a plus de ${LATE_AFTER_DAYS} jours, toujours en cours`} />
+          <LateOrdersAlert
+            title={`Achetée il y a plus de ${LATE_AFTER_DAYS} jours, toujours en cours`}
+          />
         )}
         <ul className={styles.lines}>
           {order.lines.map((line, index) => {
@@ -91,13 +84,7 @@ export function OrderDetail({
             )
             return (
               <li key={line.cardId}>
-                {card ? (
-                  <CardLine card={card} detail={detail} />
-                ) : (
-                  <div className={styles.line}>
-                    <span className="muted">Carte retirée du Pokédex · {detail}</span>
-                  </div>
-                )}
+                <CardLine card={card} detail={detail} />
               </li>
             )
           })}

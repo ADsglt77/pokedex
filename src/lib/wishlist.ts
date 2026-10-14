@@ -10,7 +10,7 @@ import { cardTitle, findCard, speciesOf } from '@/lib/species'
 import { searchForm, searchMatcher } from '@/lib/filters'
 import { isTaken, type PokedexEntry } from '@/lib/pokedex'
 import { isToBuy } from '@/lib/collection'
-import { priceOf } from '@/lib/prices'
+import { priceChange, priceOf } from '@/lib/prices'
 import { priceVerdict } from '@/lib/purchase-planner'
 import { csvNumber, toCsv } from '@/lib/transfer'
 import type {
@@ -114,7 +114,7 @@ export function wishlistRows(
         preference,
         status: collection.cards[cardId]?.status ?? null,
         price: price?.price ?? null,
-        change30: price?.avg30 ? (price.price - price.avg30) / price.avg30 : null,
+        change30: price && priceChange(price),
       },
     ]
   })
@@ -163,6 +163,10 @@ export const DEFAULT_WISHLIST_FILTERS: WishlistFilters = {
 /** Le prix du marché est sous le prix maximum. */
 export const isUnderMax = (row: WishRow) =>
   priceVerdict(row.price, row.preference.maxPrice) === 'under'
+
+/** Les cartes encore à acheter dont le prix du marché est passé sous le prix maximum. */
+export const underMaxCount = (rows: readonly WishRow[]) =>
+  rows.filter((row) => isToBuy(row) && isUnderMax(row)).length
 
 /** Écart entre le prix du marché et le prix maximum ; `null` sans l'un des deux. */
 const gapOf = ({ price, preference }: WishRow) =>

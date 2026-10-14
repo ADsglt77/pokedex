@@ -13,6 +13,7 @@ import {
   type Catalog,
   type CatalogCard,
 } from '@/lib/card-catalog'
+import { newCardId } from '@/lib/collection'
 import { searchForm } from '@/lib/filters'
 import { formatInteger, pageTitle, plural } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
@@ -77,7 +78,7 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
   const [missingOnly, setMissingOnly] = useState(true)
   const [setOrder, setSetOrder] = useState<'recent' | 'useful'>('recent')
   const [addAs, setAddAs] = useState<AddAs>('none')
-  const grid = useRef<HTMLDivElement>(null)
+  const grid = useRef<HTMLUListElement>(null)
 
   // Les Pokémon sans carte que chaque extension peut compléter.
   const openBySet = useMemo(() => {
@@ -111,8 +112,10 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
       label: `${option.label} · ${formatInteger(openCount(known.id))} sans carte`,
     }
   })
+  // Les cartes de l'extension, cherchées une fois dans tout le catalogue (pas à chaque clic).
+  const cards = useMemo(() => setCards(catalog, set.id), [catalog, set.id])
   // Pour chaque carte, le Pokémon qui la recevrait : le premier des siens qui n'a pas de carte.
-  const rows = setCards(catalog, set.id).map((card) => ({
+  const rows = cards.map((card) => ({
     card,
     open: card.dexIds.find((id) => !entryById.get(id)?.card) ?? null,
     price: priceOf(prices, card),
@@ -130,7 +133,7 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
         () =>
           addCard(
             {
-              id: `manual:${crypto.randomUUID()}`,
+              id: newCardId(),
               dexIds: [speciesId],
               reference: card.reference,
               image: card.image,
@@ -173,7 +176,7 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
           onChange={(event) => setMissingOnly(event.target.checked)}
         />
         <Stack direction="horizontal" align="center" gap={2}>
-          <span id="add-as" className="muted">
+          <span id="add-as" className={styles.label}>
             Ajouter comme
           </span>
           <SegmentedControl
@@ -193,31 +196,27 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
       {shown.length === 0 ? (
         <p className="muted">Tous les Pokémon de cette extension ont déjà leur carte.</p>
       ) : (
-        <div ref={grid}>
-          <CatalogGrid>
-            {shown.map((row) => {
-              const { card, open, price } = row
-              const speciesId = open ?? card.dexIds[0]!
-              return (
-                <li key={card.key}>
-                  <CatalogTile
-                    card={card}
-                    price={price}
-                    speciesId={speciesId}
-                    disabled={open === null}
-                    onPick={() => open !== null && choose(card, open, choosable.indexOf(row))}
-                  >
-                    <span>
-                      {open === null
-                        ? `${getSpecies(speciesId)!.names.fr} a déjà sa carte`
-                        : `Choisir pour ${getSpecies(open)!.names.fr}`}
-                    </span>
-                  </CatalogTile>
-                </li>
-              )
-            })}
-          </CatalogGrid>
-        </div>
+        <CatalogGrid ref={grid}>
+          {shown.map((row) => {
+            const { card, open, price } = row
+            const speciesId = open ?? card.dexIds[0]!
+            return (
+              <li key={card.key}>
+                <CatalogTile
+                  card={card}
+                  price={price}
+                  speciesId={speciesId}
+                  disabled={open === null}
+                  onPick={() => open !== null && choose(card, open, choosable.indexOf(row))}
+                >
+                  {open === null
+                    ? `${getSpecies(speciesId)!.names.fr} a déjà sa carte`
+                    : `Choisir pour ${getSpecies(open)!.names.fr}`}
+                </CatalogTile>
+              </li>
+            )
+          })}
+        </CatalogGrid>
       )}
     </Stack>
   )

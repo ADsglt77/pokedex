@@ -1,5 +1,5 @@
 import { Alert, Button, FileUpload, Stack, type UploadFile } from '@camply/ui'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { summarize } from '@/lib/pokedex'
@@ -22,14 +22,20 @@ export function ImportSection() {
   // `null` : le fichier choisi n'est pas un export.
   const [imported, setImported] = useState<ImportedFile | null>()
   const [confirming, setConfirming] = useState(false)
+  // Le fichier choisi en dernier : la lecture, plus lente, d'un fichier remplacé depuis ne compte
+  // plus (on importerait un autre fichier que celui affiché).
+  const chosen = useRef<File | undefined>(undefined)
 
   const onFiles = async (next: UploadFile[]) => {
     setFiles(next)
     const file = next[0]?.file
-    setImported(file ? parseImport(await file.text()) : undefined)
+    chosen.current = file
+    const read = file ? parseImport(await file.text()) : undefined
+    if (chosen.current === file) setImported(read)
   }
 
   const reset = () => {
+    chosen.current = undefined
     setFiles([])
     setImported(undefined)
   }
@@ -69,7 +75,7 @@ export function ImportSection() {
 
       {imported && (
         <Stack gap={4} className={styles.group}>
-          <h3 className={styles.groupTitle}>Contenu du fichier</h3>
+          <h3>Contenu du fichier</h3>
           {updatedAt && (
             <p className="muted">Collection modifiée pour la dernière fois le {updatedAt}.</p>
           )}

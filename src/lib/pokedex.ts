@@ -4,6 +4,7 @@
  */
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
+import { isToBuy } from '@/lib/collection'
 import { monthRange } from '@/lib/format'
 import { findCard, SPECIES } from '@/lib/species'
 import type { CardStatus, CollectionData, PokemonCard, PokemonSpecies } from '@/types'
@@ -64,8 +65,7 @@ function describeCard(card: PokemonCard, collection: CollectionData): CardView {
 }
 
 /** Un Pokémon obtenu ou en route : sa carte est possédée ou commandée. */
-export const isTaken = (entry: PokedexEntry) =>
-  entry.card?.status === 'owned' || entry.card?.status === 'ordered'
+export const isTaken = (entry: PokedexEntry) => entry.card !== null && !isToBuy(entry.card)
 
 export function buildPokedex(collection: CollectionData): Pokedex {
   // Une carte par Pokémon : la première ajoutée, si une ancienne version en a gardé plusieurs.

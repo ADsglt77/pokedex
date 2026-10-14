@@ -6,6 +6,7 @@
 
 import { SUPPLIER_LABELS } from '@/config/shopping'
 import { formatDate } from '@/lib/format'
+import { daysBetween } from '@/lib/time'
 import type { CardOwnership, CollectionData, Order, OrderLine, OrderState } from '@/types'
 
 /** « Cardmarket », ou le nom donné à un autre fournisseur. */
@@ -210,9 +211,7 @@ export const LATE_AFTER_DAYS = 28
  */
 export const latePendingOrders = (orders: readonly Order[], today: string) =>
   orders.filter(
-    (order) =>
-      order.state === 'pending' &&
-      Date.parse(today) - Date.parse(order.date) > LATE_AFTER_DAYS * 86_400_000,
+    (order) => order.state === 'pending' && daysBetween(order.date, today) > LATE_AFTER_DAYS,
   )
 
 /** La plus récente d'abord (date d'achat, puis dernière modification). */

@@ -54,12 +54,13 @@ export async function createAuth(db: Database, { trusted = false } = {}) {
       user: {
         create: {
           // Au moment de créer le compte (une adresse invalide ou un mot de passe trop court sont
-          // refusés avant) : le code sert une fois, un second compte n'en trouve plus. Si la
+          // refusés avant) : le code sert une fois, un second compte n'en trouve plus, pas plus
+          // qu'après un compte créé par `create-user.ts` pendant que le serveur tourne. Si la
           // création échoue ensuite, redémarrer le serveur en donne un nouveau.
           before: async (_user, context) => {
             if (trusted) return
             const given = (context?.headers as Headers | undefined)?.get('x-setup-code')
-            if (!code || codeKey(given) !== codeKey(code)) {
+            if (!code || account.get() || codeKey(given) !== codeKey(code)) {
               throw new APIError('FORBIDDEN', { message: 'Code de première visite incorrect' })
             }
             code = null
@@ -106,10 +107,9 @@ export async function createAuth(db: Database, { trusted = false } = {}) {
 }
 
 export type Accounts = Awaited<ReturnType<typeof createAuth>>
-export type Auth = Accounts['auth']
 
 /** L'origine publique du site, que doivent avoir les requêtes qui modifient des données. */
-export const appOrigin = (auth: Auth) => new URL(auth.options.baseURL as string).origin
+export const appOrigin = (auth: Accounts['auth']) => new URL(auth.options.baseURL as string).origin
 
 /**
  * Le compte dans l'API (`/api/…`) :

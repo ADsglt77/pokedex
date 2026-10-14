@@ -17,7 +17,7 @@ import {
   plural,
   today,
 } from '@/lib/format'
-import { spendingByMonth } from '@/lib/budget'
+import { monthOf, spendingByMonth } from '@/lib/budget'
 import {
   collectionHistory,
   completionByGeneration,
@@ -171,7 +171,7 @@ function Movers({ moves }: { moves: { risers: PriceMove[]; fallers: PriceMove[] 
       <div className={styles.months}>
         {groups.map(({ title, list, className }) => (
           <Stack key={title} gap={3}>
-            <h3 className={styles.chartTitle}>{title}</h3>
+            <h3>{title}</h3>
             {list.length === 0 ? (
               <p className="muted">Aucune pour l’instant.</p>
             ) : (
@@ -179,7 +179,7 @@ function Movers({ moves }: { moves: { risers: PriceMove[]; fallers: PriceMove[] 
                 {list.map(({ card, price, avg30, change }) => (
                   <li key={card.id}>
                     <Link to={`/pokemon/${card.dexIds[0]}`}>{card.reference}</Link>
-                    <span className="numeric">
+                    <span className={styles.moverPrice}>
                       {formatEuro(price)} <span className={className}>{formatPercent(change)}</span>
                       <span className="muted"> · moyenne {formatEuro(avg30)}</span>
                     </span>
@@ -198,7 +198,7 @@ function Movers({ moves }: { moves: { risers: PriceMove[]; fallers: PriceMove[] 
 function MonthlyCharts() {
   const collection = useCollectionStore((state) => state.collection)
   const orders = useShoppingStore((state) => state.shopping.orders)
-  const month = today().slice(0, 7)
+  const month = monthOf(today())
   const unlocked = useMemo(() => unlockedByMonth(collection, month), [collection, month])
   const spent = useMemo(() => {
     const byMonth = new Map(spendingByMonth(orders).map(({ key, spent }) => [key, spent]))
@@ -213,7 +213,7 @@ function MonthlyCharts() {
       <h2 id="months-title">Au fil des mois</h2>
       <div className={styles.months}>
         <Stack gap={3}>
-          <h3 className={styles.chartTitle}>Pokémon débloqués</h3>
+          <h3>Pokémon débloqués</h3>
           {unlocked.length >= 2 ? (
             <PriceChart points={unlocked} label="Pokémon débloqués" format={formatInteger} />
           ) : (
@@ -223,7 +223,7 @@ function MonthlyCharts() {
           )}
         </Stack>
         <Stack gap={3}>
-          <h3 className={styles.chartTitle}>Dépenses par mois</h3>
+          <h3>Dépenses par mois</h3>
           {spent.length >= 2 ? (
             <PriceChart points={spent} label="Dépenses par mois" />
           ) : (

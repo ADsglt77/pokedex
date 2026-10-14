@@ -6,7 +6,7 @@
  * chez Pokécardex (`findCardImage`).
  */
 
-import { getJson } from '@/lib/api'
+import { derived } from '@/lib/api'
 import { codeKey, referenceCode } from '@/lib/card-code'
 import { cardImage, localSrc, pokecardexImage } from '@/lib/card-images'
 import { settled } from '@/lib/settled'
@@ -85,20 +85,14 @@ function readCatalog(file: CatalogFile): Catalog {
   return { sets: [...sets.values()], bySpecies, byCode }
 }
 
-let loaded: { response: Promise<CatalogFile | null>; catalog: Promise<Catalog | null> } | null =
-  null
-
 /**
  * Le catalogue ; `null` s'il n'est pas disponible (serveur arrêté, base encore vide : redemandé une
  * minute après au plus tôt, `getJson`). Toujours la même promesse, lue par `use()`.
  */
-export function loadCatalog() {
-  const response = getJson<CatalogFile>('/api/catalog')
-  if (loaded?.response !== response) {
-    loaded = { response, catalog: settled(response.then((file) => file && readCatalog(file))) }
-  }
-  return loaded.catalog
-}
+export const loadCatalog = derived<CatalogFile, Catalog | null>(
+  '/api/catalog',
+  (file) => file && readCatalog(file),
+)
 
 /** Une série dans une liste de choix : « SV2A · Pokémon Card 151 (2023) ». */
 export const setOption = ({ id, name, year }: CatalogSet) => ({
@@ -107,7 +101,7 @@ export const setOption = ({ id, name, year }: CatalogSet) => ({
 })
 
 /** La carte du catalogue d'une référence (« Herbizarre (OR1 2) ») ; `null` si aucune. */
-export function catalogCard(catalog: Catalog, reference: string): CatalogCard | null {
+function catalogCard(catalog: Catalog, reference: string): CatalogCard | null {
   const code = referenceCode(reference)
   return (code && catalog.byCode.get(codeKey(code))) ?? null
 }

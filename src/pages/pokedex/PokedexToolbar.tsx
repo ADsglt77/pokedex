@@ -89,7 +89,7 @@ export function PokedexToolbar({
           ref={search}
           className={styles.search}
           aria-label="Chercher un Pokémon (raccourci /)"
-          placeholder="Nom ou numéro"
+          placeholder="Nom ou numéro…"
           autoComplete="off"
           enterKeyHint="search"
           value={filters.search}

@@ -20,16 +20,14 @@ import type { Database } from 'bun:sqlite'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { INGEST_JOBS, type IngestJob } from '@/config/jobs'
-import { openData, readSource } from './db'
+import { HOUR } from '@/lib/time'
+import { openData } from './db'
 import { backups } from './jobs/backups'
-import { catalog, catalogSnapshot } from './jobs/catalog'
+import { catalog, saveCatalog } from './jobs/catalog'
 import { images } from './jobs/images'
-import { prices, pricesSnapshot } from './jobs/prices'
+import { prices, savePrices } from './jobs/prices'
 import { species } from './jobs/species'
 import { hasHistory, importLegacyPrices } from './legacy-prices'
-import { saveSnapshot } from './snapshots'
-
-const HOUR = 3_600_000
 
 /** Chaque tâche, dans l'ordre d'`INGEST_JOBS` (leur rythme) : les images suivent le catalogue. */
 const RUNS: Record<IngestJob, (db: Database) => Promise<void>> = {
@@ -81,8 +79,8 @@ const [arg, dir] = process.argv.slice(2)
 const legacy = process.env.LEGACY_PRICES
 
 if (arg === '--loop') {
-  if (readSource(db, 'catalog')) saveSnapshot(db, 'catalog', catalogSnapshot(db))
-  saveSnapshot(db, 'prices', pricesSnapshot(db))
+  saveCatalog(db)
+  savePrices(db)
   if (legacy && !hasHistory(db) && existsSync(join(legacy, 'latest.json'))) {
     await importLegacyPrices(db, legacy)
   }

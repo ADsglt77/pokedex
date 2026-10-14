@@ -51,5 +51,3 @@ export function createApp({ data, app, accounts }: Databases) {
       .get('/images/*', ({ request }) => serveImage(request), { detail: { hide: true } })
   )
 }
-
-export type App = ReturnType<typeof createApp>

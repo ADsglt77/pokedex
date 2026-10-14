@@ -18,8 +18,9 @@
 import type { Database } from 'bun:sqlite'
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { numberKey } from '@/lib/card-code'
+import { DAY, HOUR } from '@/lib/time'
 import type { CatalogFile, CatalogRow } from '@/types'
-import { writeSource } from '../db'
+import { readSource, writeSource } from '../db'
 import { refresh } from '../lib/net'
 import {
   asiaExclusive,
@@ -30,17 +31,21 @@ import {
 } from '../lib/pokecardex'
 import { saveSnapshot } from '../snapshots'
 
-const HOUR = 3_600_000
-const DAY = 24 * HOUR
-
 /** Le numéro imprimé : « 001/165 » → 001, « TG01/TG30 » → TG01 ; « — », « SV-P » : aucun. */
 function printedNumber(text: string) {
   const number = text.split('/')[0]!.trim()
   return /\d/.test(number) ? number : ''
 }
 
-/** La réponse de `/api/catalog`, d'après les tables. */
-export function catalogSnapshot(db: Database): CatalogFile {
+/**
+ * Enregistre la réponse de `/api/catalog`, d'après les tables ; rien tant que la tâche n'a jamais
+ * lu Pokécardex : un catalogue vide passerait pour disponible (l'API répond 404 en attendant).
+ */
+export function saveCatalog(db: Database) {
+  if (readSource(db, 'catalog')) saveSnapshot(db, 'catalog', catalogResponse(db))
+}
+
+function catalogResponse(db: Database): CatalogFile {
   const sets = db.query('SELECT id, name, released FROM sets').all() as {
     id: string
     name: string
@@ -196,9 +201,10 @@ export async function catalog(db: Database) {
       if (!asian.size) asian = asiaExclusive(page)
       if (asian.has(code)) continue
       const known = (countCards.get(code) as { count: number }).count
-      // Une page sans cartes alors qu'on en avait : le site a changé, on garde celles d'avant.
-      if (!page.cartes?.length && known) {
-        console.warn(`  ${code} : page sans cartes, les ${known} d’avant restent`)
+      // Une page sans cartes : une série annoncée mais pas encore remplie, ou le site a changé (on
+      // garde alors celles d'avant). Rien n'est noté : elle est relue au passage suivant.
+      if (!page.cartes?.length) {
+        if (known) console.warn(`  ${code} : page sans cartes, les ${known} d’avant restent`)
         continue
       }
       cards += save(code, page, new Date().toISOString())
@@ -229,7 +235,7 @@ export async function catalog(db: Database) {
   )
   const now = new Date().toISOString()
   writeSource(db, 'catalog', { stamp: now, date: now.slice(0, 10) })
-  saveSnapshot(db, 'catalog', catalogSnapshot(db))
+  saveCatalog(db)
   if (failed.length) {
     throw new Error(`${failed.length} séries illisibles (${failed.slice(0, 10).join(', ')})`)
   }

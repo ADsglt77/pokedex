@@ -16,7 +16,7 @@ import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { DATA_DIR } from '../db'
 
-export const BACKUP_DIR = process.env.BACKUP_DIR ?? join(DATA_DIR, 'backups')
+const BACKUP_DIR = process.env.BACKUP_DIR ?? join(DATA_DIR, 'backups')
 
 /** Copie une base, ouverte en lecture seule ; une copie du même jour est remplacée. */
 async function copy(name: string, file: string) {

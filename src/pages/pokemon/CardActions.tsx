@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { useCollectionAction } from '@/hooks/useNotify'
+import { isToBuy } from '@/lib/collection'
 import { cx } from '@/lib/cx'
 import { statusLabel } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
@@ -96,9 +97,7 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
         })}
       </ButtonGroup>
 
-      {(status === 'owned' || status === 'ordered') && (
-        <PaidPriceField card={card} className={styles.group} />
-      )}
+      {!isToBuy(view) && <PaidPriceField card={card} className={styles.group} />}
 
       <Stack gap={2} align="start" className={styles.group}>
         <Stack direction="horizontal" gap={2} wrap>
@@ -121,7 +120,7 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
             Retirer la carte
           </Button>
         </Stack>
-        <p className={styles.hint}>
+        <p className="hint">
           {inAnOrder
             ? 'Elle figure dans une commande : elle reste, pour que le registre tienne.'
             : 'Pour en choisir une autre, retirez celle-ci : son statut et ses préférences d’achat partent avec elle.'}

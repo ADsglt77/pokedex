@@ -1,5 +1,6 @@
 import { Skeleton, Stack, Stat } from '@camply/ui'
 import { Suspense, use } from 'react'
+import { CardmarketLink } from '@/components/CardmarketLink'
 import { PriceChart } from '@/components/PriceChart'
 import { details, formatEuro } from '@/lib/format'
 import { cardHistory, gainPercent, priceOf } from '@/lib/prices'
@@ -9,8 +10,8 @@ import type { PokemonCard } from '@/types'
 import styles from './CardPrice.module.css'
 
 /**
- * Le prix du jour de la carte chez Cardmarket, son évolution et, si le prix payé est noté,
- * l'écart.
+ * La carte chez Cardmarket : son id et sa page, son prix du jour, son évolution et, si le prix
+ * payé est noté, l'écart.
  */
 export function CardPrice({ card }: { card: PokemonCard }) {
   const prices = usePrices()
@@ -20,9 +21,15 @@ export function CardPrice({ card }: { card: PokemonCard }) {
 
   return (
     <Stack as="section" gap={4} aria-labelledby="price-title">
-      <h3 id="price-title" className={styles.title}>
-        Prix Cardmarket
-      </h3>
+      <div className={styles.head}>
+        <h3 id="price-title">Prix Cardmarket</h3>
+        <CardmarketLink card={card} className={styles.link} />
+        {card.cardmarket !== undefined && (
+          <p className={styles.id}>
+            Id Cardmarket <span className="numeric">{card.cardmarket}</span>
+          </p>
+        )}
+      </div>
       {price ? (
         <>
           <Stat

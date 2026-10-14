@@ -2,24 +2,29 @@
   margin-top: 3rem;
 }
 
+/* La région et sa génération à gauche, ce qui en est débloqué à droite, sur un filet. */
 .heading {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.25rem 0.75rem;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
   margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--camply-border-soft);
 }
 
 .numeral {
   color: var(--camply-text-muted-2);
-  font-size: 1rem;
+  font-family: var(--camply-font-sans);
+  font-size: var(--text-md);
+  font-weight: 500;
 }
 
 .count {
   color: var(--camply-text-muted);
-  font-family: var(--camply-font-sans);
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
 }
 
 .grid {

@@ -8,7 +8,7 @@
  * la lecture échouerait : on ne le contourne pas.
  */
 
-import { politeFetch } from './net'
+import { download } from './net'
 
 const SITE = 'https://www.pokecardex.com'
 /** Une requête toutes les 3 s au plus. */
@@ -61,9 +61,7 @@ async function read(url: string) {
   const wait = last + PACE - Date.now()
   if (wait > 0) await Bun.sleep(wait)
   last = Date.now()
-  const response = await politeFetch(url)
-  if (!response.ok) throw new Error(`HTTP ${response.status} pour ${url}`)
-  return response.text()
+  return (await download(url)).text()
 }
 
 /** Les codes des séries japonaises (« SV2A », « OR1 »…), d'après le plan du site. */
@@ -99,7 +97,9 @@ async function keyOf(script: string) {
   return key
 }
 
-const bytes = (base64: string) => Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
+/** Du base64 tel qu'il est écrit dans la page : en JSON, ses « / » sont échappés. */
+const bytes = (base64: string) =>
+  Uint8Array.from(atob(base64.replaceAll('\\/', '/')), (char) => char.charCodeAt(0))
 
 /** Les données d'une page, déchiffrées comme le fait le site. */
 async function pageData<T>(path: string): Promise<T> {
@@ -109,11 +109,10 @@ async function pageData<T>(path: string): Promise<T> {
     ?.replaceAll('&#x2F;', '/')
   const found = /__INITIAL_DATA_ENCRYPTED__ = \{"iv":"([^"]+)","data":"([^"]+)"\}/.exec(html)
   if (!script || !found) throw new Error(`Pokécardex : pas de données dans ${path}`)
-  const [iv, data] = [found[1]!, found[2]!].map((text) => bytes(text.replaceAll('\\/', '/')))
   const plain = await crypto.subtle.decrypt(
-    { name: 'AES-CBC', iv: iv! },
+    { name: 'AES-CBC', iv: bytes(found[1]!) },
     await keyOf(script),
-    data!,
+    bytes(found[2]!),
   )
   return JSON.parse(new TextDecoder().decode(plain)) as T
 }

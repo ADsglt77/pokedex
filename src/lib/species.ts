@@ -1,12 +1,10 @@
 /**
  * Les 1 025 espèces, données par le serveur (`/api/species`, tâche `species` d'après PokéAPI) avant
- * le premier affichage (`main.tsx`), et leurs détails à la demande. Les tâches du serveur les
- * donnent de même depuis la base (`setSpecies`). Les cartes, elles, sont celles que l'utilisateur
- * ajoute (`customCards`).
+ * le premier affichage (`main.tsx`), et leurs détails à la demande. Les cartes, elles, sont celles
+ * que l'utilisateur ajoute (`customCards`).
  */
 
-import { getJson } from '@/lib/api'
-import { settled } from '@/lib/settled'
+import { derived, getJson } from '@/lib/api'
 import type {
   CollectionData,
   PokemonCard,
@@ -21,15 +19,13 @@ export let SPECIES: readonly PokemonSpecies[] = []
 
 let speciesById = new Map<number, PokemonSpecies>()
 
-export function setSpecies(list: readonly PokemonSpecies[]) {
-  SPECIES = list
-  speciesById = new Map(list.map((species) => [species.id, species]))
-}
-
 /** Demande les espèces au serveur et les donne à l'app ; `false` s'il ne répond pas. */
 export async function loadSpecies() {
   const file = await getJson<SpeciesFile>('/api/species')
-  if (file) setSpecies(file.species)
+  if (file) {
+    SPECIES = file.species
+    speciesById = new Map(file.species.map((species) => [species.id, species]))
+  }
   return file !== null
 }
 
@@ -49,25 +45,12 @@ export const cardTitle = (card: PokemonCard) =>
     .map((species) => species.names.fr)
     .join(' & ') || card.reference
 
-let details: {
-  response: Promise<SpeciesDetailsFile | null>
-  map: Promise<Map<number, PokemonSpeciesDetails>>
-} | null = null
-
 /**
  * Description, taille, poids… (`/api/species/details`), chargés à la première fiche ouverte ; vide
  * si le serveur ne répond pas (redemandé une minute après au plus tôt, `getJson`). Toujours la
  * même promesse, lue par `use()`.
  */
-export function loadSpeciesDetails() {
-  const response = getJson<SpeciesDetailsFile>('/api/species/details')
-  if (details?.response !== response) {
-    details = {
-      response,
-      map: settled(
-        response.then((file) => new Map((file?.details ?? []).map((entry) => [entry.id, entry]))),
-      ),
-    }
-  }
-  return details.map
-}
+export const loadSpeciesDetails = derived<SpeciesDetailsFile, Map<number, PokemonSpeciesDetails>>(
+  '/api/species/details',
+  (file) => new Map((file?.details ?? []).map((entry) => [entry.id, entry])),
+)

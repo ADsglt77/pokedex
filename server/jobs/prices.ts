@@ -1,18 +1,17 @@
 /**
- * Tâche `prices` : les prix des cartes à l'unité, regardés toutes les 6 h.
- * - Cardmarket : son guide des prix public (prix du jour de chaque carte, par id produit) et sa
- *   liste des produits (leurs noms). Le prix du jour remplace celui de la veille
- *   (`cardmarket_prices`) et s'ajoute à l'historique de la carte (`cardmarket_history`) ; relancé
- *   le même jour, il remplace le prix du jour.
- * Le guide n'est retéléchargé que s'il a changé depuis le dernier passage (`sources`). En fin de
- * tâche, la réponse de `/api/prices` est recalculée (`snapshots`).
+ * Tâche `prices` : les prix des cartes à l'unité chez Cardmarket, regardés toutes les 6 h, d'après
+ * son guide des prix public (prix du jour de chaque carte, par id produit) et sa liste des
+ * produits (leurs noms). Le prix du jour remplace celui de la veille (`cardmarket_prices`) et
+ * s'ajoute à l'historique de la carte (`cardmarket_history`) ; relancée le même jour, la tâche
+ * remplace le prix du jour. Le guide n'est retéléchargé que s'il a changé depuis le dernier
+ * passage (`sources`). En fin de tâche, la réponse de `/api/prices` est recalculée (`snapshots`).
  */
 
 import type { Database } from 'bun:sqlite'
 import type { CardPriceRow, Prices } from '@/types'
 import { readSource, writeSource } from '../db'
 import { withPrice, yearDay } from '../history'
-import { politeFetch } from '../lib/net'
+import { download } from '../lib/net'
 import { saveSnapshot } from '../snapshots'
 
 const DOWNLOADS = 'https://downloads.s3.cardmarket.com/productCatalog'
@@ -39,13 +38,25 @@ interface ProductList {
 /** Un prix au centime ; Cardmarket note `0` ou `null` un prix inconnu. */
 const amount = (value: number | null) => (value ? Math.round(value * 100) / 100 : null)
 
-async function download(url: string, init?: RequestInit) {
-  const response = await politeFetch(url, init)
-  if (!response.ok) throw new Error(`HTTP ${response.status} pour ${url}`)
-  return response
+/** Enregistre la réponse de `/api/prices` (les prix Cardmarket du jour), d'après la base. */
+export function savePrices(db: Database) {
+  const cardmarket = readSource(db, 'cardmarket')
+  const rows = db.query('SELECT id, price, low, avg30 FROM cardmarket_prices').all() as {
+    id: number
+    price: number
+    low: number | null
+    avg30: number | null
+  }[]
+  const response: Prices = {
+    cardmarket: cardmarket && {
+      date: cardmarket.date,
+      cards: Object.fromEntries(rows.map(({ id, price, low, avg30 }) => [id, [price, low, avg30]])),
+    },
+  }
+  saveSnapshot(db, 'prices', response)
 }
 
-async function cardmarketPrices(db: Database) {
+export async function prices(db: Database) {
   const head = await download(PRICE_GUIDE_URL, { method: 'HEAD' })
   const stamp = head.headers.get('last-modified') ?? ''
   if (stamp && stamp === readSource(db, 'cardmarket')?.stamp) {
@@ -87,8 +98,8 @@ async function cardmarketPrices(db: Database) {
     for (const [id, [price, low, avg30]] of cards) {
       writePrice.run(id, price, low, avg30)
       const row = readYear.get(id, year) as { first: number; prices: string } | null
-      const known = row && { year, first: row.first, prices: JSON.parse(row.prices) }
-      const next = known ? withPrice(known, day, price) : { year, first: day, prices: [price] }
+      const known = row ? { year, first: row.first, prices: JSON.parse(row.prices) } : undefined
+      const next = withPrice(known, year, day, price)
       if (next === known) continue
       writeYear.run(id, year, next.first, JSON.stringify(next.prices))
       written++
@@ -99,26 +110,5 @@ async function cardmarketPrices(db: Database) {
   console.log(
     `Cardmarket, prix du ${date} : ${cards.length} cartes, ${written} historiques mis à jour`,
   )
-}
-
-/** La réponse de `/api/prices` : les prix Cardmarket du jour. */
-export function pricesSnapshot(db: Database): Prices {
-  const cardmarket = readSource(db, 'cardmarket')
-  const rows = db.query('SELECT id, price, low, avg30 FROM cardmarket_prices').all() as {
-    id: number
-    price: number
-    low: number | null
-    avg30: number | null
-  }[]
-  return {
-    cardmarket: cardmarket && {
-      date: cardmarket.date,
-      cards: Object.fromEntries(rows.map(({ id, price, low, avg30 }) => [id, [price, low, avg30]])),
-    },
-  }
-}
-
-export async function prices(db: Database) {
-  await cardmarketPrices(db)
-  saveSnapshot(db, 'prices', pricesSnapshot(db))
+  savePrices(db)
 }

@@ -41,3 +41,17 @@ export function getJson<T>(url: string, timeout?: number): Promise<T | null> {
   requests.set(url, request)
   return request.response as Promise<T | null>
 }
+
+/**
+ * Ce que l'app tire d'une réponse de l'API (le catalogue lu, les détails par espèce…), calculé
+ * une fois par réponse : toujours la même promesse tant que `getJson` rend la même (lue par
+ * `use()`), une nouvelle quand la réponse est redemandée après une panne.
+ */
+export function derived<T, R>(url: string, compute: (response: T | null) => R) {
+  let last: { response: Promise<T | null>; value: Promise<R> } | null = null
+  return () => {
+    const response = getJson<T>(url)
+    if (last?.response !== response) last = { response, value: settled(response.then(compute)) }
+    return last.value
+  }
+}

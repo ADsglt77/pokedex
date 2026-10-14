@@ -3,17 +3,18 @@ import { WalletCards } from '@camply/ui/icons'
 import { useMemo, useSyncExternalStore } from 'react'
 import { Link } from 'react-router'
 import { CardArt } from '@/components/CardArt'
+import { LateOrdersAlert } from '@/components/LateOrdersAlert'
 import { PokedexTile } from '@/components/PokedexTile'
 import { ProgressRuler } from '@/components/ProgressRuler'
 import { usePokedex } from '@/hooks/usePokedex'
 import { useWishlist } from '@/hooks/useWishlist'
-import { isToBuy } from '@/lib/collection'
+import { monthOf } from '@/lib/budget'
 import { cardTitle } from '@/lib/species'
 import { pokedexUrl } from '@/lib/filters'
 import { formatDate, formatInteger, pageTitle, plural, today, unlockedOf } from '@/lib/format'
 import { acquisitions, summarize, type Progress, type RecentCard } from '@/lib/pokedex'
 import { LATE_AFTER_DAYS, latePendingOrders } from '@/lib/orders'
-import { isUnderMax } from '@/lib/wishlist'
+import { underMaxCount } from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
 import styles from './HomePage.module.css'
@@ -65,7 +66,7 @@ export function HomePage() {
   const { ordered, wanted } = summarize(collection)
   const [unlockedText, remainingText] = progressSentence(pokedex.progress)
   const tracking = trackingSentence(ordered, wanted)
-  const month = today().slice(0, 7)
+  const month = monthOf(today())
   const thisMonth = obtained.filter(({ acquiredAt }) => acquiredAt?.startsWith(month)).length
   // Jusqu'à 64rem, la réglette n'est qu'une image : la liste des régions mène au Pokédex.
   const rulerInert = useMediaQuery('(max-width: 64rem)')
@@ -134,10 +135,14 @@ function UnderMaxNotice() {
 
 function UnderMaxCount() {
   const { rows } = useWishlist()
-  const count = rows.filter((row) => isToBuy(row) && isUnderMax(row)).length
+  const count = underMaxCount(rows)
   if (count === 0) return null
   return (
-    <Alert tone="success" title={`${plural(count, 'carte', 'cartes')} sous votre prix maximum`}>
+    <Alert
+      tone="success"
+      className={styles.notice}
+      title={`${plural(count, 'carte', 'cartes')} sous votre prix maximum`}
+    >
       Le prix du marché (Cardmarket) est passé sous le maximum que vous vous êtes fixé.{' '}
       <Link to="/achats">Voir la liste d’achats</Link>
     </Alert>
@@ -149,13 +154,12 @@ function LateOrdersNotice() {
   const late = useShoppingStore((state) => latePendingOrders(state.shopping.orders, today()).length)
   if (late === 0) return null
   return (
-    <Alert
-      tone="warn"
+    <LateOrdersAlert
+      className={styles.notice}
       title={`${plural(late, 'commande', 'commandes')} en cours depuis plus de ${LATE_AFTER_DAYS / 7} semaines`}
     >
-      Si rien n’est arrivé, contactez le vendeur ; sur Cardmarket, ouvrez un litige depuis la page
-      de la commande. <Link to="/achats?vue=commandes">Voir les commandes</Link>
-    </Alert>
+      <Link to="/achats?vue=commandes">Voir les commandes</Link>
+    </LateOrdersAlert>
   )
 }
 
@@ -202,7 +206,7 @@ function FirstCards() {
       />
       {teaser.length > 0 && (
         <>
-          <h2>Vos cartes à obtenir</h2>
+          <h2>Vos cartes choisies</h2>
           <ul className={styles.teaser}>
             {teaser.map((entry) => (
               <li key={entry.species.id}>

@@ -12,11 +12,11 @@
 import type { Database } from 'bun:sqlite'
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { addDays } from '@/lib/time'
 import type { CardPriceHistory, PriceFile } from '@/types'
 import { writeSource } from './db'
 import { readHistory, splitYears } from './history'
-import { pricesSnapshot } from './jobs/prices'
-import { saveSnapshot } from './snapshots'
+import { savePrices } from './jobs/prices'
 
 /** La somme de prix, en centimes : comparée exactement. */
 const cents = (prices: (number | null)[]) =>
@@ -92,7 +92,7 @@ export async function importLegacyPrices(db: Database, dir: string) {
           ? null
           : {
               name: file.name,
-              from: new Date(Date.parse(file.from) + head * 86_400_000).toISOString().slice(0, 10),
+              from: addDays(file.from, head),
               prices: file.prices.slice(head, last + 1),
             }
       const read = readHistory(db, id)
@@ -105,7 +105,7 @@ export async function importLegacyPrices(db: Database, dir: string) {
     )
   })()
 
-  saveSnapshot(db, 'prices', pricesSnapshot(db))
+  savePrices(db)
   console.log(
     `Repris : ${histories.size} historiques` +
       (latest ? `, prix Cardmarket du ${latest.date}` : ''),

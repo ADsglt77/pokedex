@@ -14,6 +14,13 @@
   line-height: 1.35;
 }
 
+/* Les avis de l'accueil (prix sous le maximum, commande en retard) : une même largeur, celle de
+   la phrase. */
+.notice {
+  width: 100%;
+  max-width: 44rem;
+}
+
 .progress {
   margin-top: 2.5rem;
 }
@@ -62,7 +69,7 @@
   flex-direction: column;
   gap: 0.15rem;
   color: inherit;
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   text-decoration: none;
 }
 
@@ -83,7 +90,7 @@
 
 .recentDate {
   color: var(--camply-text-muted-2);
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
 }
 
 /* Les cartes sont « distribuées » une à une. */

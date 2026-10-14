@@ -6,7 +6,7 @@
 
 import type { Database } from 'bun:sqlite'
 
-/** Enregistre la réponse ; son ETag, qui ne change qu'avec son contenu. */
+/** Enregistre la réponse, avec son ETag, qui ne change qu'avec son contenu. */
 export function saveSnapshot(db: Database, name: string, data: unknown) {
   const text = JSON.stringify(data)
   const etag = `"${Bun.hash(text).toString(36)}"`
@@ -15,7 +15,6 @@ export function saveSnapshot(db: Database, name: string, data: unknown) {
      ON CONFLICT (name) DO UPDATE SET etag = excluded.etag, body = excluded.body
      WHERE etag != excluded.etag`,
   ).run(name, etag, Bun.gzipSync(text))
-  return etag
 }
 
 /** La réponse HTTP d'un instantané ; 404 tant que sa tâche n'est jamais passée. */

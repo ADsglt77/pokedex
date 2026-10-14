@@ -30,11 +30,13 @@ export const PokedexGrid = memo(function PokedexGrid({ entries, generations }: P
         aria-labelledby={groups.length > 1 ? `generation-${generation.id}` : undefined}
       >
         {groups.length > 1 && (
-          <h2 id={`generation-${generation.id}`} className={styles.heading}>
-            {generation.region}
-            <span className={styles.numeral}>{generation.numeral}</span>
+          <div className={styles.heading}>
+            <h2 id={`generation-${generation.id}`}>
+              {generation.region}{' '}
+              <span className={styles.numeral}>génération {generation.numeral}</span>
+            </h2>
             <span className={styles.count}>{unlockedOf(progress)}</span>
-          </h2>
+          </div>
         )}
         <ul className={styles.grid}>
           {groupEntries.map((entry) => (

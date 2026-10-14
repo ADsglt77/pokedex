@@ -1,3 +1,18 @@
-.title {
-  font-size: 1.125rem;
+/* Le titre, le lien vers la page à sa droite, et l'id dessous. */
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--camply-space-1) var(--camply-space-4);
+}
+
+.link {
+  font-size: var(--text-md);
+}
+
+.id {
+  flex-basis: 100%;
+  color: var(--camply-text-muted);
+  font-size: var(--text-sm);
 }

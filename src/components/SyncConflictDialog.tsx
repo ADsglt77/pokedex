@@ -1,6 +1,5 @@
 import { Button, Modal, Stack } from '@camply/ui'
-import { Download } from '@camply/ui/icons'
-import { useExportCollection } from '@/hooks/useExportCollection'
+import { ExportCollectionButton } from '@/components/ExportCollectionButton'
 import { details, formatDateTime, plural } from '@/lib/format'
 import type { SyncDocument } from '@/lib/sync'
 import { useCollectionStore } from '@/store/collection'
@@ -25,7 +24,6 @@ export function SyncConflictDialog({ open, onClose }: { open: boolean; onClose: 
   const conflict = useSyncStore((state) => state.conflict)
   const collection = useCollectionStore((state) => state.collection)
   const shopping = useShoppingStore((state) => state.shopping)
-  const exportCollection = useExportCollection()
   if (!conflict) return null
 
   return (
@@ -56,16 +54,7 @@ export function SyncConflictDialog({ open, onClose }: { open: boolean; onClose: 
           <li>Le serveur : {describe(conflict.document)}</li>
         </ul>
         <p>Pour ne rien perdre, exportez d’abord la version de cet appareil.</p>
-        <div>
-          <Button
-            size="sm"
-            variant="secondary"
-            leftIcon={<Download size={14} />}
-            onClick={exportCollection}
-          >
-            Exporter la version de cet appareil
-          </Button>
-        </div>
+        <ExportCollectionButton>Exporter la version de cet appareil</ExportCollectionButton>
       </Stack>
     </Modal>
   )

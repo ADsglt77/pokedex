@@ -23,14 +23,15 @@
   padding-top: 1.5rem;
 }
 
+/* Les titres d'un onglet : sous le titre de la page et les onglets, à la taille d'un bloc. */
 .sectionTitle {
-  font-size: 1.125rem;
+  font-size: var(--title-sm);
 }
 
 .note {
   max-width: 62ch;
   color: var(--camply-text-muted);
-  font-size: 0.875rem;
+  font-size: var(--text-md);
 }
 
 /* Liste d'achats */
@@ -117,7 +118,7 @@
 }
 
 .wishReference {
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
@@ -136,7 +137,7 @@
 
 .wishPrices dt {
   color: var(--camply-text-muted);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
 }
 
 .wishPrices dd {
@@ -153,7 +154,7 @@
 
 .wishNote {
   color: var(--camply-text-muted);
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   font-style: italic;
   overflow-wrap: anywhere;
 }
@@ -167,11 +168,8 @@
 }
 
 .wishLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
   margin-right: auto;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
 }
 
 /* Une carte sur une ligne (assistant, commande) */
@@ -202,7 +200,7 @@
   min-width: 10rem;
   flex: 1;
   flex-direction: column;
-  font-size: 0.875rem;
+  font-size: var(--text-md);
 }
 
 .lineTitle {
@@ -347,7 +345,7 @@
 .orderBudget {
   display: grid;
   gap: 0.5rem;
-  font-size: 0.875rem;
+  font-size: var(--text-md);
 }
 
 .totals dd {

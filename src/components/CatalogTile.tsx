@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, Ref } from 'react'
 import { CardArt } from '@/components/CardArt'
 import { ExternalLink } from '@/components/ExternalLink'
 import type { CatalogCard } from '@/lib/card-catalog'
@@ -39,20 +39,30 @@ export function CatalogTile({
       disabled={disabled}
       onClick={onPick}
     >
-      <CardArt card={card} speciesId={speciesId} alt="" />
+      <CardArt card={card} speciesId={speciesId} alt="" className={styles.art} />
       <span className={styles.code}>
         {card.key}
         {card.set.year && <span className={styles.year}> · {card.set.year}</span>}
       </span>
       <span className={styles.price}>{price === null ? 'Sans prix' : formatEuro(price.price)}</span>
-      {children}
+      {children && <span className={styles.extra}>{children}</span>}
     </button>
   )
 }
 
 /** La grille des cartes du catalogue (une liste : chaque carte dans un `li`). */
-export function CatalogGrid({ children }: { children: ReactNode }) {
-  return <ul className={styles.grid}>{children}</ul>
+export function CatalogGrid({
+  children,
+  ref,
+}: {
+  children: ReactNode
+  ref?: Ref<HTMLUListElement>
+}) {
+  return (
+    <ul ref={ref} className={styles.grid}>
+      {children}
+    </ul>
+  )
 }
 
 /** D'où viennent les images de la grille, avec un lien (en tête de grille). */

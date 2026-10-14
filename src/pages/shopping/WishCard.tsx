@@ -1,11 +1,10 @@
 import { Badge, Card, IconButton } from '@camply/ui'
-import { ExternalLink as ExternalIcon, Pencil, X } from '@camply/ui/icons'
+import { Pencil, X } from '@camply/ui/icons'
 import { Link } from 'react-router'
 import { CardArt } from '@/components/CardArt'
-import { ExternalLink } from '@/components/ExternalLink'
+import { CardmarketLink } from '@/components/CardmarketLink'
 import { PossessionMark } from '@/components/PossessionMark'
 import { PRIORITY_LABELS } from '@/config/shopping'
-import { cardmarketPage } from '@/lib/cardmarket'
 import { formatDexNumber, formatEuro, formatPercent, statusLabel } from '@/lib/format'
 import { cardTitle } from '@/lib/species'
 import { priceLabel } from '@/lib/prices'
@@ -51,7 +50,6 @@ export function WishCard({
   onRemove: () => void
 }) {
   const { card, preference, status, price } = row
-  const page = cardmarketPage(card)
   const speciesId = card.dexIds[0]!
   const title = cardTitle(card)
 
@@ -105,11 +103,7 @@ export function WishCard({
         {preference.note && <p className={styles.wishNote}>{preference.note}</p>}
 
         <div className={styles.wishActions}>
-          {page && (
-            <ExternalLink href={page} className={styles.wishLink}>
-              Page Cardmarket <ExternalIcon size={13} aria-hidden="true" />
-            </ExternalLink>
-          )}
+          <CardmarketLink card={card} className={styles.wishLink} />
           <IconButton
             label={`Modifier ${title}, ${card.reference}`}
             size="sm"

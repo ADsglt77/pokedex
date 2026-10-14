@@ -5,6 +5,9 @@
 
 import type { CardStatus, CollectionData, PokemonCard } from '@/types'
 
+/** L'id d'une carte ajoutée par l'utilisateur (son format est celui de la collection enregistrée). */
+export const newCardId = () => `manual:${crypto.randomUUID()}`
+
 export const emptyCollection = (): CollectionData => ({
   schemaVersion: 1,
   updatedAt: null,

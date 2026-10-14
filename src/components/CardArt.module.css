@@ -53,9 +53,22 @@
   filter: grayscale(1);
 }
 
+/* En grand (la fiche) : le sprite au double de sa taille, net (pixels entiers). */
+.large .sprite {
+  max-width: 192px;
+}
+
+.large.empty .sprite {
+  opacity: 0.5;
+}
+
+.large .reference {
+  font-size: var(--text-md);
+}
+
 .reference {
   color: var(--camply-text);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 600;
 }
 
