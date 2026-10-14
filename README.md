@@ -22,7 +22,7 @@ bun run format   # Prettier
 - **Fiche** : la carte du Pokémon, choisie parmi ses cartes japonaises (image, prix du jour, tri
   par date ou par prix) ou saisie à la main, puis corrigée ou retirée ; en grand, son statut
   (possédée / commandée / souhaitée) et son prix payé, son prix Cardmarket et sa courbe, le lien
-  vers sa page Cardmarket, l'achat (à acheter ou exclue, priorité, prix maximum, note), les détails
+  vers sa page Cardmarket, l'achat (dans la liste d'achats ou non, priorité, prix maximum, note), les détails
   de l'espèce.
 - **Ajouter depuis Cardmarket** : sur la page d'une carte chez Cardmarket, le favori « Ajouter au
   Pokédex » ouvre l'app avec son id, son nom et l'adresse de la page ; le Pokémon est reconnu
@@ -36,7 +36,8 @@ bun run format   # Prettier
   budget par mois et par fournisseur. Export CSV et recherches à coller dans Cardmarket.
 - **Données** : le favori Cardmarket à installer (à glisser dans la barre de favoris, ou son code
   à copier), les images à chercher pour les cartes qui n'en ont pas, export / import (achats
-  compris), effacement.
+  compris), effacement, et l'état des données du serveur (dernière lecture de chaque source, jour
+  des prix, tâche en échec ou en retard).
 
 Toutes les données passent par le serveur de l'app (`server/`, Elysia et une base SQLite) : le
 navigateur ne parle qu'à lui. Des tâches d'ingestion lisent les sources et remplissent la base :

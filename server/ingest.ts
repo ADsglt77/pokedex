@@ -6,18 +6,20 @@
  *   bun server/ingest.ts legacy-prices <dossier>   reprise des anciens fichiers de prix
  *
  * En boucle, au démarrage : les réponses calculées de l'API (`snapshots`) sont refaites (leur
- * forme a pu changer avec le code déployé), et la reprise des anciens fichiers de prix
- * (`LEGACY_PRICES`, `legacy-prices.ts`) passe d'abord, si la base n'a pas encore d'historique :
- * la tâche `prices` n'écrit qu'ensuite.
- * En boucle, une tâche repart quand sa dernière réussite a plus que son intervalle ; après un
- * échec (source indisponible…), 10 min plus tard, puis 20, 40… jusqu'à 6 h : une panne qui dure
- * ne fait pas solliciter la source toutes les 10 min. Chaque passage est noté dans `runs`
- * (lu par `/api/status`).
+ * forme a pu changer avec le code déployé) : le catalogue et les prix d'après leurs tables, les
+ * espèces en repassant leur tâche (elle relit le cache disque de PokéAPI, sans requête s'il a moins
+ * d'un mois). La reprise des anciens fichiers de prix (`LEGACY_PRICES`, `legacy-prices.ts`) passe
+ * d'abord, si la base n'a pas encore d'historique : la tâche `prices` n'écrit qu'ensuite.
+ * En boucle, une tâche repart quand sa dernière réussite a plus que son intervalle
+ * (`INGEST_JOBS`) ; après un échec (source indisponible…), 10 min plus tard, puis 20, 40… jusqu'à
+ * 6 h : une panne qui dure ne fait pas solliciter la source toutes les 10 min. Chaque passage est
+ * noté dans `runs` (lu par `/api/status`, que montre la page Données).
  */
 
 import type { Database } from 'bun:sqlite'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
+import { INGEST_JOBS, type IngestJob } from '@/config/jobs'
 import { openData, readSource } from './db'
 import { backups } from './jobs/backups'
 import { catalog, catalogSnapshot } from './jobs/catalog'
@@ -29,22 +31,17 @@ import { saveSnapshot } from './snapshots'
 
 const HOUR = 3_600_000
 
-// Dans l'ordre où elles passent : les images suivent le catalogue.
-const JOBS: Record<string, { every: number; run: (db: Database) => Promise<void> }> = {
-  // Les espèces ne changent qu'avec une nouvelle génération.
-  species: { every: 30 * 24 * HOUR, run: species },
-  // De nouvelles cartes quelques fois par mois (Pokécardex : une page par série, toutes les 3 s).
-  catalog: { every: 24 * HOUR, run: catalog },
-  // Les prix changent une fois par jour ; la tâche ne retélécharge que ce qui a changé.
-  prices: { every: 6 * HOUR, run: prices },
-  // Après les prix : son premier passage (environ 1 Go) est long.
-  images: { every: 24 * HOUR, run: images },
-  // Les deux bases, copiées chaque jour (`BACKUP_DIR`).
-  backups: { every: 24 * HOUR, run: backups },
+/** Chaque tâche, dans l'ordre d'`INGEST_JOBS` (leur rythme) : les images suivent le catalogue. */
+const RUNS: Record<IngestJob, (db: Database) => Promise<void>> = {
+  species,
+  catalog,
+  prices,
+  images,
+  backups,
 }
+const NAMES = Object.keys(INGEST_JOBS) as IngestJob[]
 
-async function runJob(db: Database, name: string) {
-  const job = JOBS[name]!
+async function runJob(db: Database, name: IngestJob) {
   const now = () => new Date().toISOString()
   const { id } = db
     .query('INSERT INTO runs (job, started_at) VALUES (?, ?) RETURNING id')
@@ -54,7 +51,7 @@ async function runJob(db: Database, name: string) {
       .query('UPDATE runs SET finished_at = ?, ok = ?, message = ? WHERE id = ?')
       .run(now(), ok ? 1 : 0, message, id)
   try {
-    await job.run(db)
+    await RUNS[name](db)
     finish(true, null)
     return true
   } catch (error) {
@@ -65,7 +62,7 @@ async function runJob(db: Database, name: string) {
 }
 
 /** La tâche est-elle à relancer : jamais passée, intervalle écoulé, ou délai après un échec. */
-function isDue(db: Database, name: string) {
+function isDue(db: Database, name: IngestJob) {
   const runs = db
     .query(
       'SELECT ok, finished_at FROM runs WHERE job = ? AND finished_at IS NOT NULL ORDER BY id DESC LIMIT 10',
@@ -75,7 +72,7 @@ function isDue(db: Database, name: string) {
   if (!last) return true
   const failures = runs.findIndex((run) => run.ok === 1)
   const streak = failures < 0 ? runs.length : failures
-  const wait = streak ? Math.min(600_000 * 2 ** (streak - 1), 6 * HOUR) : JOBS[name]!.every
+  const wait = streak ? Math.min(600_000 * 2 ** (streak - 1), 6 * HOUR) : INGEST_JOBS[name].every
   return Date.now() - Date.parse(last.finished_at) >= wait
 }
 
@@ -89,17 +86,19 @@ if (arg === '--loop') {
   if (legacy && !hasHistory(db) && existsSync(join(legacy, 'latest.json'))) {
     await importLegacyPrices(db, legacy)
   }
+  // Les espèces sont enregistrées telles que les lit le code : repassées avec le code déployé.
+  await runJob(db, 'species')
   for (;;) {
-    for (const name of Object.keys(JOBS)) {
+    for (const name of NAMES) {
       if (isDue(db, name)) await runJob(db, name)
     }
     await Bun.sleep(60_000)
   }
 } else if (arg === 'legacy-prices' && dir) {
   await importLegacyPrices(db, dir)
-} else if (arg && arg in JOBS) {
-  if (!(await runJob(db, arg))) process.exit(1)
+} else if (NAMES.includes(arg as IngestJob)) {
+  if (!(await runJob(db, arg as IngestJob))) process.exit(1)
 } else {
-  console.error(`Tâches : ${Object.keys(JOBS).join(', ')} ; ou --loop, ou legacy-prices <dossier>`)
+  console.error(`Tâches : ${NAMES.join(', ')} ; ou --loop, ou legacy-prices <dossier>`)
   process.exit(1)
 }

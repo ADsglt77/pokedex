@@ -38,6 +38,19 @@
   width: 100%;
 }
 
+/* L'état des données : une ligne par source, son badge puis sa phrase. */
+.jobs {
+  width: 100%;
+  max-width: 44rem;
+}
+
+.job {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--camply-space-1) var(--camply-space-2);
+}
+
 .groupTitle {
   font-size: 1rem;
 }

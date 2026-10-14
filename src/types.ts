@@ -191,6 +191,23 @@ export interface CatalogFile {
   cards: Partial<Record<string, CatalogRow[]>>
 }
 
+/* État du serveur : `/api/status`, d'après le journal des tâches d'ingestion (`server/ingest.ts`) */
+
+/** Les passages d'une tâche (ISO) ; une tâche qui tourne encore n'en compte pas. */
+export interface JobStatus {
+  /** La fin du dernier passage réussi ; `null` s'il n'y en a pas eu. */
+  lastSuccess: string | null
+  /** La fin du dernier passage, réussi ou non : après `lastSuccess`, il a échoué. */
+  lastRun: string | null
+}
+
+export interface ServerStatus {
+  /** Clé : la tâche (`INGEST_JOBS`, `config/jobs.ts`) ; absente tant qu'elle n'est jamais passée. */
+  jobs: Partial<Record<string, JobStatus>>
+  /** Le jour du guide des prix Cardmarket en base ; `null` sans prix. */
+  pricesDate: string | null
+}
+
 /* Prix : `/api/prices`, mis à jour par la tâche d'ingestion `prices` (`server/jobs/prices.ts`) */
 
 export interface CardPrice {

@@ -1,6 +1,7 @@
 /**
  * Les données de référence, publiques, que remplissent les tâches d'ingestion (`ingest.ts`) :
- * - `GET /api/status` : la dernière réussite et le dernier passage de chaque tâche ;
+ * - `GET /api/status` : la dernière réussite et le dernier passage de chaque tâche, et le jour des
+ *   prix en base (la page Données le montre) ;
  * - `GET /api/species`, `/api/species/details` : les espèces, et ce qu'en montre la fiche ;
  * - `GET /api/catalog` : le catalogue des cartes japonaises ;
  * - `GET /api/prices` : les prix Cardmarket du jour ; `GET /api/prices/:id` : l'historique d'une
@@ -10,6 +11,8 @@
 
 import type { Database } from 'bun:sqlite'
 import { Elysia, t } from 'elysia'
+import type { JobStatus, ServerStatus } from '@/types'
+import { readSource } from './db'
 import { readHistory } from './history'
 import { serveSnapshot } from './snapshots'
 
@@ -30,14 +33,13 @@ export function referenceRoutes(data: Database) {
   return new Elysia({ name: 'reference' })
     .get(
       '/status',
-      ({ set }) => {
+      ({ set }): ServerStatus => {
         set.headers['cache-control'] = 'no-cache'
-        const rows = runs.all() as {
-          job: string
-          lastSuccess: string | null
-          lastRun: string | null
-        }[]
-        return Object.fromEntries(rows.map(({ job, ...times }) => [job, times]))
+        const rows = runs.all() as ({ job: string } & JobStatus)[]
+        return {
+          jobs: Object.fromEntries(rows.map(({ job, ...times }) => [job, times])),
+          pricesDate: readSource(data, 'cardmarket')?.date ?? null,
+        }
       },
       doc('Les tâches d’ingestion'),
     )

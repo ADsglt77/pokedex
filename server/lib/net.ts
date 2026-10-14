@@ -1,9 +1,9 @@
 /**
  * Réseau des tâches d'ingestion et des scripts de données : un `fetch` JSON avec un cache disque
  * (`CACHE_DIR`, sinon `.data/cache` : pour relancer une tâche sans solliciter les API à nouveau)
- * et une file à concurrence limitée. Chaque requête s'identifie et attend 100 ms avant de partir.
- * Un 404 arrête la tâche. Une réponse en cache sert tant qu'elle a moins de `maxAge` ms (sans
- * limite par défaut) ; `--refresh` redemande tout.
+ * et une file à concurrence limitée. Chaque requête s'identifie, attend 100 ms avant de partir et
+ * échoue au bout de 2 min sans réponse complète. Un 404 arrête la tâche. Une réponse en cache sert
+ * tant qu'elle a moins de `maxAge` ms (sans limite par défaut) ; `--refresh` redemande tout.
  */
 
 import { createHash } from 'node:crypto'
@@ -22,10 +22,21 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const USER_AGENT = 'pokedex-perso/1.0 (bun run data)'
 
-/** Une requête identifiée, après 100 ms d'attente : pour une API qui le demande (tcgcsv). */
+/**
+ * Au-delà, une requête échoue, lecture de la réponse comprise : une connexion qui ne répond plus ne
+ * bloque pas les tâches, qui passent l'une après l'autre (le guide des prix, 29 Mo, arrive en
+ * quelques secondes).
+ */
+const TIMEOUT = 120_000
+
+/** Une requête identifiée, après 100 ms d'attente, et 2 min au plus. */
 export async function politeFetch(url: string, init?: RequestInit) {
   await wait(100)
-  return fetch(url, { ...init, headers: { 'User-Agent': USER_AGENT, ...init?.headers } })
+  return fetch(url, {
+    signal: AbortSignal.timeout(TIMEOUT),
+    ...init,
+    headers: { 'User-Agent': USER_AGENT, ...init?.headers },
+  })
 }
 
 /**
@@ -72,7 +83,11 @@ export async function fetchJson<T>(
   }
 }
 
-/** `task` sur chaque élément, au plus `concurrency` à la fois ; les résultats gardent l'ordre. */
+/**
+ * `task` sur chaque élément, au plus `concurrency` à la fois ; les résultats gardent l'ordre. Une
+ * erreur arrête la distribution et n'est levée qu'une fois finies les tâches en cours : aucune ne
+ * continue après la fin de la tâche, en même temps que la suivante.
+ */
 export async function mapPool<T, R>(
   items: readonly T[],
   concurrency: number,
@@ -80,12 +95,21 @@ export async function mapPool<T, R>(
 ): Promise<R[]> {
   const results: R[] = []
   let next = 0
+  let stopped = false
   const worker = async () => {
-    while (next < items.length) {
+    while (next < items.length && !stopped) {
       const index = next++
-      results[index] = await task(items[index]!)
+      try {
+        results[index] = await task(items[index]!)
+      } catch (error) {
+        stopped = true
+        throw error
+      }
     }
   }
-  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker))
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, worker)
+  for (const outcome of await Promise.allSettled(workers)) {
+    if (outcome.status === 'rejected') throw outcome.reason
+  }
   return results
 }

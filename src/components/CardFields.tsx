@@ -6,7 +6,7 @@ import type { CardDraft } from '@/hooks/useCardDraft'
 import { findCardImage } from '@/lib/card-catalog'
 import { formatEuro } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
-import { loadPriceHistory, usePrices } from '@/store/prices'
+import { loadPriceHistory, usePrices, usePricesMissing } from '@/store/prices'
 import styles from './CardFields.module.css'
 
 /**
@@ -122,8 +122,17 @@ function FoundImage({ reference }: { reference: string }) {
 /** Ce que Cardmarket dit de l'id saisi : le nom de la carte et son prix, pour s'assurer du bon. */
 function CardmarketCheck({ cardmarket }: { cardmarket: number }) {
   const prices = usePrices()
+  const missing = usePricesMissing()
   const history = use(loadPriceHistory(cardmarket))
   const price = priceOf(prices, { cardmarket })
+  // Sans les prix du jour (serveur sans prix, ou qui ne répond pas), rien ne dit si l'id est faux.
+  if (!history && missing) {
+    return (
+      <p className="muted">
+        Les prix Cardmarket ne sont pas disponibles pour le moment : l’id ne peut pas être vérifié.
+      </p>
+    )
+  }
   // Sans historique, l'id n'a jamais eu de prix depuis le premier relevé ; s'il en a un ce jour,
   // c'est que l'historique n'a pas répondu (il sera redemandé).
   if (!history && !price) {
