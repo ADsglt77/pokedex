@@ -12,25 +12,33 @@
 import { createAuth } from './auth'
 import { openApp } from './db'
 
-/** Une ligne tapée sans s'afficher ; la première ligne de l'entrée standard sans terminal. */
+/**
+ * Une ligne tapée sans s'afficher ; la première ligne de l'entrée standard sans terminal. Lue par
+ * un écouteur, retiré ensuite : l'entrée reste ouverte pour la question suivante (« Encore une
+ * fois »), ce qu'une boucle `for await` ne permettrait pas (elle la ferme en sortant).
+ */
 async function readSecret(question: string): Promise<string> {
   process.stdout.write(question)
   if (!process.stdin.isTTY) return (await Bun.stdin.text()).split(/\r?\n/)[0] ?? ''
-  process.stdin.setRawMode(true)
-  let value = ''
-  for await (const chunk of process.stdin) {
-    for (const char of String(chunk)) {
-      if (char === '\u0003') process.exit(130)
-      if (char === '\r' || char === '\n') {
-        process.stdin.setRawMode(false)
-        process.stdin.pause()
-        process.stdout.write('\n')
-        return value
+  return new Promise((resolve) => {
+    let value = ''
+    const read = (chunk: Buffer) => {
+      for (const char of String(chunk)) {
+        if (char === '\u0003') process.exit(130)
+        if (char === '\r' || char === '\n') {
+          process.stdin.off('data', read)
+          process.stdin.setRawMode(false)
+          process.stdin.pause()
+          process.stdout.write('\n')
+          return resolve(value)
+        }
+        value = char === '\u007f' || char === '\b' ? value.slice(0, -1) : value + char
       }
-      value = char === '\u007f' || char === '\b' ? value.slice(0, -1) : value + char
     }
-  }
-  return value
+    process.stdin.setRawMode(true)
+    process.stdin.on('data', read)
+    process.stdin.resume()
+  })
 }
 
 const email = process.argv[2]?.trim().toLowerCase()
