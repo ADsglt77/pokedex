@@ -2,9 +2,11 @@
  * Les images des cartes japonaises, chez Pokécardex (avec son autorisation, octobre 2026),
  * retrouvées d'après la référence : « Bulbizarre (sv2a 166) », le code de l'extension puis le
  * numéro, comme Cardmarket les écrit. L'app ne lit aucune page de Pokécardex (leurs données sont
- * chiffrées) : elle charge seulement l'image, à une adresse déduite de la référence, et cite
- * Pokécardex sous la carte. Quand Pokécardex n'a pas l'image (vieilles séries, decks), celle du
- * produit chez TCGplayer, que le catalogue relie à la carte, citée de même.
+ * chiffrées) : l'adresse de l'image se déduit de la référence, et la carte cite Pokécardex. Quand
+ * Pokécardex n'a pas l'image (vieilles séries, decks), celle du produit chez TCGplayer, que le
+ * catalogue relie à la carte, citée de même.
+ * La collection garde l'adresse d'origine ; le navigateur charge la copie qu'en a le serveur
+ * (`localSrc`, `server/images.ts`), jamais l'original.
  */
 
 import { numberKey, referenceCode, setKey } from '@/lib/card-code'
@@ -24,6 +26,29 @@ export const tcgplayerImage = (productId: number): CardImage => ({
 })
 
 export const isTcgplayerImage = (image: CardImage) => image.small.startsWith(TCGPLAYER_PRODUCTS)
+
+/** Les adresses d'origine que le serveur copie, et le chemin de leur copie. */
+const MIRRORED: [RegExp, string][] = [
+  [
+    /^https:\/\/pokecardex-scans\.b-cdn\.net\/sets_jp\/(\w+)\/(\w+)\.jpg\?class=(md|hd)$/,
+    '/images/cards/pokecardex/$1/$2-$3.webp',
+  ],
+  [
+    /^https:\/\/tcgplayer-cdn\.tcgplayer\.com\/product\/(\d+)_(200w|in_1000x1000)\.jpg$/,
+    '/images/cards/tcgplayer/$1_$2.jpg',
+  ],
+]
+
+/**
+ * Ce que charge le navigateur pour une image : la copie du serveur pour une image de Pokécardex ou
+ * de TCGplayer (`/images/…`, copiée à la demande si besoin) ; une adresse collée, telle quelle.
+ */
+export function localSrc(url: string) {
+  for (const [pattern, path] of MIRRORED) {
+    if (pattern.test(url)) return url.replace(pattern, path)
+  }
+  return url
+}
 
 /** D'où vient une image, pour la citer sous la carte ; `null` : une adresse collée. */
 export function imageSource(image: CardImage): { name: string; href: string } | null {
@@ -49,7 +74,8 @@ const found = new Map<string, Promise<CardImage | null>>()
 const missing = new Set<string>()
 
 /**
- * L'image de la carte chez Pokécardex, si elle s'y charge ; `null` sinon. La même promesse pour la
+ * L'image de la carte chez Pokécardex, si sa copie se charge (le serveur la copie à la première
+ * demande) ; `null` si Pokécardex ne l'a pas. La même promesse pour la
  * même référence (ce qu'attend `use`). `retry`, au moment d'enregistrer, redemande une image qui a
  * échoué : une panne passagère ne doit pas compter pour une image absente. Sans réponse en 10 s,
  * elle compte pour absente : l'enregistrement, qui l'attend, ne reste pas bloqué.
@@ -79,7 +105,7 @@ export function findCardImage(reference: string, { retry = false } = {}) {
           clearTimeout(timer)
           fail()
         }
-        probe.src = image.small
+        probe.src = localSrc(image.small)
       }),
     )
     found.set(reference, promise)

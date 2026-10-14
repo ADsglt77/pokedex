@@ -8,7 +8,7 @@
 import { GENERATIONS, TOTAL_SPECIES } from '@/config/pokedex'
 import type { PokemonSpecies, PokemonSpeciesDetails, PokemonTypeId } from '@/types'
 import { writeDataFile } from './lib/dataFile'
-import { fetchJson, mapPool } from './lib/net'
+import { fetchJson, mapPool } from '../server/lib/net'
 
 const API = 'https://pokeapi.co/api/v2'
 

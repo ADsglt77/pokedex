@@ -35,8 +35,8 @@ jobs:
             set -e
             cd "${{ secrets.VPS_PATH }}"
             git pull --ff-only
-            # `--pull` : les images de base (nginx, bun) reçoivent leurs correctifs.
-            docker compose pull prices
+            # `--pull` : les images de base (nginx, bun) reçoivent leurs correctifs ;
+            # `--remove-orphans` : arrête les services retirés de compose.yaml (l'ancien `prices`).
             docker compose build --pull
-            docker compose up -d
+            docker compose up -d --remove-orphans
             docker image prune -f

@@ -148,10 +148,14 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
      * TCGplayer de secours et son id Cardmarket. Une adresse d'image ou une page collées pour une
      * autre carte ne lui vont plus.
      */
-    fill: (chosen: Pick<CatalogCard, 'reference' | 'cardmarket' | 'fallback'>) => {
+    fill: (chosen: Pick<CatalogCard, 'reference' | 'cardmarket' | 'image'>) => {
       setReference(chosen.reference)
       setSearched(chosen.reference)
-      setSpare(chosen.fallback && { reference: chosen.reference, image: chosen.fallback })
+      setSpare(
+        chosen.image && isTcgplayerImage(chosen.image)
+          ? { reference: chosen.reference, image: chosen.image }
+          : null,
+      )
       setCardmarketText(String(chosen.cardmarket ?? ''))
       setChecked(chosen.cardmarket ?? null)
       setImage('')

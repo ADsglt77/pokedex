@@ -23,9 +23,9 @@ export default defineConfig([
       '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
     },
   },
-  // Les scripts de données et les tests tournent sous Bun, pas dans le navigateur.
+  // Le serveur, les scripts de données et les tests tournent sous Bun, pas dans le navigateur.
   {
-    files: ['scripts/**/*.ts', 'tests/**/*.ts'],
+    files: ['server/**/*.ts', 'scripts/**/*.ts', 'tests/**/*.ts'],
     languageOptions: { globals: globals.node },
   },
 ])

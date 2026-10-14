@@ -1,15 +1,17 @@
 /**
- * Réseau des scripts de données : un `fetch` JSON avec un cache disque (`scripts/.cache`, pour
- * relancer un script sans solliciter les API à nouveau) et une file à concurrence limitée.
- * Chaque requête s'identifie et attend 100 ms avant de partir. Un 404 arrête le script ;
- * `--refresh` redemande tout (le cache n'expire jamais).
+ * Réseau des tâches d'ingestion et des scripts de données : un `fetch` JSON avec un cache disque
+ * (`CACHE_DIR`, sinon `scripts/.cache` : pour relancer une tâche sans solliciter les API à nouveau)
+ * et une file à concurrence limitée. Chaque requête s'identifie et attend 100 ms avant de partir.
+ * Un 404 arrête la tâche. Une réponse en cache sert tant qu'elle a moins de `maxAge` ms (sans
+ * limite par défaut) ; `--refresh` redemande tout.
  */
 
 import { createHash } from 'node:crypto'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 
-const CACHE_ROOT = join(import.meta.dirname, '..', '.cache')
+const CACHE_ROOT =
+  process.env.CACHE_DIR ?? join(import.meta.dirname, '..', '..', 'scripts', '.cache')
 
 /** `--refresh` : ignore le cache et redemande tout. */
 const refresh = process.argv.includes('--refresh')
@@ -26,8 +28,16 @@ export async function politeFetch(url: string, init?: RequestInit) {
   return fetch(url, { ...init, headers: { 'User-Agent': USER_AGENT, ...init?.headers } })
 }
 
-/** Document JSON, lu dans le cache s'il a déjà été téléchargé. `namespace` : un dossier par API. */
-export async function fetchJson<T>(url: string, namespace: string, init?: RequestInit): Promise<T> {
+/**
+ * Document JSON, lu dans le cache s'il y a été mis il y a moins de `maxAge` ms. `namespace` : un
+ * dossier par API.
+ */
+export async function fetchJson<T>(
+  url: string,
+  namespace: string,
+  init?: RequestInit,
+  maxAge = Infinity,
+): Promise<T> {
   const body = typeof init?.body === 'string' ? init.body : ''
   const key = createHash('sha1')
     .update(`${init?.method ?? 'GET'} ${url}\n${body}`)
@@ -36,7 +46,9 @@ export async function fetchJson<T>(url: string, namespace: string, init?: Reques
 
   if (!refresh) {
     try {
-      return JSON.parse(await readFile(file, 'utf8')) as T
+      if (Date.now() - (await stat(file)).mtimeMs < maxAge) {
+        return JSON.parse(await readFile(file, 'utf8')) as T
+      }
     } catch {
       // Pas encore en cache.
     }

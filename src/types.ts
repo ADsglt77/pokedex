@@ -166,7 +166,7 @@ export interface ShoppingData {
   budget: BudgetSettings
 }
 
-/* Fichiers de `src/data`, écrits par `bun run data` */
+/* Fichiers de `src/data`, écrits par `bun run data:species` ; et le catalogue, servi par l'API */
 
 export interface SpeciesFile {
   generatedAt: string
@@ -178,12 +178,18 @@ export interface SpeciesDetailsFile {
 }
 
 /**
- * Une carte de `catalog.json` : [extension, numéro, id Cardmarket (0 : inconnu ou douteux), suffixe,
- * produit TCGplayer (0 : aucun), ses Pokémon s'ils sont plusieurs].
+ * L'image d'une carte du catalogue : chez Pokécardex, chez TCGplayer (celle de son produit), ou
+ * aucune (ni l'un ni l'autre ne l'a).
  */
-export type CatalogRow = [string, string, number, string, number, number[]?]
+export type CatalogImage = 'pokecardex' | { tcgplayer: number } | null
 
-/** `catalog.json` : les cartes Pokémon japonaises de TCGdex (`scripts/catalog.ts`). */
+/**
+ * Une carte du catalogue : [extension, numéro, id Cardmarket (0 : inconnu ou douteux), suffixe,
+ * image, ses Pokémon s'ils sont plusieurs].
+ */
+export type CatalogRow = [string, string, number, string, CatalogImage, number[]?]
+
+/** `/api/catalog` : les cartes Pokémon japonaises de TCGdex (tâche `catalog`, `server/jobs/catalog.ts`). */
 export interface CatalogFile {
   /** [nom japonais, date de sortie, groupes TCGplayer de ses cartes s'il y en a]. */
   sets: Record<string, [name: string, released: string, tcgplayerGroups?: number[]]>
@@ -191,7 +197,7 @@ export interface CatalogFile {
   cards: Partial<Record<string, CatalogRow[]>>
 }
 
-/* Prix : `/prices/`, écrits chaque jour par `scripts/prices.ts` */
+/* Prix : `/api/prices`, mis à jour par la tâche d'ingestion `prices` (`server/jobs/prices.ts`) */
 
 /** D'où vient un prix : Cardmarket ; TCGplayer pour une carte sans prix Cardmarket ce jour. */
 export type PriceSource = 'cardmarket' | 'tcgplayer'
@@ -208,7 +214,7 @@ export interface CardPrice {
 /** Le prix du jour d'une carte, en court : prix du marché, plus bas, moyenne sur 30 jours. */
 export type CardPriceRow = [price: number, low: number | null, avg30: number | null]
 
-/** `latest.json` : le prix du jour de toutes les cartes Pokémon à l'unité de Cardmarket. */
+/** Les prix Cardmarket du jour : toutes les cartes Pokémon à l'unité de Cardmarket. */
 export interface PriceFile {
   /** Jour du guide des prix (YYYY-MM-DD). */
   date: string
@@ -220,7 +226,7 @@ export interface PriceFile {
 export type TcgplayerPriceRow = [price: number, low: number | null]
 
 /**
- * `tcgplayer.json` : le prix du jour, chez TCGplayer, des cartes du catalogue sans prix Cardmarket
+ * Les prix TCGplayer du jour des cartes du catalogue sans prix Cardmarket
  * (pas d'id, ou pas de prix pour cet id : vieilles séries, decks, promos), converti en euros.
  */
 export interface TcgplayerPriceFile {
@@ -232,13 +238,13 @@ export interface TcgplayerPriceFile {
   cards: Record<string, TcgplayerPriceRow>
 }
 
-/** Les prix du jour, chacun `null` si son fichier manque. */
+/** Les prix du jour (`/api/prices`), chacun `null` tant que sa source n'a jamais été lue. */
 export interface Prices {
   cardmarket: PriceFile | null
   tcgplayer: TcgplayerPriceFile | null
 }
 
-/** `history/<idProduct>.json` : l'historique d'une carte (Cardmarket n'en garde pas). */
+/** `/api/prices/<idProduct>` : l'historique d'une carte (Cardmarket n'en garde pas). */
 export interface CardPriceHistory {
   /** Son nom chez Cardmarket : « Leafeon V [Greening Cells | Leaf Blade] ». */
   name: string | null

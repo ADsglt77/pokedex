@@ -1,12 +1,13 @@
 /**
- * Le catalogue des cartes Pokémon japonaises (`bun run data:catalog`, depuis TCGdex) : pour chaque
- * Pokémon, ses cartes, des plus récentes aux plus anciennes, et les extensions (nom japonais, date
- * de sortie). Un fichier à part, chargé au premier choix d'une carte. Aucun tri ni détection :
- * l'utilisateur choisit, l'app ne propose rien seule.
+ * Le catalogue des cartes Pokémon japonaises (`/api/catalog`, que la tâche `catalog` construit
+ * d'après TCGdex) : pour chaque Pokémon, ses cartes, des plus récentes aux plus anciennes, et les
+ * extensions (nom japonais, date de sortie). Chargé au premier choix d'une carte. Aucun tri ni
+ * détection : l'utilisateur choisit, l'app ne propose rien seule.
  */
 
+import { getJson } from '@/lib/api'
 import { codeKey, referenceCode } from '@/lib/card-code'
-import { tcgplayerImage } from '@/lib/card-images'
+import { cardImage, tcgplayerImage } from '@/lib/card-images'
 import { settled } from '@/lib/settled'
 import { getSpecies } from '@/lib/species'
 import type { CardImage, CatalogFile } from '@/types'
@@ -31,8 +32,8 @@ export interface CatalogCard {
   cardmarket?: number
   /** « Pikachu ex (SV8 033) », « Pikachu & Zekrom GX (SM9 031) » : d'où son image est retrouvée. */
   reference: string
-  /** Son image chez TCGplayer, quand Pokécardex n'a pas la sienne ; `null` sans produit relié. */
-  fallback: CardImage | null
+  /** Son image : chez Pokécardex, sinon celle de son produit TCGplayer ; `null` sans image. */
+  image: CardImage | null
 }
 
 /** Tout le catalogue, lu une fois : les extensions et les cartes par Pokémon. */
@@ -57,15 +58,19 @@ function readCatalog(file: CatalogFile): Catalog {
     const id = Number(speciesId)
     bySpecies.set(
       id,
-      rows!.map(([set, number, cardmarket, suffix, product, dexIds = [id]]) => {
+      rows!.map(([set, number, cardmarket, suffix, image, dexIds = [id]]) => {
         const names = dexIds.map((dexId) => getSpecies(dexId)!.names.fr).join(' & ')
+        const reference = `${names}${suffix && ` ${suffix}`} (${set} ${number})`
         const card = {
           key: `${set} ${number}`,
           set: sets.get(set) ?? { id: set, name: set, year: null },
           dexIds,
           cardmarket: cardmarket || undefined,
-          reference: `${names}${suffix && ` ${suffix}`} (${set} ${number})`,
-          fallback: product ? tcgplayerImage(product) : null,
+          reference,
+          image:
+            image === 'pokecardex'
+              ? cardImage(reference)
+              : image && tcgplayerImage(image.tcgplayer),
         }
         byCode.set(codeKey({ set, number }), card)
         return card
@@ -75,16 +80,19 @@ function readCatalog(file: CatalogFile): Catalog {
   return { sets: [...sets.values()], bySpecies, byCode }
 }
 
-let catalog: Promise<Catalog> | null = null
+let loaded: { response: Promise<CatalogFile | null>; catalog: Promise<Catalog | null> } | null =
+  null
 
-/** Le catalogue. Toujours la même promesse, lue par `use()`. */
+/**
+ * Le catalogue ; `null` s'il n'est pas disponible (serveur arrêté, base encore vide : redemandé une
+ * minute après au plus tôt, `getJson`). Toujours la même promesse, lue par `use()`.
+ */
 export function loadCatalog() {
-  catalog ??= settled(
-    import('@/data/catalog.json').then(({ default: file }) =>
-      readCatalog(file as unknown as CatalogFile),
-    ),
-  )
-  return catalog
+  const response = getJson<CatalogFile>('/api/catalog')
+  if (loaded?.response !== response) {
+    loaded = { response, catalog: settled(response.then((file) => file && readCatalog(file))) }
+  }
+  return loaded.catalog
 }
 
 /** Une extension dans une liste de choix : « SV2a · ポケモンカード151 (2023) ». */

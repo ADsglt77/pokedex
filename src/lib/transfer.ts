@@ -250,3 +250,14 @@ export function parseImport(text: string) {
 }
 
 export type ImportedFile = NonNullable<ReturnType<typeof parseImport>>
+
+/**
+ * La collection et les achats qu'un navigateur envoie au serveur (synchronisation) ; `null` s'ils
+ * sont abîmés : le serveur les refuse, aux mêmes règles qu'un fichier importé.
+ */
+export function readDocument(value: unknown) {
+  if (!isRecord(value)) return null
+  const collection = readCollection(value.collection)
+  const shopping = readShopping(value.shopping)
+  return collection && shopping && readable(collection, shopping) ? { collection, shopping } : null
+}

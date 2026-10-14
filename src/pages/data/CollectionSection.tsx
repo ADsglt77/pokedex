@@ -5,6 +5,7 @@ import { usePokedex } from '@/hooks/usePokedex'
 import { isEmptySummary, summarize } from '@/lib/pokedex'
 import { formatDateTime, formatDecimal, unlockedOf } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'
+import { useSyncStore } from '@/store/sync'
 import { DataSection } from './DataSection'
 import { MissingImages } from './MissingImages'
 import { SummaryLedger } from './SummaryLedger'
@@ -15,6 +16,7 @@ export function CollectionSection() {
   const { progress } = usePokedex()
   const summary = summarize(collection)
   const updatedAt = formatDateTime(collection.updatedAt)
+  const synced = useSyncStore((state) => state.status !== 'local')
 
   return (
     <DataSection id="collection" title="Ma collection">
@@ -46,8 +48,18 @@ export function CollectionSection() {
       )}
       <p>
         {updatedAt ? `Dernière modification le ${updatedAt}. ` : ''}
-        Votre collection n’existe que dans ce navigateur, sur cet appareil : un export est sa seule
-        sauvegarde.
+        {synced ? (
+          <>
+            Votre collection est synchronisée avec votre compte : la même sur tous vos appareils, et
+            sauvegardée sur le serveur.
+          </>
+        ) : (
+          <>
+            Votre collection n’existe que dans ce navigateur, sur cet appareil : un export est sa
+            seule sauvegarde. <Link to="/connexion?retour=/donnees">Connectez-vous</Link> pour la
+            retrouver sur tous vos appareils.
+          </>
+        )}
       </p>
     </DataSection>
   )

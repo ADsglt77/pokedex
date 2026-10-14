@@ -5,3 +5,5 @@ dist
 scripts/.cache
 prices
 *.local
+.data
+.env

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { CardArt } from '@/components/CardArt'
 import { ExternalLink } from '@/components/ExternalLink'
 import type { CatalogCard } from '@/lib/card-catalog'
-import { cardImage, POKECARDEX, TCGPLAYER } from '@/lib/card-images'
+import { POKECARDEX, TCGPLAYER } from '@/lib/card-images'
 import { formatEuro } from '@/lib/format'
 import type { CardPrice } from '@/types'
 import styles from './CatalogTile.module.css'
@@ -39,12 +39,7 @@ export function CatalogTile({
       disabled={disabled}
       onClick={onPick}
     >
-      <CardArt
-        card={{ image: cardImage(card.reference), reference: card.reference }}
-        fallback={card.fallback}
-        speciesId={speciesId}
-        alt=""
-      />
+      <CardArt card={card} speciesId={speciesId} alt="" />
       <span className={styles.code}>
         {card.key}
         {card.set.year && <span className={styles.year}> · {card.set.year}</span>}

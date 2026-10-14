@@ -1,7 +1,7 @@
 /**
  * Le code d'une carte : le code de l'extension et le numéro qui finissent sa référence
- * (« Bulbizarre (sv2a 166) »), comme Cardmarket les écrit. Sans import : `scripts/prices.ts`, que
- * Bun lance seul sur le VPS, s'en sert aussi.
+ * (« Bulbizarre (sv2a 166) »), comme Cardmarket les écrit. Sans import : le serveur s'en sert aussi
+ * (catalogue, prix TCGplayer, images).
  */
 
 export interface CardCode {

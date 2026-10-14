@@ -5,7 +5,9 @@ l'utilisateur veut, qu'il choisit lui-même : dans le catalogue des cartes japon
 Pokémon, depuis Cardmarket avec le favori « Ajouter au Pokédex », ou à la main (sa référence, d'où
 son image est retrouvée, et son id Cardmarket pour le prix). Un Pokémon est « débloqué » quand sa
 carte est possédée. React 19 + Vite + TypeScript, UI `@camply/ui`, espèces PokéAPI, catalogue
-TCGdex, images Pokécardex (sinon TCGplayer), prix Cardmarket (sinon TCGplayer).
+TCGdex, images Pokécardex (sinon TCGplayer), prix Cardmarket (sinon TCGplayer) : tout passe par le
+serveur de l'app (SQLite, `server/`), le navigateur ne parle qu'à lui. Connecté (Better Auth), la
+collection est synchronisée entre vos appareils ; sans connexion, elle reste dans le navigateur.
 
 ## Commandes
 
@@ -17,11 +19,13 @@ bun dev                # serveur Vite (lancé par Bun, pas par Node : `bun --bun
 bun run build          # tsc -b + vite build (pas `bun build`)
 bun lint               # ESLint
 bun test               # tests de tests/ (logique des achats), relancés par le build Docker
-bun run format         # Prettier sur src/, scripts/ et tests/ (les JSON de src/data sont exclus)
-bun run data           # src/data : data:species puis data:catalog (sans --refresh : Bun ne le passerait qu'au dernier)
+bun run format         # Prettier sur src/, scripts/, server/ et tests/ (les JSON de src/data sont exclus)
+bun run dev:server     # le serveur de l'app (API, server/index.ts) sur le port 3000 ; `bun dev` lui renvoie /api
+bun run ingest catalog # une tâche d'ingestion : catalogue (TCGdex, Cardmarket, TCGplayer) → .data/data.db
+bun run ingest prices  # prix du jour (Cardmarket, TCGplayer, BCE) ; `--refresh` après le nom : ignore le cache
+bun run ingest legacy-prices ./prices   # une fois : reprise des anciens fichiers de prix dans la base
+bun server/create-user.ts <e-mail>       # crée le compte (ou change son mot de passe) ; en local : .env.local
 bun run data:species   # PokéAPI → species.json, species-details.json ; `--refresh` ignore le cache
-bun run data:catalog   # TCGdex → catalog.json ; `--refresh` pour les nouvelles cartes et les nouveaux id Cardmarket
-bun run prices         # prix du jour (Cardmarket, TCGplayer) → prices/, servi par `bun dev` (sur le VPS : service `prices`)
 ```
 
 ## Principes
@@ -33,29 +37,33 @@ bun run prices         # prix du jour (Cardmarket, TCGplayer) → prices/, servi
   deux endroits ou plus.
 - Tests : seulement la logique où une erreur coûte de l'argent (`tests/`, `bun test`) : budget,
   registre des commandes, plan de la prochaine commande, import (un montant mal lu fausserait le
-  budget), prix d'une carte (le plan le lit : jamais celui d'une autre). Pas de tests d'interface. Le build Docker
+  budget), prix d'une carte (le plan le lit : jamais celui d'une autre), synchronisation (une
+  erreur écraserait les commandes d'un autre appareil). Pas de tests d'interface. Le build Docker
   les lance : un test en échec bloque le déploiement.
 - Les cartes viennent de l'utilisateur, une par Pokémon, qu'il **choisit** : aucune détection ni
   classement automatique (l'ancien index TCGplayer et la détection des pleines cartes ont été
   retirés à sa demande). Aides, ajoutées à sa demande : le catalogue des cartes japonaises de
   chaque Pokémon (TCGdex : extension, numéro, id Cardmarket ; toutes ses cartes Pokémon, sans
-  filtre de rareté), et l'image, retrouvée chez Pokécardex d'après la référence. Pokécardex a
-  donné son autorisation (octobre 2026), en échange d'un lien vers son site : sous la carte de la
-  fiche, sous l'aperçu de la saisie, en tête de la grille du catalogue et dans le pied de page.
-  Pas de scraping : l'adresse de l'image se déduit de la référence, ses pages (aux données
-  chiffrées) ne sont pas lues. Quand Pokécardex n'a pas l'image (vieilles séries, decks), celle
-  du produit TCGplayer que le catalogue relie à la carte, citée de même (à sa demande, octobre
-  2026 : seulement l'image, la liste reste celle de TCGdex), et son prix pour une carte sans prix
-  Cardmarket (à sa demande, octobre 2026). Seulement des cartes japonaises
-  (images TCGdex et Limitless TCG retirées). Ne pas réintroduire le reste sans demande. En
-  attente : l'utilisateur a demandé à Pokécardex l'accès à sa liste de cartes (TCGdex n'en a
-  qu'environ la moitié : 11 Herbizarre sur 27).
+  filtre de rareté ; complété en octobre 2026, à sa demande, par les cartes de TCGplayer que
+  TCGdex n'a pas : decks, promos, sets spéciaux, environ 8 800), et l'image, retrouvée chez
+  Pokécardex d'après la référence. Pokécardex a donné son autorisation (octobre 2026), en échange
+  d'un lien vers son site : sous la carte de la fiche, sous l'aperçu de la saisie, en tête de la
+  grille du catalogue et dans le pied de page. Ses images sont copiées chez nous (tâche `images` ;
+  l'utilisateur en a l'accord, octobre 2026), à l'adresse que donne la référence. Ses pages ne
+  sont pas lues : elles chiffrent leurs données (AES, déchiffrées par leur JavaScript), et les
+  lire en masse contournerait cette protection. Leur liste de cartes (plus complète : 27
+  Herbizarre, 22 au catalogue) viendra corriger et compléter le catalogue si Pokécardex fournit un
+  accès (export, adresse non chiffrée). Quand Pokécardex n'a pas l'image (vieilles séries, decks),
+  celle du produit TCGplayer de la carte, citée de même, et son prix pour une carte sans prix
+  Cardmarket (à sa demande, octobre 2026). Seulement des cartes japonaises (images TCGdex et
+  Limitless TCG retirées). Ne pas réintroduire le reste sans demande.
 - UI : **`@camply/ui` d'abord** (skill `camply-ui`), thème camply par défaut (sombre, accent cyan).
   Un composant maison seulement s'il est métier ou absent de la lib.
 - Périmètre volontairement réduit : pas d'image téléversée (on colle une adresse), pas de
-  comparaison ni de fusion à l'import ; aucune API externe appelée par le navigateur. Seules
-  exceptions : les images (dessins des Pokémon chez PokéAPI, cartes chez Pokécardex, TCGplayer ou
-  à l'adresse collée), et les prix, fichiers du site lui-même (`/prices/`).
+  comparaison ni de fusion à l'import. Le navigateur ne parle qu'au site lui-même : son API
+  (`/api/…` : catalogue, prix) et les images copiées (`/images/…`) ; seule exception, une image à
+  l'adresse collée. Les sources (PokéAPI, TCGdex, Pokécardex, Cardmarket, TCGplayer, BCE) ne sont
+  lues que par les tâches d'ingestion du serveur.
 - Cardmarket : seulement les fichiers publics (guide des prix, liste des produits). Pas de
   scraping, pas d'API (fermée), pas de panier ni de commande à distance. Un seul lien Cardmarket
   construit : la page d'un produit par son id (`cardmarketPage` :
@@ -75,14 +83,15 @@ bun run prices         # prix du jour (Cardmarket, TCGplayer) → prices/, servi
 | Dossier | Rôle |
 |---|---|
 | `src/config/` | Générations, couleurs des types, achats (budget par défaut, niveaux de budget, priorités, fournisseurs) : configuration, pas de logique |
-| `src/data/` | JSON écrits par `bun run data` : les espèces, leurs détails et le catalogue des cartes japonaises (ces deux derniers chargés à la demande) |
-| `src/lib/` | Règles **pures** : `species` (espèces, carte d'un id), `cardmarket` (page et id saisis, ce que le favori envoie, code du favori), `card-code` (le code d'une carte dans sa référence, sa clé ; sans import, `prices.ts` s'en sert), `card-images` (l'image d'une carte chez Pokécardex d'après sa référence, celle de TCGplayer, d'où vient une image), `card-catalog` (les cartes japonaises d'un Pokémon, la carte d'une référence), `pokedex` (modèle : la carte de chaque Pokémon, progression, résumé), `collection` (modifications : statut, prix payé, ajout et retrait d'une carte), `filters` (adresse, liens filtrés, recherche), `transfer` (export, import, CSV, lecture du stockage), `prices` (prix d'une carte, Cardmarket sinon TCGplayer, valeur, coût pour compléter, courbes, plus fortes hausses et baisses : `priceMovers`), `format`, `settled` (une promesse que `use()` lit sans attendre) ; achats : `wishlist` (préférences, filtres, CSV de la liste), `orders` (coût, report sur la collection, doublons, commandes en retard), `budget` (par mois, par fournisseur), `purchase-planner` (prochaine commande) |
-| `src/store/` | Zustand : `collection` et `shopping` (liste d'achats, commandes, budget), dans `localStorage` ; `prices` (`/prices/`). `persist` les enregistre et les garde d'accord entre onglets |
-| `src/hooks/` | `usePokedex` (modèle partagé par toutes les pages), `useNotify` (toasts + « Annuler »), `usePokedexFilters`, `useCardDraft` (saisie d'une carte) |
-| `src/components/` | Composants métier partagés par plusieurs pages (carte, champs d'une carte, tuile, réglette, courbe, réglages d'achat d'une carte…) et les seuls génériques absents de camply (confirmation, en-tête de page, lien externe, crédit d'une image, champ enregistré en le quittant, `SegmentedField`) ; le reste vient de camply |
-| `src/pages/` | Une page par route ; les sous-composants d'une page vivent dans son dossier (`pokemon/CardForm` : ajouter ou corriger la carte d'un Pokémon ; `AddCardPage` : `/ajouter`, ouverte par le favori) |
-| `tests/` | Tests `bun test` de la logique des achats (`tsconfig.tests.json`) |
-| `scripts/` | Bun : `species.ts` (PokéAPI → `src/data`, avec `lib/net.ts` : cache disque, requêtes espacées, et `lib/dataFile.ts`), `catalog.ts` (TCGdex → `src/data`, avec `lib/tcgplayer.ts` : le produit TCGplayer de chaque carte, pour son image) et `prices.ts` (prix Cardmarket et TCGplayer) |
+| `src/data/` | JSON écrits par `bun run data:species` : les espèces et leurs détails (chargés à la demande) ; le catalogue vient de l'API |
+| `src/lib/` | Règles **pures** : `species` (espèces, carte d'un id), `cardmarket` (page et id saisis, ce que le favori envoie, code du favori), `card-code` (le code d'une carte dans sa référence, sa clé ; sans import, `prices.ts` s'en sert), `card-images` (l'image d'une carte chez Pokécardex d'après sa référence, celle de TCGplayer, d'où vient une image), `card-catalog` (les cartes japonaises d'un Pokémon, la carte d'une référence), `pokedex` (modèle : la carte de chaque Pokémon, progression, résumé), `collection` (modifications : statut, prix payé, ajout et retrait d'une carte), `filters` (adresse, liens filtrés, recherche), `transfer` (export, import, CSV, lecture du stockage), `prices` (prix d'une carte, Cardmarket sinon TCGplayer, valeur, coût pour compléter, courbes, plus fortes hausses et baisses : `priceMovers`), `format`, `settled` (une promesse que `use()` lit sans attendre), `api` (lecture de l'API, mémoïsée), `auth-client` (client Better Auth), `sync` (la règle de la synchronisation) ; achats : `wishlist` (préférences, filtres, CSV de la liste), `orders` (coût, report sur la collection, doublons, commandes en retard), `budget` (par mois, par fournisseur), `purchase-planner` (prochaine commande) |
+| `src/store/` | Zustand : `collection` et `shopping` (liste d'achats, commandes, budget), dans `localStorage` ; `prices` (`/api/prices`) ; `sync` (la collection du compte connecté, `/api/collection`). `persist` les enregistre et les garde d'accord entre onglets |
+| `src/hooks/` | `usePokedex` (modèle partagé par toutes les pages), `useNotify` (toasts + « Annuler »), `usePokedexFilters`, `useCardDraft` (saisie d'une carte), `useExportCollection` |
+| `src/components/` | Composants métier partagés par plusieurs pages (carte, champs d'une carte, tuile, réglette, courbe, réglages d'achat d'une carte…) et les seuls génériques absents de camply (confirmation, en-tête de page, lien externe, crédit d'une image, champ enregistré en le quittant, `SegmentedField`), le compte dans l'en-tête (`AccountMenu`) et la question d'un conflit (`SyncConflictDialog`) ; le reste vient de camply |
+| `src/pages/` | Une page par route ; les sous-composants d'une page vivent dans son dossier (`pokemon/CardForm` : ajouter ou corriger la carte d'un Pokémon ; `AddCardPage` : `/ajouter`, ouverte par le favori ; `LoginPage` : `/connexion`) |
+| `tests/` | Tests `bun test` de la logique des achats et de la synchronisation (`tsconfig.tests.json`) |
+| `server/` | Bun, le serveur (`tsconfig.server.json`) : `index.ts` (l'API, `Bun.serve`), `db.ts` (SQLite dans `DATA_DIR`, `.data/` en local : `data.db`, les données de référence, et `app.db`, le compte et la collection ; schéma par étapes, `PRAGMA user_version`), `auth.ts` (Better Auth), `collection.ts` (`/api/collection`), `create-user.ts`, `ingest.ts` (les tâches d'ingestion, une à la demande ou `--loop`), `jobs/catalog.ts`, `jobs/prices.ts`, `jobs/images.ts`, `jobs/backups.ts`, `images.ts` (les images copiées, dans `IMAGES_DIR` : leur adresse d'origine, la copie, la copie à la demande), `history.ts` (l'historique des prix, une ligne par carte et par année), `snapshots.ts` (les grosses réponses, calculées en fin de tâche et gardées compressées), `legacy-prices.ts` (reprise des anciens fichiers de prix), `lib/net.ts` (cache disque, requêtes espacées), `lib/tcgplayer.ts` (le produit TCGplayer de chaque carte) |
+| `scripts/` | Bun : `species.ts` (PokéAPI → `src/data`, avec `server/lib/net.ts` et `lib/dataFile.ts`) |
 
 Points à connaître :
 
@@ -97,21 +106,35 @@ Points à connaître :
   d'achat ; confirmation si elle est possédée ; impossible tant qu'une commande la contient) avant
   d'en ajouter une autre. Si une ancienne version en a gardé plusieurs, la première compte.
   « Souhaitée » (statut) et « À acheter » (liste d'achats) sont indépendants : la fiche le dit.
-- Catalogue (`scripts/catalog.ts` → `catalog.json`, `lib/card-catalog.ts`) : les cartes Pokémon
-  japonaises de TCGdex (une requête GraphQL pour la liste, puis l'id Cardmarket carte par carte,
-  gardé en cache : le premier passage prend un quart d'heure). Par Pokémon, des plus récentes aux
-  plus anciennes : `[extension, numéro, id Cardmarket (0 : inconnu ou douteux), suffixe, produit
-  TCGplayer (0 : aucun), Pokémon s'ils sont plusieurs]`. L'id de TCGdex est vérifié : partagé par
+- Catalogue (tâche `catalog`, `server/jobs/catalog.ts`, une fois par jour → tables `sets`, `cards`,
+  `card_species` → `/api/catalog`, `lib/card-catalog.ts`) : les cartes Pokémon japonaises de
+  TCGdex (une requête GraphQL pour la liste, relue à chaque passage, puis l'id Cardmarket carte par
+  carte, gardé en cache : le premier passage prend un quart d'heure ; redemandé chaque semaine pour
+  une carte de l'année qui n'en a pas). Une liste soudain plus courte de 5 % (panne de TCGdex) est
+  refusée : le catalogue d'avant reste. Sans serveur, la fenêtre d'ajout et la page Catalogue le
+  disent (« pas disponible pour le moment »). Par Pokémon, des plus récentes aux
+  plus anciennes : `[extension, numéro, id Cardmarket (0 : inconnu ou douteux), suffixe, image
+  (`'pokecardex'`, `{ tcgplayer: produit }` ou `null` : celle que la tâche `images` a retenue ;
+  pas encore cherchée, Pokécardex), Pokémon s'ils sont plusieurs]`. L'id de TCGdex est vérifié : partagé par
   plusieurs cartes, ou d'un autre Pokémon dans la liste publique des produits de Cardmarket (nom
-  anglais, `speciesInName`, attaques ôtées ; en cache, `--refresh` la renouvelle), il est retiré
+  anglais, `speciesInName`, attaques ôtées ; en cache un jour), il est retiré
   (16 en octobre 2026). Le Pokémon vient de TCGdex ; quand il n'en donne pas
   (des ex récentes…), de la correspondance exacte du nom japonais avec `species.json`
-  (`speciesOf`) : les cartes sans correspondance sont laissées de côté, et le script les compte.
-  Le produit TCGplayer (`scripts/lib/tcgplayer.ts`, export de tcgcsv.com, requêtes une à une, User-
-  Agent identifié, cache) : dans le groupe de l'extension (même code, sinon `GROUPS` pour les
-  vieilles séries et les decks), le même numéro ; sans numéros (1996-2001), le seul produit du
-  Pokémon (« (Lv.13) » et « (Lv.15) » : deux cartes, aucune n'en a). Toujours du même Pokémon et sans ambiguïté, sinon aucun (MC, numéroté deck par deck
-  chez TCGplayer, n'en a pas). « Ajouter une carte »
+  (`speciesOf`) : les cartes sans correspondance sont laissées de côté, et la tâche les compte.
+  Le produit TCGplayer (`server/lib/tcgplayer.ts`, export de tcgcsv.com, tous ses groupes, requêtes
+  une à une, User-Agent identifié, cache d'un jour) : dans le groupe de l'extension (même code,
+  sinon `GROUPS` pour les vieilles séries et les decks), le même numéro ; sans numéros
+  (1996-2001), le seul produit du Pokémon (« (Lv.13) » et « (Lv.15) » : deux cartes, aucune n'en
+  a). Toujours du même Pokémon et sans ambiguïté, sinon aucun. Les autres cartes Pokémon de
+  TCGplayer entrent au catalogue (`source` : `tcgplayer`, sans id Cardmarket, prix TCGplayer) :
+  une par numéro (impressions confondues), le Pokémon d'après le nom anglais (`speciesInName`,
+  chaque nom d'une TAG TEAM), l'extension d'après l'abréviation du groupe (suivie du numéro du
+  groupe quand deux la partagent : « BW6-23902 », Cold Flare), sinon le code du numéro
+  (« 025/PCG-P »), sinon `TP-<groupe>` (vieux decks ; nom et date de TCGplayer). Écartées : celles
+  que TCGdex a déjà (même code et numéro, ou même jour de sortie, numéro et Pokémon : MC),
+  celles sans numéro (distributeurs, promos CoroCoro : TCGplayer les date du jour de leur ajout),
+  deux cartes sous un même numéro (decks numérotés deck par deck), un Pokémon non reconnu ; la
+  tâche compte chaque cas. « Ajouter une carte »
   (`pokemon/CardForm`) s'ouvre sur l'onglet « Cartes japonaises » (`CatalogPicker` : image
   Pokécardex sinon TCGplayer, code, prix du jour, tri par date ou par prix ; ses réglages vivent
   dans `CardForm`, l'onglet caché étant démonté) ; choisir une carte remplit la saisie (`fill` :
@@ -135,54 +158,66 @@ Points à connaître :
   relit ces paramètres comme une saisie (`readCardmarketCard`), devine le Pokémon d'après le nom
   (`speciesInName`, modifiable) et n'ajoute rien à un Pokémon qui a déjà sa carte. Page vérifiée
   en octobre 2026 : si Cardmarket la change, le favori affiche son message d'aide.
-- Images (`lib/card-images.ts`) : la référence finit par le code de l'extension et le numéro,
-  comme Cardmarket les écrit (« Bulbizarre (sv2a 166) ») ; sans parenthèses, le code doit avoir un
-  chiffre (« SV4a 349 »). `cardImage` en déduit l'adresse chez Pokécardex :
-  `pokecardex-scans.b-cdn.net/sets_jp/SV2A/6.jpg?class=md` (code en majuscules sans tiret, SV-P
-  → SVP ; numéro sans zéro ; tailles `md` pour la grille, `hd` pour la fiche). Elle n'est pas
-  sûre : `findCardImage` vérifie qu'elle se charge (sans réponse en 10 s : absente, pour ne pas
-  bloquer l'enregistrement), la saisie le dit, et la fiche et l'aperçu
-  citent sa source sous la carte (`imageSource`, `ImageCredit`). Un échec est redemandé à
-  l'enregistrement (panne passagère), et une image déjà enregistrée reste si Pokécardex ne répond
-  pas. Sans image chez Pokécardex, celle du produit TCGplayer de la carte du catalogue
-  (`tcgplayerImage`, 200 px pour la grille) : dans la grille (`CardArt`, `fallback`, quand
-  l'image ne se charge pas), et à l'enregistrement tant que la référence reste celle de la carte
-  choisie. Une image enregistrée d'ailleurs (adresse collée, ancienne source) s'affiche toujours,
-  sans crédit. Sans adresse collée, l'image suit la référence (cherchée en quittant le champ).
-  Données : « Chercher les images » pour les cartes sans image (Pokécardex, sinon TCGplayer
-  d'après la référence, `catalogCard`). Pour deviner le Pokémon (`speciesInName`), le « (code
+- Images (`lib/card-images.ts`, `server/images.ts`, tâche `images`) : la référence finit par le
+  code de l'extension et le numéro, comme Cardmarket les écrit (« Bulbizarre (sv2a 166) ») ; sans
+  parenthèses, le code doit avoir un chiffre (« SV4a 349 »). `cardImage` en déduit l'adresse chez
+  Pokécardex : `pokecardex-scans.b-cdn.net/sets_jp/SV2A/6.jpg?class=md` (code en majuscules sans
+  tiret, SV-P → SVP ; numéro sans zéro ; tailles `md` pour la grille, `hd` pour la fiche). La
+  collection garde ces adresses d'origine (Pokécardex, TCGplayer : son format ne change pas), mais
+  le navigateur ne charge que la copie du serveur : `localSrc` en donne le chemin
+  (`/images/cards/pokecardex/SV2A/6-md.webp`, `/images/cards/tcgplayer/<produit>_200w.jpg`), pour
+  le `src` de `CardArt` et pour `findCardImage`. La tâche `images` (chaque jour, après les prix ;
+  deux téléchargements à la fois, seulement ce qui manque ; le premier passage, environ 1 Go,
+  prend une heure ou plus) copie les sprites et illustrations des 1 025 Pokémon et, pour chaque
+  carte du catalogue, le scan Pokécardex en deux tailles, sinon l'image de son produit TCGplayer,
+  et note celle retenue (`cards.image`) : le catalogue la donne d'avance (`CatalogCard.image`),
+  sans chaîne de repli. Une carte sans scan est recherchée chaque semaine. Une image absente du
+  volume (référence saisie hors du catalogue, image pas encore copiée) est copiée à la demande par
+  le serveur (`serveImage` : seulement les chemins connus, `upstreamUrl` ; chez TCGplayer, un
+  produit du catalogue, car il répond par une image pour n'importe quel numéro ; une absence
+  retenue une semaine ; nginx limite à 10 copies par seconde). Pour une référence saisie,
+  `findCardImage` vérifie que l'image se charge (sans réponse en 10 s : absente, pour ne pas
+  bloquer l'enregistrement), la saisie le dit, et la fiche et l'aperçu citent sa source sous la
+  carte (`imageSource`, `ImageCredit`, d'après l'adresse d'origine). Un échec est redemandé à
+  l'enregistrement (panne passagère), et une image déjà enregistrée reste si elle ne répond pas.
+  Sans scan Pokécardex, celle du produit TCGplayer de la carte choisie dans le catalogue, à
+  l'enregistrement tant que la référence reste la sienne. Une adresse collée s'affiche telle
+  quelle, sans crédit : la seule image que le navigateur va chercher ailleurs. Sans adresse
+  collée, l'image suit la référence (cherchée en quittant le champ). Données : « Chercher les
+  images » pour les cartes sans image (Pokécardex, sinon l'image de la carte du catalogue,
+  `catalogCard`). Pour deviner le Pokémon (`speciesInName`), le « (code
   numéro) » final est ignoré : « Énergie (MEW 207) » n'est pas Mew. Le code d'une carte
   (`lib/card-code.ts`) : `codeKey` en fait une clé (« SV2A 166 », « E1 97 » : extension en
   majuscules sans tiret, numéro sans zéro), pour retrouver la carte du catalogue et son prix
   TCGplayer.
-- Prix (`scripts/prices.ts`) : le guide des prix public de Cardmarket et sa liste des produits
-  (pour les noms), une fois par jour, seulement les cartes à l'unité (catégorie 51). Il écrit
-  `latest.json` (le prix du jour de chaque carte : `[prix, plus bas, moyenne 30 jours]`, par id
-  Cardmarket) et `history/<id>.json` (son nom et un prix par jour depuis `from` : Cardmarket ne
-  garde pas d'historique ; un historique illisible n'est jamais remplacé : il est laissé tel quel
-  et signalé, sans arrêter les autres ; il n'est réécrit que si le prix du jour change). Rien
-  n'est retéléchargé (29 Mo) tant que le guide n'a pas changé depuis le dernier passage complet,
-  que date `latest.json`, écrit en dernier (le supprimer force un passage). L'app charge
-  `latest.json` au premier écran
-  qui affiche un prix (pas l'accueil ni le Pokédex), et l'historique d'une carte à la demande : la
-  courbe, le nom affiché dans le formulaire pour vérifier l'id saisi (au départ du champ). Sans
-  ces fichiers, l'app marche sans prix. Un fichier manquant (404) n'est pas redemandé ; après une
-  panne passagère (réseau, délai, réponse illisible), il l'est la fois suivante où il sert, au plus
+- Prix (`server/jobs/prices.ts`, tâche `prices`) : le guide des prix public de Cardmarket et sa
+  liste des produits (pour les noms), seulement les cartes à l'unité (catégorie 51), dans
+  `data.db` : le prix du jour de chaque carte (`cardmarket_prices` : prix, plus bas, moyenne 30
+  jours, par id Cardmarket) et son historique (`cardmarket_history` : Cardmarket n'en garde pas ;
+  une ligne par carte et par année, à partir de son premier jour avec un prix, `server/history.ts` ;
+  relancée le même jour, la tâche remplace le prix du jour). Rien n'est retéléchargé (29 Mo) tant
+  que le guide n'a pas changé (`sources` : son `Last-Modified`). En fin de tâche, la réponse de
+  `/api/prices` est calculée et gardée compressée (`snapshots`, avec un ETag : 304 si le navigateur
+  l'a déjà). L'app la charge au premier écran qui affiche un prix (pas l'accueil ni le Pokédex), et
+  l'historique d'une carte à la demande (`/api/prices/<id>`) : la courbe, le nom affiché dans le
+  formulaire pour vérifier l'id saisi (au départ du champ). Sans serveur, ou base encore vide,
+  l'app marche sans prix. Une réponse manquante (404) n'est pas redemandée ; après une panne
+  passagère (réseau, délai, réponse illisible), elle l'est la fois suivante où elle sert, au plus
   une fois par minute (`store/prices.ts`). Pour les cartes du catalogue sans prix Cardmarket :
   sans id (près de 2 000 : séries de 1996 à 2006, decks ; Cardmarket les vend, mais ses fichiers ne
   disent ni l'extension ni le numéro : les relier serait deviner) ou dont l'id n'a pas de prix
-  dans le guide du jour (environ 300 : promos SM, MC…), `tcgplayer.json` : le prix de leur produit TCGplayer
-  (export de tcgcsv.com, une requête par groupe, ceux que `catalog.json` note pour chaque
-  extension), la moins chère de ses impressions (prix du marché, sinon plus basse annonce),
-  converti en euros au cours du jour de la BCE, par `codeKey`. Écrit après `latest.json`, qu'il
-  lit ; retéléchargé quand tcgcsv (`last-updated.txt`), le catalogue ou `latest.json` ont changé.
-  `priceOf` le prend pour une carte sans prix Cardmarket ce jour (pas d'id, ou pas de prix pour
-  cet id), d'après le code de sa référence (`source: 'tcgplayer'`, pas de moyenne 30 jours ; la
-  courbe reste celle de Cardmarket s'il y a un id) : partout comme un prix Cardmarket (valeur, liste d'achats, plan), toujours signalé
-  « TCGplayer » à côté du montant. Une source en échec n'empêche pas l'autre (TCGplayer lit alors
-  le `latest.json` d'avant). En développement,
-  `prices/` est servi à `/prices/` par un petit middleware (`vite.config.ts`) : dans `public/`,
-  ses dizaines de milliers de fichiers bloqueraient Vite, qui ne surveille pas ce dossier.
+  dans le guide du jour (environ 300 : promos SM, MC…), `tcgplayer_prices` : le prix de leur
+  produit TCGplayer (export de tcgcsv.com, une requête par groupe, ceux que la table `sets` note
+  pour chaque extension), la moins chère de ses impressions (prix du marché, sinon plus basse
+  annonce), converti en euros au cours du jour de la BCE (`rates`), par `codeKey` ; relu quand
+  tcgcsv (`last-updated.txt`), le catalogue ou les prix Cardmarket ont changé. `priceOf` le prend
+  pour une carte sans prix Cardmarket ce jour (pas d'id, ou pas de prix pour cet id), d'après le
+  code de sa référence (`source: 'tcgplayer'`, pas de moyenne 30 jours ; la courbe reste celle de
+  Cardmarket s'il y a un id) : partout comme un prix Cardmarket (valeur, liste d'achats, plan),
+  toujours signalé « TCGplayer » à côté du montant. Une source en échec n'empêche pas l'autre ; la
+  tâche échoue alors et `ingest` la relance. L'ancien historique (les fichiers du volume `prices`,
+  un par carte) est repris au premier démarrage d'`ingest` (`legacy-prices.ts`), vérifié avant
+  d'être gardé : nombre de cartes, somme des prix, échantillon relu tel que l'API le sert.
 - Collection : un statut par carte (possédée, commandée, souhaitée), le prix payé (`paidPrice`) qui
   le suit, et les cartes (`customCards`). Clé `pokedex-collection.collection` : ne pas changer son
   format. Ce qu'une ancienne version y gardait en plus (`entries` des illustrations choisies, clé
@@ -216,9 +251,34 @@ Points à connaître :
     collection » efface aussi la liste d'achats, qui renverrait à des cartes disparues ; les
     commandes et le budget restent.
 - Deux onglets ouverts restent d'accord : chacun reprend ce que l'autre enregistre (évènement
-  `storage`, `store/persist.ts`, pour les deux clés), sans quoi il l'écraserait. Si le navigateur
+  `storage`, `store/persist.ts`, pour les deux clés), sans quoi il l'écraserait ; connectés, ils
+  partagent aussi la dernière version échangée avec le serveur. Si le navigateur
   refuse de lire ou d'écrire (stockage plein ou bloqué), l'app continue en mémoire et un bandeau
   (`useStorageFailure`, `AppShell`) invite à exporter.
+- Compte et synchronisation (`server/auth.ts`, `server/collection.ts`, `lib/sync.ts`,
+  `store/sync.ts`) : un seul compte, le vôtre (Better Auth, e-mail et mot de passe, pas
+  d'inscription : `server/create-user.ts` le crée ou change son mot de passe, ce qui ferme ses
+  sessions). Sessions de 60 jours dans un cookie (`__Secure-` en https, SameSite Lax) ; en
+  production, 5 tentatives de connexion par minute et par visiteur (`cf-connecting-ip`). Sans
+  connexion, l'app marche comme avant : la collection reste dans le navigateur, le Pokédex est
+  public. Connecté, la collection et les achats forment un seul document (une commande modifie les
+  deux), dans `app.db`, numéroté par le serveur (`/api/collection` : `PUT` refusé, 409, si
+  l'appareil part d'une version dépassée ; le document passe les contrôles d'un import,
+  `readDocument`). Le navigateur garde sa copie (hors ligne, l'app marche ; l'envoi part au retour
+  du réseau) et note la dernière version échangée (`pokedex-collection.sync` : version et
+  empreinte SHA-256 ; les deux autres clés gardent leur format) : il synchronise une seconde après
+  une modification, au retour de la page et du réseau, un onglet à la fois (`navigator.locks`).
+  La règle (`decide`, testée) : seul cet appareil a changé, il envoie ; seul le serveur, il reprend ;
+  les deux, une fenêtre fait choisir la version à garder (`SyncConflictDialog`, avec un export de
+  celle de l'appareil ; jamais de fusion, comme à l'import). À la première connexion d'un appareil,
+  celui qui a quelque chose l'envoie (ou le reçoit). Le serveur garde une version remplacée par
+  heure, 30 jours (`collection_versions`, à reprendre à la main). Se déconnecter vide la copie de
+  ce navigateur (appareil partagé), après avoir proposé l'export si un envoi a échoué. « Annuler »,
+  l'import, « Effacer » sont des modifications comme les autres : connecté, elles valent pour tous
+  les appareils (les textes de la page Données le disent). L'en-tête montre l'état (`AccountMenu` :
+  synchronisée, hors ligne, reconnectez-vous, à choisir) ; `/connexion` (`LoginPage`) ramène à la
+  page d'où l'on venait (`?retour=`, seulement une page du site). Le rappel de sauvegarde ne paraît
+  que sans connexion.
 - « Annuler » (`useCollectionAction`) rétablit collection et achats d'avant, et refuse si quelque
   chose a changé depuis : une modification ultérieure n'est jamais effacée.
 - Filtres du Pokédex dans l'adresse : `q`, `generation`, `possession` (`owned` : débloqués,
@@ -242,23 +302,41 @@ Points à connaître :
   même fichier (outil, formateur) peuvent lui échapper : il sert alors l'ancienne version (page
   blanche, « … is not defined ») jusqu'à ce que le fichier soit de nouveau enregistré.
 - `noUncheckedIndexedAccess` est actif ; alias `@/` → `src/` (vite.config.ts, tsconfig.base.json
-  dont héritent tsconfig.app, .scripts et .tests, et tsconfig.json pour Bun).
+  dont héritent tsconfig.app, .scripts, .server et .tests, et tsconfig.json pour Bun).
 
 ## Déploiement
 
-VPS derrière un tunnel Cloudflare. `Dockerfile` : Bun lance les tests puis construit `dist/`,
-nginx le sert (`deploy/nginx.conf` : une route inconnue reçoit `index.html`, le routage étant côté
-client ; un fichier manquant de `/assets/` ou `/prices/` répond 404 ; `/assets/` en cache un an ;
-`/prices/` toujours revalidé ; compression gzip niveau 6, pas 1 : les prix du jour passent de 555 à
-462 Ko). `compose.yaml` : le site sur
-`127.0.0.1:${POKEDEX_PORT:-8080}`, que le tunnel publie, et le service `prices` qui relance
-`scripts/prices.ts` toutes les 6 h (après un échec : 10 min, puis 20, 40… jusqu'à 6 h ; il lit
-`scripts/` et `src/` du clone : le catalogue, `card-code.ts`) dans le volume `prices` (l'historique
-de chaque carte y vit, un fichier par carte : ne pas supprimer le volume).
-`.github/workflows/deploy.yml` : lancé à la main tant que le domaine n'est pas prêt (le push sur
-`main` à remettre, voir son en-tête), SSH sur le VPS (action épinglée sur un
-commit, empreinte d'hôte `VPS_FINGERPRINT`), `git pull --ff-only`, `docker compose build --pull`
-puis `up -d`. Marche à suivre complète : README.
+VPS derrière un tunnel Cloudflare. `Dockerfile`, trois cibles : `build` (Bun lance les tests puis
+construit `dist/`), `server` (Bun lance `server/` tel quel, avec `src/` et `tsconfig.json` pour
+l'alias `@/` ; `NODE_ENV=production`) et `web` (nginx sert `dist/`). `deploy/nginx.conf` : une
+route inconnue reçoit `index.html`, le routage étant côté client ; `/api/` va au service `server`
+(son adresse redemandée au DNS de Docker, `resolver` : un serveur redémarré change d'adresse) ;
+`/images/` vient du volume `images` (gardé un mois), une image qui y manque va au serveur, qui la
+copie (10 par seconde au plus) ; un fichier manquant de `/assets/` répond 404 ; `/assets/` en
+cache un an ; compression gzip niveau 6, réponses de l'API comprises (`gzip_proxied` ; les prix du
+jour arrivent déjà compressés). `compose.yaml` :
+- `pokedex` : le site sur `127.0.0.1:${POKEDEX_PORT:-8080}`, que le tunnel publie ;
+- `server` : l'API, qui lit la base du volume `db`, y garde le compte et la collection (`app.db`),
+  et copie à la demande dans le volume `images` ; ses secrets (`BETTER_AUTH_URL`, l'adresse
+  publique en https, et `BETTER_AUTH_SECRET`) viennent du `.env` du clone (ignoré par git) : sans
+  eux, docker compose refuse de démarrer. Le compte : `docker compose run --rm server bun
+  server/create-user.ts <e-mail>` ;
+- `ingest` : `server/ingest.ts --loop`, les tâches à leur rythme (catalogue chaque jour, puis prix
+  toutes les 6 h, puis images et sauvegardes chaque jour ; après un échec : 10 min, puis 20, 40…
+  jusqu'à 6 h), dans les volumes `db`, `images` et `backups`. À chaque démarrage, il refait les
+  réponses calculées de l'API (leur forme a pu changer avec le code) ; au premier, il reprend
+  l'historique de l'ancien volume `prices` (`LEGACY_PRICES`, l'ancien service des prix, retiré)
+  avant d'écrire.
+
+Sauvegardes (`server/jobs/backups.ts`, volume `backups`) : chaque jour, `app.db` (30 gardées) et
+`data.db` compressée (7 gardées), copiées par `VACUUM INTO` pendant que le serveur tourne. Elles
+sont sur le disque du VPS : à copier ailleurs aussi (README). Les volumes `db` (historique des
+prix, votre collection) et `backups` sont irremplaçables, `images` porte un Go de copies : jamais
+`docker compose down -v` ; `prices` (l'ancien historique, repris) se supprime à la main quand tout
+va bien. `.github/workflows/deploy.yml` : lancé à la main tant que le domaine n'est pas prêt (le
+push sur `main` à remettre, voir son en-tête), SSH sur le VPS (action épinglée sur un commit,
+empreinte d'hôte `VPS_FINGERPRINT`), `git pull --ff-only`, `docker compose build --pull` puis
+`up -d --remove-orphans`. Marche à suivre complète : README.
 
 ## Skills du projet (`.claude/skills/`)
 

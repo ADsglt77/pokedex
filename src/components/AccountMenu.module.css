@@ -1,0 +1,32 @@
+/* Un état à regarder (hors ligne, session expirée, conflit) : en couleur d'avertissement. */
+.alert {
+  color: var(--camply-warn);
+}
+
+/* L'adresse du compte et la phrase d'état : en casse normale, sur plusieurs lignes au besoin. */
+.email,
+.text {
+  max-width: 17rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.text {
+  padding-top: 0;
+  color: var(--camply-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* Sur téléphone, l'icône seule : la place manque dans l'en-tête. */
+@media (max-width: 30rem) {
+  .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

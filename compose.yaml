@@ -1,33 +1,58 @@
 # Le site, servi en local sur le VPS ; le tunnel Cloudflare l'expose sur le domaine.
+# Les volumes portent des données irremplaçables (historique des prix, votre collection) : jamais
+# `down -v`.
 services:
   pokedex:
-    build: .
+    build: { context: ., target: web }
     restart: unless-stopped
     # Seulement sur 127.0.0.1 : on n'y accède que par le tunnel, jamais directement.
     ports:
       - '127.0.0.1:${POKEDEX_PORT:-8080}:80'
     volumes:
-      - prices:/usr/share/nginx/html/prices:ro
+      - images:/srv/images:ro
+    depends_on: [server]
 
-  # Prix Cardmarket (et TCGplayer pour les cartes du catalogue sans id Cardmarket) : regardés toutes
-  # les 6 h (ils changent une fois par jour ; le script ne les retélécharge que s'ils ont changé),
-  # écrits dans le volume que sert nginx. Après un échec (Cardmarket indisponible…), de nouveau
-  # 10 min plus tard, puis 20, 40… jusqu'à 6 h : une panne qui dure ne fait pas télécharger
-  # Cardmarket toutes les 10 min. (`$$` : un `$` pour le shell.)
-  # Le code et le catalogue (`src/`) viennent du clone : un `git pull` suffit à les mettre à jour.
-  prices:
-    image: oven/bun:1-alpine
+  # L'API (`server/index.ts`) : elle lit la base que remplit `ingest`, garde le compte et la
+  # collection synchronisée (`app.db`), et copie à la demande une image qui manque. Joignable par
+  # nginx seulement. Ses deux secrets viennent du fichier `.env` du clone (voir le README) : sans
+  # eux, docker compose refuse de démarrer.
+  server:
+    build: { context: ., target: server }
     restart: unless-stopped
-    working_dir: /app
+    environment:
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?l'adresse publique du site, dans .env (voir le README)}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?la clé des sessions, dans .env (voir le README)}
     volumes:
-      - ./scripts:/app/scripts:ro
-      - ./src:/app/src:ro
-      - prices:/prices
-    command: >-
-      sh -c 'delay=600; while true; do
-      if bun scripts/prices.ts /prices; then delay=600; sleep 21600;
-      else sleep $$delay; delay=$$((delay * 2)); [ $$delay -gt 21600 ] && delay=21600;
-      fi; done'
+      - db:/data
+      - images:/images
+
+  # Les tâches d'ingestion (`server/ingest.ts`), chacune à son rythme : le catalogue chaque jour (le
+  # premier passage prend un quart d'heure), les prix toutes les 6 h (ils changent une fois par
+  # jour ; la tâche ne retélécharge que ce qui a changé), les images chaque jour (le premier
+  # passage, environ 1 Go, prend une heure ou plus), les sauvegardes des bases chaque jour. Après
+  # un échec, de nouveau 10 min plus tard, puis 20, 40… jusqu'à 6 h. Même image que `server`.
+  # L'ancien volume `prices` n'est lu qu'une fois : au premier démarrage, son historique est repris
+  # (et vérifié) avant que la tâche `prices` n'écrive.
+  ingest:
+    build: { context: ., target: server }
+    restart: unless-stopped
+    command: ['bun', 'server/ingest.ts', '--loop']
+    environment:
+      LEGACY_PRICES: /legacy-prices
+    volumes:
+      - db:/data
+      - images:/images
+      - backups:/backups
+      - prices:/legacy-prices:ro
 
 volumes:
+  # Les bases SQLite (`data.db`, `app.db` : le compte et la collection) et le cache des
+  # téléchargements.
+  db:
+  # Les images copiées chez nous (environ 1 Go) : cartes et Pokémon.
+  images:
+  # Les sauvegardes des bases, chaque jour (tâche `backups`) : à copier aussi hors du VPS.
+  backups:
+  # L'ancien service des prix (des fichiers, retiré) : son historique est repris dans `db` au
+  # premier démarrage d'`ingest`. Gardé, au cas où ; à supprimer à la main quand tout va bien.
   prices:

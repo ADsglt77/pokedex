@@ -40,11 +40,20 @@ export function CatalogPicker({
   view: PickerView
   onView: (view: PickerView) => void
 }) {
-  const cards = use(loadCatalog()).bySpecies.get(species.id) ?? []
+  const catalog = use(loadCatalog())
   const prices = usePrices()
   const { order, set, pricedOnly } = view
   const change = (next: Partial<PickerView>) => onView({ ...view, ...next })
 
+  if (!catalog) {
+    return (
+      <p className="muted">
+        Le catalogue n’est pas disponible pour le moment : réessayez dans quelques minutes, ou
+        saisissez la carte à la main.
+      </p>
+    )
+  }
+  const cards = catalog.bySpecies.get(species.id) ?? []
   if (cards.length === 0) {
     return (
       <p className="muted">

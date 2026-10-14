@@ -52,9 +52,11 @@
   fill: var(--camply-accent);
 }
 
+/* À droite, avant le compte. */
 .nav {
   display: flex;
   gap: 0.25rem;
+  margin-left: auto;
 }
 
 .navLink {

@@ -36,7 +36,7 @@ export function MissingImages() {
     const catalog = await loadCatalog()
     setSearching(false)
     const found = candidates.flatMap((card, index) => {
-      const image = images[index] ?? catalogCard(catalog, card.reference)?.fallback
+      const image = images[index] ?? (catalog && catalogCard(catalog, card.reference)?.image)
       return image ? [{ id: card.id, image }] : []
     })
     const missing = candidates.length - found.length

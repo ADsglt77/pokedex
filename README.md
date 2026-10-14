@@ -38,44 +38,91 @@ bun run format   # Prettier
   à copier), les images à chercher pour les cartes qui n'en ont pas, export / import (achats
   compris), effacement.
 
-Les espèces et le catalogue des cartes japonaises sont embarqués (`bun run data`, depuis PokéAPI
-et TCGdex ; `bun run data:catalog --refresh` pour les nouvelles cartes) : aucune API externe
-appelée par le
-navigateur, hormis les images (dessins des Pokémon chez PokéAPI ; cartes chez Pokécardex, avec son
-autorisation et un lien vers son site sur chaque page, sinon celle du produit chez TCGplayer, ou
-à l'adresse collée ; pas celles de Cardmarket, qui ne s'affichent que sur son site). Le favori ne fait que
-lire la page Cardmarket ouverte et l'envoyer à l'app d'où il a été installé : installé depuis
-`bun dev`, il ouvre `localhost`. Les prix sont des fichiers du site
-lui-même (`/prices/`), écrits chaque jour par `bun run prices` d'après les fichiers publics de
-Cardmarket : le prix du jour de toutes ses cartes à l'unité, et l'historique de chacune ; pour les
-cartes du catalogue sans prix Cardmarket (vieilles séries, decks, promos), le prix TCGplayer
-(export de tcgcsv.com), converti en euros au cours de la BCE. En
-développement, lancer `bun run prices` une fois (le premier passage écrit quelque 60 000 fichiers
-dans `prices/`). La collection reste dans le navigateur (`localStorage`) : l'export est sa seule
-sauvegarde.
+Toutes les données passent par le serveur de l'app (`server/`, une base SQLite) : le navigateur
+ne parle qu'à lui. Des tâches d'ingestion lisent les sources et remplissent la base :
+- `catalog`, chaque jour : le catalogue des cartes japonaises, d'après TCGdex, complété par les
+  cartes de TCGplayer qu'il n'a pas (decks, promos, sets spéciaux : environ 19 000 cartes en tout ;
+  `/api/catalog`) ;
+- `prices`, toutes les 6 h : les prix d'après les fichiers publics de Cardmarket (le prix du jour
+  de toutes ses cartes à l'unité, et l'historique de chacune) ; pour les cartes du catalogue sans
+  prix Cardmarket (vieilles séries, decks, promos), le prix TCGplayer (export de tcgcsv.com),
+  converti en euros au cours de la BCE (`/api/prices`) ;
+- `images`, chaque jour : les images copiées chez nous (`/images/…`) — cartes chez Pokécardex,
+  avec son autorisation et un lien vers son site sur chaque page, sinon celle du produit chez
+  TCGplayer ; sprites et illustrations des Pokémon chez PokéAPI. Une image qui manque encore est
+  copiée à la demande.
+
+Les espèces restent embarquées dans le site (`bun run data:species`, depuis PokéAPI). Seule une
+image à l'adresse collée se charge ailleurs ; pas celles de Cardmarket, qui ne s'affichent que sur
+son site. Le favori ne fait que lire la page Cardmarket ouverte et l'envoyer à l'app d'où il a été
+installé : installé depuis `bun dev`, il ouvre `localhost`.
+
+En développement : `bun run dev:server` (l'API, sur le port 3000) à côté de `bun dev`, qui lui
+renvoie `/api` et `/images` ; la base vit dans `.data/`. La remplir une fois :
+`bun run ingest catalog`, puis `bun run ingest prices` (et `bun run ingest legacy-prices ./prices`
+pour reprendre un ancien dossier `prices/`). Inutile de lancer `bun run ingest images` (1 Go) : le
+serveur copie à la demande les images affichées. Pour la connexion, un fichier `.env.local` (ignoré
+par git) :
+
+```sh
+BETTER_AUTH_URL=http://localhost:5173
+BETTER_AUTH_SECRET=…        # openssl rand -base64 32
+```
+
+puis `bun server/create-user.ts moi@exemple.fr` pour créer le compte (le mot de passe est demandé
+au clavier).
+
+Votre collection : sans connexion, elle reste dans le navigateur (`localStorage`), et l'export est
+sa seule sauvegarde. Connecté (bouton « Se connecter » en haut à droite), elle est synchronisée
+entre vos appareils et gardée sur le serveur ; si deux appareils l'ont modifiée chacun de leur
+côté, l'app vous fait choisir la version à garder.
 
 ## Déploiement (VPS + tunnel Cloudflare)
 
-Le site est statique. L'image Docker le construit avec Bun et le sert avec nginx
-(`deploy/nginx.conf` renvoie `index.html` pour les adresses du routage côté client).
-`compose.yaml` l'expose sur `127.0.0.1:8080` (variable `POKEDEX_PORT`), joignable seulement par le
-tunnel. Le service `prices` du même fichier regarde toutes les 6 h si Cardmarket a publié un
-nouveau guide des prix, et TCGplayer de nouveaux prix (il ne les télécharge qu'une fois par jour) et en garde l'historique (un
-fichier par carte, quelques centaines de Mo) dans le volume Docker `prices` : ne pas lancer
-`docker compose down -v`, qui l'effacerait.
+L'image Docker construit le site avec Bun et le sert avec nginx (`deploy/nginx.conf` renvoie
+`index.html` pour les adresses du routage côté client, `/api/` au serveur, et sert les images
+copiées). `compose.yaml` l'expose sur `127.0.0.1:8080` (variable `POKEDEX_PORT`), joignable
+seulement par le tunnel. À côté :
+- le service `server` : l'API, et la copie à la demande d'une image qui manque encore ;
+- le service `ingest` : il refait le catalogue des cartes chaque jour (le premier passage, carte
+  par carte, prend un quart d'heure ; la page Catalogue dit en attendant qu'il n'est pas
+  disponible), regarde toutes les 6 h si Cardmarket a publié un nouveau guide des prix et
+  TCGplayer de nouveaux prix (il ne les télécharge qu'une fois par jour) et en garde l'historique
+  dans une base SQLite (volume Docker `db`), puis copie chaque jour les images manquantes (volume
+  `images` ; le premier passage, environ 1 Go, prend une heure ou plus, et le serveur copie en
+  attendant celles qui s'affichent), et sauvegarde les deux bases chaque jour (volume `backups`).
+  À son premier démarrage, il reprend de lui-même l'historique de l'ancien service `prices` (des
+  fichiers, dans le volume `prices`), vérifié avant d'être gardé. L'ancien service est retiré :
+  le déploiement l'arrête (`--remove-orphans`).
+
+Ne jamais lancer `docker compose down -v`, qui effacerait ces volumes. Une fois sûr que
+l'historique est repris (`docker compose logs ingest` : « Vérifié : … cartes »), l'ancien volume
+peut partir : `docker volume rm pokedex_prices` (le nom exact : `docker volume ls`).
 
 **Une fois, sur le VPS**
 
-1. Cloner le dépôt **en SSH** puis lancer le site. Le dépôt est privé : ajouter au VPS une clé de
+1. Cloner le dépôt **en SSH**. Le dépôt est privé : ajouter au VPS une clé de
    déploiement en lecture seule, qui est une clé SSH. C'est la clé par défaut de l'utilisateur, ou
    celle déclarée pour `github.com` dans `~/.ssh/config`. Un clone HTTPS demanderait un jeton, et le
    `git pull` du déploiement automatique échouerait.
    ```sh
    git clone git@github.com:ADsglt77/pokedex.git
    cd pokedex
+   ```
+2. Créer, dans le clone, le fichier `.env` des secrets (ignoré par git ; sans lui, docker compose
+   refuse de démarrer) : l'adresse publique du site, en https, et la clé qui signe les sessions.
+   ```sh
+   echo "BETTER_AUTH_URL=https://pokedex.ton-domaine.fr" > .env
+   echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+   chmod 600 .env
    docker compose up -d --build
    ```
-2. Publier le site par le tunnel : un nom d'hôte public (par exemple `pokedex.ton-domaine.fr`)
+3. Créer votre compte (le seul : le site n'a pas d'inscription). Le mot de passe est demandé deux
+   fois, sans s'afficher ; relancer la même commande le change (et ferme les sessions ouvertes) :
+   ```sh
+   docker compose run --rm server bun server/create-user.ts moi@exemple.fr
+   ```
+4. Publier le site par le tunnel : un nom d'hôte public (par exemple `pokedex.ton-domaine.fr`)
    vers `http://localhost:8080`. Dans le tableau de bord Zero Trust (Networks › Tunnels › le
    tunnel › Public hostname), ou dans le `config.yml` de cloudflared, avant la règle finale :
    ```yaml
@@ -105,3 +152,30 @@ Secrets à créer dans le dépôt (Settings › Secrets and variables › Action
 Le port SSH doit être joignable depuis GitHub. S'il ne passe que par le tunnel (Cloudflare
 Access), ce workflow ne peut pas s'y connecter : il faut alors un runner GitHub auto-hébergé sur
 le VPS.
+
+## Sauvegardes
+
+Chaque jour, le service `ingest` copie les deux bases dans le volume `backups` :
+`app-AAAA-MM-JJ.db` (votre compte et votre collection, 30 jours gardés) et
+`data-AAAA-MM-JJ.db.gz` (catalogue, prix et leur historique, 7 jours gardés). Ce volume est sur le
+même disque que les bases : copiez-le aussi ailleurs, par exemple chaque nuit avec `rclone` ou
+`rsync` vers un autre serveur. Pour en sortir les fichiers (dans `./sauvegardes`) :
+
+```sh
+mkdir -p sauvegardes
+docker compose run --rm --no-deps -v "$PWD/sauvegardes:/out" ingest sh -c 'cp /backups/* /out/'
+```
+
+Restaurer une base : arrêter le serveur et les tâches, remettre la copie à la place de la base
+(décompressée pour `data.db`, avec `gunzip`), sans les fichiers `-wal` et `-shm` de l'ancienne,
+puis redémarrer :
+
+```sh
+docker compose stop server ingest
+docker compose run --rm --no-deps -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/app.db-wal /data/app.db-shm && cp /restore/app-AAAA-MM-JJ.db /data/app.db'
+docker compose up -d
+```
+
+Le serveur garde aussi, dans `app.db`, une version remplacée de la collection par heure pendant
+30 jours (table `collection_versions`, compressée) : de quoi revenir en arrière après une erreur,
+à la main.

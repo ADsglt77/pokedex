@@ -2,11 +2,13 @@ import { Banner, Button } from '@camply/ui'
 import { ChartLine, Database, Grid3x3, House, Layers, ShoppingCart } from '@camply/ui/icons'
 import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, ScrollRestoration, useLocation } from 'react-router'
+import { AccountMenu } from '@/components/AccountMenu'
 import { ExternalLink } from '@/components/ExternalLink'
 import { POKECARDEX, TCGPLAYER } from '@/lib/card-images'
 import { cx } from '@/lib/cx'
 import { useCollectionStore } from '@/store/collection'
 import { useLastExport, useStorageFailure } from '@/store/persist'
+import { useSyncStore } from '@/store/sync'
 import styles from './AppShell.module.css'
 
 const NAV = [
@@ -88,6 +90,7 @@ export function AppShell() {
           <nav aria-label="Navigation principale" className={styles.nav}>
             {navLinks(styles.navLink, false)}
           </nav>
+          <AccountMenu />
         </div>
       </header>
 
@@ -115,9 +118,10 @@ export function AppShell() {
       </main>
 
       <footer className={cx('container', styles.footer)}>
-        Données PokéAPI et TCGdex, images <ExternalLink href={POKECARDEX}>Pokécardex</ExternalLink>{' '}
-        et <ExternalLink href={TCGPLAYER}>TCGplayer</ExternalLink>, prix Cardmarket. Projet
-        personnel, sans lien avec Nintendo, Creatures, Game Freak ou The Pokémon Company.
+        Données PokéAPI, TCGdex et TCGplayer, images{' '}
+        <ExternalLink href={POKECARDEX}>Pokécardex</ExternalLink> et{' '}
+        <ExternalLink href={TCGPLAYER}>TCGplayer</ExternalLink>, prix Cardmarket. Projet personnel,
+        sans lien avec Nintendo, Creatures, Game Freak ou The Pokémon Company.
       </footer>
 
       <nav aria-label="Navigation principale" className={styles.tabbar}>
@@ -137,11 +141,13 @@ export function AppShell() {
 const DAY = 24 * 60 * 60 * 1000
 
 /**
- * Le rappel de sauvegarde : la collection n'existe que dans ce navigateur. Il paraît quand elle a
- * changé depuis le dernier export et que celui-ci date d'un mois, ou, sans export, dès 5 cartes.
- * Fermé, il revient au prochain chargement.
+ * Le rappel de sauvegarde, sans compte connecté : la collection n'existe que dans ce navigateur
+ * (connecté, elle est sur le serveur, sauvegardé). Il paraît quand elle a changé depuis le dernier
+ * export et que celui-ci date d'un mois, ou, sans export, dès 5 cartes. Fermé, il revient au
+ * prochain chargement.
  */
 function BackupReminder() {
+  const synced = useSyncStore((state) => state.status !== 'local')
   const lastExport = useLastExport((state) => state.at)
   const collection = useCollectionStore((state) => state.collection)
   const [now] = useState(() => Date.now())
@@ -150,7 +156,7 @@ function BackupReminder() {
   const due = Number.isNaN(last)
     ? Object.keys(collection.customCards).length >= 5
     : now - last > 30 * DAY
-  if (!changed || !due) return null
+  if (synced || !changed || !due) return null
   return (
     <Banner
       tone="info"

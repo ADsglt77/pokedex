@@ -1,7 +1,7 @@
 import { Button } from '@camply/ui'
 import { Download } from '@camply/ui/icons'
 import { DataSection } from './DataSection'
-import { useExportCollection } from './useExportCollection'
+import { useExportCollection } from '@/hooks/useExportCollection'
 
 /** Télécharger la collection : la seule sauvegarde, la collection ne vivant que dans ce navigateur. */
 export function ExportSection() {

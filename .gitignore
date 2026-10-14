@@ -28,3 +28,9 @@ scripts/.cache
 
 # Prix Cardmarket, écrits par `bun run prices` et servis par `bun dev` (sur le VPS : volume du service `prices`)
 /prices
+
+# Bases SQLite et images du serveur en développement (`DATA_DIR`, sur le VPS : volumes Docker)
+/.data
+
+# Secrets du VPS (BETTER_AUTH_SECRET…), lus par docker compose
+.env

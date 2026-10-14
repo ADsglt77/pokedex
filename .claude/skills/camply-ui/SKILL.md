@@ -63,6 +63,8 @@ Every component accepts `className` and `style`; single-root components forward 
 - **`SegmentedControl` has no `label` / `hint`**: `src/components/SegmentedField.tsx` adds them with camply's field classes (`camply-field`, `camply-field__label`, `camply-field__desc`, hint linked by `aria-describedby`). A group of `Checkbox` has no group label either: `<fieldset>` + `<legend className="camply-field__label">` (PlannerPanel).
 - **`Progress` track**: `ProgressRuler.module.css` restyles `.camply-progress__track`. Internal classes are not an API: recheck these three after a camply update.
 - **`Combobox` as an « add » field**: pass `value=""` (controlled and empty) so the field clears after each pick without remounting (a `key` would lose the focus).
+- **`CardTitle` stops at `headingLevel` 2**: a page whose title sits in a `Card` (LoginPage) renders its own `<h1>` styled with the display font.
+- **`MenuLabel` is an uppercase caption**: for an e-mail or a sentence in a `DropdownMenu`, override `text-transform` / `letter-spacing` with a class (AccountMenu).
 - **`Card` renders a `div`** (no `as`): give it `role="article"` when it stands for one (WishCard).
 - **No chart component**: `src/components/PriceChart.tsx` is a small SVG line chart on camply tokens.
 - **Toast « Annuler »**: `useNotify()` / `useCollectionAction()` (`src/hooks/useNotify.ts`) wrap `toast({ action })` with the app's undo rule (refused if the collection or the shopping data changed since).

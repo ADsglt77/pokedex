@@ -4,8 +4,10 @@
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" },
     { "path": "./tsconfig.scripts.json" },
+    { "path": "./tsconfig.server.json" },
     { "path": "./tsconfig.tests.json" }
   ],
-  // Lu par Bun pour les scripts de `scripts/` et les tests de `tests/`, qui importent du code de `src/`.
+  // Lu par Bun pour le serveur (`server/`), les scripts de `scripts/` et les tests de `tests/`, qui
+  // importent du code de `src/`.
   "compilerOptions": { "paths": { "@/*": ["./src/*"] } }
 }

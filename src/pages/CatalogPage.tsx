@@ -6,8 +6,13 @@ import { CatalogCredit, CatalogGrid, CatalogTile } from '@/components/CatalogTil
 import { PageHeader } from '@/components/PageHeader'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { usePokedex } from '@/hooks/usePokedex'
-import { loadCatalog, setCards, setOption, type CatalogCard } from '@/lib/card-catalog'
-import { findCardImage } from '@/lib/card-images'
+import {
+  loadCatalog,
+  setCards,
+  setOption,
+  type Catalog,
+  type CatalogCard,
+} from '@/lib/card-catalog'
 import { searchForm } from '@/lib/filters'
 import { formatInteger, pageTitle, plural } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
@@ -32,7 +37,7 @@ export function CatalogPage() {
         qui n’en a pas encore.
       </PageHeader>
       <Suspense fallback={<p className="muted">Chargement du catalogue…</p>}>
-        <SetBrowser />
+        <CatalogContent />
       </Suspense>
     </div>
   )
@@ -53,8 +58,18 @@ const SET_ORDERS = [
   { value: 'useful', label: 'Plus utiles' },
 ] as const
 
-function SetBrowser() {
+function CatalogContent() {
   const catalog = use(loadCatalog())
+  return catalog ? (
+    <SetBrowser catalog={catalog} />
+  ) : (
+    <p className="muted">
+      Le catalogue n’est pas disponible pour le moment : réessayez dans quelques minutes.
+    </p>
+  )
+}
+
+function SetBrowser({ catalog }: { catalog: Catalog }) {
   const [params, setParams] = useSearchParams()
   const { entryById } = usePokedex()
   const prices = usePrices()
@@ -62,7 +77,6 @@ function SetBrowser() {
   const [missingOnly, setMissingOnly] = useState(true)
   const [setOrder, setSetOrder] = useState<'recent' | 'useful'>('recent')
   const [addAs, setAddAs] = useState<AddAs>('none')
-  const [adding, setAdding] = useState<string | null>(null)
   const grid = useRef<HTMLDivElement>(null)
 
   // Les Pokémon sans carte que chaque extension peut compléter.
@@ -107,14 +121,11 @@ function SetBrowser() {
   // Le rang d'une carte parmi celles qu'on peut encore choisir : celui du focus après l'ajout.
   const choosable = shown.filter((row) => row.open !== null)
 
-  const choose = async (card: CatalogCard, speciesId: number, rank: number) => {
-    setAdding(card.key)
-    const image = (await findCardImage(card.reference, { retry: true })) ?? card.fallback
+  const choose = (card: CatalogCard, speciesId: number, rank: number) => {
     const name = getSpecies(speciesId)!.names.fr
     // Ajoutée et affichée tout de suite : le focus va alors à la carte suivante, celle ajoutée
     // disparaissant ou se désactivant.
     flushSync(() => {
-      setAdding(null)
       act(
         () =>
           addCard(
@@ -122,7 +133,7 @@ function SetBrowser() {
               id: `manual:${crypto.randomUUID()}`,
               dexIds: [speciesId],
               reference: card.reference,
-              image,
+              image: card.image,
               ...(card.cardmarket !== undefined && { cardmarket: card.cardmarket }),
             },
             { owned: addAs === 'owned', toBuy: addAs === 'toBuy' },
@@ -193,15 +204,13 @@ function SetBrowser() {
                     card={card}
                     price={price}
                     speciesId={speciesId}
-                    disabled={open === null || adding !== null}
+                    disabled={open === null}
                     onPick={() => open !== null && choose(card, open, choosable.indexOf(row))}
                   >
                     <span>
                       {open === null
                         ? `${getSpecies(speciesId)!.names.fr} a déjà sa carte`
-                        : adding === card.key
-                          ? 'Ajout…'
-                          : `Choisir pour ${getSpecies(open)!.names.fr}`}
+                        : `Choisir pour ${getSpecies(open)!.names.fr}`}
                     </span>
                   </CatalogTile>
                 </li>
