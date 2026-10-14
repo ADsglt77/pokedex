@@ -7,9 +7,15 @@ const decimalFormat = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 
 const dateFormat = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' })
 const dateTimeFormat = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeStyle: 'short' })
 
-export const formatInteger = (value: number) => integerFormat.format(value)
+/**
+ * Les nombres français séparent les milliers (et le symbole €) par une espace fine insécable, que
+ * les polices de l'app n'ont pas : elle disparaîtrait (« 1025 »). L'espace insécable la remplace.
+ */
+const spaced = (text: string) => text.replaceAll(' ', ' ')
 
-export const formatDecimal = (value: number) => decimalFormat.format(value)
+export const formatInteger = (value: number) => spaced(integerFormat.format(value))
+
+export const formatDecimal = (value: number) => spaced(decimalFormat.format(value))
 
 /** Aujourd'hui (YYYY-MM-DD), dans le fuseau de l'utilisateur. */
 export const today = () => {
@@ -56,10 +62,10 @@ const signedEuroFormat = new Intl.NumberFormat('fr-FR', {
 })
 
 /** « 1 234,50 € » */
-export const formatEuro = (value: number) => euroFormat.format(value)
+export const formatEuro = (value: number) => spaced(euroFormat.format(value))
 
 /** « +12,00 € », « −3,50 € » : un gain ou une perte. */
-export const formatEuroChange = (value: number) => signedEuroFormat.format(value)
+export const formatEuroChange = (value: number) => spaced(signedEuroFormat.format(value))
 
 const percentChangeFormat = new Intl.NumberFormat('fr-FR', {
   style: 'percent',
@@ -68,7 +74,7 @@ const percentChangeFormat = new Intl.NumberFormat('fr-FR', {
 })
 
 /** « −18 % », « +5 % » : une variation (−0,18 → « −18 % »). */
-export const formatPercent = (value: number) => percentChangeFormat.format(value)
+export const formatPercent = (value: number) => spaced(percentChangeFormat.format(value))
 
 /** Un montant saisi (« 12,50 », « 12.5 € ») ; `null` s'il est illisible. */
 export function parseEuros(text: string): number | null {

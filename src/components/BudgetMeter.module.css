@@ -1,0 +1,5 @@
+/* Le texte du budget au-dessus de sa réglette. */
+.meter {
+  display: grid;
+  gap: 0.5rem;
+}

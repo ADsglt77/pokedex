@@ -3,9 +3,11 @@ import { Flag } from '@camply/ui/icons'
 import { Suspense, use, useMemo } from 'react'
 import { Link } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
+import { Panel } from '@/components/Panel'
 import { PriceChart } from '@/components/PriceChart'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { usePokedex } from '@/hooks/usePokedex'
+import { cx } from '@/lib/cx'
 import {
   details,
   formatDate,
@@ -69,15 +71,19 @@ export function ValuePage() {
         estimation : l’état de la carte et le vendeur font varier le prix réel.
       </PageHeader>
 
-      {pricesMissing && (
-        <Alert tone="info" title="Les prix ne sont pas disponibles pour le moment.">
-          Ils sont relus chaque jour par le serveur. Les prix payés que vous avez notés restent
-          visibles ci-dessous.
-        </Alert>
-      )}
+      <div className={styles.grid}>
+        {pricesMissing && (
+          <Alert
+            className={styles.wide}
+            tone="info"
+            title="Les prix ne sont pas disponibles pour le moment."
+          >
+            Ils sont relus chaque jour par le serveur. Les prix payés que vous avez notés restent
+            visibles ci-dessous.
+          </Alert>
+        )}
 
-      <Stack gap={8} className={styles.page}>
-        <div className="stat-grid">
+        <div className={cx('stat-grid', styles.wide)}>
           <Stat
             label="Ma collection"
             icon={<STATUS_ICONS.owned size={18} />}
@@ -109,11 +115,11 @@ export function ValuePage() {
           />
         </div>
 
-        <Stack as="section" gap={4} aria-labelledby="history-title">
-          <h2 id="history-title">Valeur de ma collection</h2>
-          <p className="muted">
-            Vos cartes possédées aujourd’hui, au prix de chaque jour. Un nouveau point chaque jour.
-          </p>
+        <Panel
+          className={styles.wide}
+          title="Valeur de ma collection"
+          description="Vos cartes possédées aujourd’hui, au prix de chaque jour. Un nouveau point chaque jour."
+        >
           {owned.length > 0 ? (
             <Suspense fallback={<Skeleton height="7rem" />}>
               <CollectionChart cards={owned} />
@@ -121,27 +127,30 @@ export function ValuePage() {
           ) : (
             <p className="muted">Aucune carte possédée pour l’instant : pas de courbe à tracer.</p>
           )}
-        </Stack>
+        </Panel>
 
         <Movers moves={priceMovers(cards, prices, 5)} />
 
         <MonthlyCharts />
 
-        <Stack as="section" gap={4} aria-labelledby="cards-title">
-          <h2 id="cards-title">Mes cartes</h2>
+        <Panel
+          className={styles.wide}
+          flush
+          title="Mes cartes"
+          description="Ce qu’elles ont coûté et ce qu’elles valent, la plus chère d’abord."
+        >
           <CardsTable cards={cards} />
-        </Stack>
+        </Panel>
 
-        <Stack as="section" gap={4} aria-labelledby="completion-title">
-          <h2 id="completion-title">Pour compléter, par génération</h2>
-          <p className="muted">
-            Pour chaque Pokémon à débloquer, le prix de sa carte ; ceux sans carte, ou dont la carte
-            n’a pas de prix, sont comptés à part. Ceux dont la carte est déjà commandée n’y sont pas
-            : ils comptent dans les commandes.
-          </p>
+        <Panel
+          className={styles.wide}
+          flush
+          title="Pour compléter, par génération"
+          description="Pour chaque Pokémon à débloquer, le prix de sa carte ; ceux sans carte, ou dont la carte n’a pas de prix, sont comptés à part. Ceux dont la carte est déjà commandée n’y sont pas : ils comptent dans les commandes."
+        >
           <CompletionTable rows={completion} />
-        </Stack>
-      </Stack>
+        </Panel>
+      </div>
     </div>
   )
 }
@@ -162,16 +171,15 @@ function Movers({ moves }: { moves: { risers: PriceMove[]; fallers: PriceMove[] 
     { title: 'Plus fortes baisses', list: moves.fallers, className: styles.down },
   ]
   return (
-    <Stack as="section" gap={4} aria-labelledby="movers-title">
-      <h2 id="movers-title">Ce qui bouge</h2>
-      <p className="muted">
-        Vos cartes possédées dont le prix du jour s’écarte le plus de leur moyenne Cardmarket sur 30
-        jours (au moins 5 % et 0,50 €).
-      </p>
-      <div className={styles.months}>
+    <Panel
+      className={styles.wide}
+      title="Ce qui bouge"
+      description="Vos cartes possédées dont le prix du jour s’écarte le plus de leur moyenne Cardmarket sur 30 jours (au moins 5 % et 0,50 €)."
+    >
+      <div className={styles.columns}>
         {groups.map(({ title, list, className }) => (
-          <Stack key={title} gap={3}>
-            <h3>{title}</h3>
+          <Stack key={title} gap={2}>
+            <h3 className={styles.subtitle}>{title}</h3>
             {list.length === 0 ? (
               <p className="muted">Aucune pour l’instant.</p>
             ) : (
@@ -190,7 +198,7 @@ function Movers({ moves }: { moves: { risers: PriceMove[]; fallers: PriceMove[] 
           </Stack>
         ))}
       </div>
-    </Stack>
+    </Panel>
   )
 }
 
@@ -209,28 +217,21 @@ function MonthlyCharts() {
   }, [orders, month])
 
   return (
-    <Stack as="section" gap={4} aria-labelledby="months-title">
-      <h2 id="months-title">Au fil des mois</h2>
-      <div className={styles.months}>
-        <Stack gap={3}>
-          <h3>Pokémon débloqués</h3>
-          {unlocked.length >= 2 ? (
-            <PriceChart points={unlocked} label="Pokémon débloqués" format={formatInteger} />
-          ) : (
-            <p className="muted">
-              La courbe se dessine dès votre deuxième mois de cartes obtenues.
-            </p>
-          )}
-        </Stack>
-        <Stack gap={3}>
-          <h3>Dépenses par mois</h3>
-          {spent.length >= 2 ? (
-            <PriceChart points={spent} label="Dépenses par mois" />
-          ) : (
-            <p className="muted">La courbe se dessine dès votre deuxième mois de commandes.</p>
-          )}
-        </Stack>
-      </div>
-    </Stack>
+    <>
+      <Panel title="Pokémon débloqués" description="Au fil des mois, depuis votre première carte.">
+        {unlocked.length >= 2 ? (
+          <PriceChart points={unlocked} label="Pokémon débloqués" format={formatInteger} />
+        ) : (
+          <p className="muted">La courbe se dessine dès votre deuxième mois de cartes obtenues.</p>
+        )}
+      </Panel>
+      <Panel title="Dépenses par mois" description="Vos commandes, au mois de leur achat.">
+        {spent.length >= 2 ? (
+          <PriceChart points={spent} label="Dépenses par mois" />
+        ) : (
+          <p className="muted">La courbe se dessine dès votre deuxième mois de commandes.</p>
+        )}
+      </Panel>
+    </>
   )
 }

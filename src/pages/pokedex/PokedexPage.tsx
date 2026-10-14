@@ -1,16 +1,25 @@
 import { Button, EmptyState } from '@camply/ui'
-import { SearchX } from '@camply/ui/icons'
+import { Layers, SearchX } from '@camply/ui/icons'
 import { useDeferredValue, useMemo } from 'react'
 import { Link } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { usePokedex } from '@/hooks/usePokedex'
 import { usePokedexFilters } from '@/hooks/usePokedexFilters'
-import { activeFilterCount, DEFAULT_FILTERS, filterEntries } from '@/lib/filters'
-import { pageTitle } from '@/lib/format'
+import {
+  activeFilterCount,
+  DEFAULT_FILTERS,
+  filterEntries,
+  POSSESSIONS,
+  type PossessionFilter,
+} from '@/lib/filters'
+import { formatInteger, pageTitle } from '@/lib/format'
 import { PokedexGrid } from './PokedexGrid'
 import { PokedexToolbar } from './PokedexToolbar'
 
-/** Le classeur : les 1 025 Pokémon, filtrés par la barre d'outils (filtres dans l'adresse). */
+/**
+ * Le classeur : les 1 025 Pokémon, filtrés par la barre d'outils (filtres dans l'adresse). Chaque
+ * filtre rapide dit combien de Pokémon il montrerait, les autres filtres appliqués.
+ */
 export function PokedexPage() {
   const pokedex = usePokedex()
   const [filters, setFilters] = usePokedexFilters()
@@ -20,21 +29,40 @@ export function PokedexPage() {
     () => filterEntries(pokedex.entries, shownFilters),
     [pokedex.entries, shownFilters],
   )
+  const counts = useMemo(
+    () =>
+      Object.fromEntries(
+        POSSESSIONS.map((possession) => [
+          possession,
+          filterEntries(pokedex.entries, { ...shownFilters, possession }).length,
+        ]),
+      ) as Record<PossessionFilter, number>,
+    [pokedex.entries, shownFilters],
+  )
   const filtering = filters.search.trim() !== '' || activeFilterCount(filters) > 0
   const resetFilters = () => setFilters(DEFAULT_FILTERS)
 
   return (
     <div className="container">
       <title>{pageTitle('Pokédex')}</title>
-      <PageHeader title="Pokédex">
-        Les 1 025 Pokémon et leur carte. Pour en choisir plusieurs d’un coup, parcourez le{' '}
-        <Link to="/catalogue">catalogue par extension</Link>.
+      <PageHeader
+        title="Pokédex"
+        actions={
+          <Button asChild variant="secondary" leftIcon={<Layers size={16} />}>
+            <Link to="/catalogue">Choisir par extension</Link>
+          </Button>
+        }
+      >
+        Les {formatInteger(pokedex.progress.total)} Pokémon et leur carte :{' '}
+        {formatInteger(pokedex.progress.unlocked)} débloqués. Ouvrez-en un pour lui choisir sa
+        carte.
       </PageHeader>
 
       <PokedexToolbar
         filters={filters}
         setFilters={setFilters}
         pokedex={pokedex}
+        counts={counts}
         resultCount={filtering ? visible.length : null}
         onReset={resetFilters}
       />

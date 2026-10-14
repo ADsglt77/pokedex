@@ -1,9 +1,7 @@
+/* Les panneaux de la carte, l'un sous l'autre. */
 .sheet {
+  display: grid;
+  gap: var(--space-block);
+  align-content: start;
   min-width: 0;
-}
-
-/* Le prix et l'achat : deux temps de la fiche, chacun sous un filet. */
-.sheet > section {
-  padding-top: var(--camply-space-6);
-  border-top: 1px solid var(--camply-border-soft);
 }

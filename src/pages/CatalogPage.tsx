@@ -1,9 +1,10 @@
-import { Combobox, SegmentedControl, Stack, Switch } from '@camply/ui'
+import { Combobox, Progress, SegmentedControl, Stack, Switch } from '@camply/ui'
 import { Suspense, use, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useSearchParams } from 'react-router'
 import { CatalogCredit, CatalogGrid, CatalogTile } from '@/components/CatalogTile'
 import { PageHeader } from '@/components/PageHeader'
+import { Panel } from '@/components/Panel'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { usePokedex } from '@/hooks/usePokedex'
 import {
@@ -15,7 +16,7 @@ import {
 } from '@/lib/card-catalog'
 import { newCardId } from '@/lib/collection'
 import { searchForm } from '@/lib/filters'
-import { formatInteger, pageTitle, plural } from '@/lib/format'
+import { details, formatInteger, pageTitle, plural } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
 import { getSpecies } from '@/lib/species'
 import { usePrices } from '@/store/prices'
@@ -123,6 +124,9 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
   const shown = missingOnly ? rows.filter((row) => row.open !== null) : rows
   // Le rang d'une carte parmi celles qu'on peut encore choisir : celui du focus après l'ajout.
   const choosable = shown.filter((row) => row.open !== null)
+  // Les Pokémon de l'extension, et ceux d'entre eux qui ont déjà leur carte (d'ici ou d'ailleurs).
+  const setSpecies = new Set(cards.flatMap((card) => card.dexIds))
+  const covered = [...setSpecies].filter((id) => entryById.get(id)?.card).length
 
   const choose = (card: CatalogCard, speciesId: number, rank: number) => {
     const name = getSpecies(speciesId)!.names.fr
@@ -150,7 +154,7 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
 
   return (
     <Stack gap={5}>
-      <Stack direction="horizontal" align="end" gap={3} wrap>
+      <div className={styles.controls}>
         <div className={styles.search}>
           <Combobox
             label="Extension"
@@ -168,30 +172,61 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
           value={setOrder}
           onChange={setSetOrder}
         />
-      </Stack>
-      <Stack direction="horizontal" align="center" gap={4} wrap>
-        <Switch
-          label="Seulement les Pokémon sans carte"
-          checked={missingOnly}
-          onChange={(event) => setMissingOnly(event.target.checked)}
-        />
-        <Stack direction="horizontal" align="center" gap={2}>
-          <span id="add-as" className={styles.label}>
-            Ajouter comme
-          </span>
-          <SegmentedControl
-            aria-labelledby="add-as"
+      </div>
+      {setOrder === 'useful' && (
+        <p className="hint">
+          Plus utiles : celles qui donnent leur carte au plus de vos Pokémon qui n’en ont pas.
+        </p>
+      )}
+
+      <Panel
+        title={set.name}
+        description={details(
+          set.id,
+          set.year && `sortie en ${set.year}`,
+          plural(cards.length, 'carte Pokémon', 'cartes Pokémon'),
+        )}
+      >
+        <div className={styles.coverage}>
+          <p>
+            <strong className="numeric">
+              {formatInteger(covered)} sur {formatInteger(setSpecies.size)}
+            </strong>{' '}
+            de ses Pokémon ont leur carte
+            {covered < setSpecies.size &&
+              ` : ${plural(setSpecies.size - covered, 'reste', 'restent')} à choisir`}
+            .
+          </p>
+          <Progress
             size="sm"
-            options={ADD_AS}
-            value={addAs}
-            onChange={setAddAs}
+            value={covered}
+            max={Math.max(setSpecies.size, 1)}
+            aria-label="Pokémon de l’extension qui ont leur carte"
           />
-        </Stack>
-      </Stack>
+        </div>
+        <div className={styles.options}>
+          <Switch
+            label="Seulement les Pokémon sans carte"
+            checked={missingOnly}
+            onChange={(event) => setMissingOnly(event.target.checked)}
+          />
+          <Stack direction="horizontal" align="center" gap={2}>
+            <span id="add-as" className={styles.label}>
+              Ajouter comme
+            </span>
+            <SegmentedControl
+              aria-labelledby="add-as"
+              size="sm"
+              options={ADD_AS}
+              value={addAs}
+              onChange={setAddAs}
+            />
+          </Stack>
+        </div>
+      </Panel>
+
       <p className="muted">
         {plural(shown.length, 'carte', 'cartes')} · <CatalogCredit />
-        {setOrder === 'useful' &&
-          ' · plus utiles : celles qui donnent leur carte au plus de vos Pokémon qui n’en ont pas'}
       </p>
       {shown.length === 0 ? (
         <p className="muted">Tous les Pokémon de cette extension ont déjà leur carte.</p>

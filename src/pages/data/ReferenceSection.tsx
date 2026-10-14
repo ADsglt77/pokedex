@@ -21,7 +21,11 @@ export function ReferenceSection() {
   // Créée ici, hors de la partie qui attend : elle ne serait sinon jamais la même promesse.
   const [status] = useState(loadStatus)
   return (
-    <DataSection id="reference" title="Données de référence">
+    <DataSection
+      id="reference"
+      title="Sources des données"
+      description="D’où viennent les espèces, les cartes, leurs images et leurs prix, et où en est le serveur qui les relit."
+    >
       <p>
         Les espèces viennent de <ExternalLink href="https://pokeapi.co/">PokéAPI</ExternalLink>,
         gardées par le serveur. Le catalogue des cartes japonaises de chaque Pokémon (toutes les

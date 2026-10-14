@@ -1,20 +1,88 @@
-.section {
-  padding-block: 2.5rem;
-  border-top: 1px solid var(--camply-border-soft);
-  scroll-margin-top: 1rem;
+/* Le sommaire puis les sections ; côte à côte sur grand écran, le sommaire collé en haut. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-block);
 }
 
-.section > p {
+.sections {
+  display: grid;
+  gap: var(--space-block);
+  max-width: 50rem;
+}
+
+/* Le sommaire : une rangée de liens qui défile de côté, puis une colonne sur grand écran. */
+.toc ul {
+  display: flex;
+  gap: 0.375rem;
+  margin: 0 calc(-1 * var(--gutter));
+  padding: 0 var(--gutter);
+  overflow-x: auto;
+  list-style: none;
+  scrollbar-width: none;
+}
+
+.toc ul::-webkit-scrollbar {
+  display: none;
+}
+
+.toc a {
+  display: block;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--camply-border-soft);
+  border-radius: var(--camply-radius-pill);
+  color: var(--camply-text-muted);
+  font-size: var(--text-md);
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.toc a:hover {
+  background: var(--camply-surface-2);
+  color: var(--camply-text-strong);
+}
+
+@media (min-width: 80rem) {
+  .layout {
+    grid-template-columns: 12rem minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .toc {
+    position: sticky;
+    top: 1.5rem;
+  }
+
+  .toc ul {
+    flex-direction: column;
+    gap: 0.125rem;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .toc a {
+    border: 0;
+    border-radius: var(--camply-radius-sm);
+  }
+}
+
+/* Les phrases d'une section, à une longueur de ligne lisible. */
+.section p {
   max-width: 62ch;
   color: var(--camply-text-muted);
 }
 
-.apart {
-  margin-top: 2rem;
+/* L'effacement : bordé de rouge, son titre aussi. */
+.danger {
+  border-color: color-mix(in srgb, var(--camply-danger) 35%, var(--camply-border-soft));
 }
 
-.apart .title {
-  font-size: 1.25rem;
+.danger h2 {
+  color: var(--camply-danger);
 }
 
 /* Le registre : une ligne par type de donnée, le compte à droite. */
@@ -34,14 +102,41 @@
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
-.group {
-  width: 100%;
+/* La progression du Pokédex, en tête de « Ma collection ». */
+.progress {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 30rem;
+}
+
+.progress strong {
+  color: var(--camply-text-strong);
+}
+
+/* Les actions d'une section, alignées à gauche, à la ligne au besoin. */
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--camply-space-3);
+}
+
+/* Le contenu du fichier à importer, dans un encart. */
+.preview {
+  display: grid;
+  gap: var(--camply-space-3);
+  padding: var(--camply-space-4);
+  border: 1px solid var(--camply-border-soft);
+  border-radius: var(--camply-radius);
+  background: var(--camply-surface-2);
+}
+
+.preview h3 {
+  font-size: var(--text-md);
 }
 
 /* L'état des données : une ligne par source, son badge puis sa phrase. */
 .jobs {
   width: 100%;
-  max-width: 44rem;
 }
 
 .job {
@@ -51,10 +146,34 @@
   gap: var(--camply-space-1) var(--camply-space-2);
 }
 
-/* Les étapes d'installation du favori. */
+/* Les étapes d'installation du favori, numérotées dans une pastille. */
 .steps {
-  max-width: 62ch;
+  display: grid;
+  gap: 0.625rem;
   margin: 0;
-  padding-left: 1.25rem;
-  color: var(--camply-text-muted);
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.steps li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  color: var(--camply-text);
+  counter-increment: step;
+}
+
+.steps li::before {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--camply-accent-soft);
+  color: var(--camply-accent);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  content: counter(step);
 }

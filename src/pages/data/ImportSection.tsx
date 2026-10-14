@@ -1,4 +1,4 @@
-import { Alert, Button, FileUpload, Stack, type UploadFile } from '@camply/ui'
+import { Alert, Button, FileUpload, type UploadFile } from '@camply/ui'
 import { useRef, useState } from 'react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useCollectionAction } from '@/hooks/useNotify'
@@ -51,14 +51,12 @@ export function ImportSection() {
   const updatedAt = imported && formatDateTime(imported.collection.updatedAt)
 
   return (
-    <DataSection id="importer" title="Importer">
-      <p>
-        Reprenez une collection exportée depuis ce Pokédex, ici ou dans un autre navigateur. Elle
-        remplace votre collection actuelle, ainsi que vos achats si le fichier en contient.
-      </p>
-
+    <DataSection
+      id="importer"
+      title="Importer"
+      description="Reprenez une collection exportée depuis ce Pokédex, ici ou dans un autre navigateur. Elle remplace votre collection actuelle, ainsi que vos achats si le fichier en contient."
+    >
       <FileUpload
-        className={styles.group}
         label="Fichier d’export"
         hint="Fichier .json de 20 Mo au plus."
         accept=".json,application/json"
@@ -74,7 +72,7 @@ export function ImportSection() {
       )}
 
       {imported && (
-        <Stack gap={4} className={styles.group}>
+        <div className={styles.preview}>
           <h3>Contenu du fichier</h3>
           {updatedAt && (
             <p className="muted">Collection modifiée pour la dernière fois le {updatedAt}.</p>
@@ -85,13 +83,13 @@ export function ImportSection() {
               ? `Achats : ${plural(acceptedCount(imported.shopping, imported.collection), 'carte', 'cartes')} dans la liste d’achats, ${plural(imported.shopping.orders.length, 'commande', 'commandes')}.`
               : 'Ce fichier date d’avant le module d’achats : votre liste d’achats, vos commandes et votre budget actuels sont conservés.'}
           </p>
-          <Stack direction="horizontal" gap={3} wrap>
+          <div className={styles.buttons}>
             <Button onClick={() => setConfirming(true)}>Importer</Button>
             <Button variant="ghost" onClick={reset}>
               Retirer ce fichier
             </Button>
-          </Stack>
-        </Stack>
+          </div>
+        </div>
       )}
 
       <ConfirmDialog

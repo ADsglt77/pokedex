@@ -12,6 +12,7 @@ import { findCard } from '@/lib/species'
 import { details, formatEuro, formatInteger, formatMonth, plural } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
+import { Panel } from '@/components/Panel'
 import { BudgetField } from './BudgetField'
 import styles from './ShoppingPage.module.css'
 
@@ -38,15 +39,14 @@ export function BudgetPanel() {
   const perSpecies = costPerSpecies(orders, (cardId) => findCard(cardId, collection)?.dexIds ?? [])
 
   return (
-    <Stack gap={8} className={styles.panel}>
-      <Stack gap={4}>
-        <h2 className={styles.sectionTitle}>Réglages</h2>
+    <Stack gap={6} className={styles.panel}>
+      <Panel title="Réglages" description="Enregistrés en quittant le champ ; vide vaut 0.">
         <div className={styles.formGrid3}>
           <BudgetField field="monthly" />
           <BudgetField field="ceiling" />
           <BudgetField field="shippingReserve" />
         </div>
-      </Stack>
+      </Panel>
 
       <div className="stat-grid">
         <Stat
@@ -78,8 +78,11 @@ export function BudgetPanel() {
         />
       </div>
 
-      <Stack gap={4}>
-        <h2 className={styles.sectionTitle}>Mois par mois</h2>
+      <Panel
+        flush
+        title="Mois par mois"
+        description="Chaque commande compte une fois, dans le mois de sa date d’achat : cartes, port et frais, moins le remboursé. Une commande annulée ne compte pas."
+      >
         <Table
           className={styles.table}
           data={months}
@@ -114,10 +117,9 @@ export function BudgetPanel() {
             },
           ]}
         />
-      </Stack>
+      </Panel>
 
-      <Stack gap={4}>
-        <h2 className={styles.sectionTitle}>Par fournisseur</h2>
+      <Panel title="Par fournisseur" flush>
         <Table
           className={styles.table}
           data={suppliers}
@@ -134,11 +136,7 @@ export function BudgetPanel() {
             },
           ]}
         />
-        <p className="muted">
-          Chaque commande compte une fois, dans le mois de sa date d’achat : cartes, port et frais,
-          moins le remboursé. Une commande annulée ne compte pas.
-        </p>
-      </Stack>
+      </Panel>
     </Stack>
   )
 }

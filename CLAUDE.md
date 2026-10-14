@@ -86,8 +86,8 @@ bun server/create-user.ts <e-mail>       # change le mot de passe du compte (ou 
 | `src/config/` | Générations, couleurs des types, achats (budget par défaut, niveaux de budget, priorités, fournisseurs), tâches d'ingestion (`jobs` : leur rythme, que lisent le serveur et la page Données) : configuration, pas de logique |
 | `src/lib/` | Règles **pures** : `species` (espèces, données par le serveur avant le premier affichage ; carte d'un id), `cardmarket` (page et id saisis, ce que le favori envoie, code du favori), `card-code` (le code d'une carte dans sa référence, sa clé ; sans import, le serveur s'en sert : `jobs/catalog.ts`), `card-images` (l'image d'une carte chez Pokécardex, d'après sa série et son rang ou d'après sa référence ; d'où vient une image), `card-catalog` (les cartes japonaises d'un Pokémon, la carte d'une référence, l'image retrouvée : `findCardImage`), `pokedex` (modèle : la carte de chaque Pokémon, progression, résumé), `collection` (modifications : statut, prix payé, ajout et retrait d'une carte ; l'id d'une carte : `newCardId`), `filters` (adresse, liens filtrés, recherche), `transfer` (export, import, CSV, lecture du stockage), `prices` (prix Cardmarket d'une carte, écart à sa moyenne sur 30 jours : `priceChange`, valeur, coût pour compléter, courbes, plus fortes hausses et baisses : `priceMovers`), `format`, `settled` (une promesse que `use()` lit sans attendre), `api` (lecture de l'API, mémoïsée ; ce qu'on en tire, calculé une fois par réponse : `derived`), `time` (durées en ms, jours : `addDays`, `daysBetween` ; le serveur s'en sert aussi), `auth-client` (client Better Auth ; l'adresse de connexion qui ramène à la page : `loginPath`), `sync` (la règle de la synchronisation) ; achats : `wishlist` (préférences, filtres, CSV de la liste), `orders` (coût, report sur la collection, doublons, commandes en retard), `budget` (par mois, par fournisseur), `purchase-planner` (prochaine commande) |
 | `src/store/` | Zustand : `collection` et `shopping` (liste d'achats, commandes, budget), dans `localStorage` ; `prices` (`/api/prices`) ; `sync` (la collection du compte connecté, `/api/collection`). `persist` les enregistre et les garde d'accord entre onglets |
-| `src/hooks/` | `usePokedex` (modèle partagé par toutes les pages), `useNotify` (toasts + « Annuler »), `usePokedexFilters`, `useCardDraft` (saisie d'une carte), `useExportCollection` |
-| `src/components/` | Composants métier partagés par plusieurs pages (carte, champs d'une carte, tuile, réglette, courbe, réglages d'achat d'une carte…) (lien « Voir sur Cardmarket » : `CardmarketLink` ; commandes en retard : `LateOrdersAlert` ; bouton d'export avant de remplacer ou d'effacer : `ExportCollectionButton`) et les seuls génériques absents de camply (confirmation, en-tête de page, lien externe, crédit d'une image, champ enregistré en le quittant, `SegmentedField`), le compte dans l'en-tête (`AccountMenu`) et la question d'un conflit (`SyncConflictDialog`) ; le reste vient de camply |
+| `src/hooks/` | `usePokedex` (modèle partagé par toutes les pages), `useNotify` (toasts + « Annuler »), `usePokedexFilters`, `useCardDraft` (saisie d'une carte), `useExportCollection`, `useMediaQuery` |
+| `src/components/` | Composants métier partagés par plusieurs pages (carte, champs d'une carte, tuile, réglette, courbe, réglages d'achat d'une carte…) (lien « Voir sur Cardmarket » : `CardmarketLink` ; commandes en retard : `LateOrdersAlert` ; bouton d'export avant de remplacer ou d'effacer : `ExportCollectionButton`) et les seuls génériques absents de camply (confirmation, en-tête de page `PageHeader`, bloc de page `Panel`, lien externe, crédit d'une image, champ enregistré en le quittant, `SegmentedField`), la coquille (`AppShell` : navigation ; `AppSearch` : la recherche Ctrl/⌘ K), le compte (`AccountMenu`), la jauge du budget (`BudgetMeter`, accueil et achats) et la question d'un conflit (`SyncConflictDialog`) ; le reste vient de camply |
 | `src/pages/` | Une page par route ; les sous-composants d'une page vivent dans son dossier (`pokemon/CardForm` : ajouter ou corriger la carte d'un Pokémon ; `AddCardPage` : `/ajouter`, ouverte par le favori ; `LoginPage` : `/connexion` ; `WelcomePage` : `/bienvenue`, la première visite) |
 | `tests/` | Tests `bun test` de la logique des achats, de la synchronisation et de l'historique des prix (`tsconfig.tests.json`) |
 | `server/` | Bun, le serveur (`tsconfig.server.json`) : `index.ts` (lance le serveur ; écrit le code de première visite), `app.ts` (l'API, Elysia : un plugin par domaine, paramètres et corps validés par leurs schémas, 422 sinon ; 404 sans corps ; documentation OpenAPI à `/api/docs` en développement), `reference.ts` (les données de référence : état des tâches, espèces, catalogue, prix, historique), `db.ts` (SQLite dans `DATA_DIR`, `.data/` en local : `data.db`, les données de référence, et `app.db`, le compte et la collection ; schéma par étapes, `PRAGMA user_version`), `auth.ts` (Better Auth : un seul compte, créé à la première visite, une session ; `/api/auth/*`, `/api/account`, la macro `auth` des routes du compte : session, origine, `no-store`), `collection.ts` (`/api/collection`), `create-user.ts`, `jobs/species.ts`, `ingest.ts` (les tâches d'ingestion, une à la demande ou `--loop`), `jobs/catalog.ts`, `jobs/prices.ts`, `jobs/images.ts`, `jobs/backups.ts`, `images.ts` (les images copiées, dans `IMAGES_DIR` : leur adresse d'origine, la copie, la copie à la demande), `history.ts` (l'historique des prix, une ligne par carte et par année), `snapshots.ts` (les grosses réponses, calculées en fin de tâche et gardées compressées), `legacy-prices.ts` (reprise des anciens fichiers de prix), `lib/net.ts` (cache disque, requêtes identifiées de 2 min au plus, file à concurrence limitée qui attend les requêtes en cours avant de lever une erreur), `lib/pokecardex.ts` (les pages de Pokécardex, déchiffrées ; une toutes les 3 s) |
@@ -188,13 +188,13 @@ Points à connaître :
   relancée le même jour, la tâche remplace le prix du jour). Rien n'est retéléchargé (29 Mo) tant
   que le guide n'a pas changé (`sources` : son `Last-Modified`). En fin de tâche, la réponse de
   `/api/prices` est calculée et gardée compressée (`snapshots`, avec un ETag : 304 si le navigateur
-  l'a déjà). L'app la charge au premier écran qui affiche un prix (pas l'accueil ni le Pokédex), et
-  l'historique d'une carte à la demande (`/api/prices/<id>`) : la courbe, le nom affiché dans le
-  formulaire pour vérifier l'id saisi (au départ du champ). Sans serveur, ou base encore vide,
-  l'app marche sans prix. Une réponse manquante (404) n'est pas redemandée ; après une panne
-  passagère (réseau, délai, réponse illisible), elle l'est la fois suivante où elle sert, au plus
-  une fois par minute (`store/prices.ts`). Une carte sans id Cardmarket, ou dont l'id n'a pas de
-  prix ce jour, n'a pas de prix (aucun n'est inventé ; Pokécardex donne l'id de presque toutes).
+  l'a déjà). L'app la charge au premier écran qui affiche un prix (l'accueil, pour sa valeur ;
+  pas le Pokédex), et l'historique d'une carte à la demande (`/api/prices/<id>`) : la courbe,
+  le nom affiché dans le formulaire pour vérifier l'id saisi (au départ du champ). Sans serveur,
+  ou base encore vide, l'app marche sans prix. Une réponse manquante (404) n'est pas redemandée ;
+  après une panne passagère (réseau, délai, réponse illisible), elle l'est la fois suivante où elle
+  sert, au plus une fois par minute (`store/prices.ts`). Une carte sans id Cardmarket, ou dont
+  l'id n'a pas de prix ce jour, n'a pas de prix (aucun n'est inventé ; Pokécardex donne l'id de presque toutes).
   L'ancien historique (les fichiers du volume `prices`,
   un par carte) est repris au premier démarrage d'`ingest` (`legacy-prices.ts`), vérifié avant
   d'être gardé : nombre de cartes, somme des prix, échantillon relu tel que l'API le sert.
@@ -289,17 +289,35 @@ Points à connaître :
   construit avec `pokedexUrl`. La recherche passe par `flushSync` (le routeur met l'adresse à jour
   dans une transition, le champ suivrait la frappe en retard) ; la grille, mémoïsée, suit par
   `useDeferredValue`.
-- Interface : les cartes portent la couleur, l'interface reste sobre (thème camply). Échelle de
-  texte dans `styles/global.css` (`--text-xs`, `--text-sm`, `--text-md` ; `--title-sm` pour les
-  `h3`, `--title-md` pour les `h2` ; les titres de page ont leur taille fluide) : une taille hors
-  d'elle doit avoir une raison. Liens soulignés fins, pleins au survol ; statistiques par deux,
-  par quatre au-delà de 56rem (`.stat-grid`). Navigation : barre d'onglets en bas jusqu'à 52rem
-  (en haut, les six onglets ne tiendraient pas à côté du nom et du compte), onglets serrés et
-  compte en icône jusqu'à 64rem. Un avertissement de l'app (export, stockage) s'aligne sur le
-  conteneur des pages. La fiche d'un Pokémon : statut et prix payé, prix Cardmarket (id et lien
-  sous son titre), achat, séparés d'un filet ; seul effet appuyé de l'app, la carte en grand suit
-  la souris et la lumière y glisse (`CardStage` : variables CSS, sans rendu React ; ni au toucher
-  ni en mouvement réduit).
+- Interface : les cartes portent la couleur, l'interface reste sobre (thème camply). Le système
+  de design vit dans `styles/global.css` : échelle de texte (`--text-xs`, `--text-sm`,
+  `--text-md` ; `--title-sm`, `--title-md` ; les titres de page ont leur taille fluide), rythme
+  (`--space-block` entre les blocs d'une page, `--space-panel` dans un panneau), mise en page
+  (`--sidebar-width`, `--tabbar-height`), mouvement (`--ease-out`, `--duration-fast`) : une valeur
+  hors d'eux doit avoir une raison. Une page : `PageHeader` (titre, phrase, actions à droite),
+  puis ses blocs en `Panel` (une `Card` de camply : titre `h2`, phrase, actions, contenu ; `flush`
+  pour un tableau bord à bord) ; statistiques par deux, par quatre au-delà de 56rem
+  (`.stat-grid`, plus compactes sur téléphone). Navigation (`AppShell`) : à partir de 64rem, une
+  barre latérale collée (Collection : Accueil, Pokédex, Catalogue ; Achats et valeur : Achats,
+  Valeur ; la progression ; Données et le compte en pied) ; en dessous, une barre en haut (nom,
+  recherche, Données, compte en icône) et cinq onglets en bas. Partout, la recherche
+  (`AppSearch`, Ctrl/⌘ K, la palette de camply) : les pages, quelques actions (exporter, importer,
+  installer le favori) et les 1 025 Pokémon (noms français, anglais, japonais, numéro). Un
+  avertissement de l'app (export, stockage) s'aligne sur le conteneur des pages. L'accueil est un
+  tableau de bord : progression (anneau, réglette des régions), « À faire » (commandes en retard,
+  cartes sous leur prix maximum, cartes à compléter, chacune vers sa liste filtrée), indicateurs
+  (valeur, dépensé ce mois-ci, liste d'achats, commandes), dernières cartes obtenues ; une
+  collection vide y trouve trois étapes pour commencer. Le Pokédex : recherche, filtres rapides de
+  possession avec leur nombre (les autres filtres appliqués), les autres filtres dans un panneau
+  (génération, type, carte), chacun rappelé en étiquette retirable. Le catalogue : l'extension,
+  puis un panneau (ses Pokémon qui ont déjà leur carte, réglages de l'ajout). Données : un
+  sommaire (collé à gauche sur grand écran) et un panneau par section, l'effacement bordé de
+  rouge. La fiche d'un Pokémon : fil d'Ariane (Pokédex › région › nom), puis la carte, collée à
+  l'écran, et ses panneaux (statut et prix payé, prix Cardmarket, achat, « Dans le Pokédex ») ;
+  seul effet appuyé de l'app, la carte en grand suit la souris et la lumière y glisse
+  (`CardStage` : variables CSS, sans rendu React ; ni au toucher ni en mouvement réduit). Les
+  nombres formatés gardent une espace insécable visible (`spaced`, `lib/format.ts` : l'espace fine
+  de `Intl` manque à certaines polices).
 - Performance (mesurer en production, `bun run build` puis `bun run preview` : `bun dev` est 3 à 4
   fois plus lent) : le Pokédex affiche 1 025 pochettes. Seules celles à l'écran sont dessinées
   (`content-visibility`, de même pour la liste d'achats et le catalogue), les marques de

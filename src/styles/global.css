@@ -1,4 +1,9 @@
-/* Le thème vient de @camply/ui (tokens --camply-*) ; on n'ajoute que les bases de la page. */
+/*
+ * Le système de design de l'app : le thème vient de @camply/ui (couleurs, rayons, ombres,
+ * espacements `--camply-*`) ; on n'ajoute ici que ce qui est propre à l'app : la mise en page
+ * (barre latérale, barres du haut et du bas, largeur des pages), l'échelle de texte, le rythme
+ * entre les blocs, les mouvements.
+ */
 
 *,
 *::before,
@@ -16,6 +21,15 @@
   --text-md: 0.875rem;
   --title-sm: 1.125rem;
   --title-md: 1.5rem;
+  /* La coquille (AppShell) : barre latérale sur grand écran, barres du haut et du bas ailleurs. */
+  --sidebar-width: 15.5rem;
+  --tabbar-height: 4rem;
+  /* Entre les blocs d'une page (panneaux, sections), et dans un panneau. */
+  --space-block: clamp(1.5rem, 1rem + 1.5vw, 2rem);
+  --space-panel: clamp(1rem, 0.75rem + 1vw, 1.5rem);
+  /* Le mouvement de l'app : une arrivée qui ralentit, rapide pour un survol. */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-fast: 0.15s;
 }
 
 html {
@@ -138,6 +152,30 @@ img {
   .stat-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1rem;
+  }
+}
+
+/* Téléphone : des statistiques plus compactes, pour que le contenu de la page arrive vite.
+   Classes internes de camply (pas une API) : à revérifier après une mise à jour. */
+@media (max-width: 40rem) {
+  .stat-grid .camply-stat__root {
+    padding: 0.875rem 1rem;
+  }
+
+  .stat-grid .camply-stat__top {
+    margin-bottom: 0.375rem;
+  }
+
+  .stat-grid .camply-stat__icon {
+    display: none;
+  }
+
+  .stat-grid .camply-stat__value {
+    font-size: 1.5rem;
+  }
+
+  .stat-grid .camply-stat__bottom {
+    margin-top: 0.375rem;
   }
 }
 

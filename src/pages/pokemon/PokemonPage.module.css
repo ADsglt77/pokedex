@@ -54,13 +54,14 @@
   container-type: inline-size;
   display: flex;
   flex-direction: column;
-  gap: 3rem;
+  gap: var(--space-block);
   min-width: 0;
 }
 
 .columns {
   display: grid;
-  gap: 2.5rem;
+  gap: var(--space-block);
+  align-items: start;
 }
 
 @container (min-width: 46rem) {

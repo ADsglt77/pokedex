@@ -9,7 +9,7 @@ import { wishlistEstimate } from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
 import { useWishlist } from '@/hooks/useWishlist'
-import { BudgetMeter } from './BudgetMeter'
+import { BudgetMeter } from '@/components/BudgetMeter'
 
 /** Le mois en cours en un coup d'œil : dépensé, restant, liste d'achats, Pokémon à débloquer. */
 export function BudgetOverview() {

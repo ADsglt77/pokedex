@@ -1,5 +1,6 @@
-import { DescriptionList, SkeletonText, Stack } from '@camply/ui'
+import { DescriptionList, SkeletonText } from '@camply/ui'
 import { Suspense, use } from 'react'
+import { Panel } from '@/components/Panel'
 import { artworkUrl, generationById } from '@/config/pokedex'
 import { loadSpeciesDetails } from '@/lib/species'
 import { formatDecimal } from '@/lib/format'
@@ -27,9 +28,7 @@ export function SpeciesAbout({
   showArtwork: boolean
 }) {
   return (
-    <Stack as="aside" gap={5} className={styles.about} aria-labelledby="about-title">
-      <h2 id="about-title">Dans le Pokédex</h2>
-
+    <Panel title="Dans le Pokédex" className={styles.about}>
       {/* Sans carte, l'illustration officielle — clairement présentée comme telle. */}
       {showArtwork && (
         <figure className={styles.artwork}>
@@ -45,7 +44,7 @@ export function SpeciesAbout({
       <Suspense fallback={<SkeletonText lines={4} />}>
         <SpeciesDetails species={species} />
       </Suspense>
-    </Stack>
+    </Panel>
   )
 }
 

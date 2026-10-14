@@ -1,8 +1,13 @@
-import { Button, IconButton, Input, Kbd, Select, Stack } from '@camply/ui'
+import { Button, IconButton, Input, Kbd, Popover, Select, Stack, Tag, Toggle } from '@camply/ui'
 import { ArrowDown01, ArrowDown10, Search, SlidersHorizontal, X } from '@camply/ui/icons'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { ProgressRuler } from '@/components/ProgressRuler'
-import { GENERATION_OPTIONS, POKEMON_TYPES } from '@/config/pokedex'
+import {
+  GENERATION_OPTIONS,
+  generationById,
+  generationLabel,
+  POKEMON_TYPES,
+} from '@/config/pokedex'
 import { cx } from '@/lib/cx'
 import {
   activeFilterCount,
@@ -10,27 +15,35 @@ import {
   type PokedexFilters,
   type PossessionFilter,
 } from '@/lib/filters'
-import { formatInteger, unlockedOf } from '@/lib/format'
+import { formatInteger } from '@/lib/format'
 import type { Pokedex } from '@/lib/pokedex'
 import type { GenerationId, PokemonTypeId } from '@/types'
 import styles from './PokedexToolbar.module.css'
 
-const POSSESSION_OPTIONS: { value: PossessionFilter; label: string }[] = [
-  { value: 'all', label: 'Tous les Pokémon' },
+/** Les filtres rapides, toujours visibles : où en est chaque Pokémon. */
+const CHIPS: { value: PossessionFilter; label: string }[] = [
+  { value: 'all', label: 'Tous' },
   { value: 'owned', label: 'Débloqués' },
+  { value: 'missing', label: 'À débloquer' },
   { value: 'ordered', label: 'Carte commandée' },
   { value: 'wanted', label: 'Carte souhaitée' },
-  { value: 'missing', label: 'À débloquer' },
 ]
 
 // Les listes de camply n'acceptent que des chaînes : '' veut dire « tout ».
+const CARD_LABELS: Record<CardFilter, string> = {
+  with: 'Avec carte',
+  without: 'Sans carte',
+  'no-image': 'Carte sans image',
+  'no-cardmarket': 'Carte sans id Cardmarket',
+  'no-paid': 'Possédée sans prix payé',
+}
+
 const CARD_OPTIONS: { value: CardFilter | ''; label: string }[] = [
   { value: '', label: 'Avec ou sans carte' },
-  { value: 'with', label: 'Avec carte' },
-  { value: 'without', label: 'Sans carte' },
-  { value: 'no-image', label: 'Carte sans image' },
-  { value: 'no-cardmarket', label: 'Carte sans id Cardmarket' },
-  { value: 'no-paid', label: 'Possédée sans prix payé' },
+  ...(Object.entries(CARD_LABELS) as [CardFilter, string][]).map(([value, label]) => ({
+    value,
+    label,
+  })),
 ]
 
 const TYPE_OPTIONS: { value: PokemonTypeId | ''; label: string }[] = [
@@ -44,26 +57,28 @@ interface PokedexToolbarProps {
   filters: PokedexFilters
   setFilters: (patch: Partial<PokedexFilters>) => void
   pokedex: Pokedex
+  /** Le nombre de Pokémon de chaque filtre rapide, les autres filtres appliqués. */
+  counts: Record<PossessionFilter, number>
   /** Nombre de résultats, `null` quand rien ne filtre. */
   resultCount: number | null
   onReset: () => void
 }
 
 /**
- * La barre du Pokédex, collée en haut : recherche (raccourci « / »), filtres (repliés sur
- * téléphone), réglette des générations (grand écran), nombre de résultats.
+ * La barre du Pokédex, collée en haut : recherche (raccourci « / »), filtres rapides de possession
+ * avec leur nombre, les autres filtres dans un panneau (génération, type, carte), l'ordre, la
+ * réglette des générations (grand écran), et les filtres actifs, chacun retirable.
  */
 export function PokedexToolbar({
   filters,
   setFilters,
   pokedex,
+  counts,
   resultCount,
   onReset,
 }: PokedexToolbarProps) {
   const search = useRef<HTMLInputElement>(null)
-  // Sur téléphone, les filtres se replient derrière un bouton ; ouverts d'emblée sur tablette.
-  const [filtersOpen, setFiltersOpen] = useState(() => matchMedia('(min-width: 40rem)').matches)
-  const count = activeFilterCount(filters)
+  const panelCount = activeFilterCount(filters) - Number(filters.possession !== 'all')
 
   // « / » place le curseur dans la recherche, sauf quand on tape déjà dans un champ.
   useEffect(() => {
@@ -82,9 +97,34 @@ export function PokedexToolbar({
     search.current?.focus()
   }
 
+  // Les filtres du panneau en cours, chacun retirable d'un clic.
+  const tags: { key: string; label: string; remove: () => void }[] = []
+  const generation = filters.generation && generationById(filters.generation)
+  if (generation) {
+    tags.push({
+      key: 'generation',
+      label: generationLabel(generation),
+      remove: () => setFilters({ generation: null }),
+    })
+  }
+  if (filters.type) {
+    tags.push({
+      key: 'type',
+      label: `Type ${POKEMON_TYPES[filters.type].label}`,
+      remove: () => setFilters({ type: null }),
+    })
+  }
+  if (filters.card) {
+    tags.push({
+      key: 'card',
+      label: CARD_LABELS[filters.card],
+      remove: () => setFilters({ card: null }),
+    })
+  }
+
   return (
-    <Stack gap={3} className={styles.toolbar} role="search">
-      <Stack direction="horizontal" align="center" gap={3} wrap>
+    <div className={styles.toolbar} role="search">
+      <div className={styles.row}>
         <Input
           ref={search}
           className={styles.search}
@@ -114,56 +154,62 @@ export function PokedexToolbar({
           }
         />
 
-        <Button
-          className={styles.filtersToggle}
-          variant="secondary"
-          leftIcon={<SlidersHorizontal size={16} />}
-          aria-expanded={filtersOpen}
-          aria-controls="pokedex-filters"
-          onClick={() => setFiltersOpen((open) => !open)}
-        >
-          Filtres{count > 0 && ` (${count})`}
-        </Button>
+        <div className={styles.chips} role="group" aria-label="Possession">
+          {CHIPS.map(({ value, label }) => (
+            <Toggle
+              key={value}
+              size="sm"
+              pressed={filters.possession === value}
+              onChange={() => setFilters({ possession: value })}
+              className={styles.chip}
+            >
+              {label}
+              <span className={cx(styles.count, 'numeric')}>{formatInteger(counts[value])}</span>
+            </Toggle>
+          ))}
+        </div>
 
-        <Stack
-          id="pokedex-filters"
-          direction="horizontal"
-          align="center"
-          gap={2}
-          wrap
-          className={cx(styles.filters, filtersOpen && styles.open)}
-        >
-          <Select
-            aria-label="Possession"
-            size="sm"
-            options={POSSESSION_OPTIONS}
-            value={filters.possession}
-            onChange={(possession) => setFilters({ possession })}
-          />
-          <Select
-            aria-label="Carte"
-            size="sm"
-            options={CARD_OPTIONS}
-            value={filters.card ?? ''}
-            onChange={(card) => setFilters({ card: card || null })}
-          />
-          <Select
-            aria-label="Type"
-            size="sm"
-            options={TYPE_OPTIONS}
-            value={filters.type ?? ''}
-            onChange={(type) => setFilters({ type: type || null })}
-          />
-          <Select
-            className={styles.generationSelect}
-            aria-label="Génération"
-            size="sm"
-            options={GENERATION_OPTIONS}
-            value={filters.generation ? String(filters.generation) : ''}
-            onChange={(generation) =>
-              setFilters({ generation: generation ? (Number(generation) as GenerationId) : null })
+        <div className={styles.actions}>
+          <Popover
+            placement="bottom-end"
+            trigger={
+              <Button
+                variant="secondary"
+                size="sm"
+                leftIcon={<SlidersHorizontal size={15} />}
+                aria-label={`Filtres${panelCount ? ` (${panelCount} actifs)` : ''}`}
+              >
+                Filtres
+                {panelCount > 0 && <span className={styles.badge}>{panelCount}</span>}
+              </Button>
             }
-          />
+          >
+            <Stack gap={3} className={styles.panel}>
+              <Select
+                label="Génération"
+                size="sm"
+                options={GENERATION_OPTIONS}
+                value={filters.generation ? String(filters.generation) : ''}
+                onChange={(value) =>
+                  setFilters({ generation: value ? (Number(value) as GenerationId) : null })
+                }
+              />
+              <Select
+                label="Type"
+                size="sm"
+                options={TYPE_OPTIONS}
+                value={filters.type ?? ''}
+                onChange={(type) => setFilters({ type: type || null })}
+              />
+              <Select
+                label="Carte"
+                size="sm"
+                options={CARD_OPTIONS}
+                value={filters.card ?? ''}
+                onChange={(card) => setFilters({ card: card || null })}
+              />
+            </Stack>
+          </Popover>
           <IconButton
             label="Numéros décroissants"
             size="sm"
@@ -173,20 +219,26 @@ export function PokedexToolbar({
           >
             {filters.descending ? <ArrowDown10 size={18} /> : <ArrowDown01 size={18} />}
           </IconButton>
-        </Stack>
-      </Stack>
+        </div>
+      </div>
 
       {/* Sur grand écran, la réglette sert de filtre de génération. */}
       <div className={styles.ruler}>
         <ProgressRuler
           generations={pokedex.generations}
           selected={filters.generation}
-          onSelect={(generation) => setFilters({ generation })}
+          onSelect={(value) => setFilters({ generation: value })}
         />
       </div>
 
       <div className={styles.status}>
-        <span className="numeric">{unlockedOf(pokedex.progress)}</span>
+        <span className={styles.tags}>
+          {tags.map((tag) => (
+            <Tag key={tag.key} onRemove={tag.remove} removeLabel={`Retirer le filtre ${tag.label}`}>
+              {tag.label}
+            </Tag>
+          ))}
+        </span>
         <span className={styles.results}>
           {/* Toujours présente : une région annoncée doit exister avant son premier contenu. */}
           <span aria-live="polite" className="numeric">
@@ -194,11 +246,11 @@ export function PokedexToolbar({
           </span>
           {resultCount !== null && (
             <Button size="sm" variant="ghost" onClick={onReset}>
-              Réinitialiser les filtres
+              Réinitialiser
             </Button>
           )}
         </span>
       </div>
-    </Stack>
+    </div>
   )
 }

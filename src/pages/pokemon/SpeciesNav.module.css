@@ -7,6 +7,21 @@
   gap: 0.75rem 1rem;
 }
 
+/* Le fil d'Ariane : des liens discrets, la page en cours en clair. */
+.crumbs {
+  margin-right: 0.5rem;
+  font-size: var(--text-md);
+}
+
+.crumb {
+  color: var(--camply-text-muted);
+  text-decoration: none;
+}
+
+.crumb:hover {
+  color: var(--camply-accent);
+}
+
 .links {
   display: flex;
   flex-wrap: wrap;

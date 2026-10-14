@@ -3,6 +3,12 @@
   color: var(--camply-warn);
 }
 
+/* En bas de la barre latérale : de sa largeur, aligné comme ses liens. */
+.wide {
+  justify-content: flex-start;
+  width: 100%;
+}
+
 /* L'adresse du compte et la phrase d'état : en casse normale, sur plusieurs lignes au besoin. */
 .email,
 .text {
@@ -17,29 +23,4 @@
   font-size: var(--text-sm);
   font-weight: 400;
   line-height: 1.4;
-}
-
-/* L'icône seule (le texte reste lu) : sur téléphone, la place manque pour l'état de la
-   synchronisation ; sur tablette, l'en-tête porte aussi les six onglets, et « Se connecter » s'y
-   efface aussi. */
-@media (max-width: 30rem), (min-width: 52.01rem) and (max-width: 64rem) {
-  .label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-}
-
-@media (min-width: 52.01rem) and (max-width: 64rem) {
-  .signIn {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
 }

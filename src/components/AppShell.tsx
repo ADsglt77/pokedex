@@ -1,25 +1,68 @@
-import { Banner, Button } from '@camply/ui'
-import { ChartLine, Database, Grid3x3, House, Layers, ShoppingCart } from '@camply/ui/icons'
-import { useEffect, useRef, useState } from 'react'
+import { Badge, Banner, Button, IconButton, Kbd, Progress, useCommandPalette } from '@camply/ui'
+import {
+  ChartLine,
+  Database,
+  Grid3x3,
+  House,
+  Layers,
+  Search,
+  ShoppingCart,
+  type IconProps,
+} from '@camply/ui/icons'
+import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { Link, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { AccountMenu } from '@/components/AccountMenu'
+import { AppSearch } from '@/components/AppSearch'
 import { ExternalLink } from '@/components/ExternalLink'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { usePokedex } from '@/hooks/usePokedex'
 import { POKECARDEX } from '@/lib/card-images'
 import { cx } from '@/lib/cx'
+import { formatDecimal, formatInteger, today } from '@/lib/format'
+import { latePendingOrders } from '@/lib/orders'
 import { DAY } from '@/lib/time'
 import { useCollectionStore } from '@/store/collection'
 import { useLastExport, useStorageFailure } from '@/store/persist'
+import { useShoppingStore } from '@/store/shopping'
 import { useSyncStore } from '@/store/sync'
 import styles from './AppShell.module.css'
 
-const NAV = [
-  { to: '/', label: 'Accueil', icon: House },
-  { to: '/pokedex', label: 'Pokédex', icon: Grid3x3 },
-  { to: '/catalogue', label: 'Catalogue', icon: Layers },
-  { to: '/valeur', label: 'Valeur', icon: ChartLine },
-  { to: '/achats', label: 'Achats', icon: ShoppingCart },
-  { to: '/donnees', label: 'Données', icon: Database },
+interface Place {
+  to: string
+  label: string
+  icon: ComponentType<IconProps>
+}
+
+/** La navigation, par usage : la collection, puis ce qui coûte. Données est à part (réglages). */
+const GROUPS: { label: string; places: Place[] }[] = [
+  {
+    label: 'Collection',
+    places: [
+      { to: '/', label: 'Accueil', icon: House },
+      { to: '/pokedex', label: 'Pokédex', icon: Grid3x3 },
+      { to: '/catalogue', label: 'Catalogue', icon: Layers },
+    ],
+  },
+  {
+    label: 'Achats et valeur',
+    places: [
+      { to: '/achats', label: 'Achats', icon: ShoppingCart },
+      { to: '/valeur', label: 'Valeur', icon: ChartLine },
+    ],
+  },
 ]
+const DATA: Place = { to: '/donnees', label: 'Données', icon: Database }
+/** La barre d'onglets du téléphone : cinq au plus, Données passe dans la barre du haut. */
+const TABS = GROUPS.flatMap((group) => group.places)
+
+/** La page ouverte : la fiche d'un Pokémon fait partie du Pokédex. */
+const isCurrent = (to: string, path: string) =>
+  to === '/'
+    ? path === '/'
+    : path.startsWith(to) || (to === '/pokedex' && path.startsWith('/pokemon'))
+
+/** Ctrl K, ou ⌘ K sur un Mac. */
+const SEARCH_KEYS = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘ K' : 'Ctrl K'
 
 /** L'action des avertissements de l'app (stockage, sauvegarde) : la section Exporter des Données. */
 const exportAction = (
@@ -27,12 +70,6 @@ const exportAction = (
     <Link to="/donnees#exporter">Exporter</Link>
   </Button>
 )
-
-/** L'onglet de la page : la fiche d'un Pokémon fait partie du Pokédex. */
-const isCurrent = (to: string, path: string) =>
-  to === '/'
-    ? path === '/'
-    : path.startsWith(to) || (to === '/pokedex' && path.startsWith('/pokemon'))
 
 function Emblem() {
   return (
@@ -52,16 +89,31 @@ function Emblem() {
   )
 }
 
+function Brand() {
+  return (
+    <Link to="/" className={styles.brand}>
+      <Emblem />
+      Mon Pokédex
+    </Link>
+  )
+}
+
 /**
- * La coquille de toutes les pages : lien d'évitement, en-tête et navigation (barre d'onglets en bas
- * sur téléphone), avertissement si le navigateur n'enregistre plus, pied de page, focus et
- * défilement à chaque changement de page.
+ * La coquille de toutes les pages. Grand écran : une barre latérale (recherche, navigation par
+ * groupes, progression, données et compte). Tablette et téléphone : une barre en haut (recherche,
+ * données, compte) et une barre d'onglets en bas. Partout : la recherche (Ctrl K), le lien
+ * d'évitement, les avertissements de l'app, le pied de page, le focus et le défilement à chaque
+ * changement de page.
  */
 export function AppShell() {
   const { pathname } = useLocation()
   const storageFailed = useStorageFailure((state) => state.failed)
   const main = useRef<HTMLElement>(null)
   const shownPath = useRef(pathname)
+  const [searching, setSearching] = useCommandPalette()
+  // Le compte n'existe qu'une fois (il suit la session et ouvre la question d'un conflit) : dans
+  // la barre latérale ou dans la barre du haut.
+  const wide = useMediaQuery('(min-width: 64rem)')
 
   // À chaque nouvelle page, le focus va au contenu (lecteurs d'écran, navigation au clavier).
   useEffect(() => {
@@ -70,18 +122,7 @@ export function AppShell() {
     main.current?.focus({ preventScroll: true })
   }, [pathname])
 
-  const navLinks = (className: string | undefined, withIcons: boolean) =>
-    NAV.map(({ to, label, icon: Icon }) => (
-      <Link
-        key={to}
-        to={to}
-        className={className}
-        aria-current={isCurrent(to, pathname) ? 'page' : undefined}
-      >
-        {withIcons && <Icon size={20} aria-hidden="true" />}
-        <span>{label}</span>
-      </Link>
-    ))
+  const search = () => setSearching(true)
 
   return (
     <div className={styles.shell}>
@@ -89,46 +130,92 @@ export function AppShell() {
         Aller au contenu
       </a>
 
-      <header className={styles.header}>
-        <div className={cx('container', styles.headerInner)}>
-          <Link to="/" className={styles.brand}>
-            <Emblem />
-            Mon Pokédex
-          </Link>
-          <nav aria-label="Navigation principale" className={styles.nav}>
-            {navLinks(styles.navLink, false)}
-          </nav>
-          <AccountMenu />
+      <aside className={styles.sidebar} aria-label="Barre latérale">
+        <Brand />
+        <button type="button" className={styles.searchField} onClick={search}>
+          <Search size={16} aria-hidden="true" />
+          <span>Rechercher…</span>
+          <Kbd size="sm" className={styles.searchKeys}>
+            {SEARCH_KEYS}
+          </Kbd>
+        </button>
+        <nav aria-label="Navigation principale" className={styles.sideNav}>
+          {GROUPS.map((group) => (
+            <div key={group.label} className={styles.group}>
+              <p className={styles.groupLabel}>{group.label}</p>
+              {group.places.map((place) => (
+                <SideLink key={place.to} place={place} pathname={pathname} />
+              ))}
+            </div>
+          ))}
+        </nav>
+        <ProgressCard />
+        <div className={styles.sideFoot}>
+          <SideLink place={DATA} pathname={pathname} />
+          {wide && <AccountMenu />}
         </div>
-      </header>
+      </aside>
 
-      {storageFailed ? (
-        <div className={cx('container', styles.notice)}>
-          <Banner tone="warn" action={exportAction}>
-            Le navigateur n’enregistre plus vos modifications (stockage plein ou bloqué) : elles
-            seront perdues en fermant la page. Exportez votre collection pour les garder.
-          </Banner>
-        </div>
-      ) : (
-        <BackupReminder />
-      )}
+      <div className={styles.content}>
+        <header className={styles.topbar}>
+          <Brand />
+          <div className={styles.topActions}>
+            <IconButton label="Rechercher" variant="ghost" onClick={search}>
+              <Search size={18} />
+            </IconButton>
+            <IconButton
+              asChild
+              label="Données et sauvegarde"
+              variant={isCurrent(DATA.to, pathname) ? 'soft' : 'ghost'}
+            >
+              <Link to={DATA.to} aria-current={isCurrent(DATA.to, pathname) ? 'page' : undefined}>
+                <Database size={18} />
+              </Link>
+            </IconButton>
+            {!wide && <AccountMenu compact />}
+          </div>
+        </header>
 
-      <main id="main" ref={main} tabIndex={-1} className={styles.main}>
-        {/* Une clé par adresse : chaque page (et chaque fiche) repart d'un état neuf. */}
-        <div key={pathname} className={styles.page}>
-          <Outlet />
-        </div>
-      </main>
+        {storageFailed ? (
+          <div className={cx('container', styles.notice)}>
+            <Banner tone="warn" action={exportAction}>
+              Le navigateur n’enregistre plus vos modifications (stockage plein ou bloqué) : elles
+              seront perdues en fermant la page. Exportez votre collection pour les garder.
+            </Banner>
+          </div>
+        ) : (
+          <BackupReminder />
+        )}
 
-      <footer className={cx('container', styles.footer)}>
-        Espèces PokéAPI, cartes et images <ExternalLink href={POKECARDEX}>Pokécardex</ExternalLink>,
-        prix Cardmarket. Projet personnel, sans lien avec Nintendo, Creatures, Game Freak ou The
-        Pokémon Company.
-      </footer>
+        <main id="main" ref={main} tabIndex={-1} className={styles.main}>
+          {/* Une clé par adresse : chaque page (et chaque fiche) repart d'un état neuf. */}
+          <div key={pathname} className={styles.page}>
+            <Outlet />
+          </div>
+        </main>
+
+        <footer className={cx('container', styles.footer)}>
+          Espèces PokéAPI, cartes et images{' '}
+          <ExternalLink href={POKECARDEX}>Pokécardex</ExternalLink>, prix Cardmarket. Projet
+          personnel, sans lien avec Nintendo, Creatures, Game Freak ou The Pokémon Company.
+        </footer>
+      </div>
 
       <nav aria-label="Navigation principale" className={styles.tabbar}>
-        {navLinks(styles.tab, true)}
+        {TABS.map(({ to, label, icon: Icon }) => (
+          <Link
+            key={to}
+            to={to}
+            className={styles.tab}
+            aria-current={isCurrent(to, pathname) ? 'page' : undefined}
+          >
+            <Icon size={20} aria-hidden="true" />
+            <span>{label}</span>
+          </Link>
+        ))}
       </nav>
+
+      <AppSearch open={searching} onClose={() => setSearching(false)} />
 
       <ScrollRestoration
         // Revenir au Pokédex avec les mêmes filtres, même par un lien, retrouve la position.
@@ -137,6 +224,47 @@ export function AppShell() {
         }
       />
     </div>
+  )
+}
+
+/** Un lien de la barre latérale ; les achats signalent les commandes en retard. */
+function SideLink({ place, pathname }: { place: Place; pathname: string }) {
+  const { to, label, icon: Icon } = place
+  const late = useShoppingStore((state) =>
+    to === '/achats' ? latePendingOrders(state.shopping.orders, today()).length : 0,
+  )
+  return (
+    <Link
+      to={to}
+      className={styles.sideLink}
+      aria-current={isCurrent(to, pathname) ? 'page' : undefined}
+    >
+      <Icon size={18} aria-hidden="true" />
+      <span>{label}</span>
+      {late > 0 && (
+        <Badge size="sm" tone="warn" className={styles.sideBadge}>
+          {formatInteger(late)}
+          <span className="visually-hidden"> en retard</span>
+        </Badge>
+      )}
+    </Link>
+  )
+}
+
+/** La progression, toujours sous les yeux : ce qui est débloqué sur 1 025, vers le Pokédex. */
+function ProgressCard() {
+  const { progress } = usePokedex()
+  return (
+    <Link to="/pokedex" className={styles.progressCard}>
+      <span className={styles.progressHead}>
+        <span>Progression</span>
+        <span className="numeric">{formatDecimal(progress.percent)} %</span>
+      </span>
+      <Progress size="sm" value={progress.percent} aria-hidden />
+      <span className={cx(styles.progressCount, 'numeric')}>
+        {formatInteger(progress.unlocked)} débloqués sur {formatInteger(progress.total)}
+      </span>
+    </Link>
   )
 }
 

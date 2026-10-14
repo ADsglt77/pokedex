@@ -1,13 +1,16 @@
-import { Button } from '@camply/ui'
-import { ArrowLeft, ArrowRight } from '@camply/ui/icons'
+import { Breadcrumbs, Button } from '@camply/ui'
+import { ArrowRight } from '@camply/ui/icons'
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { pokedexHref } from '@/hooks/usePokedexFilters'
+import { generationById } from '@/config/pokedex'
+import { pokedexUrl } from '@/lib/filters'
 import { formatDexNumber } from '@/lib/format'
 import type { PokemonSpecies } from '@/types'
 import styles from './SpeciesNav.module.css'
 
 interface SpeciesNavProps {
+  species: PokemonSpecies
   previous: PokemonSpecies | null
   next: PokemonSpecies | null
   /** Le prochain Pokémon sans carte, pour en ajouter à la suite ; `null` s'il n'y en a plus. */
@@ -15,10 +18,10 @@ interface SpeciesNavProps {
 }
 
 /**
- * Retour au Pokédex (filtres conservés), Pokémon voisins (aussi au clavier, ← et →) et prochain
- * Pokémon sans carte.
+ * Où l'on est (Pokédex, filtres conservés › région › Pokémon), Pokémon voisins (aussi au clavier, ← et
+ * →) et prochain Pokémon sans carte.
  */
-export function SpeciesNav({ previous, next, nextWithoutCard }: SpeciesNavProps) {
+export function SpeciesNav({ species, previous, next, nextWithoutCard }: SpeciesNavProps) {
   const navigate = useNavigate()
 
   // ← et → changent de Pokémon, sauf dans un champ ou une fenêtre ouverte, ou quand un réglage s'en
@@ -49,9 +52,27 @@ export function SpeciesNav({ previous, next, nextWithoutCard }: SpeciesNavProps)
   return (
     <nav aria-label="Navigation entre les Pokémon" className={styles.nav}>
       <div className={styles.links}>
-        <Button asChild variant="ghost" size="sm" leftIcon={<ArrowLeft size={16} />}>
-          <Link to={pokedexHref()}>Pokédex</Link>
-        </Button>
+        {/* Des liens du routeur dans les libellés : camply ferait des liens qui rechargent la page. */}
+        <Breadcrumbs
+          className={styles.crumbs}
+          items={[
+            {
+              label: (
+                <Link to={pokedexHref()} className={styles.crumb}>
+                  Pokédex
+                </Link>
+              ),
+            },
+            {
+              label: (
+                <Link to={pokedexUrl({ generation: species.generation })} className={styles.crumb}>
+                  {generationById(species.generation)!.region}
+                </Link>
+              ),
+            },
+            { label: species.names.fr },
+          ]}
+        />
         {nextWithoutCard && (
           <Button asChild variant="soft" size="sm" rightIcon={<ArrowRight size={16} />}>
             <Link to={`/pokemon/${nextWithoutCard.id}`}>

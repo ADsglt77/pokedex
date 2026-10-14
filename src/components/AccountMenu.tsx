@@ -6,6 +6,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SyncConflictDialog } from '@/components/SyncConflictDialog'
 import { useNotify } from '@/hooks/useNotify'
 import { authClient, loginPath } from '@/lib/auth-client'
+import { cx } from '@/lib/cx'
 import {
   hasUnsentChanges,
   setSyncUser,
@@ -54,11 +55,12 @@ const STATUS: Record<
 }
 
 /**
- * Le compte, dans l'en-tête : « Se connecter » ; connecté, l'état de la synchronisation et un menu
- * (synchroniser, se reconnecter, se déconnecter). Il suit la session pour la synchronisation
- * (`setSyncUser`) et ouvre la question d'un conflit.
+ * Le compte : « Se connecter » ; connecté, l'état de la synchronisation et un menu (synchroniser,
+ * se reconnecter, se déconnecter). Il suit la session pour la synchronisation (`setSyncUser`) et
+ * ouvre la question d'un conflit : un seul dans la page. En bas de la barre latérale, de sa largeur ;
+ * `compact` (barre du haut), son icône seule (le texte reste lu).
  */
-export function AccountMenu() {
+export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const { data: session, isPending } = authClient.useSession()
   const status = useSyncStore((state) => state.status)
   const conflict = useSyncStore((state) => state.conflict)
@@ -79,9 +81,15 @@ export function AccountMenu() {
   if (isPending) return null
   if (!session) {
     return pathname === '/connexion' ? null : (
-      <Button asChild size="sm" variant="ghost" leftIcon={<LogIn size={16} />}>
+      <Button
+        asChild
+        size="sm"
+        variant="ghost"
+        leftIcon={<LogIn size={16} />}
+        className={cx(!compact && styles.wide)}
+      >
         <Link to={login}>
-          <span className={styles.signIn}>Se connecter</span>
+          <span className={cx(compact && 'visually-hidden')}>Se connecter</span>
         </Link>
       </Button>
     )
@@ -101,15 +109,18 @@ export function AccountMenu() {
   return (
     <>
       <DropdownMenu
-        placement="bottom-end"
+        placement={compact ? 'bottom-end' : 'top-start'}
         trigger={
           <Button
             size="sm"
             variant="ghost"
             leftIcon={<Icon size={16} />}
-            className={shown === 'synced' || shown === 'syncing' ? undefined : styles.alert}
+            className={cx(
+              !compact && styles.wide,
+              shown !== 'synced' && shown !== 'syncing' && styles.alert,
+            )}
           >
-            <span className={styles.label}>{label}</span>
+            <span className={cx(compact && 'visually-hidden')}>{label}</span>
           </Button>
         }
       >

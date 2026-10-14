@@ -2,6 +2,10 @@
   position: sticky;
   top: 0;
   z-index: 10;
+  display: grid;
+  /* Une colonne qui ne s'élargit pas pour les filtres rapides : ils défilent dans la leur. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
   margin-inline: calc(-1 * var(--gutter));
   padding: 0.75rem var(--gutter) 0.5rem;
@@ -10,14 +14,62 @@
   background: color-mix(in srgb, var(--camply-bg) 96%, transparent);
 }
 
-.search {
-  flex: 1 1 16rem;
-  max-width: 26rem;
+/* La recherche, les filtres rapides, puis le panneau et l'ordre à droite ; à la ligne au besoin. */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.filtersToggle,
-.generationSelect {
-  display: none;
+.search {
+  flex: 1 1 16rem;
+  max-width: 24rem;
+}
+
+.chips {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.chip {
+  flex: none;
+}
+
+/* Le nombre de Pokémon d'un filtre rapide, plus discret que son nom. */
+.count {
+  color: var(--camply-text-muted-2);
+  font-weight: 500;
+}
+
+.chip[aria-pressed='true'] .count {
+  color: inherit;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-left: auto;
+}
+
+/* Le nombre de filtres actifs du panneau, sur son bouton. */
+.badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  margin-left: 0.25rem;
+  padding: 0 0.3rem;
+  border-radius: var(--camply-radius-pill);
+  background: var(--camply-accent);
+  color: var(--camply-accent-contrast);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.panel {
+  width: min(18rem, 80vw);
 }
 
 .status {
@@ -26,15 +78,21 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  min-height: 2rem;
   color: var(--camply-text-muted);
   font-size: var(--text-md);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
 }
 
 .results {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  margin-left: auto;
   color: var(--camply-text);
 }
 
@@ -45,31 +103,33 @@
   }
 }
 
-/* Écran moyen : la réglette laisse place à une liste, et les filtres se replient. */
-@media (max-width: 64rem) {
+/* Sans barre latérale, la réglette laisse place au panneau de filtres. */
+@media (max-width: 63.99rem) {
   .ruler {
     display: none;
   }
-
-  .filtersToggle,
-  .generationSelect {
-    display: inline-flex;
-  }
-
-  .filters {
-    display: none;
-    width: 100%;
-  }
-
-  .filters.open {
-    display: flex;
-    animation: unfold 0.2s ease-out;
-  }
 }
 
+/* Téléphone : la recherche et le panneau sur une ligne, puis les filtres rapides, qui défilent de
+   côté. */
 @media (max-width: 40rem) {
   .search {
+    flex-basis: 10rem;
     max-width: none;
+  }
+
+  .chips {
+    order: 3;
+    flex: 1 1 100%;
+    min-width: 0;
+    margin-inline: calc(-1 * var(--gutter));
+    padding-inline: var(--gutter);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .chips::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -77,12 +137,5 @@
 @media (max-height: 30rem) {
   .toolbar {
     position: static;
-  }
-}
-
-@keyframes unfold {
-  from {
-    opacity: 0;
-    transform: translateY(-0.25rem);
   }
 }

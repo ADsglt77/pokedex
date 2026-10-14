@@ -1,13 +1,31 @@
 .header {
-  margin-bottom: clamp(1.5rem, 1rem + 2vw, 2.5rem);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--camply-space-4) var(--camply-space-6);
+  margin-bottom: var(--space-block);
+}
+
+.titles {
+  display: grid;
+  gap: var(--camply-space-2);
+  min-width: 0;
 }
 
 .title {
-  font-size: clamp(2rem, 1.4rem + 2.5vw, 3.25rem);
+  font-size: clamp(1.875rem, 1.4rem + 1.8vw, 2.75rem);
+  letter-spacing: -0.02em;
 }
 
 .lede {
   max-width: 62ch;
   color: var(--camply-text-muted);
-  font-size: 1.0625rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--camply-space-2);
 }

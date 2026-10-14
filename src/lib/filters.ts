@@ -6,7 +6,7 @@ import type { PokedexEntry } from '@/lib/pokedex'
 import type { GenerationId, PokemonSpecies, PokemonTypeId } from '@/types'
 
 /** Débloqués (carte possédée), à débloquer (pas encore), ou carte commandée, souhaitée. */
-const POSSESSIONS = ['all', 'owned', 'ordered', 'wanted', 'missing'] as const
+export const POSSESSIONS = ['all', 'owned', 'ordered', 'wanted', 'missing'] as const
 export type PossessionFilter = (typeof POSSESSIONS)[number]
 
 /**

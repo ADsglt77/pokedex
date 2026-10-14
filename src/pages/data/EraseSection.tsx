@@ -21,20 +21,23 @@ export function EraseSection() {
   const summary = summarize(collection)
 
   return (
-    <DataSection id="effacer" title="Effacer ma collection" apart>
-      <p>
-        Supprime {synced ? 'de votre compte, sur tous vos appareils,' : 'de ce navigateur'} vos
-        cartes ajoutées, leurs statuts, leurs prix payés et la liste d’achats. Les commandes et le
-        budget sont conservés : ils gardent ce que vous avez dépensé.
-      </p>
-      <Button
-        tone="danger"
-        leftIcon={<Trash2 size={16} />}
-        disabled={isEmptySummary(summary)}
-        onClick={() => setConfirming(true)}
-      >
-        Effacer ma collection
-      </Button>
+    <DataSection
+      id="effacer"
+      title="Effacer ma collection"
+      danger
+      description={`Supprime ${synced ? 'de votre compte, sur tous vos appareils,' : 'de ce navigateur'} vos cartes ajoutées, leurs statuts, leurs prix payés et la liste d’achats. Les commandes et le budget sont conservés : ils gardent ce que vous avez dépensé.`}
+    >
+      <div>
+        <Button
+          variant="secondary"
+          tone="danger"
+          leftIcon={<Trash2 size={16} />}
+          disabled={isEmptySummary(summary)}
+          onClick={() => setConfirming(true)}
+        >
+          Effacer ma collection
+        </Button>
+      </div>
 
       <ConfirmDialog
         open={confirming}

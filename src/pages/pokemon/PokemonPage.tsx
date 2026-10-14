@@ -30,6 +30,7 @@ function SpeciesPage({ entry }: { entry: PokedexEntry }) {
     <div className="container">
       <title>{pageTitle(species.names.fr)}</title>
       <SpeciesNav
+        species={species}
         previous={getSpecies(species.id - 1)}
         next={getSpecies(species.id + 1)}
         nextWithoutCard={nextWithoutCard}

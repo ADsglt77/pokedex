@@ -1,17 +1,17 @@
 /* Vue d'ensemble et statistiques */
 
-.meter {
-  display: grid;
-  gap: 0.5rem;
-}
-
 .tabs {
   margin-top: 2.5rem;
 }
 
-/* Sur téléphone, les onglets passent à la ligne : tous restent visibles. */
+/* Les onglets défilent de côté quand ils manquent de place, sans barre de défilement. */
 .tabList {
-  flex-wrap: wrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabList::-webkit-scrollbar {
+  display: none;
 }
 
 .tabList > * {
@@ -46,8 +46,9 @@
   flex: 1 1 9rem;
 }
 
+/* La recherche plus large que les listes ; tout sur une ligne quand la place le permet. */
 .toolbar > .search {
-  flex: 2 1 100%;
+  flex: 2 1 16rem;
 }
 
 .switches {
@@ -56,12 +57,19 @@
   gap: 0.75rem 1.5rem;
 }
 
+/* La phrase à gauche, à une longueur lisible ; les boutons à droite, ou dessous s’ils manquent
+   de place. */
 .listHead {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem 1rem;
+}
+
+.listHead > p {
+  flex: 1 1 24rem;
+  max-width: 62ch;
 }
 
 .wishGrid {
@@ -78,11 +86,13 @@
 .wish {
   display: grid;
   grid-template-columns: 7.5rem minmax(0, 1fr);
-  gap: 1rem;
+  /* Le pied reste en bas quand la carte s’étire à la hauteur de ses voisines. */
+  grid-template-rows: 1fr auto;
+  gap: 0.75rem 1rem;
   width: 100%;
   /* La liste peut compter des centaines de cartes : le navigateur ne dessine que celles à l'écran. */
   content-visibility: auto;
-  contain-intrinsic-block-size: auto 13rem;
+  contain-intrinsic-block-size: auto 15rem;
 }
 
 .wishArt {
@@ -159,12 +169,15 @@
   overflow-wrap: anywhere;
 }
 
+/* Le pied de la carte, sous la vignette et le texte, séparé d’un filet. */
 .wishActions {
   display: flex;
+  grid-column: 1 / -1;
   align-items: center;
   justify-content: flex-end;
   gap: 0.25rem;
-  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--camply-border-soft);
 }
 
 .wishLink {

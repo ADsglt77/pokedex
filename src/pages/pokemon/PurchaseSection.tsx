@@ -1,5 +1,6 @@
 import { Button, SegmentedControl, Stack } from '@camply/ui'
 import { Link } from 'react-router'
+import { Panel } from '@/components/Panel'
 import { PreferenceFields } from '@/components/PreferenceFields'
 import { useCollectionAction } from '@/hooks/useNotify'
 import type { CardView } from '@/lib/pokedex'
@@ -42,12 +43,11 @@ export function PurchaseSection({ view }: { view: CardView }) {
     )
 
   return (
-    // La section prend la largeur de la fiche (son filet aussi), ses réglages celle des statuts.
-    <Stack as="section" gap={3} aria-labelledby="purchase-title">
-      <h3 id="purchase-title">Achat</h3>
+    // Le panneau prend la largeur de la fiche, ses réglages celle des statuts.
+    <Panel title="Achat">
       <Stack gap={3} className={styles.group}>
         <SegmentedControl
-          aria-labelledby="purchase-title"
+          aria-label="Liste d’achats"
           size="sm"
           fullWidth
           options={CHOICES}
@@ -66,7 +66,7 @@ export function PurchaseSection({ view }: { view: CardView }) {
           </>
         )}
       </Stack>
-    </Stack>
+    </Panel>
   )
 }
 

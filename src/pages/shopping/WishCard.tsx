@@ -101,26 +101,27 @@ export function WishCard({
         </div>
 
         {preference.note && <p className={styles.wishNote}>{preference.note}</p>}
+      </div>
 
-        <div className={styles.wishActions}>
-          <CardmarketLink card={card} className={styles.wishLink} />
-          <IconButton
-            label={`Modifier ${title}, ${card.reference}`}
-            size="sm"
-            variant="ghost"
-            onClick={onEdit}
-          >
-            <Pencil size={15} />
-          </IconButton>
-          <IconButton
-            label={`Retirer ${title}, ${card.reference}, de la liste d’achats`}
-            size="sm"
-            variant="ghost"
-            onClick={onRemove}
-          >
-            <X size={15} />
-          </IconButton>
-        </div>
+      {/* Le pied de la carte, sur toute sa largeur : le lien et les actions ne se serrent pas. */}
+      <div className={styles.wishActions}>
+        <CardmarketLink card={card} className={styles.wishLink} />
+        <IconButton
+          label={`Modifier ${title}, ${card.reference}`}
+          size="sm"
+          variant="ghost"
+          onClick={onEdit}
+        >
+          <Pencil size={15} />
+        </IconButton>
+        <IconButton
+          label={`Retirer ${title}, ${card.reference}, de la liste d’achats`}
+          size="sm"
+          variant="ghost"
+          onClick={onRemove}
+        >
+          <X size={15} />
+        </IconButton>
       </div>
     </Card>
   )

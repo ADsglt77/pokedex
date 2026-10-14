@@ -1,31 +1,27 @@
-import { Stack } from '@camply/ui'
 import type { ReactNode } from 'react'
-import { cx } from '@/lib/cx'
+import { Panel } from '@/components/Panel'
 import styles from './DataPage.module.css'
 
 interface DataSectionProps {
   id: string
   title: string
+  /** La phrase sous le titre : ce que fait la section. */
+  description?: ReactNode
   children: ReactNode
-  /** Section mise à part (effacement). */
-  apart?: boolean
+  /** Section dangereuse (effacement), bordée de rouge. */
+  danger?: boolean
 }
 
-/** Une section de la page Données : un titre et son contenu ; `apart` l'écarte (effacement). */
-export function DataSection({ id, title, children, apart }: DataSectionProps) {
+/** Une section de la page Données : un panneau, son ancre (`#exporter`…) et son contenu. */
+export function DataSection({ id, title, description, children, danger }: DataSectionProps) {
   return (
-    <Stack
-      as="section"
-      gap={4}
-      align="start"
+    <Panel
       id={id}
-      className={cx(styles.section, apart && styles.apart)}
-      aria-labelledby={`${id}-title`}
+      title={title}
+      description={description}
+      className={danger ? `${styles.section} ${styles.danger}` : styles.section}
     >
-      <h2 id={`${id}-title`} className={styles.title}>
-        {title}
-      </h2>
       {children}
-    </Stack>
+    </Panel>
   )
 }

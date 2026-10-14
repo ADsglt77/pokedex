@@ -1,7 +1,8 @@
-import { Button, Stack } from '@camply/ui'
+import { Button } from '@camply/ui'
 import { Plus } from '@camply/ui/icons'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { Panel } from '@/components/Panel'
 import { loadCatalog } from '@/lib/card-catalog'
 import { statusCaption } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
@@ -13,23 +14,23 @@ import { PurchaseSection } from './PurchaseSection'
 import styles from './CardSheet.module.css'
 
 /**
- * La fiche de la carte du Pokémon, en trois temps séparés d'un filet : ce que l'utilisateur en
- * fait (statut, prix payé), ce qu'elle vaut chez Cardmarket, son achat.
+ * La fiche de la carte du Pokémon, en trois panneaux : ce que l'utilisateur en fait (statut, prix
+ * payé), ce qu'elle vaut chez Cardmarket, son achat.
  */
 export function CardSheet({ view, species }: { view: CardView; species: PokemonSpecies }) {
   const { card } = view
   return (
-    <Stack as="section" gap={6} className={styles.sheet} aria-labelledby="sheet-title">
-      <Stack as="header" gap={2} align="start">
-        <h2 id="sheet-title">Carte {card.reference}</h2>
-        <p className="muted">{statusCaption(view.status, view.acquiredAt)}</p>
-      </Stack>
-
+    <div className={styles.sheet}>
       {/* Les actions d'abord : sur téléphone, « Je possède cette carte » reste près de l'écran. */}
-      <CardActions view={view} species={species} />
+      <Panel
+        title={`Carte ${card.reference}`}
+        description={statusCaption(view.status, view.acquiredAt)}
+      >
+        <CardActions view={view} species={species} />
+      </Panel>
       <CardPrice card={card} />
       <PurchaseSection view={view} />
-    </Stack>
+    </div>
   )
 }
 
@@ -44,8 +45,7 @@ export function EmptySheet({ species }: { species: PokemonSpecies }) {
     } else setTimeout(() => void loadCatalog(), 1000)
   }, [])
   return (
-    <Stack as="section" gap={6} className={styles.sheet} aria-labelledby="sheet-title">
-      <h2 id="sheet-title">Carte à choisir</h2>
+    <Panel title="Carte à choisir">
       <p className="muted">
         Choisissez la carte que vous voulez pour {species.names.fr} parmi ses cartes japonaises,
         avec leur image et leur prix, ou saisissez-la à la main. Depuis Cardmarket, le favori
@@ -58,6 +58,6 @@ export function EmptySheet({ species }: { species: PokemonSpecies }) {
         </Button>
       </div>
       {adding && <CardForm species={species} card={null} onClose={() => setAdding(false)} />}
-    </Stack>
+    </Panel>
   )
 }

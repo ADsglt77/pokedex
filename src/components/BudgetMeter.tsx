@@ -3,7 +3,7 @@ import { BUDGET_LEVELS } from '@/config/shopping'
 import { budgetLevel } from '@/lib/budget'
 import { formatEuro } from '@/lib/format'
 import type { BudgetSettings } from '@/types'
-import styles from './ShoppingPage.module.css'
+import styles from './BudgetMeter.module.css'
 
 /** Ce qu'un mois a coûté face à son budget et à son plafond : une réglette, colorée au-delà. */
 export function BudgetMeter({ spent, budget }: { spent: number; budget: BudgetSettings }) {

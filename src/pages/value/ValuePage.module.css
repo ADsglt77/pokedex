@@ -1,5 +1,20 @@
-.page {
-  margin-top: 1rem;
+/* Les chiffres en tête, puis un panneau par sujet : les courbes mensuelles côte à côte sur grand
+   écran, le reste sur toute la largeur. */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-block);
+}
+
+@media (min-width: 64rem) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+.wide {
+  grid-column: 1 / -1;
 }
 
 .table {
@@ -20,11 +35,18 @@
   color: var(--camply-danger);
 }
 
-/* Les deux courbes mensuelles, côte à côte sur grand écran. */
-.months {
+/* Les hausses et les baisses, côte à côte quand la place le permet. */
+.columns {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
-  gap: 2rem;
+  gap: var(--camply-space-4) var(--camply-space-8);
+}
+
+.subtitle {
+  color: var(--camply-text-muted);
+  font-family: var(--camply-font-sans);
+  font-size: var(--text-md);
+  font-weight: 600;
 }
 
 /* Les cartes qui bougent : la carte à gauche, son prix et son écart à droite, une par ligne. */
@@ -42,6 +64,10 @@
   padding-block: 0.5rem;
   border-bottom: 1px solid var(--camply-border-soft);
   font-size: var(--text-md);
+}
+
+.movers li:last-child {
+  border-bottom: 0;
 }
 
 /* Le prix et l'écart restent à droite, même passés à la ligne sur un écran étroit. */

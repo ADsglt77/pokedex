@@ -1,4 +1,4 @@
-import { Button, EmptyState } from '@camply/ui'
+import { Button, EmptyState, Progress } from '@camply/ui'
 import { Inbox } from '@camply/ui/icons'
 import { Link } from 'react-router'
 import { usePokedex } from '@/hooks/usePokedex'
@@ -10,8 +10,9 @@ import { useSyncStore } from '@/store/sync'
 import { DataSection } from './DataSection'
 import { MissingImages } from './MissingImages'
 import { SummaryLedger } from './SummaryLedger'
+import styles from './DataPage.module.css'
 
-/** Où en est la collection, ou comment la commencer quand elle est vide. */
+/** Où en est la collection, ou comment la commencer quand elle est vide ; où elle est gardée. */
 export function CollectionSection() {
   const collection = useCollectionStore((state) => state.collection)
   const { progress } = usePokedex()
@@ -20,7 +21,21 @@ export function CollectionSection() {
   const synced = useSyncStore((state) => state.status !== 'local')
 
   return (
-    <DataSection id="collection" title="Ma collection">
+    <DataSection
+      id="collection"
+      title="Ma collection"
+      description={
+        synced ? (
+          'Synchronisée avec votre compte : la même sur tous vos appareils, et sauvegardée sur le serveur.'
+        ) : (
+          <>
+            Elle n’existe que dans ce navigateur, sur cet appareil : un export est sa seule
+            sauvegarde. <Link to={loginPath('/donnees')}>Connectez-vous</Link> pour la retrouver sur
+            tous vos appareils.
+          </>
+        )
+      }
+    >
       {isEmptySummary(summary) ? (
         <EmptyState
           align="start"
@@ -33,35 +48,30 @@ export function CollectionSection() {
                 <Link to="/pokedex">Ouvrir le Pokédex</Link>
               </Button>
               <Button asChild variant="ghost">
-                <Link to="#importer">Importer une collection</Link>
+                <a href="#importer">Importer une collection</a>
               </Button>
             </>
           }
         />
       ) : (
         <>
-          <p>
-            {unlockedOf(progress, 'Pokémon')}, soit {formatDecimal(progress.percent)} % du Pokédex.
-          </p>
+          <div className={styles.progress}>
+            <p>
+              <strong className="numeric">{unlockedOf(progress, 'Pokémon')}</strong>, soit{' '}
+              {formatDecimal(progress.percent)} % du Pokédex.
+            </p>
+            <Progress
+              size="sm"
+              value={progress.unlocked}
+              max={progress.total}
+              aria-label="Pokémon débloqués"
+            />
+          </div>
           <SummaryLedger summary={summary} />
           <MissingImages />
         </>
       )}
-      <p>
-        {updatedAt ? `Dernière modification le ${updatedAt}. ` : ''}
-        {synced ? (
-          <>
-            Votre collection est synchronisée avec votre compte : la même sur tous vos appareils, et
-            sauvegardée sur le serveur.
-          </>
-        ) : (
-          <>
-            Votre collection n’existe que dans ce navigateur, sur cet appareil : un export est sa
-            seule sauvegarde. <Link to={loginPath('/donnees')}>Connectez-vous</Link> pour la
-            retrouver sur tous vos appareils.
-          </>
-        )}
-      </p>
+      {updatedAt && <p className="hint">Dernière modification le {updatedAt}.</p>}
     </DataSection>
   )
 }

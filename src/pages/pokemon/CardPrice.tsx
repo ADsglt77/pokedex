@@ -1,6 +1,7 @@
-import { Skeleton, Stack, Stat } from '@camply/ui'
+import { Skeleton, Stat } from '@camply/ui'
 import { Suspense, use } from 'react'
 import { CardmarketLink } from '@/components/CardmarketLink'
+import { Panel } from '@/components/Panel'
 import { PriceChart } from '@/components/PriceChart'
 import { details, formatEuro } from '@/lib/format'
 import { cardHistory, gainPercent, priceOf } from '@/lib/prices'
@@ -20,19 +21,21 @@ export function CardPrice({ card }: { card: PokemonCard }) {
   const price = priceOf(prices, card)
 
   return (
-    <Stack as="section" gap={4} aria-labelledby="price-title">
-      <div className={styles.head}>
-        <h3 id="price-title">Prix Cardmarket</h3>
-        <CardmarketLink card={card} className={styles.link} />
-        {card.cardmarket !== undefined && (
-          <p className={styles.id}>
+    <Panel
+      title="Prix Cardmarket"
+      description={
+        card.cardmarket !== undefined && (
+          <>
             Id Cardmarket <span className="numeric">{card.cardmarket}</span>
-          </p>
-        )}
-      </div>
+          </>
+        )
+      }
+      actions={<CardmarketLink card={card} className={styles.link} />}
+    >
       {price ? (
         <>
           <Stat
+            className={styles.stat}
             label="Prix du marché"
             value={formatEuro(price.price)}
             delta={paid === null ? undefined : gainPercent(price.price, paid)}
@@ -60,7 +63,7 @@ export function CardPrice({ card }: { card: PokemonCard }) {
         // Les prix arrivent : la place du prix est gardée.
         <Skeleton height="4.5rem" />
       )}
-    </Stack>
+    </Panel>
   )
 }
 
