@@ -69,15 +69,16 @@ BETTER_AUTH_URL=http://localhost:5173
 BETTER_AUTH_SECRET=…        # openssl rand -base64 32
 ```
 
-puis `bun server/create-user.ts moi@exemple.fr` pour créer votre compte, administrateur (le mot de
-passe est demandé au clavier).
+Au premier lancement, le site n'a pas de compte : toute page mène à `/bienvenue`, où vous créez le
+vôtre, le seul, avec le code de première visite que `bun run dev:server` écrit dans son terminal
+(il change à chaque démarrage du serveur). Pour changer le mot de passe ensuite :
+`bun server/create-user.ts moi@exemple.fr` (demandé au clavier). La documentation de l'API
+(Elysia, OpenAPI) est à `http://localhost:5173/api/docs`, en développement seulement.
 
 Votre collection : sans connexion, elle reste dans le navigateur (`localStorage`), et l'export est
 sa seule sauvegarde. Connecté (bouton « Se connecter » en haut à droite), elle est gardée sur le
 serveur et vous suit d'un appareil à l'autre : un seul connecté à la fois (se connecter ailleurs
-déconnecte le précédent, qui garde ses modifications). Les autres personnes s'inscrivent avec une
-invitation que vous créez (Données › Invitations) : un lien pour une seule inscription, valable 7
-jours.
+déconnecte le précédent, qui garde ses modifications). Personne d'autre ne peut créer de compte.
 
 ## Déploiement (VPS + tunnel Cloudflare)
 
@@ -119,13 +120,7 @@ peut partir : `docker volume rm pokedex_prices` (le nom exact : `docker volume l
    chmod 600 .env
    docker compose up -d --build
    ```
-3. Créer votre compte, administrateur : lui seul crée des invitations (Données › Invitations),
-   sans lesquelles personne ne peut s'inscrire. Le mot de passe est demandé deux fois, sans
-   s'afficher ; relancer la même commande le change (et ferme les sessions ouvertes) :
-   ```sh
-   docker compose run --rm server bun server/create-user.ts moi@exemple.fr
-   ```
-4. Publier le site par le tunnel : un nom d'hôte public (par exemple `pokedex.ton-domaine.fr`)
+3. Publier le site par le tunnel : un nom d'hôte public (par exemple `pokedex.ton-domaine.fr`)
    vers `http://localhost:8080`. Dans le tableau de bord Zero Trust (Networks › Tunnels › le
    tunnel › Public hostname), ou dans le `config.yml` de cloudflared, avant la règle finale :
    ```yaml
@@ -136,6 +131,17 @@ peut partir : `docker volume rm pokedex_prices` (le nom exact : `docker volume l
    ```
    Si cloudflared tourne lui-même dans Docker, mettre les deux conteneurs sur un même réseau et
    viser `http://pokedex:80`.
+4. Créer votre compte, le seul : ouvrez le site, la première visite le demande, avec le code que
+   le serveur écrit dans son journal tant qu'aucun compte n'existe (un visiteur arrivé avant vous
+   ne peut donc pas le créer ; le code change à chaque redémarrage du serveur) :
+   ```sh
+   docker compose logs server | grep "première visite"
+   ```
+   Pour changer le mot de passe ensuite (demandé deux fois, sans s'afficher ; les sessions ouvertes
+   se ferment) :
+   ```sh
+   docker compose run --rm server bun server/create-user.ts moi@exemple.fr
+   ```
 
 **Ensuite, à chaque déploiement** (`.github/workflows/deploy.yml`, lancé à la main depuis l'onglet
 Actions tant que le domaine n'est pas prêt ; son en-tête dit comment le relancer à chaque push sur

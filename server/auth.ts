@@ -1,10 +1,11 @@
 /**
- * La connexion (Better Auth) : des comptes par e-mail et mot de passe, dans `app.db`.
- * - L'inscription (`/inscription`) n'accepte qu'une invitation valable (en-tête `X-Invitation`,
- *   table `invitations`) : un administrateur la crée (`invitations.ts`), elle sert une fois, sept
- *   jours au plus. Le premier compte, administrateur, se crée sur le serveur (`create-user.ts`).
- * - Une seule session par compte : se connecter sur un appareil déconnecte les autres. La
- *   collection n'est donc modifiée que d'un appareil à la fois.
+ * La connexion (Better Auth) : un seul compte, le vôtre, par e-mail et mot de passe, dans `app.db`.
+ * - Il se crée à la première visite du site (`/bienvenue`), avec le code de première visite : tant
+ *   qu'aucun compte n'existe, le serveur l'écrit dans son journal (`index.ts`), que vous seul lisez.
+ *   Un visiteur arrivé avant vous ne peut donc pas le prendre. Ensuite, plus aucune inscription.
+ *   `create-user.ts` le crée aussi depuis le serveur, ou change son mot de passe.
+ * - Une seule session : se connecter sur un appareil déconnecte les autres. La collection n'est
+ *   donc modifiée que d'un appareil à la fois.
  * Sessions de 60 jours, renouvelées chaque jour d'usage, dans un cookie (`__Secure-`, SameSite
  * Lax, en https).
  *
@@ -17,43 +18,51 @@ import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { APIError } from 'better-auth/api'
 import { getMigrations } from 'better-auth/db/migration'
 import type { Database } from 'bun:sqlite'
+import { Elysia } from 'elysia'
 
 const DAY = 24 * 60 * 60
 
-/** Le rôle d'un compte : `admin` (créé par `create-user.ts`, il invite), ou `user`. */
-export type Role = 'admin' | 'user'
+/** Sans les caractères qui se confondent (I, L, O, U) : « 7KQM-3XPA ». */
+const CODE_LETTERS = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
+
+/** Un code de première visite : 8 caractères, 40 bits, à 5 essais par minute. */
+function newCode() {
+  const letters = Array.from(
+    crypto.getRandomValues(new Uint8Array(8)),
+    (byte) => CODE_LETTERS[byte % 32],
+  )
+  return `${letters.slice(0, 4).join('')}-${letters.slice(4).join('')}`
+}
+
+/** Le code tel que saisi, comparable au vrai : majuscules, sans espace ni tiret. */
+const codeKey = (code: string | null | undefined) =>
+  (code ?? '').toUpperCase().replace(/[^0-9A-Z]/g, '')
 
 /**
- * La connexion, une fois créées les tables du compte qui manquent. `trusted` : seulement pour
- * `create-user.ts`, qui crée un compte sans invitation.
+ * La connexion, une fois créées les tables du compte qui manquent ; et la première visite. `trusted`
+ * : seulement pour `create-user.ts`, qui crée le compte sans code.
  */
 export async function createAuth(db: Database, { trusted = false } = {}) {
-  const consume = db.query(
-    `UPDATE invitations SET used_at = ?, used_email = ?
-     WHERE token = ? AND used_at IS NULL AND expires_at > ?`,
-  )
+  let code: string | null = null
   const options = {
     database: db,
     baseURL: process.env.BETTER_AUTH_URL,
     secret: process.env.BETTER_AUTH_SECRET,
     emailAndPassword: { enabled: true },
-    user: {
-      // `input: false` : personne ne se donne un rôle en s'inscrivant.
-      additionalFields: { role: { type: 'string', defaultValue: 'user', input: false } },
-    },
     session: { expiresIn: 60 * DAY, updateAge: DAY },
     databaseHooks: {
       user: {
         create: {
-          // L'invitation est prise au moment de créer le compte : une adresse déjà inscrite est
-          // refusée avant, sans la gâcher.
-          before: async (user, context) => {
+          // Au moment de créer le compte (une adresse invalide ou un mot de passe trop court sont
+          // refusés avant) : le code sert une fois, un second compte n'en trouve plus. Si la
+          // création échoue ensuite, redémarrer le serveur en donne un nouveau.
+          before: async (_user, context) => {
             if (trusted) return
-            const token = (context?.headers as Headers | undefined)?.get('x-invitation') ?? ''
-            const now = new Date().toISOString()
-            if (consume.run(now, user.email, token, now).changes !== 1) {
-              throw new APIError('FORBIDDEN', { message: 'Invitation invalide ou expirée' })
+            const given = (context?.headers as Headers | undefined)?.get('x-setup-code')
+            if (!code || codeKey(given) !== codeKey(code)) {
+              throw new APIError('FORBIDDEN', { message: 'Code de première visite incorrect' })
             }
+            code = null
           },
         },
       },
@@ -72,8 +81,8 @@ export async function createAuth(db: Database, { trusted = false } = {}) {
     // Derrière le tunnel Cloudflare et nginx (qui n'écoute que sur la machine), l'adresse du
     // visiteur est dans cet en-tête : la limite de tentatives vaut pour lui, pas pour le tunnel.
     advanced: { ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] } },
-    // En production : 5 tentatives de connexion ou d'inscription par minute, 100 requêtes pour le
-    // reste.
+    // En production : 5 tentatives de connexion ou de création du compte par minute, 100 requêtes
+    // pour le reste.
     rateLimit: {
       window: 60,
       max: 100,
@@ -84,10 +93,61 @@ export async function createAuth(db: Database, { trusted = false } = {}) {
     },
   } satisfies BetterAuthOptions
   await (await getMigrations(options)).runMigrations()
-  return betterAuth(options)
+
+  const account = db.query('SELECT email FROM "user" LIMIT 1')
+  if (!trusted && !account.get()) code = newCode()
+  return {
+    auth: betterAuth(options),
+    /** Le compte (son e-mail), `null` tant qu'il n'est pas créé. */
+    account: () => (account.get() as { email: string } | null)?.email ?? null,
+    /** Le code de première visite, `null` une fois le compte créé. */
+    setupCode: () => code,
+  }
 }
 
-export type Auth = Awaited<ReturnType<typeof createAuth>>
+export type Accounts = Awaited<ReturnType<typeof createAuth>>
+export type Auth = Accounts['auth']
 
 /** L'origine publique du site, que doivent avoir les requêtes qui modifient des données. */
 export const appOrigin = (auth: Auth) => new URL(auth.options.baseURL as string).origin
+
+/**
+ * Le compte dans l'API (`/api/…`) :
+ * - `/api/auth/*` : Better Auth (connexion, déconnexion, session, création du compte) ;
+ * - `GET /api/account` : `{ exists }`, si le compte existe déjà (sinon, la première visite) ;
+ * - la macro `auth` des routes réservées au compte : 401 sans session, 403 pour une modification
+ *   venue d'une autre origine (le cookie part avec toute requête vers le site), jamais en cache ;
+ *   la route reçoit `user`.
+ */
+export function accountRoutes({ auth, account }: Accounts) {
+  const origin = appOrigin(auth)
+  return new Elysia({ name: 'account' })
+    .all('/auth/*', ({ request }) => auth.handler(request), {
+      // Better Auth lit lui-même la requête.
+      parse: 'none',
+      detail: { hide: true },
+    })
+    .get(
+      '/account',
+      ({ set }) => {
+        set.headers['cache-control'] = 'no-store'
+        return { exists: account() !== null }
+      },
+      { detail: { summary: 'Le compte existe-t-il ? Sinon, la première visite le crée' } },
+    )
+    .macro({
+      auth: {
+        async resolve({ request, set, status }) {
+          set.headers['cache-control'] = 'no-store'
+          if (
+            !['GET', 'HEAD'].includes(request.method) &&
+            request.headers.get('origin') !== origin
+          ) {
+            return status(403, null)
+          }
+          const session = await auth.api.getSession({ headers: request.headers })
+          return session ? { user: session.user } : status(401, null)
+        },
+      },
+    })
+}

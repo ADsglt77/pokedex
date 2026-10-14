@@ -25,7 +25,7 @@ bun run ingest catalog # une tâche d'ingestion : catalogue (TCGdex, Cardmarket,
 bun run ingest prices  # prix du jour (Cardmarket, TCGplayer, BCE) ; `--refresh` après le nom : ignore le cache
 bun run ingest legacy-prices ./prices   # une fois : reprise des anciens fichiers de prix dans la base
 bun run ingest species # les espèces (PokéAPI) → .data/data.db : la première tâche à lancer
-bun server/create-user.ts <e-mail>       # crée un compte administrateur (ou change son mot de passe) ; en local : .env.local
+bun server/create-user.ts <e-mail>       # change le mot de passe du compte (ou le crée sans la première visite)
 ```
 
 ## Principes
@@ -49,11 +49,12 @@ bun server/create-user.ts <e-mail>       # crée un compte administrateur (ou ch
   Pokécardex d'après la référence. Pokécardex a donné son autorisation (octobre 2026), en échange
   d'un lien vers son site : sous la carte de la fiche, sous l'aperçu de la saisie, en tête de la
   grille du catalogue et dans le pied de page. Ses images sont copiées chez nous (tâche `images` ;
-  l'utilisateur en a l'accord, octobre 2026), à l'adresse que donne la référence. Ses pages ne
-  sont pas lues : elles chiffrent leurs données (AES, déchiffrées par leur JavaScript), et les
-  lire en masse contournerait cette protection. Leur liste de cartes (plus complète : 27
-  Herbizarre, 22 au catalogue) viendra corriger et compléter le catalogue si Pokécardex fournit un
-  accès (export, adresse non chiffrée). Quand Pokécardex n'a pas l'image (vieilles séries, decks),
+  l'utilisateur en a l'accord, octobre 2026), à l'adresse que donne la référence. Pokécardex ne
+  fournit rien (ni export ni accès), mais autorise à lire ce qui est disponible sur son site
+  (octobre 2026). Ses pages chiffrent leurs données (AES, déchiffrées par leur JavaScript) : leur
+  liste de cartes (plus complète : 27 Herbizarre, 22 au catalogue) n'est pas encore lue, la
+  méthode (pages rendues par un navigateur sans tête, ou déchiffrement) et le rythme restent à
+  convenir avec l'utilisateur avant de commencer. Quand Pokécardex n'a pas l'image (vieilles séries, decks),
   celle du produit TCGplayer de la carte, citée de même, et son prix pour une carte sans prix
   Cardmarket (à sa demande, octobre 2026). Seulement des cartes japonaises (images TCGdex et
   Limitless TCG retirées). Ne pas réintroduire le reste sans demande.
@@ -92,9 +93,9 @@ bun server/create-user.ts <e-mail>       # crée un compte administrateur (ou ch
 | `src/store/` | Zustand : `collection` et `shopping` (liste d'achats, commandes, budget), dans `localStorage` ; `prices` (`/api/prices`) ; `sync` (la collection du compte connecté, `/api/collection`). `persist` les enregistre et les garde d'accord entre onglets |
 | `src/hooks/` | `usePokedex` (modèle partagé par toutes les pages), `useNotify` (toasts + « Annuler »), `usePokedexFilters`, `useCardDraft` (saisie d'une carte), `useExportCollection` |
 | `src/components/` | Composants métier partagés par plusieurs pages (carte, champs d'une carte, tuile, réglette, courbe, réglages d'achat d'une carte…) et les seuls génériques absents de camply (confirmation, en-tête de page, lien externe, crédit d'une image, champ enregistré en le quittant, `SegmentedField`), le compte dans l'en-tête (`AccountMenu`) et la question d'un conflit (`SyncConflictDialog`) ; le reste vient de camply |
-| `src/pages/` | Une page par route ; les sous-composants d'une page vivent dans son dossier (`pokemon/CardForm` : ajouter ou corriger la carte d'un Pokémon ; `AddCardPage` : `/ajouter`, ouverte par le favori ; `LoginPage` : `/connexion`) |
+| `src/pages/` | Une page par route ; les sous-composants d'une page vivent dans son dossier (`pokemon/CardForm` : ajouter ou corriger la carte d'un Pokémon ; `AddCardPage` : `/ajouter`, ouverte par le favori ; `LoginPage` : `/connexion` ; `WelcomePage` : `/bienvenue`, la première visite) |
 | `tests/` | Tests `bun test` de la logique des achats et de la synchronisation (`tsconfig.tests.json`) |
-| `server/` | Bun, le serveur (`tsconfig.server.json`) : `index.ts` (l'API, `Bun.serve`), `db.ts` (SQLite dans `DATA_DIR`, `.data/` en local : `data.db`, les données de référence, et `app.db`, le compte et la collection ; schéma par étapes, `PRAGMA user_version`), `auth.ts` (Better Auth : invitations, une session par compte), `invitations.ts` (`/api/invitations`), `collection.ts` (`/api/collection`), `create-user.ts`, `jobs/species.ts`, `ingest.ts` (les tâches d'ingestion, une à la demande ou `--loop`), `jobs/catalog.ts`, `jobs/prices.ts`, `jobs/images.ts`, `jobs/backups.ts`, `images.ts` (les images copiées, dans `IMAGES_DIR` : leur adresse d'origine, la copie, la copie à la demande), `history.ts` (l'historique des prix, une ligne par carte et par année), `snapshots.ts` (les grosses réponses, calculées en fin de tâche et gardées compressées), `legacy-prices.ts` (reprise des anciens fichiers de prix), `lib/net.ts` (cache disque, requêtes espacées), `lib/tcgplayer.ts` (le produit TCGplayer de chaque carte) |
+| `server/` | Bun, le serveur (`tsconfig.server.json`) : `index.ts` (lance le serveur ; écrit le code de première visite), `app.ts` (l'API, Elysia : un plugin par domaine, paramètres et corps validés par leurs schémas, 422 sinon ; 404 sans corps ; documentation OpenAPI à `/api/docs` en développement), `reference.ts` (les données de référence : statut, espèces, catalogue, prix, historique), `db.ts` (SQLite dans `DATA_DIR`, `.data/` en local : `data.db`, les données de référence, et `app.db`, le compte et la collection ; schéma par étapes, `PRAGMA user_version`), `auth.ts` (Better Auth : un seul compte, créé à la première visite, une session ; `/api/auth/*`, `/api/account`, la macro `auth` des routes du compte : session, origine, `no-store`), `collection.ts` (`/api/collection`), `create-user.ts`, `jobs/species.ts`, `ingest.ts` (les tâches d'ingestion, une à la demande ou `--loop`), `jobs/catalog.ts`, `jobs/prices.ts`, `jobs/images.ts`, `jobs/backups.ts`, `images.ts` (les images copiées, dans `IMAGES_DIR` : leur adresse d'origine, la copie, la copie à la demande), `history.ts` (l'historique des prix, une ligne par carte et par année), `snapshots.ts` (les grosses réponses, calculées en fin de tâche et gardées compressées), `legacy-prices.ts` (reprise des anciens fichiers de prix), `lib/net.ts` (cache disque, requêtes espacées), `lib/tcgplayer.ts` (le produit TCGplayer de chaque carte) |
 
 Points à connaître :
 
@@ -258,17 +259,21 @@ Points à connaître :
   partagent aussi la dernière version échangée avec le serveur. Si le navigateur
   refuse de lire ou d'écrire (stockage plein ou bloqué), l'app continue en mémoire et un bandeau
   (`useStorageFailure`, `AppShell`) invite à exporter.
-- Comptes et synchronisation (`server/auth.ts`, `server/invitations.ts`, `server/collection.ts`,
-  `lib/sync.ts`, `store/sync.ts`) : Better Auth, e-mail et mot de passe. Inscription
-  (`/inscription`, `SignUpPage`) seulement avec une invitation valable (lien
-  `?invitation=…`, en-tête `X-Invitation`, prise au moment de créer le compte : une seule
-  inscription, 7 jours) ; un administrateur les crée et les retire (Données › Invitations,
-  `/api/invitations`, réservé au rôle `admin`, champ `role` du compte, jamais donné à
-  l'inscription). `server/create-user.ts` crée un compte administrateur (le vôtre) ou change son
-  mot de passe (ce qui ferme ses sessions). **Une seule session par compte** : se connecter sur un
+- Comptes et synchronisation (`server/auth.ts`, `server/collection.ts`, `lib/sync.ts`,
+  `store/sync.ts`) : Better Auth, e-mail et mot de passe, **un seul compte**, celui de
+  l'utilisateur (les invitations ont été retirées à sa demande, octobre 2026). Tant qu'il n'existe
+  pas, c'est la première visite : le serveur écrit dans son journal un code de première visite
+  (8 caractères, nouveau à chaque démarrage), `GET /api/account` répond `{ exists: false }` et le
+  routeur (créé après cette réponse, `main.tsx` : ses `loader` lisent `accountExists` dès sa
+  création) mène toute page à `/bienvenue` (`WelcomePage`, hors de la coquille). On y crée le
+  compte avec ce code (en-tête `X-Setup-Code`, vérifié puis consommé au moment de créer le compte,
+  `databaseHooks.user.create.before`) ; ensuite, plus aucune inscription, et `/bienvenue` mène à
+  `/connexion`. Un visiteur arrivé avant l'utilisateur ne peut donc pas prendre le compte.
+  `server/create-user.ts` le crée aussi depuis le serveur (jamais un second) ou change son mot de
+  passe (ce qui ferme ses sessions). **Une seule session par compte** : se connecter sur un
   appareil déconnecte les autres (crochet `session.create.after`) ; l'appareil déconnecté garde
   ses modifications et affiche « Reconnectez-vous ». Sessions de 60 jours dans un cookie
-  (`__Secure-` en https, SameSite Lax) ; en production, 5 tentatives de connexion ou d'inscription
+  (`__Secure-` en https, SameSite Lax) ; en production, 5 tentatives de connexion ou de création du compte
   par minute et par visiteur (`cf-connecting-ip`). Sans connexion, l'app marche comme avant : la
   collection reste dans le navigateur, le Pokédex est public. Connecté, la collection et les achats
   forment un seul document par compte (une commande modifie les deux), dans `app.db`, numéroté par
@@ -288,7 +293,7 @@ Points à connaître :
   l'export si un envoi a échoué. « Annuler », l'import, « Effacer » sont des modifications comme
   les autres : connecté, elles valent pour tous les appareils (les textes de la page Données le
   disent). L'en-tête montre l'état (`AccountMenu` : synchronisée, hors ligne, reconnectez-vous, à
-  choisir ; « Inviter quelqu'un » pour un administrateur) ; `/connexion` (`LoginPage`) ramène à la
+  choisir) ; `/connexion` (`LoginPage`) ramène à la
   page d'où l'on venait (`?retour=`, seulement une page du site). Le rappel de sauvegarde ne paraît
   que sans connexion.
 - « Annuler » (`useCollectionAction`) rétablit collection et achats d'avant, et refuse si quelque
@@ -331,8 +336,8 @@ jour arrivent déjà compressés). `compose.yaml` :
 - `server` : l'API, qui lit la base du volume `db`, y garde le compte et la collection (`app.db`),
   et copie à la demande dans le volume `images` ; ses secrets (`BETTER_AUTH_URL`, l'adresse
   publique en https, et `BETTER_AUTH_SECRET`) viennent du `.env` du clone (ignoré par git) : sans
-  eux, docker compose refuse de démarrer. Le compte : `docker compose run --rm server bun
-  server/create-user.ts <e-mail>` ;
+  eux, docker compose refuse de démarrer. Le compte : à la première visite, avec le code du journal (`docker compose logs server`) ;
+  son mot de passe : `docker compose run --rm server bun server/create-user.ts <e-mail>` ;
 - `ingest` : `server/ingest.ts --loop`, les tâches à leur rythme (espèces chaque mois, catalogue
   chaque jour, puis prix toutes les 6 h, puis images et sauvegardes chaque jour ; après un échec : 10 min, puis 20, 40…
   jusqu'à 6 h), dans les volumes `db`, `images` et `backups`. À chaque démarrage, il refait les

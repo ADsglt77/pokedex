@@ -5,12 +5,11 @@ import { CollectionSection } from './CollectionSection'
 import { EraseSection } from './EraseSection'
 import { ExportSection } from './ExportSection'
 import { ImportSection } from './ImportSection'
-import { InvitationsSection } from './InvitationsSection'
 import { ReferenceSection } from './ReferenceSection'
 
 /**
- * Données : la collection, le favori Cardmarket, la sauvegarde (export, import), les invitations
- * (administrateur), les sources, l'effacement.
+ * Données : la collection, le favori Cardmarket, la sauvegarde (export, import), les sources,
+ * l'effacement.
  */
 export function DataPage() {
   return (
@@ -23,7 +22,6 @@ export function DataPage() {
       <BookmarkletSection />
       <ExportSection />
       <ImportSection />
-      <InvitationsSection />
       <ReferenceSection />
       <EraseSection />
     </div>

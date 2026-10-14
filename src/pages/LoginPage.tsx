@@ -21,7 +21,7 @@ const failure = (status: number) =>
 
 /**
  * `/connexion` : se connecter pour retrouver sa collection sur tous ses appareils. Pas
- * d'inscription : le compte se crée sur le serveur (`server/create-user.ts`). Ensuite, retour à la
+ * d'inscription : le seul compte se crée à la première visite (`WelcomePage`). Ensuite, retour à la
  * page d'où l'on venait (`?retour=`).
  */
 export function LoginPage() {
@@ -89,10 +89,6 @@ export function LoginPage() {
               <Button type="submit" fullWidth loading={busy} leftIcon={<LogIn size={16} />}>
                 Se connecter
               </Button>
-              <p className="muted">
-                Pas de compte ? L’inscription se fait sur invitation : demandez un lien à
-                l’administrateur du site.
-              </p>
             </Stack>
           </form>
         )}

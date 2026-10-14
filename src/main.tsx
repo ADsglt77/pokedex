@@ -11,8 +11,9 @@ import '@fontsource/space-grotesk/600.css'
 import '@fontsource/space-grotesk/700.css'
 import '@camply/ui/styles.css'
 import './styles/global.css'
+import { loadAccount } from './lib/auth-client'
 import { loadSpecies } from './lib/species'
-import { router } from './router'
+import { createRouter } from './router'
 import { requestPersistentStorage } from './store/persist'
 
 requestPersistentStorage()
@@ -20,13 +21,14 @@ requestPersistentStorage()
 const root = createRoot(document.getElementById('root')!)
 
 // Point d'entrée : polices, styles camply puis ceux de l'app. Les espèces viennent du serveur
-// avant tout affichage (toutes les pages en ont besoin) ; puis notifications et routeur.
-loadSpecies().then((loaded) =>
+// avant tout affichage (toutes les pages en ont besoin), avec l'existence du compte (sans lui, la
+// première visite) ; puis notifications et routeur.
+Promise.all([loadSpecies(), loadAccount()]).then(([loaded]) =>
   root.render(
     <StrictMode>
       {loaded ? (
         <ToastProvider position="bottom-left">
-          <RouterProvider router={router} />
+          <RouterProvider router={createRouter()} />
         </ToastProvider>
       ) : (
         <main className="container">

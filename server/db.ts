@@ -154,6 +154,10 @@ const APP_STEPS = [
     used_email TEXT
   );
   `,
+  `
+  -- Les invitations, retirées : un seul compte, créé à la première visite du site (\`auth.ts\`).
+  DROP TABLE invitations;
+  `,
 ]
 
 /** Applique les étapes du schéma pas encore passées, une transaction chacune. */

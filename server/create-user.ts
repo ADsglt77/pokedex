@@ -1,6 +1,6 @@
 /**
- * Crée un compte administrateur (le vôtre : il invite les autres, qui s'inscrivent avec une
- * invitation), ou change son mot de passe ; un compte existant devient administrateur.
+ * Crée le compte, le seul (si la première visite du site ne l'a pas fait), ou change son mot de
+ * passe.
  *
  *   bun server/create-user.ts <e-mail>
  *   sur le VPS : docker compose run --rm server bun server/create-user.ts <e-mail>
@@ -48,7 +48,12 @@ if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
   process.exit(1)
 }
 
-const auth = await createAuth(openApp(), { trusted: true })
+const { auth, account } = await createAuth(openApp(), { trusted: true })
+const existing = account()
+if (existing && existing !== email) {
+  console.error(`Le compte est ${existing} : il n’y en a qu’un.`)
+  process.exit(1)
+}
 const context = await auth.$context
 const { minPasswordLength, maxPasswordLength } = context.password.config
 
@@ -62,17 +67,13 @@ if (password.length < minPasswordLength || password.length > maxPasswordLength) 
   process.exit(1)
 }
 
-const found = await context.internalAdapter.findUserByEmail(email)
-if (found) {
+if (existing) {
+  const found = (await context.internalAdapter.findUserByEmail(email))!
   await context.internalAdapter.updatePassword(found.user.id, await context.password.hash(password))
   await context.internalAdapter.deleteUserSessions(found.user.id)
-  await context.internalAdapter.updateUser(found.user.id, { role: 'admin' })
-  console.log(`Mot de passe de ${email} changé (administrateur) ; ses sessions sont fermées.`)
+  console.log(`Mot de passe de ${email} changé ; ses sessions sont fermées.`)
 } else {
-  const { user } = await auth.api.signUpEmail({
-    body: { email, password, name: email.split('@')[0]! },
-  })
-  await context.internalAdapter.updateUser(user.id, { role: 'admin' })
-  console.log(`Compte administrateur ${email} créé : il peut inviter d’autres personnes.`)
+  await auth.api.signUpEmail({ body: { email, password, name: email.split('@')[0]! } })
+  console.log(`Compte ${email} créé.`)
 }
 process.exit(0)

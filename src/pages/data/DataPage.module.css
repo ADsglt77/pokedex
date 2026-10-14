@@ -49,30 +49,3 @@
   padding-left: 1.25rem;
   color: var(--camply-text-muted);
 }
-
-/* Le lien d'une invitation : le champ prend la place, le bouton « Copier » reste à côté. */
-.invitation {
-  width: 100%;
-}
-
-.invitation > :first-child {
-  flex: 1;
-}
-
-.invitations {
-  display: grid;
-  gap: var(--camply-space-2);
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.invitations li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--camply-space-2);
-  color: var(--camply-text-muted);
-}
