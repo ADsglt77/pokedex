@@ -61,7 +61,7 @@ export interface PokemonCard {
   image: CardImage | null
   /** Id du produit Cardmarket (`idProduct`), pour son prix et le lien vers sa page. */
   cardmarket?: number
-  /** Sa page chez Cardmarket, collée ou reprise par le favori ; sans elle, le lien suit l'id. */
+  /** Sa page chez Cardmarket, collée ; sans elle, le lien suit l'id. */
   page?: string
 }
 

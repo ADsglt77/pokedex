@@ -52,11 +52,6 @@ export const createRouter = () =>
             import('@/pages/data/DataPage').then(({ DataPage }) => ({ Component: DataPage })),
         },
         {
-          path: 'ajouter',
-          lazy: () =>
-            import('@/pages/AddCardPage').then(({ AddCardPage }) => ({ Component: AddCardPage })),
-        },
-        {
           path: 'connexion',
           lazy: () =>
             import('@/pages/LoginPage').then(({ LoginPage }) => ({ Component: LoginPage })),

@@ -56,8 +56,7 @@ export function CatalogPicker({
   if (cards.length === 0) {
     return (
       <p className="muted">
-        Aucune carte japonaise de {species.names.fr} dans le catalogue : saisissez-la à la main, ou
-        prenez-la sur Cardmarket avec le favori.
+        Aucune carte japonaise de {species.names.fr} dans le catalogue : saisissez-la à la main.
       </p>
     )
   }

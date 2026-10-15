@@ -42,7 +42,7 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
         )}
         <Input
           label="Id Cardmarket"
-          hint="Le numéro du produit chez Cardmarket (idProduct), pour son prix. Le favori le remplit."
+          hint="Le numéro du produit chez Cardmarket (idProduct), pour son prix. Le catalogue le remplit."
           inputMode="numeric"
           value={draft.cardmarketText}
           onChange={(event) => draft.setCardmarketText(event.target.value)}
@@ -56,7 +56,7 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
         )}
         <Input
           label="Page Cardmarket"
-          hint="Facultatif : vide, le lien se fait par l’id Cardmarket. Le favori y met la page exacte."
+          hint="Facultatif : vide, le lien se fait par l’id Cardmarket."
           placeholder="https://www.cardmarket.com/…"
           inputMode="url"
           value={draft.page}

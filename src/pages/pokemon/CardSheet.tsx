@@ -1,7 +1,6 @@
 import { Button } from '@camply/ui'
 import { Plus } from '@camply/ui/icons'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
 import { Panel } from '@/components/Panel'
 import { loadCatalog } from '@/lib/card-catalog'
 import { statusCaption } from '@/lib/format'
@@ -48,9 +47,7 @@ export function EmptySheet({ species }: { species: PokemonSpecies }) {
     <Panel title="Carte à choisir">
       <p className="muted">
         Choisissez la carte que vous voulez pour {species.names.fr} parmi ses cartes japonaises,
-        avec leur image et leur prix, ou saisissez-la à la main. Depuis Cardmarket, le favori
-        «&nbsp;Ajouter au Pokédex&nbsp;» l’ajoute aussi : installez-le depuis la{' '}
-        <Link to="/donnees">page Données</Link>.
+        avec leur image et leur prix, ou saisissez-la à la main.
       </p>
       <div>
         <Button leftIcon={<Plus size={16} />} onClick={() => setAdding(true)}>

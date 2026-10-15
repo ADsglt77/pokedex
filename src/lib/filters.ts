@@ -101,26 +101,15 @@ export function searchMatcher(search: string): (species: PokemonSpecies) => bool
   return (species) => speciesIndex().searchNames.get(species.id)!.includes(needle)
 }
 
-/**
- * En mots simples : replié (`fold`), ponctuation changée en espaces ; ♀ et ♂ sont des mots
- * (Nidoran♀ n'est pas Nidoran♂). « Mr. Mime » → « mr mime », « Nidoran♀ » → « nidoran ♀ ».
- */
-const words = (text: string) =>
-  ` ${fold(text)
-    .replace(/[♀♂]/g, ' $& ')
-    .replace(/[^\p{L}\p{N}♀♂]+/gu, ' ')
-    .trim()} `
-
 let index: {
   species: readonly PokemonSpecies[]
   searchNames: Map<number, string>
-  words: { id: number; name: string }[]
 } | null = null
 
 /**
  * Les noms des espèces prêts pour la recherche, faits à la première recherche (les espèces arrivent
  * du serveur après le chargement de ce module) : pour chacune, ses noms fr, en et ja, une ligne
- * chacun (une recherche ne déborde pas d'un nom sur le suivant), et ses noms fr et en en mots.
+ * chacun (une recherche ne déborde pas d'un nom sur le suivant).
  */
 function speciesIndex() {
   if (index?.species !== SPECIES) {
@@ -132,24 +121,9 @@ function speciesIndex() {
           [names.fr, names.en, names.ja ?? ''].map(searchForm).join('\n'),
         ]),
       ),
-      words: SPECIES.flatMap(({ id, names }) =>
-        [names.fr, names.en].map((name) => ({ id, name: words(name) })),
-      ),
     }
   }
   return index
-}
-
-/**
- * Le Pokémon d'un nom de carte (« Lillie's Clefairy ex », « Pikachu (30C 034) ») : celui dont le
- * nom français ou anglais y figure en entier, le plus long s'il y en a plusieurs (Porygon-Z avant
- * Porygon) ; `null` si aucun. Le code et le numéro entre parenthèses n'en font pas partie : « (MEW
- * 166) » n'est pas Mew.
- */
-export function speciesInName(name: string): number | null {
-  const text = words(name.replace(/\([^()]*\)\s*$/, ''))
-  const found = speciesIndex().words.filter((species) => text.includes(species.name))
-  return found.sort((a, b) => b.name.length - a.name.length)[0]?.id ?? null
 }
 
 function cardMatches(card: PokedexEntry['card'], filter: CardFilter) {

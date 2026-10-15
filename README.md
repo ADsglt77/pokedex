@@ -29,10 +29,6 @@ bun run format   # Prettier
   de l'espèce.
 - **Catalogue** : les cartes japonaises extension par extension ; un clic donne sa carte au
   premier Pokémon qui n'en a pas.
-- **Ajouter depuis Cardmarket** : sur la page d'une carte chez Cardmarket, le favori « Ajouter au
-  Pokédex » ouvre l'app avec son id, son nom et l'adresse de la page ; le Pokémon est reconnu
-  d'après le nom et l'image retrouvée d'après le code de la carte (« SV2A 166 »), à vérifier ; il
-  reste à valider.
 - **Valeur** : prix Cardmarket du jour, valeur de la collection (et gain par rapport au prix
   payé), commandes, souhaits, coût pour compléter le Pokédex, courbes de prix au fil des jours.
 - **Achats** : liste d'achats (les cartes acceptées, avec priorité et prix maximum),
@@ -41,8 +37,7 @@ bun run format   # Prettier
   budget par mois et par fournisseur. Export CSV et recherches à coller dans Cardmarket.
 - **Thème** : sombre (gris foncé et jaune) ou clair (blanc pastel et rouge), au bouton de la
   barre ; sans choix, celui du système.
-- **Données** : le favori Cardmarket à installer (à glisser dans la barre de favoris, ou son code
-  à copier), les images à chercher pour les cartes qui n'en ont pas, export / import (achats
+- **Données** : les images à chercher pour les cartes qui n'en ont pas, export / import (achats
   compris), effacement, et l'état des données du serveur (dernière lecture de chaque source, jour
   des prix, tâche en échec ou en retard).
 
@@ -61,8 +56,7 @@ navigateur ne parle qu'à lui. Des tâches d'ingestion lisent les sources et rem
 
 Les espèces (PokéAPI) viennent aussi du serveur (tâche `species`, chaque mois). Seule une
 image à l'adresse collée se charge ailleurs ; pas celles de Cardmarket, qui ne s'affichent que sur
-son site. Le favori ne fait que lire la page Cardmarket ouverte et l'envoyer à l'app d'où il a été
-installé : installé depuis `bun dev`, il ouvre `localhost`.
+son site.
 
 En développement : `bun run dev:server` (l'API, sur le port 3000) à côté de `bun dev`, qui lui
 renvoie `/api` et `/images` ; la base vit dans `.data/`. La remplir une fois :

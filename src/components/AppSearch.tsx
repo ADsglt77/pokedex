@@ -1,6 +1,5 @@
 import { CommandPalette, type Command } from '@camply/ui'
 import {
-  BookmarkPlus,
   ChartLine,
   Database,
   Download,
@@ -36,7 +35,6 @@ const PLACES = [
   { label: 'Budget', to: '/achats?vue=budget', icon: Wallet },
   { label: 'Valeur de la collection', to: '/valeur', icon: ChartLine },
   { label: 'Données et sauvegarde', to: '/donnees', icon: Database },
-  { label: 'Installer le favori Cardmarket', to: '/donnees#favori', icon: BookmarkPlus },
   { label: 'Importer une collection', to: '/donnees#importer', icon: Upload },
 ]
 

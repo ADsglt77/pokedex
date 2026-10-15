@@ -11,7 +11,6 @@ import {
   TrendingDown,
   Unlink,
   Wallet,
-  WalletCards,
   type IconProps,
 } from '@camply/ui/icons'
 import { useMemo, type ComponentType, type ReactNode } from 'react'
@@ -449,15 +448,7 @@ function Chosen() {
 /** Une collection vide : les trois temps de l'app, et par où commencer. */
 function StartPanel() {
   return (
-    <Panel
-      title="Pour commencer"
-      description="Trois temps, à votre rythme."
-      actions={
-        <Button asChild variant="ghost" size="sm" leftIcon={<WalletCards size={14} />}>
-          <Link to="/donnees#favori">Installer le favori Cardmarket</Link>
-        </Button>
-      }
-    >
+    <Panel title="Pour commencer" description="Trois temps, à votre rythme.">
       <Steps
         orientation="vertical"
         current={0}

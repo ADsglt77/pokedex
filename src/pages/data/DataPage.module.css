@@ -145,35 +145,3 @@
   align-items: baseline;
   gap: var(--camply-space-1) var(--camply-space-2);
 }
-
-/* Les étapes d'installation du favori, numérotées dans une pastille. */
-.steps {
-  display: grid;
-  gap: 0.625rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: step;
-}
-
-.steps li {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-  color: var(--camply-text);
-  counter-increment: step;
-}
-
-.steps li::before {
-  display: inline-grid;
-  flex: none;
-  place-items: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  background: var(--camply-accent-soft);
-  color: var(--camply-accent);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  content: counter(step);
-}

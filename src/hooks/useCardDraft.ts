@@ -8,13 +8,6 @@ import { parseLink } from '@/lib/format'
 import { loadPriceHistory } from '@/store/prices'
 import type { CardImage, PokemonCard } from '@/types'
 
-/** Ce que le favori a lu de Cardmarket, pour une carte à ajouter. */
-export interface CardStart {
-  cardmarket?: number
-  reference?: string
-  page?: string
-}
-
 /**
  * L'image enregistrée vient de Pokécardex (ou de TCGplayer, d'une ancienne version) : elle suit la
  * référence, ce n'est pas une adresse collée.
@@ -24,22 +17,21 @@ const isFoundImage = (card: PokemonCard) =>
 
 /**
  * La saisie d'une carte : l'adresse de son image (vide : celle retrouvée d'après la référence),
- * son id Cardmarket, sa référence, sa page chez Cardmarket. `card` : la carte à corriger ;
- * `start` : ce que le favori a lu de Cardmarket.
+ * son id Cardmarket, sa référence, sa page chez Cardmarket. `card` : la carte à corriger.
  */
-export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
+export function useCardDraft(card: PokemonCard | null) {
   // Tiré une fois : deux clics sur « Enregistrer » écrivent la même carte, pas deux.
   const [id] = useState(() => card?.id ?? newCardId())
   const [image, setImage] = useState(() =>
     card?.image && !isFoundImage(card) ? card.image.large : '',
   )
-  // L'id et la page de départ : ceux de la carte, ou ceux que le favori a lus.
+  // L'id et la page de départ : ceux de la carte.
   const [initial] = useState(() => ({
-    cardmarket: card?.cardmarket ?? start.cardmarket ?? null,
-    page: card?.page ?? start.page ?? '',
+    cardmarket: card?.cardmarket ?? null,
+    page: card?.page ?? '',
   }))
   const [cardmarketText, setCardmarketText] = useState(String(initial.cardmarket ?? ''))
-  const [reference, setReference] = useState(card?.reference ?? start.reference ?? '')
+  const [reference, setReference] = useState(card?.reference ?? '')
   const [page, setPage] = useState(initial.page)
   const [submitted, setSubmitted] = useState(false)
   const [saving, setSaving] = useState(false)
