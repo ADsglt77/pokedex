@@ -18,7 +18,7 @@ bun install
 bun dev                # serveur Vite (lancé par Bun, pas par Node : `bun --bun vite`) ; voir « Sous Windows » plus bas
 bun run build          # tsc -b + vite build (pas `bun build`)
 bun lint               # ESLint
-bun test               # tests de tests/ (achats, prix, import, synchronisation, historique des prix), relancés par le build Docker
+bun test               # tests de tests/ (achats, prix, saisie, import, synchronisation, historique des prix), relancés par le build Docker
 bun run format         # Prettier sur src/, server/ et tests/
 bun run dev:server     # le serveur de l'app (API, server/index.ts) sur le port 3000 ; `bun dev` lui renvoie /api et /images
 bun run ingest catalog # une tâche d'ingestion : catalogue (Pokécardex) → .data/data.db ; `--refresh` relit toutes les séries
@@ -37,8 +37,8 @@ bun server/create-user.ts <e-mail>       # change le mot de passe du compte (ou 
   saisit (montants, liens, adresse d'image, id Cardmarket). Factoriser quand une logique sert à
   deux endroits ou plus.
 - Tests : seulement la logique où une erreur coûte de l'argent (`tests/`, `bun test`) : budget,
-  registre des commandes, plan de la prochaine commande, import (un montant mal lu fausserait le
-  budget), prix d'une carte (le plan le lit : jamais celui d'une autre), synchronisation (une
+  registre des commandes, plan de la prochaine commande, import et montants saisis (un montant mal
+  lu fausserait le budget), id Cardmarket saisi, prix d'une carte (le plan le lit : jamais celui d'une autre), synchronisation (une
   erreur écraserait les commandes d'un autre appareil) ; et l'historique des prix (`server/history.ts`,
   irremplaçable : Cardmarket n'en garde pas). Pas de tests d'interface. Le build Docker les lance :
   un test en échec bloque le déploiement.

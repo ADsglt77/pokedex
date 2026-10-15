@@ -25,11 +25,14 @@ export function parseCardmarketLink(text: string): string | null {
   return url?.protocol === 'https:' && url.hostname === 'www.cardmarket.com' ? url.href : null
 }
 
-/** Un id Cardmarket saisi ; `null` s'il est vide, `undefined` s'il n'est pas un nombre. */
+/**
+ * Un id Cardmarket saisi ; `null` s'il est vide, `undefined` s'il n'est pas un nombre (ou vaut 0 :
+ * aucun produit, la carte n'aurait jamais de prix).
+ */
 export function readCardmarketId(text: string): number | null | undefined {
   const trimmed = text.trim()
   if (!trimmed) return null
-  return /^\d{1,9}$/.test(trimmed) ? Number(trimmed) : undefined
+  return /^\d{1,9}$/.test(trimmed) && Number(trimmed) > 0 ? Number(trimmed) : undefined
 }
 
 /** Une image de Cardmarket : elle ne s'affichera pas dans l'app. */
