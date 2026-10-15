@@ -1,16 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#0a1019"/>
-  <g fill="#38bdf8">
-    <rect x="5" y="5" width="6" height="6" rx="1.5"/>
-    <rect x="13" y="5" width="6" height="6" rx="1.5"/>
-    <rect x="21" y="5" width="6" height="6" rx="1.5"/>
-    <rect x="5" y="13" width="6" height="6" rx="1.5"/>
+  <rect x="1" y="1" width="30" height="30" rx="8" fill="#e3350d"/>
+  <path d="M1 21.5h30" stroke="#a8230a" stroke-width="1.5"/>
+  <circle cx="10.5" cy="11" r="6.75" fill="#ffffff"/>
+  <circle cx="10.5" cy="11" r="4.75" fill="#3ba3f0"/>
+  <circle cx="8.9" cy="9.4" r="1.5" fill="#ffffff" opacity="0.75"/>
+  <g stroke="#a8230a" stroke-width="0.75">
+    <circle cx="19.5" cy="7.5" r="1.5" fill="#ff5f52"/>
+    <circle cx="23.25" cy="7.5" r="1.5" fill="#ffcb05"/>
+    <circle cx="27" cy="7.5" r="1.5" fill="#5fd27d"/>
   </g>
-  <g fill="#1d2a3c">
-    <rect x="13" y="13" width="6" height="6" rx="1.5"/>
-    <rect x="21" y="13" width="6" height="6" rx="1.5"/>
-    <rect x="5" y="21" width="6" height="6" rx="1.5"/>
-    <rect x="13" y="21" width="6" height="6" rx="1.5"/>
-    <rect x="21" y="21" width="6" height="6" rx="1.5"/>
-  </g>
+  <rect x="6" y="24.5" width="20" height="3.5" rx="1.5" fill="#0a1426"/>
 </svg>

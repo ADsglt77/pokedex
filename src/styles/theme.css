@@ -1,0 +1,86 @@
+/*
+ * Le thème de l'app : les couleurs de @camply/ui (`--camply-*`) redéfinies aux couleurs de
+ * l'univers Pokémon, sur le thème sombre de camply. Des fonds bleu nuit (le bleu du logo Pokémon,
+ * assombri), l'accent jaune (boutons, page ouverte, focus), le rouge du Pokédex pour la marque
+ * (logo). Les tons gardent chacun leur couleur, distincte de l'accent : danger corail,
+ * avertissement orange, succès vert, information bleu Pokémon.
+ * Chargé après les styles de camply : ses jetons sont redéfinis au même niveau (`:root`).
+ */
+
+:root {
+  /* La marque : le logo (un Pokédex) et l'icône de l'onglet (`public/favicon.svg`). */
+  --brand-red: #e3350d;
+  --brand-red-dark: #a8230a;
+  --brand-yellow: #ffcb05;
+  --brand-blue: #2a75bb;
+  --brand-lens: #3ba3f0;
+
+  /* Fonds et textes : bleu nuit. */
+  --camply-bg: #0a1426;
+  --camply-surface: #0e1a31;
+  --camply-surface-2: #13233f;
+  --camply-elevated: #172a4b;
+  --camply-overlay: rgba(4, 9, 20, 0.72);
+  --camply-text: #e9f0fb;
+  --camply-text-strong: #ffffff;
+  --camply-text-muted: #a0b2d0;
+  --camply-text-muted-2: #7689ab;
+  --camply-text-disabled: #4c5f82;
+
+  /* L'accent : le jaune Pokémon, texte bleu nuit dessus. */
+  --camply-accent: #ffcb05;
+  --camply-accent-hover: #ffd94a;
+  --camply-accent-contrast: #0a1426;
+  --camply-accent-soft: rgba(255, 203, 5, 0.12);
+  --camply-accent-soft-hover: rgba(255, 203, 5, 0.2);
+  --camply-accent-border: rgba(255, 203, 5, 0.4);
+  --camply-ring: 0 0 0 3px rgba(255, 203, 5, 0.45);
+  --camply-gradient-accent: linear-gradient(90deg, #f29e0c, var(--camply-accent));
+
+  /* Danger : un corail, distinct du rouge de la marque. */
+  --camply-danger: #ff5f52;
+  --camply-danger-hover: #ff8076;
+  --camply-danger-contrast: #2b0703;
+  --camply-danger-soft: rgba(255, 95, 82, 0.14);
+  --camply-danger-soft-hover: rgba(255, 95, 82, 0.22);
+  --camply-danger-border: rgba(255, 95, 82, 0.36);
+  --camply-danger-ring: 0 0 0 3px rgba(255, 95, 82, 0.3);
+  --camply-gradient-danger: linear-gradient(90deg, #c4260a, var(--camply-danger));
+
+  /* Avertissement : orange, distinct du jaune de l'accent. */
+  --camply-warn: #ff9d3b;
+  --camply-warn-contrast: #2a1402;
+  --camply-warn-soft: rgba(255, 157, 59, 0.13);
+  --camply-warn-border: rgba(255, 157, 59, 0.32);
+  --camply-gradient-warn: linear-gradient(90deg, #d9661a, var(--camply-warn));
+
+  --camply-success: #5fd27d;
+  --camply-success-contrast: #04170a;
+  --camply-success-soft: rgba(95, 210, 125, 0.13);
+  --camply-success-border: rgba(95, 210, 125, 0.3);
+
+  /* Information : le bleu Pokémon, éclairci pour se lire sur le fond. */
+  --camply-info: #6cb2ff;
+  --camply-info-contrast: #04142a;
+  --camply-info-soft: rgba(108, 178, 255, 0.13);
+  --camply-info-border: rgba(108, 178, 255, 0.32);
+  --camply-gradient-info: linear-gradient(90deg, var(--brand-blue), var(--camply-info));
+
+  /* Bordures, reflets, ombres : teintés de bleu. */
+  --camply-border: rgba(120, 160, 225, 0.16);
+  --camply-border-soft: rgba(120, 160, 225, 0.09);
+  --camply-border-strong: rgba(120, 160, 225, 0.26);
+  --camply-border-hover: rgba(120, 160, 225, 0.36);
+  --camply-sheen: rgba(120, 160, 225, 0.16);
+  --camply-scrollbar-thumb: rgba(120, 160, 225, 0.26);
+  --camply-scrollbar-thumb-hover: rgba(120, 160, 225, 0.42);
+  --camply-shadow-color: rgba(2, 6, 16, 0.6);
+  --camply-shadow-sm: 0 2px 8px rgba(2, 6, 16, 0.5);
+  --camply-shadow-md: 0 8px 24px rgba(2, 6, 16, 0.55);
+  --camply-shadow-lg: 0 22px 55px rgba(2, 6, 16, 0.62);
+  --camply-shadow-pop: 0 16px 40px rgba(2, 6, 16, 0.6);
+  --camply-neutral-solid: #d6e1f2;
+  --camply-knob: #eef3fb;
+  --camply-tooltip-bg: #eef3fb;
+  --camply-tooltip-dark: #1b2f52;
+}

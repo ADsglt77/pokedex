@@ -18,7 +18,7 @@ The user's own React component library (60 components, dark theme by default, Fr
 
 ## Theming
 
-Everything reads `--camply-*` CSS variables. This app keeps the default camply look (dark, cyan accent); if a token must change, override it on `:root` in `src/styles/global.css`. Never hard-code colors in components — use the tokens. Main tokens:
+Everything reads `--camply-*` CSS variables. This app restyles camply's dark theme in Pokémon colours: `src/styles/theme.css` (loaded right after camply's styles) redefines the `--camply-*` tokens on `:root` — navy backgrounds, yellow accent, Pokédex red for the brand (`--brand-*`, logo only), danger coral and warn orange kept distinct from the accent. Change a colour there, never in a component. Never hard-code colors in components — use the tokens. Main tokens:
 
 `--camply-bg, --camply-surface, --camply-surface-2, --camply-elevated, --camply-overlay, --camply-text, --camply-text-strong, --camply-text-muted, --camply-accent, --camply-accent-hover, --camply-accent-contrast, --camply-accent-soft, --camply-accent-border, --camply-danger*, --camply-warn*, --camply-success*, --camply-info*, --camply-border, --camply-border-soft, --camply-border-strong, --camply-radius-{xs,sm,,lg,xl,pill}, --camply-space-{1..6,8}, --camply-shadow-{sm,md,lg,pop}, --camply-ring, --camply-field-bg, --camply-font-{sans,display,mono}`.
 
@@ -64,7 +64,7 @@ Every component accepts `className` and `style`; single-root components forward 
 - **`Progress` track**: `ProgressRuler.module.css` restyles `.camply-progress__track`. Internal classes are not an API: recheck them after a camply update.
 - **Table inside a `Panel`**: `<Panel flush>` drops the `.camply-table__wrap` border and aligns the first and last columns on the panel title (`Panel.module.css`). A `Stat` shown flat in a panel (`CardPrice`) and the compact `.stat-grid` on phones (`global.css`) restyle `.camply-stat__*` the same way.
 - **`Combobox` as an « add » field**: pass `value=""` (controlled and empty) so the field clears after each pick without remounting (a `key` would lose the focus).
-- **`CardTitle` stops at `headingLevel` 2**: a page whose title sits in a `Card` (LoginPage) renders its own `<h1>` styled with the display font.
+- **`CardTitle` stops at `headingLevel` 2**: a page whose title sits in a `Card` (`AuthCard`, for LoginPage and WelcomePage) renders its own `<h1>` styled with the display font.
 - **`MenuLabel` is an uppercase caption**: for an e-mail or a sentence in a `DropdownMenu`, override `text-transform` / `letter-spacing` with a class (AccountMenu).
 - **`Card` renders a `div`** (no `as`): give it `role="article"` when it stands for one (WishCard).
 - **No chart component**: `src/components/PriceChart.tsx` is a small SVG line chart on camply tokens.

@@ -1,21 +1,4 @@
-/* Connexion et inscription : une carte seule, centrée, à la largeur d'un formulaire. */
-.page {
-  display: grid;
-  place-items: center;
-  min-height: 60svh;
-  padding: var(--camply-space-6) var(--gutter);
-}
-
-.card {
-  width: 100%;
-  max-width: 26rem;
-}
-
-/* Le titre de la page (camply n'a pas de `CardTitle` de niveau 1) : un `h1` à la taille d'un `h2`. */
-.title {
-  font-size: var(--title-md);
-}
-
+/* Le formulaire des pages de connexion et de première visite, sous le texte de leur carte. */
 .form {
   margin-top: var(--camply-space-5);
 }

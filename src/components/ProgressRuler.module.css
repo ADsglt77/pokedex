@@ -26,8 +26,8 @@
 .segment :global(.camply-progress__track) {
   height: 6px;
   transition:
-    height 0.15s,
-    background 0.15s;
+    height var(--duration-fast),
+    background var(--duration-fast);
 }
 
 .segment:hover :global(.camply-progress__track) {

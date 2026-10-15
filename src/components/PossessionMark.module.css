@@ -11,7 +11,7 @@
   background: color-mix(in srgb, var(--camply-bg) 90%, transparent);
   color: var(--camply-text-muted);
   box-shadow: 0 0 0 1px var(--camply-border-strong);
-  animation: stamp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: stamp 0.3s var(--ease-out);
 }
 
 /* L'icône (celles de camply, en masque) prend la couleur du texte. */

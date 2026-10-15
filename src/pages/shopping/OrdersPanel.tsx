@@ -3,7 +3,7 @@ import { Download, Eye, PackageCheck, Pencil, Plus, Receipt, Trash2 } from '@cam
 import { useState } from 'react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExternalLink } from '@/components/ExternalLink'
-import { LateOrdersAlert } from '@/components/LateOrdersAlert'
+import { LateOrdersAlert } from './LateOrdersAlert'
 import { useCollectionAction, useNotify } from '@/hooks/useNotify'
 import { formatDate, formatEuro, formatInteger, plural, today } from '@/lib/format'
 import {

@@ -1,6 +1,6 @@
 import { Card, CardDescription, CardHeader } from '@camply/ui'
 import type { ReactNode } from 'react'
-import styles from './AuthPage.module.css'
+import styles from './AuthCard.module.css'
 
 /** Trop de tentatives (5 par minute, `server/auth.ts`) : la réponse 429 du serveur. */
 export const TOO_MANY_ATTEMPTS = 'Trop de tentatives : réessayez dans une minute.'

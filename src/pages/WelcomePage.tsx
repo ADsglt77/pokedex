@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router'
 import { accountCreated, authClient } from '@/lib/auth-client'
 import { pageTitle } from '@/lib/format'
 import { sync } from '@/store/sync'
-import { AuthCard, TOO_MANY_ATTEMPTS } from './AuthCard'
+import { AuthCard, TOO_MANY_ATTEMPTS } from '@/components/AuthCard'
 import styles from './AuthPage.module.css'
 
 /** Le message d'un refus, d'après la réponse du serveur. */
@@ -94,7 +94,7 @@ export function WelcomePage() {
             onChange={(event) => setPassword(event.target.value)}
           />
           <Input
-            label="Encore une fois"
+            label="Confirmer le mot de passe"
             type="password"
             autoComplete="new-password"
             required

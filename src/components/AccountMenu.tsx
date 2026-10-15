@@ -9,6 +9,7 @@ import { authClient, loginPath } from '@/lib/auth-client'
 import { cx } from '@/lib/cx'
 import {
   hasUnsentChanges,
+  setConflictQuestion,
   setSyncUser,
   signOut,
   sync,
@@ -69,8 +70,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   // Après la connexion, retour à la page ouverte, filtres compris.
   const login = loginPath(pathname + search)
   const notify = useNotify()
-  // Le conflit dont la question a été fermée (« Plus tard ») ; un nouveau la rouvre.
-  const [closedConflict, setClosedConflict] = useState<typeof conflict>(null)
+  const dismissed = useSyncStore((state) => state.dismissed)
   const [confirmingSignOut, setConfirmingSignOut] = useState(false)
   const userId = session?.user.id ?? null
 
@@ -128,7 +128,9 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
         <MenuLabel className={styles.text}>{text}</MenuLabel>
         <MenuSeparator />
         {status === 'conflict' && (
-          <MenuItem onSelect={() => setClosedConflict(null)}>Choisir la version à garder</MenuItem>
+          <MenuItem onSelect={() => setConflictQuestion(true)}>
+            Choisir la version à garder
+          </MenuItem>
         )}
         {status === 'expired' ? (
           <MenuItem icon={<LogIn size={16} />} onSelect={() => navigate(login)}>
@@ -151,8 +153,8 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
       </DropdownMenu>
 
       <SyncConflictDialog
-        open={status === 'conflict' && conflict !== closedConflict}
-        onClose={() => setClosedConflict(conflict)}
+        open={status === 'conflict' && conflict !== dismissed}
+        onClose={() => setConflictQuestion(false)}
       />
       <ConfirmDialog
         open={confirmingSignOut}

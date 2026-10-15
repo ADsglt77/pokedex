@@ -50,7 +50,7 @@ export function SpeciesNav({ species, previous, next, nextWithoutCard }: Species
   }, [previous, next, navigate])
 
   return (
-    <nav aria-label="Navigation entre les Pokémon" className={styles.nav}>
+    <div className={styles.nav}>
       <div className={styles.links}>
         {/* Des liens du routeur dans les libellés : camply ferait des liens qui rechargent la page. */}
         <Breadcrumbs
@@ -81,11 +81,11 @@ export function SpeciesNav({ species, previous, next, nextWithoutCard }: Species
           </Button>
         )}
       </div>
-      <div className={styles.neighbours}>
+      <nav aria-label="Pokémon voisins" className={styles.neighbours}>
         <Neighbour species={previous} rel="prev" edge="Début du Pokédex" />
         <Neighbour species={next} rel="next" edge="Fin du Pokédex" />
-      </div>
-    </nav>
+      </nav>
+    </div>
   )
 }
 
@@ -104,7 +104,7 @@ function Neighbour({
       to={`/pokemon/${species.id}`}
       rel={rel}
       className={styles.neighbour}
-      aria-label={`${rel === 'prev' ? 'Pokémon précédent' : 'Pokémon suivant'} : ${species.names.fr}`}
+      aria-label={`${rel === 'prev' ? 'Pokémon précédent' : 'Pokémon suivant'} : ${species.names.fr}, ${formatDexNumber(species.id)}`}
     >
       <span className={styles.number}>
         {rel === 'prev' && '← '}

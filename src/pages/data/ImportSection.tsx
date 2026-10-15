@@ -30,7 +30,10 @@ export function ImportSection() {
     setFiles(next)
     const file = next[0]?.file
     chosen.current = file
-    const read = file ? parseImport(await file.text()) : undefined
+    // L'aperçu du fichier d'avant disparaît pendant la lecture : on n'importe que celui affiché.
+    setImported(undefined)
+    // Un fichier illisible (supprimé, inaccessible) compte pour un fichier qui n'est pas un export.
+    const read = file ? parseImport(await file.text().catch(() => '')) : undefined
     if (chosen.current === file) setImported(read)
   }
 

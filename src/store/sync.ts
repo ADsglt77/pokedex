@@ -39,10 +39,19 @@ export interface ServerDocument {
   hash: string
 }
 
-export const useSyncStore = create<{ status: SyncStatus; conflict: ServerDocument | null }>(() => ({
-  status: 'local',
-  conflict: null,
-}))
+export const useSyncStore = create<{
+  status: SyncStatus
+  conflict: ServerDocument | null
+  /** Le conflit dont la question a été fermée (« Plus tard ») ; un nouveau la rouvre. */
+  dismissed: ServerDocument | null
+}>(() => ({ status: 'local', conflict: null, dismissed: null }))
+
+/**
+ * Ferme la question du conflit en cours (`open` à faux) ou la rouvre. Gardé ici, pas dans le menu
+ * du compte : il change de place (barre latérale, barre du haut) quand l'écran tourne.
+ */
+export const setConflictQuestion = (open: boolean) =>
+  useSyncStore.setState((state) => ({ dismissed: open ? null : state.conflict }))
 
 const BASE_KEY = 'pokedex-collection.sync'
 
@@ -81,6 +90,18 @@ function apply({ collection, shopping }: SyncDocument) {
 
 const setStatus = (status: SyncStatus) => useSyncStore.setState({ status })
 
+let retry: ReturnType<typeof setTimeout> | undefined
+/**
+ * Hors ligne, ou le serveur en panne passagère (502 pendant un redémarrage…) : la synchronisation
+ * est redemandée 30 s plus tard. Le retour du réseau, de la page ou une modification la relancent
+ * aussi, plus tôt.
+ */
+function offline() {
+  setStatus('offline')
+  clearTimeout(retry)
+  if (user) retry = setTimeout(() => void sync(), 30_000)
+}
+
 /** Un appel à l'API ; `null` sans réponse (hors ligne, serveur arrêté). */
 async function call(method: 'GET' | 'PUT', init: { body?: string; etag?: string } = {}) {
   try {
@@ -110,15 +131,17 @@ async function readServer(response: Response): Promise<ServerDocument | null> {
 /** Envoie le document : `true` s'il est enregistré, `false` si le serveur a changé depuis. */
 async function push(document: SyncDocument, hash: string, baseVersion: number) {
   const response = await call('PUT', { body: JSON.stringify({ baseVersion, ...document }) })
-  if (!response) return setStatus('offline')
+  if (!response) return offline()
   if (response.status === 401) return setStatus('expired')
   if (response.status === 409) return false
   // Refusé : le document ne passe pas les contrôles du serveur. Toute autre erreur (502 pendant
   // un redémarrage…) est une panne passagère : l'envoi repartira.
   if (response.status === 400 || response.status === 422) return setStatus('refused')
-  if (!response.ok) return setStatus('offline')
-  const { version } = (await response.json()) as { version: number }
-  writeBase(version, hash)
+  if (!response.ok) return offline()
+  const body = (await response.json().catch(() => null)) as { version: number } | null
+  // Une réponse illisible (coupée en route) : l'envoi est peut-être passé, on comparera de nouveau.
+  if (!body) return offline()
+  writeBase(body.version, hash)
   setStatus('synced')
   return true
 }
@@ -137,43 +160,52 @@ function changedSince(document: SyncDocument) {
 export function sync(): Promise<void> {
   if (!user || useSyncStore.getState().status === 'conflict') return Promise.resolve()
   return exclusive(async () => {
-    // Un autre appareil peut écrire entre la lecture et l'envoi : on recommence alors.
-    for (let attempt = 0; attempt < 3 && user; attempt++) {
-      if (useSyncStore.getState().status !== 'synced') setStatus('syncing')
-      const base = readBase()
-      const document = localDocument()
-      const hash = await documentHash(document)
-      const response = await call('GET', { etag: base ? `"v${base.version}"` : undefined })
-      // Déconnecté pendant l'échange : plus rien à synchroniser.
-      if (!user) return
-      if (!response) return setStatus('offline')
-      if (response.status === 401) return setStatus('expired')
-      if (response.status !== 304 && !response.ok) return setStatus('offline')
-      // 304 : le serveur en est toujours à la version échangée.
-      const server = response.status === 304 ? null : await readServer(response)
-      const current =
-        response.status === 304
-          ? { ...base!, empty: false }
-          : {
-              version: server?.version ?? 0,
-              hash: server?.hash ?? null,
-              empty: !server || isEmptyDocument(server.document),
-            }
-      const step = decide({ hash, empty: isEmptyDocument(document) }, base, current)
-      if (step === 'noop') return setStatus('synced')
-      if (step === 'adopt') {
-        // Modifiée pendant l'échange : reprendre celle du serveur l'effacerait, on compare de
-        // nouveau.
-        if (changedSince(document)) continue
-        writeBase(server!.version, server!.hash)
-        if (server!.hash !== hash) apply(server!.document)
-        return setStatus('synced')
-      }
-      if (step === 'conflict')
-        return useSyncStore.setState({ status: 'conflict', conflict: server })
-      if ((await push(document, hash, current.version)) !== false) return
+    try {
+      await compare()
+    } catch {
+      // Une réponse illisible (coupée, délai dépassé pendant sa lecture) : une panne passagère.
+      offline()
     }
   })
+}
+
+/** Le tour de `sync`, sous le verrou. */
+async function compare() {
+  // Un autre appareil peut écrire entre la lecture et l'envoi : on recommence alors.
+  for (let attempt = 0; attempt < 3 && user; attempt++) {
+    if (useSyncStore.getState().status !== 'synced') setStatus('syncing')
+    const base = readBase()
+    const document = localDocument()
+    const hash = await documentHash(document)
+    const response = await call('GET', { etag: base ? `"v${base.version}"` : undefined })
+    // Déconnecté pendant l'échange : plus rien à synchroniser.
+    if (!user) return
+    if (!response) return offline()
+    if (response.status === 401) return setStatus('expired')
+    if (response.status !== 304 && !response.ok) return offline()
+    // 304 : le serveur en est toujours à la version échangée.
+    const server = response.status === 304 ? null : await readServer(response)
+    const current =
+      response.status === 304
+        ? { ...base!, empty: false }
+        : {
+            version: server?.version ?? 0,
+            hash: server?.hash ?? null,
+            empty: !server || isEmptyDocument(server.document),
+          }
+    const step = decide({ hash, empty: isEmptyDocument(document) }, base, current)
+    if (step === 'noop') return setStatus('synced')
+    if (step === 'adopt') {
+      // Modifiée pendant l'échange : reprendre celle du serveur l'effacerait, on compare de
+      // nouveau.
+      if (changedSince(document)) continue
+      writeBase(server!.version, server!.hash)
+      if (server!.hash !== hash) apply(server!.document)
+      return setStatus('synced')
+    }
+    if (step === 'conflict') return useSyncStore.setState({ status: 'conflict', conflict: server })
+    if ((await push(document, hash, current.version)) !== false) return
+  }
 }
 
 /** Conflit : garde la version de cet appareil, envoyée à la place de celle du serveur. */

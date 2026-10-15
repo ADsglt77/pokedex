@@ -343,6 +343,7 @@ function Indicators() {
             )
           }
           delta={prices ? gainPercent(owned.paidCardsValue, owned.paid) : undefined}
+          deltaSuffix={'\u00a0%'}
           hint={
             pricesMissing
               ? 'Prix indisponibles pour le moment'

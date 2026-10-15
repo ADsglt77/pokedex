@@ -12,11 +12,14 @@ bun install
 bun dev          # serveur de dev Vite
 bun run build    # type-check + build
 bun lint         # ESLint
-bun test         # tests de la logique des achats
+bun test         # tests : achats, prix, import, synchronisation, historique des prix
 bun run format   # Prettier
 ```
 
-- **Accueil** : progression, réglette par génération, dernières cartes obtenues.
+- **Accueil** : un tableau de bord (progression, « À faire », valeur, budget du mois, liste
+  d'achats, commandes, dernières cartes) ; trois étapes pour commencer quand la collection est vide.
+- **Recherche** (Ctrl/⌘ K, ou le bouton de la barre) : un Pokémon par son nom ou son numéro, une
+  page, une action.
 - **Pokédex** : les 1 025 espèces, recherche (nom fr/en/ja ou numéro, raccourci `/`), filtres
   partageables dans l'adresse.
 - **Fiche** : la carte du Pokémon, choisie parmi ses cartes japonaises (image, prix du jour, tri
@@ -24,6 +27,8 @@ bun run format   # Prettier
   (possédée / commandée / souhaitée) et son prix payé, son prix Cardmarket et sa courbe, le lien
   vers sa page Cardmarket, l'achat (dans la liste d'achats ou non, priorité, prix maximum, note), les détails
   de l'espèce.
+- **Catalogue** : les cartes japonaises extension par extension ; un clic donne sa carte au
+  premier Pokémon qui n'en a pas.
 - **Ajouter depuis Cardmarket** : sur la page d'une carte chez Cardmarket, le favori « Ajouter au
   Pokédex » ouvre l'app avec son id, son nom et l'adresse de la page ; le Pokémon est reconnu
   d'après le nom et l'image retrouvée d'après le code de la carte (« SV2A 166 »), à vérifier ; il
@@ -76,7 +81,7 @@ vôtre, le seul, avec le code de première visite que `bun run dev:server` écri
 (Elysia, OpenAPI) est à `http://localhost:5173/api/docs`, en développement seulement.
 
 Votre collection : sans connexion, elle reste dans le navigateur (`localStorage`), et l'export est
-sa seule sauvegarde. Connecté (bouton « Se connecter » en haut à droite), elle est gardée sur le
+sa seule sauvegarde. Connecté (« Se connecter », en bas de la barre latérale, ou en haut à droite sur petit écran), elle est gardée sur le
 serveur et vous suit d'un appareil à l'autre : un seul connecté à la fois (se connecter ailleurs
 déconnecte le précédent, qui garde ses modifications). Personne d'autre ne peut créer de compte.
 

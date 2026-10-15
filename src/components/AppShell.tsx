@@ -71,20 +71,23 @@ const exportAction = (
   </Button>
 )
 
-function Emblem() {
+/**
+ * Le logo : un Pokédex. Boîtier rouge, grande lentille bleue cerclée de blanc, trois voyants
+ * (rouge, jaune, vert), charnière et écran. Le même dessin sert d'icône d'onglet
+ * (`public/favicon.svg`).
+ */
+function Logo() {
   return (
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" className={styles.emblem}>
-      {Array.from({ length: 9 }, (_, index) => (
-        <rect
-          key={index}
-          x={1 + (index % 3) * 8}
-          y={1 + Math.floor(index / 3) * 8}
-          width="6"
-          height="6"
-          rx="1.5"
-          className={index < 4 ? styles.emblemFilled : undefined}
-        />
-      ))}
+    <svg viewBox="0 0 32 32" aria-hidden="true" className={styles.logo}>
+      <rect x="1" y="1" width="30" height="30" rx="8" className={styles.logoShell} />
+      <path d="M1 21.5h30" className={styles.logoHinge} />
+      <circle cx="10.5" cy="11" r="6.75" className={styles.logoRing} />
+      <circle cx="10.5" cy="11" r="4.75" className={styles.logoLens} />
+      <circle cx="8.9" cy="9.4" r="1.5" className={styles.logoGlint} />
+      <circle cx="19.5" cy="7.5" r="1.5" className={cx(styles.logoLed, styles.logoLedRed)} />
+      <circle cx="23.25" cy="7.5" r="1.5" className={cx(styles.logoLed, styles.logoLedYellow)} />
+      <circle cx="27" cy="7.5" r="1.5" className={cx(styles.logoLed, styles.logoLedGreen)} />
+      <rect x="6" y="24.5" width="20" height="3.5" rx="1.5" className={styles.logoScreen} />
     </svg>
   )
 }
@@ -92,8 +95,10 @@ function Emblem() {
 function Brand() {
   return (
     <Link to="/" className={styles.brand}>
-      <Emblem />
-      Mon Pokédex
+      <Logo />
+      <span>
+        <span className={styles.brandMine}>Mon</span> Pokédex
+      </span>
     </Link>
   )
 }

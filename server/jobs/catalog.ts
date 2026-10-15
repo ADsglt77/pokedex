@@ -31,6 +31,12 @@ import {
 } from '../lib/pokecardex'
 import { saveSnapshot } from '../snapshots'
 
+/**
+ * Autant de pages en échec d'affilée : le site a changé (clé introuvable, défi anti-robot…), on ne
+ * le sollicite pas davantage ; la tâche est relancée plus tard.
+ */
+const MAX_FAILURES_IN_A_ROW = 10
+
 /** Le numéro imprimé : « 001/165 » → 001, « TG01/TG30 » → TG01 ; « — », « SV-P » : aucun. */
 function printedNumber(text: string) {
   const number = text.split('/')[0]!.trim()
@@ -190,6 +196,7 @@ export async function catalog(db: Database) {
   })
 
   const failed: string[] = []
+  let inARow = 0
   let cards = 0
   let read = 0
   // Les exclusivités d'autres pays d'Asie, d'après le menu de la première page lue.
@@ -209,9 +216,14 @@ export async function catalog(db: Database) {
       }
       cards += save(code, page, new Date().toISOString())
       read++
+      inARow = 0
     } catch (error) {
       failed.push(code)
       console.warn(`  ${code} :`, error instanceof Error ? error.message : error)
+      if (++inARow >= MAX_FAILURES_IN_A_ROW) {
+        console.warn(`  ${inARow} séries en échec d’affilée : la lecture s’arrête là.`)
+        break
+      }
     }
     if ((index + 1) % 50 === 0) console.log(`  ${index + 1} / ${due.length} séries`)
   }
@@ -233,8 +245,12 @@ export async function catalog(db: Database) {
       `${totals.cards} cartes en tout, ${totals.withoutCardmarket ?? 0} sans id Cardmarket, ` +
       `${totals.otherNumber ?? 0} dont le numéro imprimé n’est pas le rang de l’image`,
   )
-  const now = new Date().toISOString()
-  writeSource(db, 'catalog', { stamp: now, date: now.slice(0, 10) })
+  // Noté seulement si Pokécardex a été lu : sans aucune carte (premier passage en échec), un
+  // catalogue vide passerait pour disponible.
+  if (totals.cards > 0) {
+    const now = new Date().toISOString()
+    writeSource(db, 'catalog', { stamp: now, date: now.slice(0, 10) })
+  }
   saveCatalog(db)
   if (failed.length) {
     throw new Error(`${failed.length} séries illisibles (${failed.slice(0, 10).join(', ')})`)

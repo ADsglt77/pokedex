@@ -91,8 +91,10 @@ export function useCardDraft(card: PokemonCard | null, start: CardStart = {}) {
     const stalePage = cardmarket !== initial.cardmarket && page.trim() === initial.page
     const search = !image.trim() && referenceCode(typed) !== null
     // L'image déjà retrouvée reste, pour la même référence : si elle ne répond pas cette fois, ou
-    // si la référence n'a pas de code où la chercher (une image d'une ancienne version).
-    const kept = card && typed === card.reference && isFoundImage(card) ? card.image : null
+    // si la référence n'a pas de code où la chercher (une image d'une ancienne version). Pas si la
+    // référence n'était que le nom de l'ancien id : elle devient celle d'une autre carte.
+    const kept =
+      card && !stale && typed === card.reference && isFoundImage(card) ? card.image : null
     const found = search ? await findCardImage(typed, { retry: true }) : null
     const picture = pasted ?? found ?? kept
     return {

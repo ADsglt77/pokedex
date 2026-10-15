@@ -10,6 +10,7 @@ import '@fontsource/space-grotesk/500.css'
 import '@fontsource/space-grotesk/600.css'
 import '@fontsource/space-grotesk/700.css'
 import '@camply/ui/styles.css'
+import './styles/theme.css'
 import './styles/global.css'
 import { loadAccount } from './lib/auth-client'
 import { loadSpecies } from './lib/species'
@@ -20,9 +21,9 @@ requestPersistentStorage()
 
 const root = createRoot(document.getElementById('root')!)
 
-// Point d'entrée : polices, styles camply puis ceux de l'app. Les espèces viennent du serveur
-// avant tout affichage (toutes les pages en ont besoin), avec l'existence du compte (sans lui, la
-// première visite) ; puis notifications et routeur.
+// Point d'entrée : polices, styles camply, le thème (ses couleurs redéfinies), puis ceux de l'app.
+// Les espèces viennent du serveur avant tout affichage (toutes les pages en ont besoin), avec
+// l'existence du compte (sans lui, la première visite) ; puis notifications et routeur.
 Promise.all([loadSpecies(), loadAccount()]).then(([loaded]) =>
   root.render(
     <StrictMode>

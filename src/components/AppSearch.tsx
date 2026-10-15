@@ -72,7 +72,8 @@ export function AppSearch({ open, onClose }: { open: boolean; onClose: () => voi
         keywords: [searchForm(names.fr), names.en, searchForm(names.en), names.ja ?? '', id].join(
           ' ',
         ),
-        group: 'Pokémon',
+        // Pas « Pokémon » : la palette cherche aussi dans le groupe, « poké » les trouverait tous.
+        group: 'Espèces',
         onRun: () => navigate(`/pokemon/${id}`),
       })),
     ],

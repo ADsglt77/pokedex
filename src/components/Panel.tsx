@@ -1,12 +1,13 @@
 import { Card, CardDescription, CardTitle } from '@camply/ui'
-import { useId, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { cx } from '@/lib/cx'
 import styles from './Panel.module.css'
 
 /**
  * Un bloc d'une page (tableau de bord, valeur, réglages) : une `Card` de camply, son titre et sa
- * phrase, ses actions à droite, puis son contenu (`flush` : un tableau, bord à bord). Une région
- * nommée par son titre.
+ * phrase, ses actions à droite, puis son contenu (`flush` : un tableau, bord à bord). Pas une
+ * région nommée : une page en compte jusqu'à huit, trop de points de repère ; son titre (h2) suffit
+ * à s'y retrouver.
  */
 export function Panel({
   title,
@@ -26,18 +27,11 @@ export function Panel({
   flush?: boolean
   children?: ReactNode
 }) {
-  const titleId = useId()
   return (
-    <Card
-      padding="none"
-      role="region"
-      aria-labelledby={titleId}
-      id={id}
-      className={cx(styles.panel, className)}
-    >
+    <Card padding="none" id={id} className={cx(styles.panel, className)}>
       <div className={styles.head}>
         <div className={styles.titles}>
-          <CardTitle id={titleId} headingLevel={2} className={styles.title}>
+          <CardTitle headingLevel={2} className={styles.title}>
             {title}
           </CardTitle>
           {description && <CardDescription>{description}</CardDescription>}

@@ -39,6 +39,7 @@ export function CardPrice({ card }: { card: PokemonCard }) {
             label="Prix du marché"
             value={formatEuro(price.price)}
             delta={paid === null ? undefined : gainPercent(price.price, paid)}
+            deltaSuffix={'\u00a0%'}
             hint={details(
               paid !== null && `payée ${formatEuro(paid)}`,
               price.low && `au plus bas ${formatEuro(price.low)}`,

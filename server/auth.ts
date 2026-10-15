@@ -20,7 +20,8 @@ import { getMigrations } from 'better-auth/db/migration'
 import type { Database } from 'bun:sqlite'
 import { Elysia } from 'elysia'
 
-const DAY = 24 * 60 * 60
+/** Un jour, en secondes (Better Auth compte ses durées en secondes ; `@/lib/time` en ms). */
+const DAY_IN_SECONDS = 24 * 60 * 60
 
 /** Sans les caractères qui se confondent (I, L, O, U) : « 7KQM-3XPA ». */
 const CODE_LETTERS = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
@@ -49,7 +50,7 @@ export async function createAuth(db: Database, { trusted = false } = {}) {
     baseURL: process.env.BETTER_AUTH_URL,
     secret: process.env.BETTER_AUTH_SECRET,
     emailAndPassword: { enabled: true },
-    session: { expiresIn: 60 * DAY, updateAge: DAY },
+    session: { expiresIn: 60 * DAY_IN_SECONDS, updateAge: DAY_IN_SECONDS },
     databaseHooks: {
       user: {
         create: {

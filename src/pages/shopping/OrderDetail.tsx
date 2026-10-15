@@ -1,7 +1,7 @@
 import { Badge, Button, Modal, Stack } from '@camply/ui'
 import { PackageCheck, Pencil, Trash2 } from '@camply/ui/icons'
 import { ExternalLink } from '@/components/ExternalLink'
-import { LateOrdersAlert } from '@/components/LateOrdersAlert'
+import { LateOrdersAlert } from './LateOrdersAlert'
 import { ORDER_STATE_LABELS } from '@/config/shopping'
 import { details, formatDate, formatEuro, formatInteger, today } from '@/lib/format'
 import { LATE_AFTER_DAYS, latePendingOrders, supplierLabel, unitCosts } from '@/lib/orders'

@@ -26,11 +26,12 @@ services:
       - db:/data
       - images:/images
 
-  # Les tâches d'ingestion (`server/ingest.ts`), chacune à son rythme : le catalogue chaque jour (le
-  # premier passage prend un quart d'heure), les prix toutes les 6 h (ils changent une fois par
-  # jour ; la tâche ne retélécharge que ce qui a changé), les images chaque jour (le premier
-  # passage, environ 1 Go, prend une heure ou plus), les sauvegardes des bases chaque jour. Après
-  # un échec, de nouveau 10 min plus tard, puis 20, 40… jusqu'à 6 h. Même image que `server`.
+  # Les tâches d'ingestion (`server/ingest.ts`), chacune à son rythme : les espèces chaque mois,
+  # le catalogue chaque jour (le premier passage prend une vingtaine de minutes), les prix toutes
+  # les 6 h (ils changent une fois par jour ; la tâche ne retélécharge que ce qui a changé), les
+  # images chaque jour (le premier passage, environ 1 Go, prend une heure ou plus), les sauvegardes
+  # des bases chaque jour. Après un échec, de nouveau 10 min plus tard, puis 20, 40… jusqu'à 6 h.
+  # Même image que `server`.
   # L'ancien volume `prices` n'est lu qu'une fois : au premier démarrage, son historique est repris
   # (et vérifié) avant que la tâche `prices` n'écrive.
   ingest:

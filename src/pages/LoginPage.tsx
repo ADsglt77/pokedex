@@ -5,12 +5,15 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { authClient } from '@/lib/auth-client'
 import { pageTitle } from '@/lib/format'
 import { sync } from '@/store/sync'
-import { AuthCard, TOO_MANY_ATTEMPTS } from './AuthCard'
+import { AuthCard, TOO_MANY_ATTEMPTS } from '@/components/AuthCard'
 import styles from './AuthPage.module.css'
 
-/** L'adresse où revenir : une page du site (« /achats »), jamais un autre site (« //exemple.fr »). */
+/**
+ * L'adresse où revenir : une page du site (« /achats »), jamais un autre site (« //exemple.fr »,
+ * « /\exemple.fr », que le navigateur lit comme « //exemple.fr ») : elle doit rester sur le site.
+ */
 const returnPath = (path: string | null) =>
-  path?.startsWith('/') && !path.startsWith('//') ? path : '/'
+  path?.startsWith('/') && new URL(path, location.origin).origin === location.origin ? path : '/'
 
 /** Le message d'un échec de connexion, d'après la réponse du serveur. */
 const failure = (status: number) =>

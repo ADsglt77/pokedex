@@ -21,7 +21,7 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--duration-fast);
 }
 
 .art {
@@ -60,7 +60,7 @@
   color: var(--camply-text);
   font-size: var(--text-sm);
   line-height: 1.35;
-  transition: color 0.15s;
+  transition: color var(--duration-fast);
 }
 
 .choice:hover .extra {

@@ -35,12 +35,60 @@
   text-decoration: none;
 }
 
-.emblem rect {
-  fill: var(--camply-fill-3);
+.brandMine {
+  color: var(--camply-text-muted);
+  font-weight: 600;
 }
 
-.emblem .emblemFilled {
-  fill: var(--camply-accent);
+/* Le logo, un Pokédex : aux couleurs de la marque (`styles/theme.css`). */
+.logo {
+  flex: none;
+  width: 1.875rem;
+  height: 1.875rem;
+  filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--brand-red) 40%, transparent));
+}
+
+.logoShell {
+  fill: var(--brand-red);
+}
+
+.logoHinge {
+  stroke: var(--brand-red-dark);
+  stroke-width: 1.5;
+}
+
+.logoRing {
+  fill: var(--camply-text-strong);
+}
+
+.logoLens {
+  fill: var(--brand-lens);
+}
+
+.logoGlint {
+  fill: var(--camply-text-strong);
+  opacity: 0.75;
+}
+
+.logoLed {
+  stroke: var(--brand-red-dark);
+  stroke-width: 0.75;
+}
+
+.logoLedRed {
+  fill: var(--camply-danger);
+}
+
+.logoLedYellow {
+  fill: var(--brand-yellow);
+}
+
+.logoLedGreen {
+  fill: var(--camply-success);
+}
+
+.logoScreen {
+  fill: var(--camply-bg);
 }
 
 /* Barre latérale (grand écran seulement) */

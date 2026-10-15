@@ -1,4 +1,15 @@
-import { Button, IconButton, Input, Kbd, Popover, Select, Stack, Tag, Toggle } from '@camply/ui'
+import {
+  Badge,
+  Button,
+  IconButton,
+  Input,
+  Kbd,
+  Popover,
+  Select,
+  Stack,
+  Tag,
+  Toggle,
+} from '@camply/ui'
 import { ArrowDown01, ArrowDown10, Search, SlidersHorizontal, X } from '@camply/ui/icons'
 import { useEffect, useRef } from 'react'
 import { ProgressRuler } from '@/components/ProgressRuler'
@@ -15,7 +26,7 @@ import {
   type PokedexFilters,
   type PossessionFilter,
 } from '@/lib/filters'
-import { formatInteger } from '@/lib/format'
+import { formatInteger, plural } from '@/lib/format'
 import type { Pokedex } from '@/lib/pokedex'
 import type { GenerationId, PokemonTypeId } from '@/types'
 import styles from './PokedexToolbar.module.css'
@@ -177,10 +188,14 @@ export function PokedexToolbar({
                 variant="secondary"
                 size="sm"
                 leftIcon={<SlidersHorizontal size={15} />}
-                aria-label={`Filtres${panelCount ? ` (${panelCount} actifs)` : ''}`}
+                aria-label={`Filtres${panelCount ? ` (${plural(panelCount, 'actif', 'actifs')})` : ''}`}
               >
                 Filtres
-                {panelCount > 0 && <span className={styles.badge}>{panelCount}</span>}
+                {panelCount > 0 && (
+                  <Badge variant="solid" size="sm" className={styles.badge}>
+                    {panelCount}
+                  </Badge>
+                )}
               </Button>
             }
           >

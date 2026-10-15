@@ -61,6 +61,9 @@ export function ValuePage() {
   const completion = useMemo(() => completionByGeneration(entries, prices), [entries, prices])
   const toComplete = useMemo(() => completionCost(entries, prices), [entries, prices])
   const owned = cards.filter((card) => card.status === 'owned').map((card) => card.card)
+  // Un montant au prix du jour : « — » sans prix, une ébauche tant qu'ils arrivent.
+  const money = (value: number) =>
+    prices ? formatEuro(value) : pricesMissing ? '—' : <Skeleton width="7rem" height="1.75rem" />
 
   return (
     <div className="container">
@@ -87,26 +90,29 @@ export function ValuePage() {
           <Stat
             label="Ma collection"
             icon={<STATUS_ICONS.owned size={18} />}
-            value={formatEuro(tallies.owned.value)}
-            delta={gainPercent(tallies.owned.paidCardsValue, tallies.owned.paid)}
+            value={money(tallies.owned.value)}
+            delta={
+              prices ? gainPercent(tallies.owned.paidCardsValue, tallies.owned.paid) : undefined
+            }
+            deltaSuffix={'\u00a0%'}
             hint={tallyHint(tallies.owned, true)}
           />
           <Stat
             label="Commandées"
             icon={<STATUS_ICONS.ordered size={18} />}
-            value={formatEuro(tallies.ordered.value)}
+            value={money(tallies.ordered.value)}
             hint={tallyHint(tallies.ordered, true)}
           />
           <Stat
             label="Souhaitées"
             icon={<STATUS_ICONS.wanted size={18} />}
-            value={formatEuro(tallies.wanted.value)}
+            value={money(tallies.wanted.value)}
             hint={tallyHint(tallies.wanted, false)}
           />
           <Stat
             label="Pour compléter le Pokédex"
             icon={<Flag size={18} />}
-            value={formatEuro(toComplete.value)}
+            value={money(toComplete.value)}
             hint={details(
               plural(toComplete.priced, 'Pokémon chiffré', 'Pokémon chiffrés'),
               toComplete.unpriced > 0 && `${formatInteger(toComplete.unpriced)} sans prix`,

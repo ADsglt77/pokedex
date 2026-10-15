@@ -5,8 +5,12 @@
   min-width: 0;
   color: inherit;
   text-decoration: none;
-  /* La grille compte plus de 1 000 pochettes : le navigateur ne dessine que celles à l'écran. */
+  /* La grille compte plus de 1 000 pochettes : le navigateur ne dessine que celles à l'écran.
+     Ce qu'il dessine s'arrête au bord de la pochette : une marge intérieure, rendue par une marge
+     négative, laisse la place au soulèvement et au contour du focus de la carte. */
   content-visibility: auto;
+  margin: -0.5rem;
+  padding: 0.5rem;
   contain-intrinsic-block-size: auto 15rem;
   scroll-margin-block: 9rem 2rem;
 }

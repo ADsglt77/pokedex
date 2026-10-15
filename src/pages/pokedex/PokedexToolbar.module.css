@@ -27,8 +27,11 @@
   max-width: 24rem;
 }
 
+/* Les filtres rapides : à la ligne quand la place manque (sur téléphone, ils défilent). */
 .chips {
   display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
   gap: 0.375rem;
 }
 
@@ -55,16 +58,7 @@
 
 /* Le nombre de filtres actifs du panneau, sur son bouton. */
 .badge {
-  display: inline-grid;
-  place-items: center;
-  min-width: 1.25rem;
-  height: 1.25rem;
   margin-left: 0.25rem;
-  padding: 0 0.3rem;
-  border-radius: var(--camply-radius-pill);
-  background: var(--camply-accent);
-  color: var(--camply-accent-contrast);
-  font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -121,9 +115,10 @@
   .chips {
     order: 3;
     flex: 1 1 100%;
-    min-width: 0;
+    flex-wrap: nowrap;
     margin-inline: calc(-1 * var(--gutter));
-    padding-inline: var(--gutter);
+    /* De la place autour : l'anneau du focus n'est pas rogné par le défilement. */
+    padding: 0.25rem var(--gutter);
     overflow-x: auto;
     scrollbar-width: none;
   }
