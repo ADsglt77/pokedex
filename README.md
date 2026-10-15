@@ -39,6 +39,8 @@ bun run format   # Prettier
   assistant « prochaine commande » dans un budget (100 € par mois, 150 € au plus, réglables),
   registre des commandes (Cardmarket, Myutsu, Hikaru…) qui met à jour les statuts, suivi du
   budget par mois et par fournisseur. Export CSV et recherches à coller dans Cardmarket.
+- **Thème** : sombre (gris foncé et jaune) ou clair (blanc pastel et rouge), au bouton de la
+  barre ; sans choix, celui du système.
 - **Données** : le favori Cardmarket à installer (à glisser dans la barre de favoris, ou son code
   à copier), les images à chercher pour les cartes qui n'en ont pas, export / import (achats
   compris), effacement, et l'état des données du serveur (dernière lecture de chaque source, jour

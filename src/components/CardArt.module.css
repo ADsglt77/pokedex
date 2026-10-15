@@ -48,8 +48,9 @@
   image-rendering: pixelated;
 }
 
+/* Pas encore de carte : le sprite grisé, plus ou moins effacé selon le thème (`theme.css`). */
 .empty .sprite {
-  opacity: 0.35;
+  opacity: var(--empty-sprite-opacity);
   filter: grayscale(1);
 }
 
@@ -59,7 +60,7 @@
 }
 
 .large.empty .sprite {
-  opacity: 0.5;
+  opacity: var(--empty-sprite-opacity-large);
 }
 
 .large .reference {

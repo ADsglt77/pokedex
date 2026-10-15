@@ -40,55 +40,34 @@
   font-weight: 600;
 }
 
-/* Le logo, un Pokédex : aux couleurs de la marque (`styles/theme.css`). */
+/* Le logo, une Poké Ball : aux couleurs de la marque (`styles/theme.css`), dans les deux thèmes. */
 .logo {
   flex: none;
-  width: 1.875rem;
-  height: 1.875rem;
-  filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--brand-red) 40%, transparent));
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
-.logoShell {
+.ballWhite {
+  fill: var(--brand-white);
+}
+
+.ballRed {
   fill: var(--brand-red);
 }
 
-.logoHinge {
-  stroke: var(--brand-red-dark);
-  stroke-width: 1.5;
+.ballBand {
+  stroke: var(--brand-ink);
+  stroke-width: 2.5;
 }
 
-.logoRing {
-  fill: var(--camply-text-strong);
+.ballInk {
+  fill: var(--brand-ink);
 }
 
-.logoLens {
-  fill: var(--brand-lens);
-}
-
-.logoGlint {
-  fill: var(--camply-text-strong);
-  opacity: 0.75;
-}
-
-.logoLed {
-  stroke: var(--brand-red-dark);
-  stroke-width: 0.75;
-}
-
-.logoLedRed {
-  fill: var(--camply-danger);
-}
-
-.logoLedYellow {
-  fill: var(--brand-yellow);
-}
-
-.logoLedGreen {
-  fill: var(--camply-success);
-}
-
-.logoScreen {
-  fill: var(--camply-bg);
+.ballOutline {
+  fill: none;
+  stroke: var(--brand-ink);
+  stroke-width: 2;
 }
 
 /* Barre latérale (grand écran seulement) */
@@ -156,6 +135,18 @@
   transition:
     background var(--duration-fast),
     color var(--duration-fast);
+}
+
+/* Le bouton du thème, en ligne de la barre comme un lien. */
+.sideButton {
+  width: 100%;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
 }
 
 .sideLink:hover {

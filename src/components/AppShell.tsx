@@ -5,8 +5,10 @@ import {
   Grid3x3,
   House,
   Layers,
+  Moon,
   Search,
   ShoppingCart,
+  Sun,
   type IconProps,
 } from '@camply/ui/icons'
 import { useEffect, useRef, useState, type ComponentType } from 'react'
@@ -25,6 +27,7 @@ import { useCollectionStore } from '@/store/collection'
 import { useLastExport, useStorageFailure } from '@/store/persist'
 import { useShoppingStore } from '@/store/shopping'
 import { useSyncStore } from '@/store/sync'
+import { toggleTheme, useThemeStore } from '@/store/theme'
 import styles from './AppShell.module.css'
 
 interface Place {
@@ -72,23 +75,43 @@ const exportAction = (
 )
 
 /**
- * Le logo : un Pokédex. Boîtier rouge, grande lentille bleue cerclée de blanc, trois voyants
- * (rouge, jaune, vert), charnière et écran. Le même dessin sert d'icône d'onglet
+ * Le logo : une Poké Ball, plate (moitié rouge, moitié blanche, bande et bouton cerclés d'encre),
+ * aux couleurs de la marque dans les deux thèmes. Le même dessin sert d'icône d'onglet
  * (`public/favicon.svg`).
  */
 function Logo() {
   return (
     <svg viewBox="0 0 32 32" aria-hidden="true" className={styles.logo}>
-      <rect x="1" y="1" width="30" height="30" rx="8" className={styles.logoShell} />
-      <path d="M1 21.5h30" className={styles.logoHinge} />
-      <circle cx="10.5" cy="11" r="6.75" className={styles.logoRing} />
-      <circle cx="10.5" cy="11" r="4.75" className={styles.logoLens} />
-      <circle cx="8.9" cy="9.4" r="1.5" className={styles.logoGlint} />
-      <circle cx="19.5" cy="7.5" r="1.5" className={cx(styles.logoLed, styles.logoLedRed)} />
-      <circle cx="23.25" cy="7.5" r="1.5" className={cx(styles.logoLed, styles.logoLedYellow)} />
-      <circle cx="27" cy="7.5" r="1.5" className={cx(styles.logoLed, styles.logoLedGreen)} />
-      <rect x="6" y="24.5" width="20" height="3.5" rx="1.5" className={styles.logoScreen} />
+      <circle cx="16" cy="16" r="14" className={styles.ballWhite} />
+      <path d="M2 16a14 14 0 0 1 28 0Z" className={styles.ballRed} />
+      <path d="M2 16h28" className={styles.ballBand} />
+      <circle cx="16" cy="16" r="5.25" className={styles.ballInk} />
+      <circle cx="16" cy="16" r="3" className={styles.ballWhite} />
+      <circle cx="16" cy="16" r="14" className={styles.ballOutline} />
     </svg>
+  )
+}
+
+/**
+ * Passer à l'autre thème (sombre, clair) : une ligne de la barre latérale, ou l'icône seule dans
+ * la barre du haut (`compact`).
+ */
+function ThemeButton({ compact = false }: { compact?: boolean }) {
+  const theme = useThemeStore((state) => state.theme)
+  const label = theme === 'dark' ? 'Thème clair' : 'Thème sombre'
+  const Icon = theme === 'dark' ? Sun : Moon
+  if (compact) {
+    return (
+      <IconButton label={label} variant="ghost" onClick={toggleTheme}>
+        <Icon size={18} />
+      </IconButton>
+    )
+  }
+  return (
+    <button type="button" className={cx(styles.sideLink, styles.sideButton)} onClick={toggleTheme}>
+      <Icon size={18} aria-hidden="true" />
+      <span>{label}</span>
+    </button>
   )
 }
 
@@ -157,6 +180,7 @@ export function AppShell() {
         <ProgressCard />
         <div className={styles.sideFoot}>
           <SideLink place={DATA} pathname={pathname} />
+          <ThemeButton />
           {wide && <AccountMenu />}
         </div>
       </aside>
@@ -177,6 +201,7 @@ export function AppShell() {
                 <Database size={18} />
               </Link>
             </IconButton>
+            <ThemeButton compact />
             {!wide && <AccountMenu compact />}
           </div>
         </header>

@@ -1,13 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect x="1" y="1" width="30" height="30" rx="8" fill="#e3350d"/>
-  <path d="M1 21.5h30" stroke="#a8230a" stroke-width="1.5"/>
-  <circle cx="10.5" cy="11" r="6.75" fill="#ffffff"/>
-  <circle cx="10.5" cy="11" r="4.75" fill="#3ba3f0"/>
-  <circle cx="8.9" cy="9.4" r="1.5" fill="#ffffff" opacity="0.75"/>
-  <g stroke="#a8230a" stroke-width="0.75">
-    <circle cx="19.5" cy="7.5" r="1.5" fill="#ff5f52"/>
-    <circle cx="23.25" cy="7.5" r="1.5" fill="#ffcb05"/>
-    <circle cx="27" cy="7.5" r="1.5" fill="#5fd27d"/>
-  </g>
-  <rect x="6" y="24.5" width="20" height="3.5" rx="1.5" fill="#0a1426"/>
+  <circle cx="16" cy="16" r="14" fill="#ffffff"/>
+  <path d="M2 16a14 14 0 0 1 28 0Z" fill="#e3350d"/>
+  <path d="M2 16h28" stroke="#1f1f22" stroke-width="2.5"/>
+  <circle cx="16" cy="16" r="5.25" fill="#1f1f22"/>
+  <circle cx="16" cy="16" r="3" fill="#ffffff"/>
+  <circle cx="16" cy="16" r="14" fill="none" stroke="#1f1f22" stroke-width="2"/>
 </svg>

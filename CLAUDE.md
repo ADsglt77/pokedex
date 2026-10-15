@@ -54,12 +54,19 @@ bun server/create-user.ts <e-mail>       # change le mot de passe du compte (ou 
   de la fiche, sous l'aperçu de la saisie, en tête de la grille du catalogue et dans le pied de
   page. Seulement des cartes japonaises (pas les françaises de Pokécardex, son choix). Ne pas
   réintroduire le reste sans demande.
-- UI : **`@camply/ui` d'abord** (skill `camply-ui`), aux couleurs de l'univers Pokémon
-  (`styles/theme.css`, à sa demande, octobre 2026 : les jetons `--camply-*` redéfinis sur le thème
-  sombre de camply ; fonds bleu nuit, accent jaune, rouge du Pokédex pour la marque, tons distincts
-  de l'accent : danger corail, avertissement orange). Le logo est un Pokédex dessiné (`Logo`,
-  `AppShell`), le même que l'icône de l'onglet (`public/favicon.svg`) ; pas de logo officiel
-  Pokémon. Un composant maison seulement s'il est métier ou absent de la lib.
+- UI : **`@camply/ui` d'abord** (skill `camply-ui`), en deux thèmes (`styles/theme.css`, à sa
+  demande, octobre 2026 ; pas de bleu) : **sombre** par défaut, gris foncé neutre et accent jaune ;
+  **clair** (`data-camply-theme="light"` sur `<html>`), blanc pastel chaud et accent rouge. Les tons
+  restent distincts de l'accent (sombre : danger corail, avertissement orange ; clair : danger
+  cramoisi), l'information est violette. Le choix (bouton « Thème clair / sombre » de la barre,
+  `store/theme.ts`) est gardé dans ce navigateur (`pokedex-collection.theme`, une préférence, pas
+  synchronisée) ; sans choix, celui du système, posé avant le premier affichage par le script
+  d'`index.html` (même règle). Les couleurs se changent dans `theme.css`, jamais dans un
+  composant ; ce qui diffère d'un thème à l'autre hors camply y a aussi son jeton
+  (`--empty-sprite-opacity` : le sprite grisé d'un Pokémon sans carte, `--card-glare`). Le logo
+  est une Poké Ball plate (`Logo`, `AppShell` ; couleurs `--brand-*`, les mêmes dans les deux
+  thèmes), la même que l'icône de l'onglet (`public/favicon.svg`). Un composant maison seulement
+  s'il est métier ou absent de la lib.
 - Périmètre volontairement réduit : pas d'image téléversée (on colle une adresse), pas de
   comparaison ni de fusion à l'import. Le navigateur ne parle qu'au site lui-même : son API
   (`/api/…` : catalogue, prix) et les images copiées (`/images/…`) ; seule exception, une image à
@@ -90,7 +97,7 @@ bun server/create-user.ts <e-mail>       # change le mot de passe du compte (ou 
 |---|---|
 | `src/config/` | Générations, couleurs des types, achats (budget par défaut, niveaux de budget, priorités, fournisseurs), tâches d'ingestion (`jobs` : leur rythme, que lisent le serveur et la page Données) : configuration, pas de logique |
 | `src/lib/` | Règles **pures** : `species` (espèces, données par le serveur avant le premier affichage ; carte d'un id), `cardmarket` (page et id saisis, ce que le favori envoie, code du favori), `card-code` (le code d'une carte dans sa référence, sa clé ; sans import, le serveur s'en sert : `jobs/catalog.ts`), `card-images` (l'image d'une carte chez Pokécardex, d'après sa série et son rang ou d'après sa référence ; d'où vient une image), `card-catalog` (les cartes japonaises d'un Pokémon, la carte d'une référence, l'image retrouvée : `findCardImage`), `pokedex` (modèle : la carte de chaque Pokémon, progression, résumé), `collection` (modifications : statut, prix payé, ajout et retrait d'une carte ; l'id d'une carte : `newCardId`), `filters` (adresse, liens filtrés, recherche), `transfer` (export, import, CSV, lecture du stockage), `prices` (prix Cardmarket d'une carte, écart à sa moyenne sur 30 jours : `priceChange`, valeur, coût pour compléter, courbes, plus fortes hausses et baisses : `priceMovers`), `format`, `settled` (une promesse que `use()` lit sans attendre), `cx` (classes CSS), `api` (lecture de l'API, mémoïsée ; ce qu'on en tire, calculé une fois par réponse : `derived`), `time` (durées en ms, jours : `addDays`, `daysBetween` ; le serveur s'en sert aussi), `auth-client` (client Better Auth ; l'adresse de connexion qui ramène à la page : `loginPath`), `sync` (la règle de la synchronisation) ; achats : `wishlist` (préférences, filtres, CSV de la liste), `orders` (coût, report sur la collection, doublons, commandes en retard), `budget` (par mois, par fournisseur), `purchase-planner` (prochaine commande) |
-| `src/store/` | Zustand : `collection` et `shopping` (liste d'achats, commandes, budget), dans `localStorage` ; `prices` (`/api/prices`) ; `sync` (la collection du compte connecté, `/api/collection`). `persist` les enregistre et les garde d'accord entre onglets |
+| `src/store/` | Zustand : `collection` et `shopping` (liste d'achats, commandes, budget), dans `localStorage` ; `prices` (`/api/prices`) ; `sync` (la collection du compte connecté, `/api/collection`) ; `theme` (sombre ou clair, gardé dans ce navigateur). `persist` les enregistre et les garde d'accord entre onglets |
 | `src/hooks/` | `usePokedex` (modèle partagé par toutes les pages), `useNotify` (toasts + « Annuler »), `usePokedexFilters`, `useCardDraft` (saisie d'une carte), `useExportCollection`, `useMediaQuery`, `useWishlist` (la liste d'achats : Achats et accueil) |
 | `src/components/` | Composants métier partagés par plusieurs pages (carte, champs d'une carte, tuile, réglette, courbe, réglages d'achat d'une carte…) (lien « Voir sur Cardmarket » : `CardmarketLink` ; bouton d'export avant de remplacer ou d'effacer : `ExportCollectionButton`) et les seuls génériques absents de camply (confirmation, en-tête de page `PageHeader`, bloc de page `Panel`, lien externe, crédit d'une image, champ enregistré en le quittant, `SegmentedField`), la coquille (`AppShell` : navigation, logo ; `AppSearch` : la recherche Ctrl/⌘ K), le compte (`AccountMenu` ; la carte des pages de connexion et de première visite : `AuthCard`), la jauge du budget (`BudgetMeter`, accueil et achats) et la question d'un conflit (`SyncConflictDialog`) ; le reste vient de camply |
 | `src/pages/` | Une page par route ; les sous-composants d'une page vivent dans son dossier (`pokemon/CardForm` : ajouter ou corriger la carte d'un Pokémon ; `AddCardPage` : `/ajouter`, ouverte par le favori ; `LoginPage` : `/connexion` ; `WelcomePage` : `/bienvenue`, la première visite ; `shopping/LateOrdersAlert` : les commandes en retard ; `ErrorPage`, `NotFoundPage`) |
@@ -302,7 +309,7 @@ Points à connaître :
   construit avec `pokedexUrl`. La recherche passe par `flushSync` (le routeur met l'adresse à jour
   dans une transition, le champ suivrait la frappe en retard) ; la grille, mémoïsée, suit par
   `useDeferredValue`.
-- Interface : les cartes portent la couleur, l'interface reste sobre (thème Pokémon,
+- Interface : les cartes portent la couleur, l'interface reste sobre (deux thèmes,
   `styles/theme.css`). Le système
   de design vit dans `styles/global.css` : échelle de texte (`--text-xs`, `--text-sm`,
   `--text-md` ; `--title-sm`, `--title-md` ; les titres de page ont leur taille fluide), rythme
@@ -314,7 +321,8 @@ Points à connaître :
   (`.stat-grid`, plus compactes sur téléphone). Navigation (`AppShell`) : à partir de 64rem, une
   barre latérale collée (Collection : Accueil, Pokédex, Catalogue ; Achats et valeur : Achats,
   Valeur ; la progression ; Données et le compte en pied) ; en dessous, une barre en haut (nom,
-  recherche, Données, compte en icône) et cinq onglets en bas. Partout, la recherche
+  recherche, Données, thème, compte en icône) et cinq onglets en bas ; le bouton du thème est aussi
+  en pied de la barre latérale. Partout, la recherche
   (`AppSearch`, Ctrl/⌘ K, la palette de camply) : les pages, quelques actions (exporter, importer,
   installer le favori) et les 1 025 Pokémon (noms français, anglais, japonais, numéro ; groupe
   « Espèces » : la palette cherche aussi dans le nom du groupe, « Pokémon » ferait tout trouver à

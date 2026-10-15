@@ -1,43 +1,47 @@
 /*
- * Le thème de l'app : les couleurs de @camply/ui (`--camply-*`) redéfinies aux couleurs de
- * l'univers Pokémon, sur le thème sombre de camply. Des fonds bleu nuit (le bleu du logo Pokémon,
- * assombri), l'accent jaune (boutons, page ouverte, focus), le rouge du Pokédex pour la marque
- * (logo). Les tons gardent chacun leur couleur, distincte de l'accent : danger corail,
- * avertissement orange, succès vert, information bleu Pokémon.
- * Chargé après les styles de camply : ses jetons sont redéfinis au même niveau (`:root`).
+ * Les deux thèmes de l'app : les couleurs de @camply/ui (`--camply-*`) redéfinies.
+ * - Sombre (par défaut) : gris foncé neutre, accent jaune (le jaune Pokémon).
+ * - Clair (`data-camply-theme="light"` sur `<html>`) : blanc pastel, accent rouge (le rouge de la
+ *   Poké Ball).
+ * Le choix se fait dans la barre de l'app (`store/theme.ts`) ; sans choix, celui du système. Les
+ * tons gardent chacun leur couleur, distincte de l'accent : danger, avertissement, succès,
+ * information (violet : l'app n'a pas de bleu). Chargé après les styles de camply : ses jetons sont
+ * redéfinis au même niveau, ou plus précis pour le thème clair.
  */
 
 :root {
-  /* La marque : le logo (un Pokédex) et l'icône de l'onglet (`public/favicon.svg`). */
+  /* La marque : la Poké Ball du logo et de l'icône de l'onglet, la même dans les deux thèmes. */
   --brand-red: #e3350d;
-  --brand-red-dark: #a8230a;
-  --brand-yellow: #ffcb05;
-  --brand-blue: #2a75bb;
-  --brand-lens: #3ba3f0;
+  --brand-ink: #1f1f22;
+  --brand-white: #ffffff;
+  /* La lumière qui glisse sur la carte en grand : blanche, quel que soit le thème. */
+  --card-glare: rgb(255 255 255 / 0.35);
+  /* Le sprite grisé d'un Pokémon sans carte (`CardArt`) : sur fond sombre, il ressort de lui-même. */
+  --empty-sprite-opacity: 0.35;
+  --empty-sprite-opacity-large: 0.5;
 
-  /* Fonds et textes : bleu nuit. */
-  --camply-bg: #0a1426;
-  --camply-surface: #0e1a31;
-  --camply-surface-2: #13233f;
-  --camply-elevated: #172a4b;
-  --camply-overlay: rgba(4, 9, 20, 0.72);
-  --camply-text: #e9f0fb;
+  /* Sombre : gris foncé, sans teinte. */
+  --camply-bg: #141414;
+  --camply-surface: #1b1b1c;
+  --camply-surface-2: #232325;
+  --camply-elevated: #28282b;
+  --camply-overlay: rgba(0, 0, 0, 0.66);
+  --camply-text: #ececed;
   --camply-text-strong: #ffffff;
-  --camply-text-muted: #a0b2d0;
-  --camply-text-muted-2: #7689ab;
-  --camply-text-disabled: #4c5f82;
+  --camply-text-muted: #a9a9ae;
+  --camply-text-muted-2: #86868c;
+  --camply-text-disabled: #56565c;
 
-  /* L'accent : le jaune Pokémon, texte bleu nuit dessus. */
+  /* L'accent : le jaune Pokémon, texte gris foncé dessus. */
   --camply-accent: #ffcb05;
-  --camply-accent-hover: #ffd94a;
-  --camply-accent-contrast: #0a1426;
+  --camply-accent-hover: #ffd84a;
+  --camply-accent-contrast: #161616;
   --camply-accent-soft: rgba(255, 203, 5, 0.12);
   --camply-accent-soft-hover: rgba(255, 203, 5, 0.2);
   --camply-accent-border: rgba(255, 203, 5, 0.4);
   --camply-ring: 0 0 0 3px rgba(255, 203, 5, 0.45);
   --camply-gradient-accent: linear-gradient(90deg, #f29e0c, var(--camply-accent));
 
-  /* Danger : un corail, distinct du rouge de la marque. */
   --camply-danger: #ff5f52;
   --camply-danger-hover: #ff8076;
   --camply-danger-contrast: #2b0703;
@@ -59,28 +63,109 @@
   --camply-success-soft: rgba(95, 210, 125, 0.13);
   --camply-success-border: rgba(95, 210, 125, 0.3);
 
-  /* Information : le bleu Pokémon, éclairci pour se lire sur le fond. */
-  --camply-info: #6cb2ff;
-  --camply-info-contrast: #04142a;
-  --camply-info-soft: rgba(108, 178, 255, 0.13);
-  --camply-info-border: rgba(108, 178, 255, 0.32);
-  --camply-gradient-info: linear-gradient(90deg, var(--brand-blue), var(--camply-info));
+  --camply-info: #b9a2ff;
+  --camply-info-contrast: #160c33;
+  --camply-info-soft: rgba(185, 162, 255, 0.13);
+  --camply-info-border: rgba(185, 162, 255, 0.32);
+  --camply-gradient-info: linear-gradient(90deg, #7c5cdb, var(--camply-info));
 
-  /* Bordures, reflets, ombres : teintés de bleu. */
-  --camply-border: rgba(120, 160, 225, 0.16);
-  --camply-border-soft: rgba(120, 160, 225, 0.09);
-  --camply-border-strong: rgba(120, 160, 225, 0.26);
-  --camply-border-hover: rgba(120, 160, 225, 0.36);
-  --camply-sheen: rgba(120, 160, 225, 0.16);
-  --camply-scrollbar-thumb: rgba(120, 160, 225, 0.26);
-  --camply-scrollbar-thumb-hover: rgba(120, 160, 225, 0.42);
-  --camply-shadow-color: rgba(2, 6, 16, 0.6);
-  --camply-shadow-sm: 0 2px 8px rgba(2, 6, 16, 0.5);
-  --camply-shadow-md: 0 8px 24px rgba(2, 6, 16, 0.55);
-  --camply-shadow-lg: 0 22px 55px rgba(2, 6, 16, 0.62);
-  --camply-shadow-pop: 0 16px 40px rgba(2, 6, 16, 0.6);
-  --camply-neutral-solid: #d6e1f2;
-  --camply-knob: #eef3fb;
-  --camply-tooltip-bg: #eef3fb;
-  --camply-tooltip-dark: #1b2f52;
+  /* Bordures, remplissages, reflets, ombres : blancs et noirs, sans teinte. */
+  --camply-border: rgba(255, 255, 255, 0.1);
+  --camply-border-soft: rgba(255, 255, 255, 0.06);
+  --camply-border-strong: rgba(255, 255, 255, 0.17);
+  --camply-border-hover: rgba(255, 255, 255, 0.26);
+  --camply-sheen: rgba(255, 255, 255, 0.1);
+  --camply-scrollbar-thumb: rgba(255, 255, 255, 0.2);
+  --camply-scrollbar-thumb-hover: rgba(255, 255, 255, 0.34);
+  --camply-shadow-color: rgba(0, 0, 0, 0.55);
+  --camply-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.45);
+  --camply-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --camply-shadow-lg: 0 22px 55px rgba(0, 0, 0, 0.58);
+  --camply-shadow-pop: 0 16px 40px rgba(0, 0, 0, 0.55);
+  --camply-neutral-solid: #e4e4e7;
+  --camply-knob: #f4f4f5;
+  --camply-tooltip-bg: #f4f4f5;
+  --camply-tooltip-dark: #2c2c30;
+}
+
+/* Clair : blanc pastel (un blanc chaud), le rouge de la Poké Ball. */
+:root[data-camply-theme='light'] {
+  color-scheme: light;
+  /* Sur le blanc, le sprite grisé s'effacerait : moins transparent. */
+  --empty-sprite-opacity: 0.7;
+  --empty-sprite-opacity-large: 0.8;
+
+  --camply-bg: #faf6f3;
+  --camply-surface: #ffffff;
+  --camply-surface-2: #f4eeea;
+  --camply-elevated: #ffffff;
+  --camply-overlay: rgba(28, 20, 18, 0.4);
+  --camply-text: #2a2321;
+  --camply-text-strong: #17110f;
+  --camply-text-muted: #6e6460;
+  --camply-text-muted-2: #766b66;
+  --camply-text-disabled: #bdb3ae;
+
+  /* L'accent : le rouge, un peu foncé pour que le texte blanc dessus se lise. */
+  --camply-accent: #d42a0c;
+  --camply-accent-hover: #b5230a;
+  --camply-accent-contrast: #ffffff;
+  --camply-accent-soft: rgba(212, 42, 12, 0.08);
+  --camply-accent-soft-hover: rgba(212, 42, 12, 0.14);
+  --camply-accent-border: rgba(212, 42, 12, 0.32);
+  --camply-ring: 0 0 0 3px rgba(212, 42, 12, 0.28);
+  --camply-gradient-accent: linear-gradient(90deg, #a81f05, var(--camply-accent));
+
+  /* Danger : un cramoisi, plus rose que le rouge de l'accent. */
+  --camply-danger: #be123c;
+  --camply-danger-hover: #9f1239;
+  --camply-danger-contrast: #ffffff;
+  --camply-danger-soft: rgba(190, 18, 60, 0.08);
+  --camply-danger-soft-hover: rgba(190, 18, 60, 0.14);
+  --camply-danger-border: rgba(190, 18, 60, 0.3);
+  --camply-danger-ring: 0 0 0 3px rgba(190, 18, 60, 0.26);
+  --camply-gradient-danger: linear-gradient(90deg, #881337, var(--camply-danger));
+
+  --camply-warn: #b45309;
+  --camply-warn-contrast: #ffffff;
+  --camply-warn-soft: rgba(180, 83, 9, 0.1);
+  --camply-warn-border: rgba(180, 83, 9, 0.28);
+  --camply-gradient-warn: linear-gradient(90deg, #92400e, var(--camply-warn));
+
+  --camply-success: #047857;
+  --camply-success-contrast: #ffffff;
+  --camply-success-soft: rgba(4, 120, 87, 0.1);
+  --camply-success-border: rgba(4, 120, 87, 0.28);
+
+  --camply-info: #6d4fc2;
+  --camply-info-contrast: #ffffff;
+  --camply-info-soft: rgba(109, 79, 194, 0.09);
+  --camply-info-border: rgba(109, 79, 194, 0.26);
+  --camply-gradient-info: linear-gradient(90deg, #4c3591, var(--camply-info));
+
+  /* Bordures, remplissages, reflets, ombres : un brun très léger, accordé au blanc chaud. */
+  --camply-border: rgba(60, 35, 28, 0.12);
+  --camply-border-soft: rgba(60, 35, 28, 0.07);
+  --camply-border-strong: rgba(60, 35, 28, 0.2);
+  --camply-border-hover: rgba(60, 35, 28, 0.3);
+  --camply-fill-1: rgba(60, 35, 28, 0.02);
+  --camply-fill-2: rgba(60, 35, 28, 0.05);
+  --camply-fill-3: rgba(60, 35, 28, 0.1);
+  --camply-fill-4: rgba(60, 35, 28, 0.2);
+  --camply-sheen: rgba(60, 35, 28, 0.08);
+  --camply-scrollbar-thumb: rgba(60, 35, 28, 0.22);
+  --camply-scrollbar-thumb-hover: rgba(60, 35, 28, 0.35);
+  --camply-shadow-color: rgba(60, 35, 28, 0.16);
+  --camply-shadow-sm: 0 1px 3px rgba(60, 35, 28, 0.08);
+  --camply-shadow-md: 0 6px 18px rgba(60, 35, 28, 0.1);
+  --camply-shadow-lg: 0 18px 45px rgba(60, 35, 28, 0.14);
+  --camply-shadow-pop: 0 12px 32px rgba(60, 35, 28, 0.14);
+  --camply-field-bg: #ffffff;
+  --camply-neutral-solid: #3a312e;
+  --camply-knob: #ffffff;
+  --camply-tooltip-bg: #2a2321;
+  --camply-tooltip-fg: #faf6f3;
+  --camply-tooltip-dark: #17110f;
+  --camply-checker-fg: rgba(60, 35, 28, 0.1);
+  --camply-checker-bg: #f4eeea;
 }

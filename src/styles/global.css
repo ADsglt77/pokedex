@@ -32,6 +32,7 @@
   --duration-fast: 0.15s;
 }
 
+/* Sombre par défaut ; le thème clair le change (`theme.css`). */
 html {
   color-scheme: dark;
   -webkit-text-size-adjust: 100%;

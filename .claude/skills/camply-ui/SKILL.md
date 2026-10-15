@@ -14,11 +14,11 @@ The user's own React component library (60 components, dark theme by default, Fr
 - Icons: `import { Search, Star, Lock } from '@camply/ui/icons'` (2100+ Lucide-style icons, `size` default 16, any SVG prop). Do **not** add `lucide-react`.
 - Fonts are **not** shipped: tokens reference `Manrope` / `Space Grotesk` / `JetBrains Mono`. This app loads Manrope and Space Grotesk with `@fontsource/*` in `src/main.tsx`.
 - Optional `<CamplyProvider locale labels>` to override built-in labels (defaults are neutral French — fine for this app).
-- Light theme: `data-camply-theme="light"` on a container (this app is dark-only).
+- Light theme: `data-camply-theme="light"` on a container. This app sets it on `<html>` (`src/store/theme.ts`, and an inline script in `index.html` before the first paint).
 
 ## Theming
 
-Everything reads `--camply-*` CSS variables. This app restyles camply's dark theme in Pokémon colours: `src/styles/theme.css` (loaded right after camply's styles) redefines the `--camply-*` tokens on `:root` — navy backgrounds, yellow accent, Pokédex red for the brand (`--brand-*`, logo only), danger coral and warn orange kept distinct from the accent. Change a colour there, never in a component. Never hard-code colors in components — use the tokens. Main tokens:
+Everything reads `--camply-*` CSS variables. This app has two themes in `src/styles/theme.css` (loaded right after camply's styles), no blue anywhere: dark (default, `:root`) — neutral dark grey, yellow accent, danger coral, warn orange; light (`:root[data-camply-theme='light']`) — warm pastel white, red accent, danger crimson. Info is purple in both. The Poké Ball logo uses `--brand-*` (same in both themes). Anything else that must differ per theme gets an app token there too (`--empty-sprite-opacity`, `--card-glare`). Change a colour there, never in a component; check both themes. Never hard-code colors in components — use the tokens. Main tokens:
 
 `--camply-bg, --camply-surface, --camply-surface-2, --camply-elevated, --camply-overlay, --camply-text, --camply-text-strong, --camply-text-muted, --camply-accent, --camply-accent-hover, --camply-accent-contrast, --camply-accent-soft, --camply-accent-border, --camply-danger*, --camply-warn*, --camply-success*, --camply-info*, --camply-border, --camply-border-soft, --camply-border-strong, --camply-radius-{xs,sm,,lg,xl,pill}, --camply-space-{1..6,8}, --camply-shadow-{sm,md,lg,pop}, --camply-ring, --camply-field-bg, --camply-font-{sans,display,mono}`.
 

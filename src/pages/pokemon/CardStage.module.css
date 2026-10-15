@@ -48,7 +48,7 @@
   inset: 0;
   background: radial-gradient(
     circle at var(--glare-x, 50%) var(--glare-y, 50%),
-    color-mix(in srgb, var(--camply-text-strong) 35%, transparent),
+    var(--card-glare),
     transparent 55%
   );
   mix-blend-mode: soft-light;
