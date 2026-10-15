@@ -8,11 +8,15 @@ import type { JobStatus, ServerStatus } from '@/types'
 import { DataSection } from './DataSection'
 import styles from './DataPage.module.css'
 
-/** L'état des tâches du serveur, demandé à chaque ouverture de la page ; `null` s'il ne répond pas. */
+/**
+ * L'état des tâches du serveur, demandé à chaque ouverture de la page ; `null` s'il ne répond pas,
+ * ou s'il n'est pas de la même version que le site (pas encore redémarré après une mise à jour).
+ */
 const loadStatus = () =>
   settled(
     fetch('/api/status', { cache: 'no-store', signal: AbortSignal.timeout(10_000) })
       .then((response) => (response.ok ? (response.json() as Promise<ServerStatus>) : null))
+      .then((status) => (status?.jobs ? status : null))
       .catch(() => null),
   )
 
@@ -99,7 +103,12 @@ function JobsStatus({ status }: { status: Promise<ServerStatus | null> }) {
   const current = use(status)
   const [now] = useState(() => Date.now())
   if (!current) {
-    return <p className="muted">Le serveur ne répond pas : l’état des données est inconnu.</p>
+    return (
+      <p className="muted">
+        L’état des données est inconnu : le serveur ne répond pas, ou il n’est pas à jour
+        (redémarrez-le).
+      </p>
+    )
   }
   return (
     <DescriptionList
