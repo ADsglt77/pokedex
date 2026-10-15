@@ -170,8 +170,8 @@ export function PlannerPanel({
             <span className="muted"> sur {formatEuro(amount)}</span>
           </p>
           <Progress
-            value={Math.min(plan.total, amount)}
-            max={Math.max(amount, 1)}
+            value={plan.total}
+            max={amount}
             tone={plan.overBudget ? 'danger' : 'info'}
             size="sm"
             aria-label="Part du budget utilisée"

@@ -14,7 +14,7 @@ import { Elysia, t } from 'elysia'
 import type { JobStatus, ServerStatus } from '@/types'
 import { readSource } from './db'
 import { readHistory } from './history'
-import { serveSnapshot } from './snapshots'
+import { notFound, serveSnapshot } from './snapshots'
 
 export function referenceRoutes(data: Database) {
   const runs = data.query(
@@ -53,9 +53,10 @@ export function referenceRoutes(data: Database) {
     .get('/prices', snapshot('prices'), doc('Les prix du jour'))
     .get(
       '/prices/:id',
-      ({ params, set, status }) => {
+      ({ params, set }) => {
         const history = readHistory(data, params.id)
-        if (!history) return status(404, null)
+        // Sans cache, comme l'historique : la carte peut avoir un prix au prochain passage.
+        if (!history) return notFound()
         set.headers['cache-control'] = 'no-cache'
         return history
       },

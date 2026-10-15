@@ -15,7 +15,7 @@ export interface SyncDocument {
 }
 
 /** Une version du document : son numéro chez le serveur et son empreinte. */
-export interface SyncVersion {
+interface SyncVersion {
   version: number
   hash: string
 }
@@ -26,7 +26,7 @@ export interface SyncVersion {
  * - `adopt` : reprendre celle du serveur (lui seul a changé, ou c'est la même) ;
  * - `conflict` : les deux ont changé, l'utilisateur choisit.
  */
-export type SyncStep = 'noop' | 'push' | 'adopt' | 'conflict'
+type SyncStep = 'noop' | 'push' | 'adopt' | 'conflict'
 
 /** L'empreinte d'un document (SHA-256 de son JSON) : deux documents égaux ont la même. */
 export async function documentHash(document: SyncDocument): Promise<string> {

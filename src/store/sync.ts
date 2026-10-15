@@ -34,7 +34,7 @@ export type SyncStatus =
   'local' | 'syncing' | 'synced' | 'offline' | 'expired' | 'conflict' | 'refused'
 
 /** La version du serveur, telle qu'il l'envoie. */
-export interface ServerDocument {
+interface ServerDocument {
   version: number
   document: SyncDocument
   hash: string

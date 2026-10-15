@@ -17,11 +17,6 @@
   grid-column: 1 / -1;
 }
 
-.table {
-  width: 100%;
-  font-variant-numeric: tabular-nums;
-}
-
 .card {
   display: flex;
   flex-direction: column;

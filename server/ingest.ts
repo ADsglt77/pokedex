@@ -19,7 +19,7 @@
 import type { Database } from 'bun:sqlite'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { INGEST_JOBS, type IngestJob } from '@/config/jobs'
+import { INGEST_JOB_NAMES, INGEST_JOBS, type IngestJob } from '@/config/jobs'
 import { HOUR } from '@/lib/time'
 import { openData } from './db'
 import { backups } from './jobs/backups'
@@ -37,7 +37,6 @@ const RUNS: Record<IngestJob, (db: Database) => Promise<void>> = {
   images,
   backups,
 }
-const NAMES = Object.keys(INGEST_JOBS) as IngestJob[]
 
 async function runJob(db: Database, name: IngestJob) {
   const now = () => new Date().toISOString()
@@ -107,7 +106,7 @@ if (arg === '--loop') {
   // Les espèces sont enregistrées telles que les lit le code : repassées avec le code déployé.
   await runJob(db, 'species')
   for (;;) {
-    for (const name of NAMES) {
+    for (const name of INGEST_JOB_NAMES) {
       if (name === 'prices' && skipPrices) continue
       if (isDue(db, name)) await runJob(db, name)
     }
@@ -115,9 +114,9 @@ if (arg === '--loop') {
   }
 } else if (arg === 'legacy-prices' && dir) {
   await importLegacyPrices(db, dir)
-} else if (NAMES.includes(arg as IngestJob)) {
+} else if (INGEST_JOB_NAMES.includes(arg as IngestJob)) {
   if (!(await runJob(db, arg as IngestJob))) process.exit(1)
 } else {
-  console.error(`Tâches : ${NAMES.join(', ')} ; ou --loop, ou legacy-prices <dossier>`)
+  console.error(`Tâches : ${INGEST_JOB_NAMES.join(', ')} ; ou --loop, ou legacy-prices <dossier>`)
   process.exit(1)
 }

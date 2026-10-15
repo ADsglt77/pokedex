@@ -89,7 +89,7 @@ export function BudgetPanel() {
         description="Chaque commande compte une fois, dans le mois de sa date d’achat : cartes, port et frais, moins le remboursé. Une commande annulée ne compte pas."
       >
         <Table
-          className={styles.table}
+          className="data-table"
           data={months}
           rowKey={(row) => row.key}
           emptyState="Aucune commande enregistrée."
@@ -126,7 +126,7 @@ export function BudgetPanel() {
 
       <Panel title="Par fournisseur" flush>
         <Table
-          className={styles.table}
+          className="data-table"
           data={suppliers}
           rowKey={(row) => row.key}
           emptyState="Aucune commande enregistrée."

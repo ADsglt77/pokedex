@@ -224,17 +224,15 @@ export interface CardPrice {
 /** Le prix du jour d'une carte, en court : prix du marché, plus bas, moyenne sur 30 jours. */
 export type CardPriceRow = [price: number, low: number | null, avg30: number | null]
 
-/** Les prix Cardmarket du jour : toutes les cartes Pokémon à l'unité de Cardmarket. */
+/**
+ * Les prix Cardmarket du jour (`/api/prices`, 404 tant que le guide n'a jamais été lu) : toutes les
+ * cartes Pokémon à l'unité de Cardmarket.
+ */
 export interface PriceFile {
   /** Jour du guide des prix (YYYY-MM-DD). */
   date: string
   /** Clé : id Cardmarket (`idProduct`). */
   cards: Record<string, CardPriceRow>
-}
-
-/** Les prix du jour (`/api/prices`) : `null` tant que le guide n'a jamais été lu. */
-export interface Prices {
-  cardmarket: PriceFile | null
 }
 
 /** `/api/prices/<idProduct>` : l'historique d'une carte (Cardmarket n'en garde pas). */

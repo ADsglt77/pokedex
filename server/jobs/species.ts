@@ -6,7 +6,7 @@
  */
 
 import type { Database } from 'bun:sqlite'
-import { GENERATIONS, TOTAL_SPECIES } from '@/config/pokedex'
+import { GENERATIONS, SPECIES_IDS, TOTAL_SPECIES } from '@/config/pokedex'
 import { DAY } from '@/lib/time'
 import type { PokemonSpecies, PokemonSpeciesDetails, PokemonTypeId } from '@/types'
 import { fetchJson, mapPool } from '../lib/net'
@@ -95,9 +95,8 @@ function normalize(species: RawSpecies, pokemon: RawPokemon) {
 }
 
 export async function species(db: Database) {
-  const ids = Array.from({ length: TOTAL_SPECIES }, (_, index) => index + 1)
   console.log(`Lecture des ${TOTAL_SPECIES} espèces sur PokéAPI…`)
-  const rows = await mapPool(ids, 8, async (id) => {
+  const rows = await mapPool(SPECIES_IDS, 8, async (id) => {
     const [raw, pokemon] = await Promise.all([
       fetchJson<RawSpecies>(`${API}/pokemon-species/${id}`, 'pokeapi', MONTH),
       fetchJson<RawPokemon>(`${API}/pokemon/${id}`, 'pokeapi', MONTH),
@@ -105,14 +104,8 @@ export async function species(db: Database) {
     return normalize(raw, pokemon)
   })
 
-  const write = db.query(
-    `INSERT INTO species (id, data, details) VALUES (?, ?, ?)
-     ON CONFLICT (id) DO UPDATE SET data = excluded.data, details = excluded.details`,
-  )
+  // Ensemble : la liste et les détails restent d'accord.
   db.transaction(() => {
-    for (const { entry, details } of rows) {
-      write.run(entry.id, JSON.stringify(entry), JSON.stringify(details))
-    }
     saveSnapshot(db, 'species', { species: rows.map(({ entry }) => entry) })
     saveSnapshot(db, 'species-details', { details: rows.map(({ details }) => details) })
   })()

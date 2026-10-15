@@ -70,7 +70,7 @@ export function CatalogPicker({
   // Les plus chères d'abord, celles sans prix à la fin.
   const shown =
     order === 'price'
-      ? [...priced].sort((a, b) => (b.price?.price ?? -1) - (a.price?.price ?? -1))
+      ? priced.sort((a, b) => (b.price?.price ?? -1) - (a.price?.price ?? -1))
       : priced
 
   return (

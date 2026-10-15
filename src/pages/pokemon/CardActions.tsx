@@ -97,7 +97,9 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
         })}
       </ButtonGroup>
 
-      {!isToBuy(view) && <PaidPriceField card={card} className={styles.group} />}
+      {!isToBuy(view) && (
+        <PaidPriceField card={card} paid={view.paidPrice} className={styles.group} />
+      )}
 
       <Stack gap={2} align="start" className={styles.group}>
         <Stack direction="horizontal" gap={2} wrap>

@@ -1,7 +1,7 @@
 import { Input, Stack } from '@camply/ui'
 import { Suspense, use } from 'react'
 import { CardArt } from '@/components/CardArt'
-import { ImageCredit } from '@/components/ImageCredit'
+import { ImageCredit } from './ImageCredit'
 import type { CardDraft } from '@/hooks/useCardDraft'
 import { findCardImage } from '@/lib/card-catalog'
 import { formatEuro } from '@/lib/format'

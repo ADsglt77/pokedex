@@ -9,7 +9,7 @@ import { cardmarketPage } from '@/lib/cardmarket'
 import { cardTitle, findCard, speciesOf } from '@/lib/species'
 import { searchForm, searchMatcher } from '@/lib/filters'
 import { isTaken, type PokedexEntry } from '@/lib/pokedex'
-import { isToBuy } from '@/lib/collection'
+import { isToBuy, stillWanted } from '@/lib/collection'
 import { priceChange, priceOf } from '@/lib/prices'
 import { priceVerdict } from '@/lib/purchase-planner'
 import { csvNumber, toCsv } from '@/lib/transfer'
@@ -18,7 +18,7 @@ import type {
   CollectionData,
   GenerationId,
   PokemonCard,
-  Prices,
+  PriceFile,
   Priority,
   PurchasePreference,
   ShoppingData,
@@ -98,7 +98,7 @@ export interface WishRow {
 export function wishlistRows(
   preferences: ShoppingData['preferences'],
   collection: CollectionData,
-  prices: Prices | null,
+  prices: PriceFile | null,
 ): WishRow[] {
   return Object.entries(preferences).flatMap(([cardId, preference]) => {
     const card = findCard(cardId, collection)
@@ -130,8 +130,7 @@ export const takenSpecies = (entries: readonly PokedexEntry[]): Set<number> =>
  */
 export function wishlistEstimate(rows: readonly WishRow[], taken: ReadonlySet<number>) {
   const estimate = { value: 0, unpriced: 0 }
-  for (const row of rows.filter(isToBuy)) {
-    if (row.card.dexIds.every((id) => taken.has(id))) continue
+  for (const row of rows.filter((row) => stillWanted(row, taken))) {
     if (row.price === null) estimate.unpriced++
     else estimate.value += row.price
   }

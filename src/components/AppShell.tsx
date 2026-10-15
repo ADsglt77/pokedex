@@ -13,6 +13,7 @@ import {
 } from '@camply/ui/icons'
 import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { Link, Outlet, ScrollRestoration, useLocation } from 'react-router'
+import { shoppingUrl } from '@/lib/filters'
 import { AccountMenu } from '@/components/AccountMenu'
 import { AppSearch } from '@/components/AppSearch'
 import { ExternalLink } from '@/components/ExternalLink'
@@ -49,7 +50,7 @@ const GROUPS: { label: string; places: Place[] }[] = [
   {
     label: 'Achats et valeur',
     places: [
-      { to: '/achats', label: 'Achats', icon: ShoppingCart },
+      { to: shoppingUrl(), label: 'Achats', icon: ShoppingCart },
       { to: '/valeur', label: 'Valeur', icon: ChartLine },
     ],
   },
@@ -262,7 +263,7 @@ export function AppShell() {
 function SideLink({ place, pathname }: { place: Place; pathname: string }) {
   const { to, label, icon: Icon } = place
   const late = useShoppingStore((state) =>
-    to === '/achats' ? latePendingOrders(state.shopping.orders, today()).length : 0,
+    to === shoppingUrl() ? latePendingOrders(state.shopping.orders, today()).length : 0,
   )
   return (
     <Link

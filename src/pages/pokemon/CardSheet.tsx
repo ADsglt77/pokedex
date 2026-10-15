@@ -37,7 +37,7 @@ export function CardSheet({
       >
         <CardActions view={view} species={species} />
       </Panel>
-      <PricePanel card={card} />
+      <PricePanel card={card} paid={view.paidPrice} />
       <PurchaseSection view={view} />
     </div>
   )

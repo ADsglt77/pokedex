@@ -1,9 +1,9 @@
 /**
- * Réseau des tâches d'ingestion : un `fetch` JSON avec un cache disque
- * (`CACHE_DIR`, sinon `.data/cache` : pour relancer une tâche sans solliciter les API à nouveau)
- * et une file à concurrence limitée. Chaque requête s'identifie, attend 100 ms avant de partir et
- * échoue au bout de 2 min sans réponse complète. Un 404 arrête la tâche. Une réponse en cache sert
- * tant qu'elle a moins de `maxAge` ms (sans limite par défaut) ; `--refresh` redemande tout.
+ * Réseau des tâches d'ingestion : un `fetch` JSON avec un cache disque (`DATA_DIR/cache` : pour
+ * relancer une tâche sans solliciter les API à nouveau) et une file à concurrence limitée. Chaque
+ * requête s'identifie, attend 100 ms avant de partir et échoue au bout de 2 min sans réponse
+ * complète. Un 404 arrête la tâche. Une réponse en cache sert tant qu'elle a moins de `maxAge` ms ;
+ * `--refresh` redemande tout.
  */
 
 import { createHash } from 'node:crypto'
@@ -11,14 +11,12 @@ import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { DATA_DIR } from '../db'
 
-const CACHE_ROOT = process.env.CACHE_DIR ?? join(DATA_DIR, 'cache')
+const CACHE_ROOT = join(DATA_DIR, 'cache')
 
 /** `--refresh` : ignore le cache et redemande tout. */
 export const refresh = process.argv.includes('--refresh')
 
 class NotFoundError extends Error {}
-
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const USER_AGENT = 'pokedex-perso/1.0 (Pokédex personnel)'
 
@@ -31,7 +29,7 @@ const TIMEOUT = 120_000
 
 /** Une requête identifiée, après 100 ms d'attente, et 2 min au plus. */
 export async function politeFetch(url: string, init?: RequestInit) {
-  await wait(100)
+  await Bun.sleep(100)
   return fetch(url, {
     signal: AbortSignal.timeout(TIMEOUT),
     ...init,
@@ -50,7 +48,7 @@ export async function download(url: string, init?: RequestInit) {
  * Document JSON, lu dans le cache s'il y a été mis il y a moins de `maxAge` ms. `namespace` : un
  * dossier par API.
  */
-export async function fetchJson<T>(url: string, namespace: string, maxAge = Infinity): Promise<T> {
+export async function fetchJson<T>(url: string, namespace: string, maxAge: number): Promise<T> {
   // La clé des fichiers déjà en cache : celle d'une requête GET sans corps.
   const key = createHash('sha1').update(`GET ${url}\n`).digest('hex')
   const file = join(CACHE_ROOT, namespace, `${key}.json`)
@@ -78,7 +76,7 @@ export async function fetchJson<T>(url: string, namespace: string, maxAge = Infi
       return data
     } catch (error) {
       if (error instanceof NotFoundError || attempt === 4) throw error
-      await wait(500 * 2 ** attempt)
+      await Bun.sleep(500 * 2 ** attempt)
     }
   }
 }

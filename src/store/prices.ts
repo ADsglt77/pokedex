@@ -7,14 +7,14 @@
 import { create } from 'zustand'
 import { getJson } from '@/lib/api'
 import { settled } from '@/lib/settled'
-import type { CardPriceHistory, Prices } from '@/types'
+import type { CardPriceHistory, PriceFile } from '@/types'
 
-const usePriceStore = create<{ prices: Prices | null; loaded: boolean }>(() => ({
+const usePriceStore = create<{ prices: PriceFile | null; loaded: boolean }>(() => ({
   prices: null,
   loaded: false,
 }))
 
-let requested: Promise<Prices | null> | null = null
+let requested: Promise<PriceFile | null> | null = null
 
 /**
  * Demande les prix du jour au premier écran qui en affiche (ceux de Cardmarket couvrent toutes ses
@@ -22,16 +22,14 @@ let requested: Promise<Prices | null> | null = null
  * nouveau après une panne passagère.
  */
 function requestPrices() {
-  const response = getJson<Prices>('/api/prices')
+  const response = getJson<PriceFile>('/api/prices')
   if (response === requested) return
   requested = response
   response.then((prices) => {
     // La réponse d'une demande refaite depuis ne compte plus.
     if (requested !== response) return
-    usePriceStore.setState({
-      prices: prices?.cardmarket ? prices : null,
-      loaded: true,
-    })
+    // Une réponse d'une autre forme (un serveur pas encore à jour) compte comme pas de prix.
+    usePriceStore.setState({ prices: prices?.cards ? prices : null, loaded: true })
   })
 }
 

@@ -110,8 +110,8 @@ const DATA_STEPS = [
   ALTER TABLE cards ADD COLUMN source TEXT NOT NULL DEFAULT 'tcgdex';
   `,
   `
-  -- Les espèces (tâche \`species\`, d'après PokéAPI) : \`data\`, ce que l'app affiche partout (noms,
-  -- types, génération) ; \`details\`, ce que montre la fiche (catégorie, description, taille…).
+  -- Les espèces (tâche \`species\`, d'après PokéAPI), jamais lues : l'API sert les réponses que la
+  -- tâche calcule (\`snapshots\`). Retirée plus bas.
   CREATE TABLE species (id INTEGER PRIMARY KEY, data TEXT NOT NULL, details TEXT NOT NULL);
   `,
   `
@@ -159,6 +159,13 @@ const DATA_STEPS = [
     dex_id INTEGER NOT NULL,
     PRIMARY KEY (card, rank)
   ) WITHOUT ROWID;
+  `,
+  `
+  -- La table des espèces, que rien ne lisait (l'API sert les réponses de la tâche \`species\`,
+  -- \`snapshots\`), et la source \`catalog\`, qui ne disait que « au moins une carte lue » (la
+  -- table \`cards\` le dit) : retirées.
+  DROP TABLE species;
+  DELETE FROM sources WHERE name = 'catalog';
   `,
 ]
 
@@ -217,9 +224,7 @@ const userVersion = (db: Database) =>
 function migrate(db: Database, steps: string[]) {
   while (userVersion(db) < steps.length) {
     const applied = db.transaction(() => {
-      const { user_version: version } = db.query('PRAGMA user_version').get() as {
-        user_version: number
-      }
+      const version = userVersion(db)
       const step = steps[version]
       if (step === undefined) return false
       db.run(step)
@@ -265,9 +270,11 @@ export const openApp = () => open('app.db', APP_STEPS)
 function open(name: string, steps: string[]) {
   mkdirSync(DATA_DIR, { recursive: true })
   const db = new Database(join(DATA_DIR, name), { create: true, strict: true })
+  // Avant le passage en WAL : à la création de la base, l'autre processus qui démarre en même
+  // temps la verrouille un instant, et ce passage échouerait tout de suite.
+  db.run('PRAGMA busy_timeout = 5000')
   db.run('PRAGMA journal_mode = WAL')
   db.run('PRAGMA synchronous = NORMAL')
-  db.run('PRAGMA busy_timeout = 5000')
   db.run('PRAGMA foreign_keys = ON')
   // Le journal WAL retombe à 64 Mo après une grosse écriture (l'historique des prix du jour).
   db.run('PRAGMA journal_size_limit = 67108864')

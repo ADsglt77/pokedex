@@ -16,7 +16,7 @@
  */
 
 import type { Database } from 'bun:sqlite'
-import { TOTAL_SPECIES } from '@/config/pokedex'
+import { SPECIES_IDS, TOTAL_SPECIES } from '@/config/pokedex'
 import { localSrc, pokecardexImage } from '@/lib/card-images'
 import { WEEK } from '@/lib/time'
 import { mirror } from '../images'
@@ -45,8 +45,7 @@ export async function images(db: Database) {
   }
 
   try {
-    const species = Array.from({ length: TOTAL_SPECIES }, (_, index) => index + 1)
-    await mapPool(species, 2, async (id) => {
+    await mapPool(SPECIES_IDS, 2, async (id) => {
       await copy(`/images/species/${id}.png`)
       await copy(`/images/species/artwork/${id}.png`)
     })

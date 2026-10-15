@@ -2,9 +2,9 @@ import { Table } from '@camply/ui'
 import { Link } from 'react-router'
 import { cardTitle } from '@/lib/species'
 import { cx } from '@/lib/cx'
-import { pokedexUrl } from '@/lib/filters'
+import { pokedexUrl, speciesPath } from '@/lib/filters'
 import { formatEuro, formatEuroChange, formatInteger, statusLabel } from '@/lib/format'
-import { priceLabel, type CompletionCost, type TrackedCard } from '@/lib/prices'
+import type { CompletionCost, TrackedCard } from '@/lib/prices'
 import { type Generation, generationLabel } from '@/config/pokedex'
 import type { CardStatus } from '@/types'
 import styles from './ValuePage.module.css'
@@ -16,7 +16,7 @@ const STATUS_ORDER: Record<CardStatus, number> = { owned: 0, ordered: 1, wanted:
 interface CardRow {
   id: string
   name: string
-  speciesId: number | null
+  speciesId: number
   reference: string
   status: CardStatus
   paid: number | null
@@ -30,7 +30,7 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
   const rows: CardRow[] = cards.map(({ card, status, paid, value }) => ({
     id: card.id,
     name: cardTitle(card),
-    speciesId: card.dexIds[0] ?? null,
+    speciesId: card.dexIds[0]!,
     reference: card.reference,
     status,
     paid,
@@ -40,7 +40,7 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
 
   return (
     <Table
-      className={styles.table}
+      className="data-table"
       data={rows}
       rowKey={(row) => row.id}
       defaultSort={{ key: 'value', dir: 'desc' }}
@@ -52,7 +52,7 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
           sortValue: (row) => row.name,
           cell: (row) => (
             <span className={styles.card}>
-              {row.speciesId ? <Link to={`/pokemon/${row.speciesId}`}>{row.name}</Link> : row.name}
+              <Link to={speciesPath(row.speciesId)}>{row.name}</Link>
               <span className="muted">{row.reference}</span>
             </span>
           ),
@@ -75,7 +75,7 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
           header: 'Valeur',
           align: 'right',
           sortValue: (row) => row.value ?? -1,
-          cell: (row) => (row.value === null ? '—' : priceLabel(row.value)),
+          cell: (row) => money(row.value),
         },
         {
           key: 'gain',
@@ -109,7 +109,7 @@ export function CompletionTable({
 }) {
   return (
     <Table
-      className={styles.table}
+      className="data-table"
       data={rows}
       rowKey={(row) => row.generation.id}
       columns={[

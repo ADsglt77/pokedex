@@ -1,6 +1,7 @@
 import { Badge, Card, IconButton } from '@camply/ui'
 import { Pencil, X } from '@camply/ui/icons'
 import { Link } from 'react-router'
+import { speciesPath } from '@/lib/filters'
 import { CardArt } from '@/components/CardArt'
 import { CardmarketLink } from '@/components/CardmarketLink'
 import { PossessionMark } from '@/components/PossessionMark'
@@ -56,12 +57,7 @@ export function WishCard({
   return (
     <Card padding="sm" role="article" className={styles.wish}>
       {/* La vignette double le lien du titre : cachée au clavier et aux lecteurs d'écran. */}
-      <Link
-        to={`/pokemon/${speciesId}`}
-        className={styles.wishArt}
-        tabIndex={-1}
-        aria-hidden="true"
-      >
+      <Link to={speciesPath(speciesId)} className={styles.wishArt} tabIndex={-1} aria-hidden="true">
         <CardArt card={card} speciesId={speciesId} alt="">
           <PossessionMark status={status} />
         </CardArt>
@@ -70,7 +66,7 @@ export function WishCard({
       <div className={styles.wishBody}>
         <header className={styles.wishHead}>
           <h2 className={styles.wishTitle}>
-            <Link to={`/pokemon/${speciesId}`}>{title}</Link>
+            <Link to={speciesPath(speciesId)}>{title}</Link>
           </h2>
           <span className="muted numeric">{formatDexNumber(speciesId)}</span>
         </header>

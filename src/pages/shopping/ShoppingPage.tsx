@@ -2,6 +2,7 @@ import { Badge, Tab, TabList, TabPanel, Tabs } from '@camply/ui'
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
+import { SHOPPING_VIEWS, UNDER_MAX } from '@/lib/filters'
 import { pageTitle } from '@/lib/format'
 import { isToBuy } from '@/lib/collection'
 import { DEFAULT_WISHLIST_FILTERS, underMaxCount, type WishlistFilters } from '@/lib/wishlist'
@@ -14,10 +15,6 @@ import { useWishlist } from '@/hooks/useWishlist'
 import { WishlistPanel } from './WishlistPanel'
 import styles from './ShoppingPage.module.css'
 
-const VIEWS = ['liste', 'prochaine-commande', 'commandes', 'budget'] as const
-/** Le filtre « sous le prix maximum » dans l'adresse : `/achats?filtre=sous-max`. */
-const UNDER_MAX = 'sous-max'
-
 /**
  * Achats (`/achats`) : le budget du mois, la liste d'achats, l'assistant de la prochaine commande,
  * le registre des commandes et le suivi du budget. L'onglet ouvert est dans l'adresse (`?vue=`),
@@ -27,7 +24,7 @@ const UNDER_MAX = 'sous-max'
  */
 export function ShoppingPage() {
   const [params, setParams] = useSearchParams()
-  const view = VIEWS.find((known) => known === params.get('vue')) ?? 'liste'
+  const view = SHOPPING_VIEWS.find((known) => known === params.get('vue')) ?? 'liste'
   // Un paramètre de l'adresse changé, les autres gardés.
   const setParam = (name: string, value: string | null) =>
     setParams(

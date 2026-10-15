@@ -4,7 +4,8 @@ import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { pokedexHref } from '@/hooks/usePokedexFilters'
 import { generationById } from '@/config/pokedex'
-import { pokedexUrl } from '@/lib/filters'
+import { pokedexUrl, speciesPath } from '@/lib/filters'
+import { shortcutBlocked } from '@/lib/focus'
 import { formatDexNumber } from '@/lib/format'
 import type { PokemonSpecies } from '@/types'
 import styles from './SpeciesNav.module.css'
@@ -28,22 +29,11 @@ export function SpeciesNav({ species, previous, next, nextWithoutCard }: Species
   // est déjà servi (« Achat », « Priorité » : un choix au clavier ne doit pas quitter la page).
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      const busy =
-        event.target instanceof HTMLElement &&
-        event.target.closest('input, textarea, select, [role=listbox]')
-      if (
-        busy ||
-        event.defaultPrevented ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.altKey ||
-        event.shiftKey
-      )
-        return
+      if (shortcutBlocked(event) || event.shiftKey) return
       const target = event.key === 'ArrowLeft' ? previous : event.key === 'ArrowRight' ? next : null
-      if (!target || document.querySelector('[role=dialog]')) return
+      if (!target) return
       event.preventDefault()
-      navigate(`/pokemon/${target.id}`)
+      navigate(speciesPath(target.id))
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -75,7 +65,7 @@ export function SpeciesNav({ species, previous, next, nextWithoutCard }: Species
         />
         {nextWithoutCard && (
           <Button asChild variant="soft" size="sm" rightIcon={<ArrowRight size={16} />}>
-            <Link to={`/pokemon/${nextWithoutCard.id}`}>
+            <Link to={speciesPath(nextWithoutCard.id)}>
               Suivant sans carte : {nextWithoutCard.names.fr}
             </Link>
           </Button>
@@ -101,7 +91,7 @@ function Neighbour({
   if (!species) return <span className={styles.edge}>{edge}</span>
   return (
     <Link
-      to={`/pokemon/${species.id}`}
+      to={speciesPath(species.id)}
       rel={rel}
       className={styles.neighbour}
       aria-label={`${rel === 'prev' ? 'Pokémon précédent' : 'Pokémon suivant'} : ${species.names.fr}, ${formatDexNumber(species.id)}`}

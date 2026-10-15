@@ -1,7 +1,7 @@
 import { Badge, DescriptionList, SkeletonText, type BadgeTone } from '@camply/ui'
 import { Suspense, use, useState, type ReactNode } from 'react'
 import { ExternalLink } from '@/components/ExternalLink'
-import { INGEST_JOBS, type IngestJob } from '@/config/jobs'
+import { INGEST_JOB_NAMES, INGEST_JOBS, type IngestJob } from '@/config/jobs'
 import { details, formatDate, formatDateTime } from '@/lib/format'
 import { settled } from '@/lib/settled'
 import type { JobStatus, ServerStatus } from '@/types'
@@ -53,8 +53,6 @@ export function ReferenceSection() {
     </DataSection>
   )
 }
-
-const JOB_NAMES = Object.keys(INGEST_JOBS) as IngestJob[]
 
 /** Où en est une tâche : un badge et une phrase. `now` : en ms. */
 function describeJob(
@@ -114,7 +112,7 @@ function JobsStatus({ status }: { status: Promise<ServerStatus | null> }) {
     <DescriptionList
       className={styles.jobs}
       divided
-      items={JOB_NAMES.map((job) => {
+      items={INGEST_JOB_NAMES.map((job) => {
         const { tone, badge, text } = describeJob(job, current.jobs[job], now)
         // Le jour des prix, qui peut précéder celui de leur relevé.
         const pricesDate =

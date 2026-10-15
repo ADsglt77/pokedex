@@ -5,13 +5,11 @@
 
 import { describe, expect, test } from 'bun:test'
 import { priceOf } from '@/lib/prices'
-import type { Prices } from '@/types'
+import type { PriceFile } from '@/types'
 
-const prices: Prices = {
-  cardmarket: {
-    date: '2026-10-12',
-    cards: { '719445': [6.87, 5, 7.2], '719446': [99, null, null] },
-  },
+const prices: PriceFile = {
+  date: '2026-10-12',
+  cards: { '719445': [6.87, 5, 7.2], '719446': [99, null, null] },
 }
 
 describe('priceOf', () => {
@@ -28,7 +26,6 @@ describe('priceOf', () => {
   })
 
   test('sans fichier de prix : pas de prix', () => {
-    expect(priceOf({ cardmarket: null }, { cardmarket: 719445 })).toBeNull()
     expect(priceOf(null, { cardmarket: 719445 })).toBeNull()
   })
 })

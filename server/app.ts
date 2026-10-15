@@ -13,6 +13,7 @@ import { accountRoutes, type Accounts } from './auth'
 import { collectionRoutes } from './collection'
 import { serveImage } from './images'
 import { referenceRoutes } from './reference'
+import { notFound } from './snapshots'
 
 /** Bien au-delà d'une collection de 1 025 cartes et de ses commandes : 413 au-delà. */
 const MAX_BODY = 5_000_000
@@ -41,9 +42,7 @@ export function createApp({ data, app, accounts }: AppContext) {
       // Une adresse inconnue : 404, sans corps. Une erreur inattendue : dans le journal du serveur,
       // et 500 sans corps (rien de ses détails, une requête SQL par exemple, ne part vers le site).
       .onError(({ code, error }) => {
-        if (code === 'NOT_FOUND') {
-          return new Response(null, { status: 404, headers: { 'Cache-Control': 'no-cache' } })
-        }
+        if (code === 'NOT_FOUND') return notFound()
         if (code === 'UNKNOWN' || code === 'INTERNAL_SERVER_ERROR') {
           console.error('Erreur de l’API :', error)
           return new Response(null, { status: 500, headers: { 'Cache-Control': 'no-store' } })

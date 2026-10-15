@@ -1,7 +1,7 @@
 /* Vue d'ensemble et statistiques */
 
 .tabs {
-  margin-top: 2.5rem;
+  margin-top: var(--space-block);
 }
 
 /* Les onglets défilent de côté quand ils manquent de place, sans barre de défilement. */
@@ -20,7 +20,7 @@
 }
 
 .panel {
-  padding-top: 1.5rem;
+  padding-top: var(--space-block);
 }
 
 /* Les titres d'un onglet : sous le titre de la page et les onglets, à la taille d'un bloc. */
@@ -246,8 +246,8 @@
 .planner {
   display: grid;
   grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
-  gap: 2.5rem;
-  padding-top: 1.5rem;
+  gap: var(--space-block);
+  padding-top: var(--space-block);
 }
 
 /* Une Card de camply, qui reste visible pendant qu'on parcourt le plan. */
@@ -294,14 +294,6 @@
 }
 
 /* Commandes et budget */
-
-.table {
-  /* Positionné : un titre de colonne masqué (`visually-hidden`) reste dans la zone qui défile,
-     sans élargir la page sur téléphone. */
-  position: relative;
-  width: 100%;
-  font-variant-numeric: tabular-nums;
-}
 
 /* Une valeur et sa précision en dessous, alignées comme la colonne. */
 .stacked {
@@ -372,7 +364,6 @@
 @media (max-width: 52rem) {
   .planner {
     grid-template-columns: minmax(0, 1fr);
-    gap: 2rem;
   }
 
   .plannerOptions {

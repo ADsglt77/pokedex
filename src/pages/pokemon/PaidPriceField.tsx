@@ -5,16 +5,23 @@ import { useCollectionStore } from '@/store/collection'
 import type { PokemonCard } from '@/types'
 
 /** Le prix payé d'une carte possédée ou commandée, enregistré en quittant le champ (ou Entrée). */
-export function PaidPriceField({ card, className }: { card: PokemonCard; className?: string }) {
+export function PaidPriceField({
+  card,
+  paid,
+  className,
+}: {
+  card: PokemonCard
+  paid: number | null
+  className?: string
+}) {
   const act = useCollectionAction()
-  const paid = useCollectionStore((state) => state.collection.cards[card.id]?.paidPrice)
 
   return (
     <EuroInput
       className={className}
       label="Prix payé"
       hint="Pour suivre ce que la carte vous a coûté, et ce qu’elle vaut depuis."
-      value={paid}
+      value={paid ?? undefined}
       onCommit={(amount) =>
         act(
           () => useCollectionStore.getState().setPaidPrice(card, amount),

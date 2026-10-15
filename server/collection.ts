@@ -15,6 +15,7 @@ import { Elysia, t } from 'elysia'
 import { DAY, HOUR } from '@/lib/time'
 import { readDocument } from '@/lib/transfer'
 import type { accountRoutes } from './auth'
+import { matchesEtag } from './snapshots'
 
 interface Row {
   version: number
@@ -58,7 +59,7 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
       ({ user, request }) => {
         const row = read.get(user.id) as Row | null
         const etag = `"v${row?.version ?? 0}"`
-        if (request.headers.get('if-none-match')?.replace(/^W\//, '') === etag) {
+        if (matchesEtag(request, etag)) {
           return new Response(null, {
             status: 304,
             headers: { ETag: etag, 'Cache-Control': 'no-store' },

@@ -25,7 +25,14 @@ import { usePokedex } from '@/hooks/usePokedex'
 import { useWishlist } from '@/hooks/useWishlist'
 import { monthOf } from '@/lib/budget'
 import { cx } from '@/lib/cx'
-import { DEFAULT_FILTERS, filterEntries, pokedexUrl, type CardFilter } from '@/lib/filters'
+import {
+  DEFAULT_FILTERS,
+  filterEntries,
+  pokedexUrl,
+  shoppingUrl,
+  speciesPath,
+  type CardFilter,
+} from '@/lib/filters'
 import {
   details,
   formatDate,
@@ -45,6 +52,7 @@ import { underMaxCount } from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
 import { usePrices, usePricesMissing } from '@/store/prices'
 import { useShoppingStore } from '@/store/shopping'
+import type { PokemonCard } from '@/types'
 import styles from './HomePage.module.css'
 
 function progressSentence(progress: Progress) {
@@ -255,7 +263,7 @@ function TodoPanel() {
               late === 1
                 ? 'En cours depuis plus de 4 semaines : réclamez-la au vendeur'
                 : 'En cours depuis plus de 4 semaines : réclamez-les aux vendeurs',
-            to: '/achats?vue=commandes',
+            to: shoppingUrl({ view: 'commandes' }),
             icon: Clock,
             tone: 'warn' as const,
           },
@@ -271,7 +279,7 @@ function TodoPanel() {
               'cartes sous votre prix maximum',
             ),
             hint: 'Le prix du marché est passé sous ce que vous vous êtes fixé',
-            to: '/achats?filtre=sous-max',
+            to: shoppingUrl({ underMax: true }),
             icon: TrendingDown,
             tone: 'success' as const,
           },
@@ -355,13 +363,13 @@ function Indicators() {
           }
         />
       </StatLink>
-      <StatLink to="/achats?vue=budget">
+      <StatLink to={shoppingUrl({ view: 'budget' })}>
         <SpentThisMonthStat />
       </StatLink>
-      <StatLink to="/achats">
+      <StatLink to={shoppingUrl()}>
         <WishlistStat />
       </StatLink>
-      <StatLink to="/achats?vue=commandes">
+      <StatLink to={shoppingUrl({ view: 'commandes' })}>
         <Stat
           label="Commandes en cours"
           icon={<Package size={18} />}
@@ -395,16 +403,40 @@ function RecentPanel({ cards }: { cards: RecentCard[] }) {
               className={styles.dealt}
               style={{ animationDelay: `${index * 70}ms` }}
             >
-              <Link to={`/pokemon/${speciesId}`} className={styles.card}>
-                <CardArt card={recent.card} speciesId={speciesId} alt="" eager />
-                <span className={styles.cardName}>{cardTitle(recent.card)}</span>
-                <span className="hint">{date ? `Obtenue le ${date}` : recent.card.reference}</span>
-              </Link>
+              <CardLink
+                card={recent.card}
+                speciesId={speciesId}
+                name={cardTitle(recent.card)}
+                hint={date ? `Obtenue le ${date}` : recent.card.reference}
+              />
             </li>
           )
         })}
       </ul>
     </Panel>
+  )
+}
+
+/** Une carte de l'accueil, qui mène à la fiche de son Pokémon ; `locked` : pas encore obtenue. */
+function CardLink({
+  card,
+  speciesId,
+  name,
+  hint,
+  locked,
+}: {
+  card: PokemonCard
+  speciesId: number
+  name: string
+  hint: string
+  locked?: boolean
+}) {
+  return (
+    <Link to={speciesPath(speciesId)} className={styles.card}>
+      <CardArt card={card} speciesId={speciesId} alt="" locked={locked} eager />
+      <span className={styles.cardName}>{name}</span>
+      <span className="hint">{hint}</span>
+    </Link>
   )
 }
 
@@ -422,11 +454,13 @@ function Chosen() {
       <ul className={styles.cards}>
         {chosen.map(({ species, card }) => (
           <li key={species.id}>
-            <Link to={`/pokemon/${species.id}`} className={styles.card}>
-              <CardArt card={card!.card} speciesId={species.id} alt="" locked eager />
-              <span className={styles.cardName}>{species.names.fr}</span>
-              <span className="hint">{card!.card.reference}</span>
-            </Link>
+            <CardLink
+              card={card!.card}
+              speciesId={species.id}
+              name={species.names.fr}
+              hint={card!.card.reference}
+              locked
+            />
           </li>
         ))}
       </ul>

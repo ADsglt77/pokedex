@@ -16,7 +16,7 @@ import {
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import { useExportCollection } from '@/hooks/useExportCollection'
-import { pokedexUrl, searchForm } from '@/lib/filters'
+import { pokedexUrl, searchForm, shoppingUrl, speciesPath } from '@/lib/filters'
 import { formatDexNumber } from '@/lib/format'
 import { SPECIES } from '@/lib/species'
 
@@ -29,10 +29,14 @@ const PLACES = [
   { label: 'Pokémon à débloquer', to: pokedexUrl({ possession: 'missing' }), icon: Lock },
   { label: 'Pokémon sans carte', to: pokedexUrl({ card: 'without' }), icon: Grid3x3 },
   { label: 'Catalogue par extension', to: '/catalogue', icon: Layers },
-  { label: 'Liste d’achats', to: '/achats', icon: ListChecks },
-  { label: 'Prochaine commande', to: '/achats?vue=prochaine-commande', icon: Sparkles },
-  { label: 'Commandes', to: '/achats?vue=commandes', icon: Receipt },
-  { label: 'Budget', to: '/achats?vue=budget', icon: Wallet },
+  { label: 'Liste d’achats', to: shoppingUrl(), icon: ListChecks },
+  {
+    label: 'Prochaine commande',
+    to: shoppingUrl({ view: 'prochaine-commande' }),
+    icon: Sparkles,
+  },
+  { label: 'Commandes', to: shoppingUrl({ view: 'commandes' }), icon: Receipt },
+  { label: 'Budget', to: shoppingUrl({ view: 'budget' }), icon: Wallet },
   { label: 'Valeur de la collection', to: '/valeur', icon: ChartLine },
   { label: 'Données et sauvegarde', to: '/donnees', icon: Database },
   { label: 'Importer une collection', to: '/donnees#importer', icon: Upload },
@@ -72,7 +76,7 @@ export function AppSearch({ open, onClose }: { open: boolean; onClose: () => voi
         ),
         // Pas « Pokémon » : la palette cherche aussi dans le groupe, « poké » les trouverait tous.
         group: 'Espèces',
-        onRun: () => navigate(`/pokemon/${id}`),
+        onRun: () => navigate(speciesPath(id)),
       })),
     ],
     [navigate, exportCollection],

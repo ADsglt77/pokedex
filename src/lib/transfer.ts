@@ -141,10 +141,8 @@ export function readShopping(value: unknown): ShoppingData | null {
 }
 
 /** Chaque valeur d'un dictionnaire (ou d'une liste) est un objet qui passe `ok` (avec sa clé). */
-const all = (
-  values: object,
-  ok: (value: Record<string, unknown>, key: string) => boolean = () => true,
-) => Object.entries(values).every(([key, value]) => isRecord(value) && ok(value, key))
+const all = (values: object, ok: (value: Record<string, unknown>, key: string) => boolean) =>
+  Object.entries(values).every(([key, value]) => isRecord(value) && ok(value, key))
 
 /** Aucune valeur en double. */
 const distinct = (values: readonly unknown[]) => new Set(values).size === values.length

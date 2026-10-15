@@ -15,7 +15,7 @@ import { getSpecies } from '@/lib/species'
 import type { CardImage, CatalogFile } from '@/types'
 
 /** Une série du catalogue. */
-export interface CatalogSet {
+interface CatalogSet {
   /** Son code chez Pokécardex : « SV2A ». */
   id: string
   /** Son nom : « Pokémon Card 151 ». */
@@ -70,7 +70,7 @@ function readCatalog(file: CatalogFile): Catalog {
           const names = name || dexIds.map((dexId) => getSpecies(dexId)!.names.fr).join(' & ')
           card = {
             key,
-            set: sets.get(set) ?? { id: set, name: set, year: null },
+            set: sets.get(set)!,
             dexIds,
             cardmarket: cardmarket || undefined,
             reference: `${names} (${set} ${number})`,

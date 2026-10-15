@@ -8,7 +8,7 @@
 
 import { create } from 'zustand'
 
-export type Theme = 'dark' | 'light'
+type Theme = 'dark' | 'light'
 
 const KEY = 'pokedex-collection.theme'
 /** La couleur de la barre du navigateur (mobile) : le fond de chaque thème. */

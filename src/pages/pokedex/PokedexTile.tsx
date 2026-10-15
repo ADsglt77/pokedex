@@ -1,10 +1,11 @@
 import { memo } from 'react'
 import { Link } from 'react-router'
+import { speciesPath } from '@/lib/filters'
 import { formatDexNumber } from '@/lib/format'
 import type { PokedexEntry } from '@/lib/pokedex'
 import type { CardStatus } from '@/types'
-import { CardArt } from './CardArt'
-import { PossessionMark } from './PossessionMark'
+import { CardArt } from '@/components/CardArt'
+import { PossessionMark } from '@/components/PossessionMark'
 import styles from './PokedexTile.module.css'
 
 const SPECIES_LABELS: Record<CardStatus | 'none', string> = {
@@ -31,7 +32,7 @@ export const PokedexTile = memo(function PokedexTile({
   const label = `${formatDexNumber(species.id)} ${species.names.fr}, ${SPECIES_LABELS[status ?? 'none']}`
 
   return (
-    <Link to={`/pokemon/${species.id}`} className={styles.tile} aria-label={label}>
+    <Link to={speciesPath(species.id)} className={styles.tile} aria-label={label}>
       <CardArt
         card={card?.card ?? null}
         speciesId={species.id}

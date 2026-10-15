@@ -170,9 +170,9 @@
   width: 100%;
   border: 0;
   background: none;
-  font: inherit;
-  font-size: 0.9375rem;
-  font-weight: 600;
+  /* La police de la page (un bouton a la sienne), la taille et la graisse de `.sideLink`. */
+  font-family: inherit;
+  line-height: inherit;
   text-align: left;
   cursor: pointer;
 }
@@ -282,7 +282,7 @@
 }
 
 .page {
-  animation: arrive 0.2s ease-out;
+  animation: arrive 0.2s var(--ease-out);
 }
 
 @keyframes arrive {

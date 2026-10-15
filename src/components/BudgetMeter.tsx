@@ -17,7 +17,7 @@ export function BudgetMeter({ spent, budget }: { spent: number; budget: BudgetSe
         sur {formatEuro(budget.monthly)} · plafond {formatEuro(budget.ceiling)}
       </span>
       <Progress
-        value={Math.min(spent, budget.ceiling)}
+        value={spent}
         max={budget.ceiling}
         tone={level ? BUDGET_LEVELS[level].tone : 'info'}
         size="sm"

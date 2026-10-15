@@ -75,7 +75,7 @@ export function useCardDraft(card: PokemonCard | null) {
   async function read(dexIds: number[], fallback: string): Promise<PokemonCard | null> {
     setSubmitted(true)
     if (cardmarket === undefined || errors.image || errors.page) return null
-    const changedId = cardmarket !== card?.cardmarket
+    const changedId = cardmarket !== initial.cardmarket
     // Le nom de l'id saisi, et celui de l'ancien id s'il a changé (la référence le reprenait-elle ?).
     const [known, previous] = await Promise.all([
       cardmarket === null ? null : loadPriceHistory(cardmarket),
@@ -83,7 +83,7 @@ export function useCardDraft(card: PokemonCard | null) {
     ])
     const typed = reference.trim()
     const stale = changedId && typed === previous?.name
-    const stalePage = cardmarket !== initial.cardmarket && page.trim() === initial.page
+    const stalePage = changedId && page.trim() === initial.page
     const search = !image.trim() && referenceCode(typed) !== null
     const found = search ? await findCardImage(typed, { retry: true }) : null
     // L'image gardée (`kept`), pas si la référence n'était que le nom de l'ancien id : elle devient

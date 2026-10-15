@@ -20,7 +20,6 @@ import { TOTAL_SPECIES } from '@/config/pokedex'
 import { numberKey } from '@/lib/card-code'
 import { DAY, HOUR } from '@/lib/time'
 import type { CatalogFile, CatalogRow } from '@/types'
-import { readSource, writeSource } from '../db'
 import { refresh } from '../lib/net'
 import {
   asiaExclusive,
@@ -44,11 +43,13 @@ function printedNumber(text: string) {
 }
 
 /**
- * Enregistre la réponse de `/api/catalog`, d'après les tables ; rien tant que la tâche n'a jamais
- * lu Pokécardex : un catalogue vide passerait pour disponible (l'API répond 404 en attendant).
+ * Enregistre la réponse de `/api/catalog`, d'après les tables ; rien tant qu'aucune carte n'a été
+ * lue : un catalogue vide passerait pour disponible (l'API répond 404 en attendant).
  */
 export function saveCatalog(db: Database) {
-  if (readSource(db, 'catalog')) saveSnapshot(db, 'catalog', catalogResponse(db))
+  if (db.query('SELECT 1 FROM cards LIMIT 1').get()) {
+    saveSnapshot(db, 'catalog', catalogResponse(db))
+  }
 }
 
 function catalogResponse(db: Database): CatalogFile {
@@ -61,8 +62,8 @@ function catalogResponse(db: Database): CatalogFile {
   const cards = db
     .query(
       `SELECT set_id AS 'set', number, sort, name, cardmarket, image,
-              (SELECT json_group_array(dex_id) FROM
-                 (SELECT dex_id FROM card_species WHERE card = id ORDER BY rank)) AS dexIds
+              (SELECT json_group_array(dex_id ORDER BY rank) FROM card_species
+               WHERE card = id) AS dexIds
        FROM cards`,
     )
     .all() as {
@@ -252,12 +253,6 @@ export async function catalog(db: Database) {
       `${totals.cards} cartes en tout, ${totals.withoutCardmarket ?? 0} sans id Cardmarket, ` +
       `${totals.otherNumber ?? 0} dont le numéro imprimé n’est pas le rang de l’image`,
   )
-  // Noté seulement si Pokécardex a été lu : sans aucune carte (premier passage en échec), un
-  // catalogue vide passerait pour disponible.
-  if (totals.cards > 0) {
-    const now = new Date().toISOString()
-    writeSource(db, 'catalog', { stamp: now, date: now.slice(0, 10) })
-  }
   saveCatalog(db)
   if (failed.length) {
     throw new Error(`${failed.length} séries illisibles (${failed.slice(0, 10).join(', ')})`)

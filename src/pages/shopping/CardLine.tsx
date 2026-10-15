@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
+import { speciesPath } from '@/lib/filters'
 import { CardArt } from '@/components/CardArt'
 import { cardTitle } from '@/lib/species'
 import type { PokemonCard } from '@/types'
@@ -18,14 +19,13 @@ export function CardLine({
   detail?: ReactNode
   children?: ReactNode
 }) {
-  const speciesId = card?.dexIds[0]
   return (
     <div className={styles.line}>
-      {card && speciesId !== undefined ? (
+      {card ? (
         <>
-          <CardArt card={card} speciesId={speciesId} alt="" className={styles.lineArt} />
+          <CardArt card={card} speciesId={card.dexIds[0]!} alt="" className={styles.lineArt} />
           <div className={styles.lineText}>
-            <Link to={`/pokemon/${speciesId}`} className={styles.lineTitle}>
+            <Link to={speciesPath(card.dexIds[0]!)} className={styles.lineTitle}>
               {cardTitle(card)}
             </Link>
             <span className="muted">

@@ -24,6 +24,12 @@ export const GENERATIONS: readonly Generation[] = [
 
 export const TOTAL_SPECIES = GENERATIONS.at(-1)!.last
 
+/** Les numéros du Pokédex national, de 1 à `TOTAL_SPECIES`. */
+export const SPECIES_IDS: readonly number[] = Array.from(
+  { length: TOTAL_SPECIES },
+  (_, index) => index + 1,
+)
+
 export function generationById(id: number): Generation | undefined {
   return GENERATIONS.find((generation) => generation.id === id)
 }

@@ -2,6 +2,7 @@ import { Alert, Skeleton, SkeletonText, Stack, Stat } from '@camply/ui'
 import { Flag } from '@camply/ui/icons'
 import { Suspense, use, useMemo } from 'react'
 import { Link } from 'react-router'
+import { speciesPath } from '@/lib/filters'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
 import { PriceChart } from '@/components/PriceChart'
@@ -71,8 +72,8 @@ export function ValuePage() {
       <title>{pageTitle('Valeur')}</title>
       <PageHeader title="Valeur">
         Prix du marché Cardmarket
-        {prices?.cardmarket && ` du ${formatDate(prices.cardmarket.date)}`}, en euros. Une
-        estimation : l’état de la carte et le vendeur font varier le prix réel.
+        {prices && ` du ${formatDate(prices.date)}`}, en euros. Une estimation : l’état de la carte
+        et le vendeur font varier le prix réel.
       </PageHeader>
 
       <div className={styles.grid}>
@@ -207,7 +208,7 @@ function Movers({ cards }: { cards: TrackedCard[] }) {
               <ul className={styles.movers}>
                 {list.map(({ card, price, avg30, change }) => (
                   <li key={card.id}>
-                    <Link to={`/pokemon/${card.dexIds[0]}`}>{card.reference}</Link>
+                    <Link to={speciesPath(card.dexIds[0]!)}>{card.reference}</Link>
                     <span className={styles.moverPrice}>
                       {formatEuro(price)} <span className={className}>{formatPercent(change)}</span>
                       <span className="muted"> · moyenne {formatEuro(avg30)}</span>

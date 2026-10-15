@@ -3,7 +3,7 @@
  * (« Bulbizarre (SV2A 166) »). Sans import : le serveur s'en sert aussi.
  */
 
-export interface CardCode {
+interface CardCode {
   set: string
   number: string
 }

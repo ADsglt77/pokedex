@@ -1,5 +1,6 @@
 import { Button, SegmentedControl, Stack } from '@camply/ui'
 import { Link } from 'react-router'
+import { shoppingUrl } from '@/lib/filters'
 import { Panel } from '@/components/Panel'
 import { PreferenceFields } from '@/components/PreferenceFields'
 import { useCollectionAction } from '@/hooks/useNotify'
@@ -60,7 +61,7 @@ export function PurchaseSection({ view }: { view: CardView }) {
             <PreferenceFields card={card} preference={preference} />
             <div>
               <Button asChild variant="ghost" size="sm">
-                <Link to="/achats">Voir la liste d’achats</Link>
+                <Link to={shoppingUrl()}>Voir la liste d’achats</Link>
               </Button>
             </div>
           </>

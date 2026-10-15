@@ -8,12 +8,13 @@
  */
 
 import type { Database } from 'bun:sqlite'
-import { mkdir, rename, stat, writeFile } from 'node:fs/promises'
+import { mkdir, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { WEEK } from '@/lib/time'
 import { DATA_DIR } from './db'
 import { politeFetch } from './lib/net'
+import { notFound } from './snapshots'
 
 const IMAGES_DIR = process.env.IMAGES_DIR ?? join(DATA_DIR, 'images')
 
@@ -51,12 +52,6 @@ const LEGACY = /^\/images\/cards\/tcgplayer\/\d{1,9}_(200w|in_1000x1000)\.jpg$/
 /** Le fichier d'un chemin local (`/images/cards/…` → `IMAGES_DIR/cards/…`). */
 const imageFile = (path: string) => join(IMAGES_DIR, path.slice('/images/'.length))
 
-const exists = (file: string) =>
-  stat(file).then(
-    () => true,
-    () => false,
-  )
-
 /**
  * Copie chez nous l'image d'un chemin local : `true` si elle y est (déjà, ou maintenant), `false`
  * si la source ne l'a pas (404). Une autre erreur (panne, réponse qui n'est pas une image) est
@@ -64,7 +59,7 @@ const exists = (file: string) =>
  */
 export async function mirror(path: string): Promise<boolean> {
   const file = imageFile(path)
-  if (await exists(file)) return true
+  if (await Bun.file(file).exists()) return true
   const url = upstreamUrl(path)!
   const response = await politeFetch(url)
   if (response.status === 404) return false
@@ -110,8 +105,6 @@ function plausible(data: Database, path: string) {
  */
 export async function serveImage(data: Database, request: Request) {
   const path = new URL(request.url).pathname
-  const notFound = () =>
-    new Response(null, { status: 404, headers: { 'Cache-Control': 'no-cache' } })
   const upstream = upstreamUrl(path)
   if (!upstream && !LEGACY.test(path)) return notFound()
   if (!plausible(data, path)) return notFound()

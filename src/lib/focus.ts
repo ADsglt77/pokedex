@@ -20,3 +20,17 @@ export function keepFocusInList(
     item?.querySelector<HTMLElement>('button:not(:disabled), a[href]') ?? fallback?.current
   target?.focus()
 }
+
+/**
+ * Un raccourci clavier de la page ne s'applique pas : on tape dans un champ (ou une liste de
+ * choix), une fenêtre est ouverte, un réglage s'est déjà servi de la touche, ou Ctrl, ⌘ ou Alt est
+ * tenu (Maj non : « / » la demande sur certains claviers).
+ */
+export const shortcutBlocked = (event: KeyboardEvent) =>
+  (event.target instanceof HTMLElement &&
+    event.target.closest('input, textarea, select, [role=listbox]') !== null) ||
+  event.defaultPrevented ||
+  event.ctrlKey ||
+  event.metaKey ||
+  event.altKey ||
+  document.querySelector('[role=dialog]') !== null

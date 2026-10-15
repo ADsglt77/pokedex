@@ -46,15 +46,11 @@
 .stage {
   grid-area: stage;
   align-self: start;
-  scroll-margin-top: 1rem;
 }
 
 .body {
   grid-area: body;
   container-type: inline-size;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-block);
   min-width: 0;
 }
 

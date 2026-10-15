@@ -1,6 +1,6 @@
 import type { PointerEvent } from 'react'
 import { CardArt } from '@/components/CardArt'
-import { ImageCredit } from '@/components/ImageCredit'
+import { ImageCredit } from './ImageCredit'
 import type { CardView } from '@/lib/pokedex'
 import type { PokemonSpecies } from '@/types'
 import styles from './CardStage.module.css'

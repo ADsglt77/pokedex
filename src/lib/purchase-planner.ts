@@ -14,7 +14,7 @@
  */
 
 import { PRIORITY_RANK } from '@/config/shopping'
-import { isToBuy } from '@/lib/collection'
+import { stillWanted } from '@/lib/collection'
 import { cents } from '@/lib/orders'
 import type { CardStatus, Priority } from '@/types'
 
@@ -78,9 +78,8 @@ export function planPurchase<T extends PlannableCard>(
     overBudget: false,
   }
 
-  const isNew = (row: T) => row.card.dexIds.some((id) => !taken.has(id))
   const candidates = cards.filter(
-    (row) => isToBuy(row) && options.priorities.includes(row.preference.priority) && isNew(row),
+    (row) => stillWanted(row, taken) && options.priorities.includes(row.preference.priority),
   )
 
   const priced: (T & { price: number })[] = []

@@ -20,13 +20,14 @@ import {
   POKEMON_TYPES,
 } from '@/config/pokedex'
 import { cx } from '@/lib/cx'
+import { shortcutBlocked } from '@/lib/focus'
 import {
   activeFilterCount,
   type CardFilter,
   type PokedexFilters,
   type PossessionFilter,
 } from '@/lib/filters'
-import { formatInteger, plural } from '@/lib/format'
+import { formatInteger, plural, toOptions } from '@/lib/format'
 import type { Pokedex } from '@/lib/pokedex'
 import type { GenerationId, PokemonTypeId } from '@/types'
 import styles from './PokedexToolbar.module.css'
@@ -49,12 +50,9 @@ const CARD_LABELS: Record<CardFilter, string> = {
   'no-paid': 'Possédée sans prix payé',
 }
 
-const CARD_OPTIONS: { value: CardFilter | ''; label: string }[] = [
-  { value: '', label: 'Avec ou sans carte' },
-  ...(Object.entries(CARD_LABELS) as [CardFilter, string][]).map(([value, label]) => ({
-    value,
-    label,
-  })),
+const CARD_OPTIONS = [
+  { value: '' as const, label: 'Avec ou sans carte' },
+  ...toOptions(CARD_LABELS),
 ]
 
 const TYPE_OPTIONS: { value: PokemonTypeId | ''; label: string }[] = [
@@ -94,8 +92,7 @@ export function PokedexToolbar({
   // « / » place le curseur dans la recherche, sauf quand on tape déjà dans un champ.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      const typing = event.target instanceof HTMLElement && event.target.closest('input, textarea')
-      if (event.key !== '/' || typing || event.ctrlKey || event.metaKey || event.altKey) return
+      if (event.key !== '/' || shortcutBlocked(event)) return
       event.preventDefault()
       search.current?.focus()
     }

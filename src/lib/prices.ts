@@ -14,7 +14,7 @@ import type {
   CardStatus,
   CollectionData,
   PokemonCard,
-  Prices,
+  PriceFile,
 } from '@/types'
 
 /** Ce qu'il faut d'une carte pour son prix : son id Cardmarket. */
@@ -26,13 +26,13 @@ interface Priced {
  * Le prix du jour d'une carte chez Cardmarket, par son id ; `null` sans id, sans prix pour cet id
  * ce jour, ou sans fichier.
  */
-export function priceOf(prices: Prices | null, card: Priced): CardPrice | null {
-  const row = card.cardmarket && prices?.cardmarket?.cards[card.cardmarket]
+export function priceOf(prices: PriceFile | null, card: Priced): CardPrice | null {
+  const row = card.cardmarket && prices?.cards[card.cardmarket]
   return row ? { price: row[0], low: row[1], avg30: row[2] } : null
 }
 
 /** Le prix du marché d'une carte ; `null` sans prix. */
-export const marketPrice = (prices: Prices | null, card: Priced) =>
+export const marketPrice = (prices: PriceFile | null, card: Priced) =>
   priceOf(prices, card)?.price ?? null
 
 /** « 12,40 € » ou « Sans prix ». */
@@ -57,7 +57,7 @@ export interface TrackedCard {
   value: number | null
 }
 
-export const trackedCards = (collection: CollectionData, prices: Prices | null): TrackedCard[] =>
+export const trackedCards = (collection: CollectionData, prices: PriceFile | null): TrackedCard[] =>
   cardsWithStatus(collection).map(({ card, ownership }) => {
     return {
       card,
@@ -98,7 +98,7 @@ export function tallyByStatus(cards: readonly TrackedCard[]): Record<CardStatus,
 }
 
 /** Une carte dont le prix a bougé : son prix du jour, sa moyenne sur 30 jours, l'écart. */
-export interface PriceMove {
+interface PriceMove {
   card: PokemonCard
   price: number
   avg30: number
@@ -114,7 +114,7 @@ export interface PriceMove {
  */
 export function priceMovers(
   cards: readonly TrackedCard[],
-  prices: Prices | null,
+  prices: PriceFile | null,
   limit: number,
 ): { risers: PriceMove[]; fallers: PriceMove[] } {
   const seen = new Set<number>()
@@ -155,7 +155,7 @@ export interface CompletionCost {
  */
 export function completionCost(
   entries: readonly PokedexEntry[],
-  prices: Prices | null,
+  prices: PriceFile | null,
 ): CompletionCost {
   const cost = { value: 0, priced: 0, unpriced: 0, noCard: 0 }
   const counted = new Set<string>()
@@ -178,7 +178,7 @@ export function completionCost(
 
 export const completionByGeneration = (
   entries: readonly PokedexEntry[],
-  prices: Prices | null,
+  prices: PriceFile | null,
 ): { generation: Generation; cost: CompletionCost }[] =>
   GENERATIONS.map((generation) => ({
     generation,

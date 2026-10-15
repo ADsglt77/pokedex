@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Panel } from '@/components/Panel'
+import { cx } from '@/lib/cx'
 import styles from './DataPage.module.css'
 
 interface DataSectionProps {
@@ -19,7 +20,7 @@ export function DataSection({ id, title, description, children, danger }: DataSe
       id={id}
       title={title}
       description={description}
-      className={danger ? `${styles.section} ${styles.danger}` : styles.section}
+      className={cx(styles.section, danger && styles.danger)}
     >
       {children}
     </Panel>

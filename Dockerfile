@@ -18,7 +18,7 @@ COPY tsconfig.json ./
 COPY server server
 COPY src src
 # `production` : cookies de session sécurisés et limite de tentatives de connexion (Better Auth).
-ENV NODE_ENV=production DATA_DIR=/data CACHE_DIR=/data/cache IMAGES_DIR=/images BACKUP_DIR=/backups
+ENV NODE_ENV=production DATA_DIR=/data IMAGES_DIR=/images BACKUP_DIR=/backups
 CMD ["bun", "server/index.ts"]
 
 # 3. Le site : nginx sert dist/ et les images copiées, et renvoie /api/ au serveur. Le tunnel

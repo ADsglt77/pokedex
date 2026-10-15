@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { PokedexTile } from '@/components/PokedexTile'
+import { PokedexTile } from './PokedexTile'
 import { groupByGeneration } from '@/lib/filters'
 import { unlockedOf } from '@/lib/format'
 import type { GenerationProgress, PokedexEntry } from '@/lib/pokedex'

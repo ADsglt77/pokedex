@@ -29,3 +29,6 @@ export const INGEST_JOBS: Record<
   // Les deux bases, copiées chaque jour (`BACKUP_DIR`).
   backups: { label: 'Sauvegardes', every: DAY },
 }
+
+/** Leurs noms, dans l'ordre où elles passent. */
+export const INGEST_JOB_NAMES = Object.keys(INGEST_JOBS) as IngestJob[]

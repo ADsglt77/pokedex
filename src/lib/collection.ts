@@ -67,3 +67,12 @@ export function removeCard(data: CollectionData, cardId: string, now: string): C
 /** Une carte encore à acheter : ni possédée ni commandée. */
 export const isToBuy = ({ status }: { status: CardStatus | null }) =>
   status !== 'owned' && status !== 'ordered'
+
+/**
+ * Une carte encore à acheter, pour un Pokémon pas encore débloqué ni en route (`taken`) : la seule
+ * que comptent le plan de la prochaine commande et l'estimation de la liste d'achats.
+ */
+export const stillWanted = (
+  row: { status: CardStatus | null; card: { dexIds: readonly number[] } },
+  taken: ReadonlySet<number>,
+) => isToBuy(row) && row.card.dexIds.some((id) => !taken.has(id))

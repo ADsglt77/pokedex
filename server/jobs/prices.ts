@@ -8,7 +8,7 @@
  */
 
 import type { Database } from 'bun:sqlite'
-import type { CardPriceRow, Prices } from '@/types'
+import type { CardPriceRow, PriceFile } from '@/types'
 import { readSource, writeSource } from '../db'
 import { withPrice, yearDay } from '../history'
 import { download } from '../lib/net'
@@ -38,20 +38,25 @@ interface ProductList {
 /** Un prix au centime ; Cardmarket note `0` ou `null` un prix inconnu. */
 const amount = (value: number | null) => (value ? Math.round(value * 100) / 100 : null)
 
-/** Enregistre la réponse de `/api/prices` (les prix Cardmarket du jour), d'après la base. */
+/**
+ * Enregistre la réponse de `/api/prices` (les prix Cardmarket du jour), d'après la base. Rien tant
+ * que le guide n'a jamais été lu : l'API répond 404, comme pour le catalogue.
+ */
 export function savePrices(db: Database) {
   const cardmarket = readSource(db, 'cardmarket')
+  if (!cardmarket) {
+    db.query("DELETE FROM snapshots WHERE name = 'prices'").run()
+    return
+  }
   const rows = db.query('SELECT id, price, low, avg30 FROM cardmarket_prices').all() as {
     id: number
     price: number
     low: number | null
     avg30: number | null
   }[]
-  const response: Prices = {
-    cardmarket: cardmarket && {
-      date: cardmarket.date,
-      cards: Object.fromEntries(rows.map(({ id, price, low, avg30 }) => [id, [price, low, avg30]])),
-    },
+  const response: PriceFile = {
+    date: cardmarket.date,
+    cards: Object.fromEntries(rows.map(({ id, price, low, avg30 }) => [id, [price, low, avg30]])),
   }
   saveSnapshot(db, 'prices', response)
 }
@@ -60,7 +65,9 @@ export async function prices(db: Database) {
   const head = await download(PRICE_GUIDE_URL, { method: 'HEAD' })
   const stamp = head.headers.get('last-modified') ?? ''
   if (stamp && stamp === readSource(db, 'cardmarket')?.stamp) {
-    return console.log('Cardmarket : guide des prix inchangé depuis le dernier passage.')
+    console.log('Cardmarket : guide des prix inchangé depuis le dernier passage.')
+    // La réponse refaite quand même, d'après la base : sa forme a pu changer avec le code.
+    return savePrices(db)
   }
 
   const [guide, products] = await Promise.all([

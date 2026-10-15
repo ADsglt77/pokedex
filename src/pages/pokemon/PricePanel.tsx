@@ -5,19 +5,17 @@ import { Panel } from '@/components/Panel'
 import { PriceChart } from '@/components/PriceChart'
 import { details, formatEuro } from '@/lib/format'
 import { cardHistory, gainPercent, priceOf } from '@/lib/prices'
-import { useCollectionStore } from '@/store/collection'
 import { loadPriceHistory, usePrices, usePricesMissing } from '@/store/prices'
 import type { PokemonCard } from '@/types'
 import styles from './PricePanel.module.css'
 
 /**
  * La carte chez Cardmarket : son id et sa page, son prix du jour, son évolution et, si le prix
- * payé est noté, l'écart.
+ * payé (`paid`) est noté, l'écart.
  */
-export function PricePanel({ card }: { card: PokemonCard }) {
+export function PricePanel({ card, paid }: { card: PokemonCard; paid: number | null }) {
   const prices = usePrices()
   const missing = usePricesMissing()
-  const paid = useCollectionStore((state) => state.collection.cards[card.id]?.paidPrice ?? null)
   const price = priceOf(prices, card)
 
   return (
