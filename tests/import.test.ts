@@ -117,6 +117,10 @@ describe('import', () => {
 
   test('une carte sans Pokémon, ou rangée sous un autre id que le sien, est refusée', () => {
     expect(reimport(['collection', 'customCards', 'a', 'dexIds'], [])).toBeNull()
+    // Un numéro hors du Pokédex : la carte serait invisible, mais comptée.
+    expect(reimport(['collection', 'customCards', 'a', 'dexIds'], [0])).toBeNull()
+    expect(reimport(['collection', 'customCards', 'a', 'dexIds'], [1026])).toBeNull()
+    expect(reimport(['collection', 'customCards', 'a', 'dexIds'], [1025])).not.toBeNull()
     expect(reimport(['collection', 'customCards', 'a', 'id'], 'b')).toBeNull()
   })
 

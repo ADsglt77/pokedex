@@ -3,6 +3,7 @@
  * pour un tableur (liste d'achats, registre des commandes).
  */
 
+import { TOTAL_SPECIES } from '@/config/pokedex'
 import { ORDER_STATE_LABELS, PRIORITY_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { parseCardmarketLink } from '@/lib/cardmarket'
 import { euroInput, parseLink, today } from '@/lib/format'
@@ -180,13 +181,13 @@ const isOwnership = (ownership: Record<string, unknown>) =>
 
 /**
  * Une carte, rangée sous son id (l'app la retrouve par sa clé et l'enregistre sous son id : deux
- * différents la dédoubleraient), d'au moins un Pokémon (elle n'aurait pas de place au Pokédex).
+ * différents la dédoubleraient), d'au moins un Pokémon du Pokédex (elle n'y aurait pas de place).
  */
 const isCard = (card: Record<string, unknown>, key: string) =>
   card.id === key &&
   Array.isArray(card.dexIds) &&
   card.dexIds.length > 0 &&
-  card.dexIds.every(Number.isInteger) &&
+  card.dexIds.every((id) => Number.isInteger(id) && id >= 1 && id <= TOTAL_SPECIES) &&
   isText(card.reference) &&
   (card.image == null ||
     (isRecord(card.image) && isText(card.image.small) && isText(card.image.large))) &&

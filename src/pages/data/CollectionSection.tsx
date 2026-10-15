@@ -58,7 +58,8 @@ export function CollectionSection() {
           <div className={styles.progress}>
             <p>
               <strong className="numeric">{unlockedOf(progress, 'Pokémon')}</strong>, soit{' '}
-              {formatDecimal(progress.percent)} % du Pokédex.
+              {formatDecimal(progress.percent)}
+              {' '}% du Pokédex.
             </p>
             <Progress
               size="sm"

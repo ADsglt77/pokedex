@@ -45,7 +45,12 @@ export function MissingImages() {
     const missing = candidates.length - found.length
     const others = missing ? ` ; introuvable pour ${plural(missing, 'autre', 'autres')}` : ''
     if (found.length === 0) {
-      notify('Pokécardex n’a pas l’image de ces cartes.', { tone: 'info' })
+      notify(
+        `Pokécardex n’a pas l’image de ${candidates.length > 1 ? 'ces cartes' : 'cette carte'}.`,
+        {
+          tone: 'info',
+        },
+      )
       return
     }
     act(

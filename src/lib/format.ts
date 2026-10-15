@@ -17,13 +17,20 @@ export const formatInteger = (value: number) => spaced(integerFormat.format(valu
 
 export const formatDecimal = (value: number) => spaced(decimalFormat.format(value))
 
-/** Aujourd'hui (YYYY-MM-DD), dans le fuseau de l'utilisateur. */
-export const today = () => {
-  const date = new Date()
-  return [date.getFullYear(), date.getMonth() + 1, date.getDate()]
+/** Le jour (YYYY-MM-DD) d'une date, dans le fuseau de l'utilisateur. */
+const localDay = (date: Date) =>
+  [date.getFullYear(), date.getMonth() + 1, date.getDate()]
     .map((part) => String(part).padStart(2, '0'))
     .join('-')
-}
+
+/** Aujourd'hui (YYYY-MM-DD), dans le fuseau de l'utilisateur. */
+export const today = () => localDay(new Date())
+
+/**
+ * Le jour local d'un instant ISO (une date d'obtention, en UTC) : le 1er novembre à 0 h 30 à Paris
+ * est enregistré le 31 octobre en UTC, mais compte en novembre.
+ */
+export const localDayOf = (iso: string) => localDay(new Date(iso))
 
 /** Une date ISO ; un jour seul (`2026-10-09`) est lu à midi, heure locale : jamais la veille. */
 function toDate(iso: string | null | undefined): Date | null {

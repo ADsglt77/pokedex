@@ -61,6 +61,9 @@ export function useCardDraft(card: PokemonCard | null) {
   // La référence dont on cherche l'image : aucune si une adresse est collée, ou sans code de série
   // et numéro.
   const lookup = image.trim() || !referenceCode(searched) ? null : searched
+  // L'image déjà retrouvée reste, pour la même référence : si elle ne répond pas cette fois, ou si
+  // la référence n'a pas de code où la chercher (une image d'une ancienne version).
+  const kept = card && reference.trim() === card.reference && isFoundImage(card) ? card.image : null
 
   /**
    * La carte saisie, pour les Pokémon `dexIds` ; `null` tant qu'un champ est illisible (ses
@@ -82,13 +85,10 @@ export function useCardDraft(card: PokemonCard | null) {
     const stale = changedId && typed === previous?.name
     const stalePage = cardmarket !== initial.cardmarket && page.trim() === initial.page
     const search = !image.trim() && referenceCode(typed) !== null
-    // L'image déjà retrouvée reste, pour la même référence : si elle ne répond pas cette fois, ou
-    // si la référence n'a pas de code où la chercher (une image d'une ancienne version). Pas si la
-    // référence n'était que le nom de l'ancien id : elle devient celle d'une autre carte.
-    const kept =
-      card && !stale && typed === card.reference && isFoundImage(card) ? card.image : null
     const found = search ? await findCardImage(typed, { retry: true }) : null
-    const picture = pasted ?? found ?? kept
+    // L'image gardée (`kept`), pas si la référence n'était que le nom de l'ancien id : elle devient
+    // celle d'une autre carte.
+    const picture = pasted ?? found ?? (stale ? null : kept)
     return {
       id,
       dexIds,
@@ -123,6 +123,8 @@ export function useCardDraft(card: PokemonCard | null) {
     pasted,
     /** La référence dont l'image est cherchée (`findCardImage`) ; `null` : rien à chercher. */
     lookup,
+    /** L'image enregistrée, gardée à défaut d'une autre tant que la référence ne change pas. */
+    kept,
     cardmarketText,
     setCardmarketText,
     /** L'id à vérifier chez Cardmarket, une fois le champ quitté ; `null` sinon. */

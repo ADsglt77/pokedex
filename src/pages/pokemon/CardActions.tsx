@@ -123,7 +123,7 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
         <p className="hint">
           {inAnOrder
             ? 'Elle figure dans une commande : elle reste, pour que le registre tienne.'
-            : 'Pour en choisir une autre, retirez celle-ci : son statut et ses préférences d’achat partent avec elle.'}
+            : 'Pour en choisir une autre, retirez celle-ci : son statut, son prix payé et sa préférence d’achat partent avec elle.'}
         </p>
       </Stack>
 

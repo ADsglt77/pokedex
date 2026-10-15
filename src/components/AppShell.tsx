@@ -289,7 +289,10 @@ function ProgressCard() {
     <Link to="/pokedex" className={styles.progressCard}>
       <span className={styles.progressHead}>
         <span>Progression</span>
-        <span className="numeric">{formatDecimal(progress.percent)} %</span>
+        <span className="numeric">
+          {formatDecimal(progress.percent)}
+          {' '}%
+        </span>
       </span>
       <Progress size="sm" value={progress.percent} aria-hidden />
       <span className={cx(styles.progressCount, 'numeric')}>

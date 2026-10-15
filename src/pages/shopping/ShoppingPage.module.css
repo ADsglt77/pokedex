@@ -390,4 +390,9 @@
   .formGrid3 {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  /* Sur une colonne, la case vide du formulaire de commande doublerait l'écart. */
+  .gridFiller {
+    display: none;
+  }
 }

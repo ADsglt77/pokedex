@@ -12,7 +12,7 @@ import {
   POSSESSIONS,
   type PossessionFilter,
 } from '@/lib/filters'
-import { formatInteger, pageTitle } from '@/lib/format'
+import { formatInteger, pageTitle, plural } from '@/lib/format'
 import { PokedexGrid } from './PokedexGrid'
 import { PokedexToolbar } from './PokedexToolbar'
 
@@ -54,8 +54,8 @@ export function PokedexPage() {
         }
       >
         Les {formatInteger(pokedex.progress.total)} Pokémon et leur carte :{' '}
-        {formatInteger(pokedex.progress.unlocked)} débloqués. Ouvrez-en un pour lui choisir sa
-        carte.
+        {plural(pokedex.progress.unlocked, 'débloqué', 'débloqués')}. Ouvrez-en un pour lui choisir
+        sa carte.
       </PageHeader>
 
       <PokedexToolbar

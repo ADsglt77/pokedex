@@ -101,6 +101,9 @@ export interface CollectionExportFile {
 
 export type Priority = 'high' | 'normal' | 'low'
 
+/** Ce qu'on fait d'une carte en l'ajoutant : rien, possédée, ou dans la liste d'achats. */
+export type AddAs = 'none' | 'owned' | 'toBuy'
+
 /** Ce que l'utilisateur pense d'une carte à l'achat ; indépendant de son statut. */
 export interface PurchasePreference {
   /** `accepted` : dans la liste d'achats ; `excluded` (ancienne version) : compte comme non décidée. */

@@ -107,7 +107,7 @@ export function WishCard({
       <div className={styles.wishActions}>
         <CardmarketLink card={card} className={styles.wishLink} />
         <IconButton
-          label={`Modifier ${title}, ${card.reference}`}
+          label={`Régler l’achat de ${title}, ${card.reference}`}
           size="sm"
           variant="ghost"
           onClick={onEdit}

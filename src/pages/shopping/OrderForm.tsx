@@ -263,7 +263,8 @@ export function OrderForm({
               onChange={(event) => set({ supplierName: event.target.value })}
             />
           ) : (
-            <span aria-hidden="true" />
+            // Cale la date sous la colonne de droite ; caché sur téléphone (une colonne).
+            <span aria-hidden="true" className={styles.gridFiller} />
           )}
           <Input
             label="Date d’achat"

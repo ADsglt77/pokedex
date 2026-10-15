@@ -10,7 +10,7 @@ import { applyOrder, previousOf, sortOrders } from '@/lib/orders'
 import { parseStored, readShopping } from '@/lib/transfer'
 import * as rules from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
-import type { BudgetSettings, Order, PokemonCard, ShoppingData } from '@/types'
+import type { AddAs, BudgetSettings, Order, PokemonCard, ShoppingData } from '@/types'
 import { persist, readStored } from './persist'
 
 const SHOPPING_KEY = 'pokedex-collection.shopping'
@@ -81,19 +81,13 @@ persist(
   (text) => ({ shopping: loadShopping(text) }),
 )
 
-/** Ce qu'on fait d'une carte au moment de l'ajouter. */
-export interface NewCardChoices {
-  owned: boolean
-  toBuy: boolean
-}
-
 /**
- * Enregistre une carte ajoutée et ce qu'on en fait : possédée, dans la liste d'achats. À lancer
+ * Enregistre une carte ajoutée et ce qu'on en fait : possédée, ou dans la liste d'achats. À lancer
  * dans le même `act` que l'ajout : « Annuler » défait le tout.
  */
-export function addCard(card: PokemonCard, choices: NewCardChoices) {
+export function addCard(card: PokemonCard, addAs: AddAs) {
   const collection = useCollectionStore.getState()
   collection.saveCard(card)
-  if (choices.owned) collection.setCardStatus(card, 'owned')
-  if (choices.toBuy) useShoppingStore.getState().setAccepted(card.id, true)
+  if (addAs === 'owned') collection.setCardStatus(card, 'owned')
+  if (addAs === 'toBuy') useShoppingStore.getState().setAccepted(card.id, true)
 }

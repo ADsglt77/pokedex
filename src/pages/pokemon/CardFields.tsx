@@ -35,14 +35,15 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
           onChange={(event) => draft.setImage(event.target.value)}
           error={errors.image}
         />
-        {/* Les réponses qui arrivent après la saisie sont annoncées (lecteurs d'écran). */}
-        {draft.lookup !== null && (
-          <div role="status">
+        {/* Les réponses qui arrivent après la saisie sont annoncées (lecteurs d'écran) : la région
+            est toujours là, son contenu change (une région créée avec son texte ne l'est pas). */}
+        <div role="status">
+          {draft.lookup !== null && (
             <Suspense fallback={<p className="muted">Recherche de l’image…</p>}>
-              <FoundImage reference={draft.lookup} />
+              <FoundImage reference={draft.lookup} kept={draft.kept !== null} />
             </Suspense>
-          </div>
-        )}
+          )}
+        </div>
         <Input
           label="Id Cardmarket"
           hint="Le numéro du produit chez Cardmarket (idProduct), pour son prix. Le catalogue le remplit."
@@ -52,13 +53,13 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
           onBlur={draft.check}
           error={errors.cardmarket}
         />
-        {draft.checkedId !== null && (
-          <div role="status">
+        <div role="status">
+          {draft.checkedId !== null && (
             <Suspense fallback={<p className="muted">Recherche de la carte chez Cardmarket…</p>}>
               <CardmarketCheck cardmarket={draft.checkedId} />
             </Suspense>
-          </div>
-        )}
+          )}
+        </div>
         <Input
           label="Page Cardmarket"
           hint="Facultatif : vide, le lien se fait par l’id Cardmarket."
@@ -77,9 +78,9 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
 }
 
 /**
- * L'aperçu : l'adresse collée, sinon l'image retrouvée chez Pokécardex (citée) ; sans image, ou si
- * l'adresse ne mène pas à une image, la carte de substitution.
- * `searching` : pendant la recherche.
+ * L'aperçu : l'adresse collée, sinon l'image retrouvée chez Pokécardex (citée), sinon celle gardée
+ * (comme à l'enregistrement) ; sans image, ou si l'adresse ne mène pas à une image, la carte de
+ * substitution. `searching` : pendant la recherche.
  */
 function Preview({
   draft,
@@ -91,7 +92,7 @@ function Preview({
   searching?: boolean
 }) {
   const found = searching || draft.lookup === null ? null : use(findCardImage(draft.lookup))
-  const image = draft.pasted ?? found
+  const image = draft.pasted ?? found ?? draft.kept
   return (
     <figure className={styles.preview}>
       <CardArt
@@ -104,13 +105,21 @@ function Preview({
   )
 }
 
-/** Ce que Pokécardex a pour la référence : l'image, ou rien. */
-function FoundImage({ reference }: { reference: string }) {
+/** Ce que Pokécardex a pour la référence : l'image, ou rien. `kept` : l'image actuelle reste. */
+function FoundImage({ reference, kept }: { reference: string; kept: boolean }) {
   const image = use(findCardImage(reference))
   if (image) {
     return (
       <p className={styles.check}>
         Image trouvée chez Pokécardex d’après la référence : vérifiez l’aperçu.
+      </p>
+    )
+  }
+  if (kept) {
+    return (
+      <p className="muted">
+        Pokécardex ne donne pas d’image pour cette référence, ou ne répond pas : l’image actuelle
+        est gardée.
       </p>
     )
   }

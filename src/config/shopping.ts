@@ -1,6 +1,20 @@
 /** Les achats : budget par défaut, priorités, fournisseurs et états d'une commande. */
 
-import type { BudgetSettings, OrderState, Priority, Supplier } from '@/types'
+import type { AddAs, BudgetSettings, OrderState, Priority, Supplier } from '@/types'
+
+/** Ajouter une carte « comme » (fenêtre d'ajout, page Catalogue) : un seul choix. */
+export const ADD_AS_LABELS: Record<AddAs, string> = {
+  none: 'Sans statut',
+  owned: 'Possédée',
+  toBuy: 'À acheter',
+}
+
+/** La fin du message d'ajout : « Carte ajoutée à Pikachu, à acheter. » */
+export const ADDED_AS: Record<AddAs, string> = {
+  none: '',
+  owned: ', possédée',
+  toBuy: ', à acheter',
+}
 
 /** 100 € par mois d'habitude, 150 € au plus. */
 export const DEFAULT_BUDGET: BudgetSettings = { monthly: 100, ceiling: 150, shippingReserve: 5 }

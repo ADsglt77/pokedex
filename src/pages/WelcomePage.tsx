@@ -11,7 +11,7 @@ import styles from './AuthPage.module.css'
 /** Le message d'un refus, d'après la réponse du serveur. */
 const failure = (status: number) =>
   status === 403
-    ? 'Code incorrect : recopiez celui du journal du serveur (il change à chaque démarrage).'
+    ? 'Code incorrect : recopiez celui du journal du serveur (il change à chaque démarrage). Si le compte vient d’être créé ailleurs, rechargez la page pour vous connecter.'
     : status === 429
       ? TOO_MANY_ATTEMPTS
       : 'Création impossible pour le moment : réessayez plus tard.'

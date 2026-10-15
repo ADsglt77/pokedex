@@ -4,6 +4,7 @@ import { flushSync } from 'react-dom'
 import { useSearchParams } from 'react-router'
 import { CatalogCredit, CatalogGrid, CatalogTile } from '@/components/CatalogTile'
 import { PageHeader } from '@/components/PageHeader'
+import { ADD_AS_LABELS, ADDED_AS } from '@/config/shopping'
 import { Panel } from '@/components/Panel'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { usePokedex } from '@/hooks/usePokedex'
@@ -16,11 +17,12 @@ import {
 } from '@/lib/card-catalog'
 import { newCardId } from '@/lib/collection'
 import { searchForm } from '@/lib/filters'
-import { details, formatInteger, pageTitle, plural } from '@/lib/format'
+import { details, formatInteger, pageTitle, plural, toOptions } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
 import { getSpecies } from '@/lib/species'
 import { usePrices } from '@/store/prices'
 import { addCard } from '@/store/shopping'
+import type { AddAs } from '@/types'
 import styles from './CatalogPage.module.css'
 
 /**
@@ -44,16 +46,6 @@ export function CatalogPage() {
     </div>
   )
 }
-
-type AddAs = 'none' | 'owned' | 'toBuy'
-
-const ADD_AS: { value: AddAs; label: string }[] = [
-  { value: 'none', label: 'Sans statut' },
-  { value: 'owned', label: 'Possédée' },
-  { value: 'toBuy', label: 'À acheter' },
-]
-
-const ADDED_AS: Record<AddAs, string> = { none: '', owned: ', possédée', toBuy: ', à acheter' }
 
 const SET_ORDERS = [
   { value: 'recent', label: 'Plus récentes' },
@@ -150,7 +142,7 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
               image: card.image,
               ...(card.cardmarket !== undefined && { cardmarket: card.cardmarket }),
             },
-            { owned: addAs === 'owned', toBuy: addAs === 'toBuy' },
+            addAs,
           ),
         `Carte ${card.key} ajoutée à ${name}${ADDED_AS[addAs]}.`,
       )
@@ -228,7 +220,7 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
               aria-labelledby={addAsLabel}
               className={styles.addAs}
               size="sm"
-              options={ADD_AS}
+              options={toOptions(ADD_AS_LABELS)}
               value={addAs}
               onChange={setAddAs}
             />

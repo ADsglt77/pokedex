@@ -5,10 +5,12 @@ import { useCollectionAction } from '@/hooks/useNotify'
 import type { CatalogCard } from '@/lib/card-catalog'
 import { useCollectionStore } from '@/store/collection'
 import { addCard } from '@/store/shopping'
-import type { PokemonCard, PokemonSpecies } from '@/types'
+import type { AddAs, PokemonCard, PokemonSpecies } from '@/types'
 import { CardFields } from './CardFields'
 import { CatalogPicker, type PickerView } from './CatalogPicker'
-import { NewCardOptions } from './NewCardOptions'
+import { SegmentedField } from '@/components/SegmentedField'
+import { ADD_AS_LABELS, ADDED_AS } from '@/config/shopping'
+import { toOptions } from '@/lib/format'
 
 /**
  * Ajouter la carte d'un Pokémon (la choisir dans le catalogue des cartes japonaises, qui remplit la
@@ -29,7 +31,7 @@ export function CardForm({
   const draft = useCardDraft(card)
   const [tab, setTab] = useState('catalogue')
   const [picked, setPicked] = useState<string | null>(null)
-  const [choices, setChoices] = useState({ owned: false, toBuy: false })
+  const [addAs, setAddAs] = useState<AddAs>('none')
   // L'onglet caché est démonté : ses réglages vivent ici.
   const [view, setView] = useState<PickerView>({ order: 'recent', set: '', pricedOnly: false })
 
@@ -46,8 +48,10 @@ export function CardForm({
   const save = () =>
     draft.save(card?.dexIds ?? [species.id], species.names.fr, (saved) => {
       act(
-        () => (card ? useCollectionStore.getState().saveCard(saved) : addCard(saved, choices)),
-        card ? `Carte de ${species.names.fr} modifiée.` : `Carte ajoutée à ${species.names.fr}.`,
+        () => (card ? useCollectionStore.getState().saveCard(saved) : addCard(saved, addAs)),
+        card
+          ? `Carte de ${species.names.fr} modifiée.`
+          : `Carte ajoutée à ${species.names.fr}${ADDED_AS[addAs]}.`,
       )
       onClose()
     })
@@ -113,7 +117,12 @@ export function CardForm({
           <TabPanel value="saisie">
             <Stack gap={5}>
               {fields}
-              <NewCardOptions choices={choices} onChange={setChoices} />
+              <SegmentedField
+                label="Ajouter comme"
+                options={toOptions(ADD_AS_LABELS)}
+                value={addAs}
+                onChange={setAddAs}
+              />
             </Stack>
           </TabPanel>
         </Tabs>

@@ -109,7 +109,6 @@ export function OrdersPanel() {
           className={styles.table}
           data={orders}
           rowKey={(order) => order.id}
-          onRowClick={(order) => setOpenId(order.id)}
           // L'état et « Marquer reçue » juste après la date : sur téléphone, sans faire défiler.
           columns={[
             {
@@ -255,7 +254,9 @@ export function OrdersPanel() {
         onConfirm={() => remove(deleting!)}
       >
         <p>
-          Elle disparaît du registre et du budget.{' '}
+          {deleting?.state === 'cancelled'
+            ? 'Elle disparaît du registre.'
+            : 'Elle disparaît du registre et du budget.'}{' '}
           {deleting?.state === 'pending' &&
             'Ses cartes encore commandées retrouvent leur état d’avant la commande.'}
           {deleting?.state === 'received' &&

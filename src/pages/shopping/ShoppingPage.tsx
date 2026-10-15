@@ -86,7 +86,7 @@ export function ShoppingPage() {
           </Tab>
           <Tab value="prochaine-commande">Prochaine commande</Tab>
           <Tab ref={ordersTab} value="commandes">
-            Commandes {pending > 0 && <Badge size="sm">{pending}</Badge>}
+            Commandes {pending > 0 && <Badge size="sm">{pending} en cours</Badge>}
           </Tab>
           <Tab value="budget">Budget</Tab>
         </TabList>

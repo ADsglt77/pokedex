@@ -36,6 +36,7 @@ export function BudgetPanel() {
   const months = spendingByMonth(orders)
   const suppliers = spendingBySupplier(orders)
   const total = spentOn(orders)
+  const cancelled = orders.filter((order) => order.state === 'cancelled').length
   const perSpecies = costPerSpecies(orders, (cardId) => findCard(cardId, collection)?.dexIds ?? [])
 
   return (
@@ -74,7 +75,11 @@ export function BudgetPanel() {
           label="Commandes"
           icon={<Receipt size={18} />}
           value={formatInteger(orders.length)}
-          hint={`dont ${formatInteger(orders.filter((order) => order.state === 'pending').length)} en cours`}
+          // Les annulées comptées à part : « Dépensé en tout » ne compte pas les annulées.
+          hint={details(
+            `dont ${formatInteger(orders.filter((order) => order.state === 'pending').length)} en cours`,
+            cancelled > 0 && plural(cancelled, 'annulée', 'annulées'),
+          )}
         />
       </div>
 

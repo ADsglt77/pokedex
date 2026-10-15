@@ -31,6 +31,7 @@ import {
   formatDate,
   formatEuro,
   formatInteger,
+  localDayOf,
   pageTitle,
   plural,
   today,
@@ -80,10 +81,14 @@ function trackingSentence(ordered: number, wanted: number): string | null {
  */
 export function HomePage() {
   const collection = useCollectionStore((state) => state.collection)
+  const hasOrders = useShoppingStore((state) => state.shopping.orders.length > 0)
   const obtained = useMemo(() => acquisitions(collection), [collection])
-  const started = Object.keys(collection.customCards).length > 0
+  // Des cartes, ou des commandes (gardées par « Effacer ma collection ») : « À faire » les suit.
+  const started = Object.keys(collection.customCards).length > 0 || hasOrders
   const month = monthOf(today())
-  const thisMonth = obtained.filter(({ acquiredAt }) => acquiredAt?.startsWith(month)).length
+  const thisMonth = obtained.filter(
+    ({ acquiredAt }) => acquiredAt && monthOf(localDayOf(acquiredAt)) === month,
+  ).length
 
   return (
     <div className="container">
@@ -184,35 +189,42 @@ const TO_COMPLETE: {
   card: CardFilter
   one: string
   many: string
-  hint: string
+  /** Le conseil, au singulier et au pluriel. */
+  hint: [string, string]
   icon: Todo['icon']
 }[] = [
   {
     card: 'without',
     one: 'Pokémon sans carte',
     many: 'Pokémon sans carte',
-    hint: 'Choisissez-leur une carte',
+    hint: ['Choisissez-lui une carte', 'Choisissez-leur une carte'],
     icon: Layers,
   },
   {
     card: 'no-paid',
     one: 'carte possédée sans prix payé',
     many: 'cartes possédées sans prix payé',
-    hint: 'Notez-le pour suivre ce qu’elles vous rapportent',
+    hint: [
+      'Notez-le pour suivre ce qu’elle vous rapporte',
+      'Notez-les pour suivre ce qu’elles vous rapportent',
+    ],
     icon: Receipt,
   },
   {
     card: 'no-image',
     one: 'carte sans image',
     many: 'cartes sans image',
-    hint: 'Corrigez sa référence, ou collez une adresse',
+    hint: [
+      'Corrigez sa référence, ou collez une adresse',
+      'Corrigez leur référence, ou collez une adresse',
+    ],
     icon: ImageOff,
   },
   {
     card: 'no-cardmarket',
     one: 'carte sans id Cardmarket',
     many: 'cartes sans id Cardmarket',
-    hint: 'Sans lui, pas de prix',
+    hint: ['Sans lui, pas de prix', 'Sans lui, pas de prix'],
     icon: Unlink,
   },
 ]
@@ -239,7 +251,10 @@ function TodoPanel() {
           {
             key: 'late',
             label: plural(late, 'commande en retard', 'commandes en retard'),
-            hint: 'En cours depuis plus de 4 semaines : réclamez-la au vendeur',
+            hint:
+              late === 1
+                ? 'En cours depuis plus de 4 semaines : réclamez-la au vendeur'
+                : 'En cours depuis plus de 4 semaines : réclamez-les aux vendeurs',
             to: '/achats?vue=commandes',
             icon: Clock,
             tone: 'warn' as const,
@@ -267,7 +282,7 @@ function TodoPanel() {
       .map(({ card, count, one, many, hint, icon }) => ({
         key: card,
         label: plural(count, one, many),
-        hint,
+        hint: hint[count === 1 ? 0 : 1],
         to: pokedexUrl({ card }),
         icon,
       })),

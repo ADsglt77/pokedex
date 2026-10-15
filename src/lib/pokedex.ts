@@ -5,7 +5,7 @@
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
 import { isToBuy } from '@/lib/collection'
-import { monthRange } from '@/lib/format'
+import { localDayOf, monthRange } from '@/lib/format'
 import { findCard, SPECIES } from '@/lib/species'
 import type { CardStatus, CollectionData, PokemonCard, PokemonSpecies } from '@/types'
 
@@ -131,19 +131,25 @@ export const acquisitions = (collection: CollectionData): RecentCard[] =>
 
 /**
  * Les Pokémon débloqués au fil des mois : à chaque mois (`YYYY-MM-01`), le total débloqué à sa
- * fin, du mois de la première carte obtenue à `month` (`YYYY-MM`, le mois en cours).
+ * fin, du mois de la première carte obtenue à `month` (`YYYY-MM`, le mois en cours). Le mois
+ * d'une carte est son mois local ; une carte possédée sans date compte dès le début, pour que la
+ * courbe finisse sur la progression.
  */
 export function unlockedByMonth(collection: CollectionData, month: string) {
-  const firstMonth = new Map<number, string>()
-  // Des plus récentes aux plus anciennes : le mois noté en dernier est le premier.
+  const firstMonth = new Map<number, string | null>()
+  // Des plus récentes aux plus anciennes (sans date en dernier) : le mois noté en dernier est le
+  // premier.
   for (const { card, acquiredAt } of acquisitions(collection)) {
-    if (!acquiredAt) continue
-    for (const id of card.dexIds) firstMonth.set(id, acquiredAt.slice(0, 7))
+    for (const id of card.dexIds) {
+      firstMonth.set(id, acquiredAt && localDayOf(acquiredAt).slice(0, 7))
+    }
   }
-  const months = [...firstMonth.values()].sort()
-  if (months.length === 0) return []
-  return monthRange(months[0]!, month).map((current) => ({
+  const months = [...firstMonth.values()]
+  const dated = months.filter((first) => first !== null).sort()
+  const start = dated[0] ?? (months.length > 0 ? month : null)
+  if (start === null) return []
+  return monthRange(start, month).map((current) => ({
     date: `${current}-01`,
-    value: months.filter((first) => first <= current).length,
+    value: months.filter((first) => first === null || first <= current).length,
   }))
 }
