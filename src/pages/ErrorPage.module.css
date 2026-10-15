@@ -1,0 +1,4 @@
+/* La page d'erreur remplace toute la coquille : sa propre marge, en haut et en bas. */
+.page {
+  padding-block: 4rem;
+}

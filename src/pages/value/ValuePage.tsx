@@ -1,4 +1,4 @@
-import { Alert, Skeleton, Stack, Stat } from '@camply/ui'
+import { Alert, Skeleton, SkeletonText, Stack, Stat } from '@camply/ui'
 import { Flag } from '@camply/ui/icons'
 import { Suspense, use, useMemo } from 'react'
 import { Link } from 'react-router'
@@ -26,10 +26,10 @@ import {
   completionCost,
   gainPercent,
   priceMovers,
-  type PriceMove,
   tallyByStatus,
   trackedCards,
   type Tally,
+  type TrackedCard,
 } from '@/lib/prices'
 import { unlockedByMonth } from '@/lib/pokedex'
 import { useCollectionStore } from '@/store/collection'
@@ -135,7 +135,7 @@ export function ValuePage() {
           )}
         </Panel>
 
-        <Movers moves={priceMovers(cards, prices, 5)} />
+        <Movers cards={cards} />
 
         <MonthlyCharts />
 
@@ -154,7 +154,7 @@ export function ValuePage() {
           title="Pour compléter, par génération"
           description="Pour chaque Pokémon à débloquer, le prix de sa carte ; ceux sans carte, ou dont la carte n’a pas de prix, sont comptés à part. Ceux dont la carte est déjà commandée n’y sont pas : ils comptent dans les commandes."
         >
-          <CompletionTable rows={completion} />
+          <CompletionTable rows={completion} priced={prices !== null} />
         </Panel>
       </div>
     </div>
@@ -170,8 +170,14 @@ function CollectionChart({ cards }: { cards: PokemonCard[] }) {
   return <PriceChart points={collectionHistory(histories)} label="Valeur de ma collection" />
 }
 
-/** Les cartes possédées dont le prix a le plus monté, ou baissé, sur 30 jours. */
-function Movers({ moves }: { moves: { risers: PriceMove[]; fallers: PriceMove[] } }) {
+/**
+ * Les cartes possédées dont le prix a le plus monté, ou baissé, sur 30 jours. Sans les prix du
+ * jour : « — », une ébauche tant qu'ils arrivent (pas « aucune »).
+ */
+function Movers({ cards }: { cards: TrackedCard[] }) {
+  const prices = usePrices()
+  const pricesMissing = usePricesMissing()
+  const moves = priceMovers(cards, prices, 5)
   const groups = [
     { title: 'Plus fortes hausses', list: moves.risers, className: styles.up },
     { title: 'Plus fortes baisses', list: moves.fallers, className: styles.down },
@@ -186,7 +192,13 @@ function Movers({ moves }: { moves: { risers: PriceMove[]; fallers: PriceMove[] 
         {groups.map(({ title, list, className }) => (
           <Stack key={title} gap={2}>
             <h3 className={styles.subtitle}>{title}</h3>
-            {list.length === 0 ? (
+            {!prices ? (
+              pricesMissing ? (
+                <p className="muted">—</p>
+              ) : (
+                <SkeletonText lines={2} />
+              )
+            ) : list.length === 0 ? (
               <p className="muted">Aucune pour l’instant.</p>
             ) : (
               <ul className={styles.movers}>

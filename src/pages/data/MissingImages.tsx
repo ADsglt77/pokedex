@@ -14,8 +14,8 @@ const lacksImage = (card: PokemonCard) => !card.image || isTcgplayerImage(card.i
 
 /**
  * Les cartes sans image, ou avec une image de TCGplayer (d'une ancienne version), dont la
- * référence donne un code de série et un numéro : chercher leurs images d'un coup chez Pokécardex
- * (cartes ajoutées avant ces recherches, ou dont l'image manquait à l'époque).
+ * référence donne un code d'extension et un numéro : chercher leurs images d'un coup chez
+ * Pokécardex (cartes ajoutées avant ces recherches, ou dont l'image manquait à l'époque).
  */
 export function MissingImages() {
   const customCards = useCollectionStore((state) => state.collection.customCards)
@@ -66,8 +66,8 @@ export function MissingImages() {
     <Stack gap={3} align="start">
       <p>
         {plural(candidates.length, 'carte', 'cartes')} sans image de Pokécardex :{' '}
-        {candidates.length > 1 ? 'leur référence donne' : 'sa référence donne'} un code de série et
-        un numéro, l’image peut y être cherchée.
+        {candidates.length > 1 ? 'leur référence donne' : 'sa référence donne'} un code d’extension
+        et un numéro, l’image peut y être cherchée.
       </p>
       <Button
         variant="soft"

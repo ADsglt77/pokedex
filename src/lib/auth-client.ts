@@ -12,16 +12,20 @@ export const loginPath = (back: string) => `/connexion?retour=${encodeURICompone
 
 /**
  * Le site a-t-il son compte ? Sinon, c'est la première visite : toute page mène à `/bienvenue`,
- * qui le crée. Lu au démarrage (`loadAccount`) ; sans réponse du serveur, on le suppose créé.
+ * qui le crée. Lu au démarrage (`loadAccount`) ; sans réponse du serveur (ou pas en 15 s : le
+ * premier affichage l'attend), on le suppose créé.
  */
 export let accountExists = true
 
 export async function loadAccount() {
   try {
-    const response = await fetch('/api/account', { cache: 'no-store' })
+    const response = await fetch('/api/account', {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15_000),
+    })
     if (response.ok) accountExists = ((await response.json()) as { exists: boolean }).exists
   } catch {
-    // Serveur arrêté : l'app s'affiche comme si le compte existait.
+    // Serveur arrêté ou bloqué : l'app s'affiche comme si le compte existait.
   }
 }
 

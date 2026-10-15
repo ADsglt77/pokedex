@@ -114,6 +114,8 @@
   gap: 0.25rem 0.75rem;
 }
 
+/* Le nom de la carte (un h2 par carte de la liste) : entre le texte et `--title-sm`, pour qu'une
+   grille de cartes ne soit pas une suite de titres. */
 .wishTitle {
   font-size: 1.0625rem;
 }
@@ -335,6 +337,7 @@
   max-width: 16rem;
 }
 
+/* Un intertitre dans la fenêtre d'une commande : à la taille du texte, sous son titre. */
 .formTitle {
   font-size: 1rem;
 }

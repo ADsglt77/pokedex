@@ -1,4 +1,4 @@
-import { Stat } from '@camply/ui'
+import { Skeleton, Stat } from '@camply/ui'
 import { Flag, ListChecks, Package, Wallet } from '@camply/ui/icons'
 import { usePokedex } from '@/hooks/usePokedex'
 import { spentThisMonth } from '@/lib/budget'
@@ -7,6 +7,7 @@ import { details, formatEuro, formatInteger, plural } from '@/lib/format'
 import { summarize } from '@/lib/pokedex'
 import { wishlistEstimate } from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
+import { usePrices, usePricesMissing } from '@/store/prices'
 import { useShoppingStore } from '@/store/shopping'
 import { useWishlist } from '@/hooks/useWishlist'
 import { BudgetMeter } from '@/components/BudgetMeter'
@@ -19,6 +20,8 @@ export function BudgetOverview() {
   const { rows, taken } = useWishlist()
   const spent = spentThisMonth(orders)
   const estimate = wishlistEstimate(rows, taken)
+  const prices = usePrices()
+  const pricesMissing = usePricesMissing()
 
   return (
     <div className="stat-grid">
@@ -38,10 +41,19 @@ export function BudgetOverview() {
         label="Liste d’achats"
         icon={<ListChecks size={18} />}
         value={plural(rows.filter(isToBuy).length, 'carte', 'cartes')}
-        hint={details(
-          `environ ${formatEuro(estimate.value)}`,
-          estimate.unpriced > 0 && `${formatInteger(estimate.unpriced)} sans prix`,
-        )}
+        // Son coût au prix du jour : « — » sans prix, une ébauche tant qu'ils arrivent.
+        hint={
+          prices ? (
+            details(
+              `environ ${formatEuro(estimate.value)}`,
+              estimate.unpriced > 0 && `${formatInteger(estimate.unpriced)} sans prix`,
+            )
+          ) : pricesMissing ? (
+            '—'
+          ) : (
+            <Skeleton variant="text" width="7rem" />
+          )
+        }
       />
       <Stat
         label="Pokémon à débloquer"

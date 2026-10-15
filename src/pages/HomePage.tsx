@@ -258,7 +258,7 @@ function TodoPanel() {
               'cartes sous votre prix maximum',
             ),
             hint: 'Le prix du marché est passé sous ce que vous vous êtes fixé',
-            to: '/achats',
+            to: '/achats?filtre=sous-max',
             icon: TrendingDown,
             tone: 'success' as const,
           },

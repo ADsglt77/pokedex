@@ -1,7 +1,9 @@
 import { Button, Stack } from '@camply/ui'
 import { Link, useRouteError } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
+import { cx } from '@/lib/cx'
 import { pageTitle } from '@/lib/format'
+import styles from './ErrorPage.module.css'
 
 /**
  * Filet de sécurité : une erreur d'affichage ne laisse jamais une page blanche. Le message de
@@ -11,7 +13,7 @@ export function ErrorPage() {
   const error = useRouteError()
   const message = error instanceof Error ? error.message : String(error ?? '')
   return (
-    <main className="container" style={{ paddingBlock: '4rem' }}>
+    <main className={cx('container', styles.page)}>
       <title>{pageTitle('Erreur')}</title>
       <PageHeader title="Quelque chose s’est mal passé">
         L’affichage de cette page a échoué. Recharger la page règle souvent le problème ; votre

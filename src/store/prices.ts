@@ -18,7 +18,8 @@ let requested: Promise<Prices | null> | null = null
 
 /**
  * Demande les prix du jour au premier écran qui en affiche (ceux de Cardmarket couvrent toutes ses
- * cartes, l'accueil et le Pokédex s'en passent), et de nouveau après une panne passagère.
+ * cartes : l'accueil en affiche, avec la valeur de la collection ; le Pokédex s'en passe), et de
+ * nouveau après une panne passagère.
  */
 function requestPrices() {
   const response = getJson<Prices>('/api/prices')

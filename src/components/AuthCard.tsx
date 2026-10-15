@@ -7,19 +7,22 @@ export const TOO_MANY_ATTEMPTS = 'Trop de tentatives : réessayez dans une minut
 
 /**
  * Une page du compte (connexion, première visite) : une carte seule, centrée, son titre (`h1` :
- * camply n'a pas de `CardTitle` de niveau 1) et son chapeau, puis son contenu.
+ * camply n'a pas de `CardTitle` de niveau 1) et son chapeau, puis son contenu. `as="main"` : une
+ * page hors de la coquille (`/bienvenue`), qui n'a pas d'autre `<main>`.
  */
 export function AuthCard({
   title,
   description,
+  as: Root = 'div',
   children,
 }: {
   title: string
   description: ReactNode
+  as?: 'div' | 'main'
   children: ReactNode
 }) {
   return (
-    <div className={styles.page}>
+    <Root className={styles.page}>
       <Card padding="lg" className={styles.card}>
         <CardHeader>
           <h1 className={styles.title}>{title}</h1>
@@ -27,6 +30,6 @@ export function AuthCard({
         </CardHeader>
         {children}
       </Card>
-    </div>
+    </Root>
   )
 }

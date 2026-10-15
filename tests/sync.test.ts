@@ -57,6 +57,20 @@ describe('decide', () => {
     ).toBe('noop')
   })
 
+  test('le serveur revenu à une version plus ancienne (base restaurée) : conflit', () => {
+    // Rien n'a changé ici : reprendre sa version perdrait sans rien dire ce qui avait été envoyé.
+    expect(
+      decide(local('a5'), { version: 5, hash: 'a5' }, { version: 3, hash: 'a3', empty: false }),
+    ).toBe('conflict')
+    expect(
+      decide(local('a6'), { version: 5, hash: 'a5' }, { version: 3, hash: 'a3', empty: false }),
+    ).toBe('conflict')
+    // La même version des deux côtés : il note simplement la version du serveur.
+    expect(
+      decide(local('a3'), { version: 5, hash: 'a5' }, { version: 3, hash: 'a3', empty: false }),
+    ).toBe('adopt')
+  })
+
   test('cet appareil vidé (« Effacer ») après la dernière synchronisation : il envoie', () => {
     expect(
       decide(
@@ -78,5 +92,23 @@ describe('documentHash', () => {
     expect(await documentHash(changed)).not.toBe(await documentHash(empty))
     expect(isEmptyDocument(empty)).toBe(true)
     expect(isEmptyDocument(changed)).toBe(false)
+  })
+})
+
+describe('isEmptyDocument', () => {
+  test('un budget réglé est à garder : le document n’est pas vide', () => {
+    const empty = { collection: emptyCollection(), shopping: emptyShopping() }
+    const budget = { ...empty.shopping.budget, monthly: 60 }
+    const tuned = { ...empty, shopping: { ...empty.shopping, budget } }
+    expect(isEmptyDocument(tuned)).toBe(false)
+    // Première connexion d'un appareil dont seul le budget a changé : il ne reprend pas celui du
+    // serveur sans rien dire.
+    expect(
+      decide({ hash: 'budget', empty: isEmptyDocument(tuned) }, null, {
+        version: 3,
+        hash: 's',
+        empty: false,
+      }),
+    ).toBe('conflict')
   })
 })

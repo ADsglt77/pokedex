@@ -25,6 +25,8 @@ dist-ssr
 
 # Anciens prix en fichiers, à reprendre dans la base : `bun run ingest legacy-prices ./prices`
 /prices
+# Les sauvegardes sorties du VPS (README) : le compte et la collection, jamais dans le dépôt.
+/sauvegardes
 
 # Bases SQLite et images du serveur en développement (`DATA_DIR`, sur le VPS : volumes Docker)
 /.data

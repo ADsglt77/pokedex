@@ -9,7 +9,7 @@ import { priceVerdict } from '@/lib/purchase-planner'
 import { usePrices } from '@/store/prices'
 import { useShoppingStore } from '@/store/shopping'
 import type { CardPrice, PurchasePreference } from '@/types'
-import styles from './CardActions.module.css'
+import styles from './PurchaseSection.module.css'
 
 type Choice = 'accepted' | 'none'
 

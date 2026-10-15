@@ -18,6 +18,7 @@ import { decide, documentHash, isEmptyDocument, type SyncDocument } from '@/lib/
 import { parseStored } from '@/lib/transfer'
 import { emptyShopping } from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
+import { currentDocument, replaceDocument, sameDocument } from '@/store/document'
 import { useShoppingStore } from '@/store/shopping'
 import { readStored } from './persist'
 
@@ -76,16 +77,6 @@ function writeBase(version: number, hash: string) {
   } catch {
     // Sans stockage, le bandeau d'échec le dit ; la version sera redemandée.
   }
-}
-
-const localDocument = (): SyncDocument => ({
-  collection: useCollectionStore.getState().collection,
-  shopping: useShoppingStore.getState().shopping,
-})
-
-function apply({ collection, shopping }: SyncDocument) {
-  useCollectionStore.getState().replaceCollection(collection)
-  useShoppingStore.getState().replaceShopping(shopping)
 }
 
 const setStatus = (status: SyncStatus) => useSyncStore.setState({ status })
@@ -150,12 +141,6 @@ async function push(document: SyncDocument, hash: string, baseVersion: number) {
 const exclusive = (task: () => Promise<void>) =>
   navigator.locks ? navigator.locks.request('pokedex-sync', task) : task()
 
-/** La collection ou les achats ont changé depuis `document` (une modification pendant l'échange). */
-function changedSince(document: SyncDocument) {
-  const current = localDocument()
-  return current.collection !== document.collection || current.shopping !== document.shopping
-}
-
 /** Compare la collection de cet appareil à celle du serveur, et fait ce que dit `decide`. */
 export function sync(): Promise<void> {
   if (!user || useSyncStore.getState().status === 'conflict') return Promise.resolve()
@@ -175,7 +160,7 @@ async function compare() {
   for (let attempt = 0; attempt < 3 && user; attempt++) {
     if (useSyncStore.getState().status !== 'synced') setStatus('syncing')
     const base = readBase()
-    const document = localDocument()
+    const document = currentDocument()
     const hash = await documentHash(document)
     const response = await call('GET', { etag: base ? `"v${base.version}"` : undefined })
     // Déconnecté pendant l'échange : plus rien à synchroniser.
@@ -198,14 +183,17 @@ async function compare() {
     if (step === 'adopt') {
       // Modifiée pendant l'échange : reprendre celle du serveur l'effacerait, on compare de
       // nouveau.
-      if (changedSince(document)) continue
+      if (!sameDocument(currentDocument(), document)) continue
       writeBase(server!.version, server!.hash)
-      if (server!.hash !== hash) apply(server!.document)
+      if (server!.hash !== hash) replaceDocument(server!.document)
       return setStatus('synced')
     }
     if (step === 'conflict') return useSyncStore.setState({ status: 'conflict', conflict: server })
     if ((await push(document, hash, current.version)) !== false) return
   }
+  // Trois essais sans aboutir (le serveur ou cet appareil changeait à chaque fois) : on
+  // recommencera plus tard, comme après une panne, plutôt que de rester « en cours ».
+  if (user) offline()
 }
 
 /** Conflit : garde la version de cet appareil, envoyée à la place de celle du serveur. */
@@ -214,7 +202,7 @@ export async function keepThisDevice() {
   if (!conflict) return
   useSyncStore.setState({ status: 'syncing', conflict: null })
   await exclusive(async () => {
-    const document = localDocument()
+    const document = currentDocument()
     await push(document, await documentHash(document), conflict.version)
   })
   // Le serveur a encore changé depuis (409, le statut est resté « syncing ») : on compare de
@@ -227,7 +215,7 @@ export function keepServer() {
   const { conflict } = useSyncStore.getState()
   if (!conflict) return
   writeBase(conflict.version, conflict.hash)
-  apply(conflict.document)
+  replaceDocument(conflict.document)
   useSyncStore.setState({ status: 'synced', conflict: null })
 }
 
@@ -248,7 +236,7 @@ export function setSyncUser(next: string | null) {
  */
 export async function hasUnsentChanges() {
   await sync()
-  const document = localDocument()
+  const document = currentDocument()
   return !isEmptyDocument(document) && readBase()?.hash !== (await documentHash(document))
 }
 
@@ -269,7 +257,7 @@ export async function signOut() {
     } catch {
       // Sans stockage, rien n'était gardé.
     }
-    apply({ collection: emptyCollection(), shopping: emptyShopping() })
+    replaceDocument({ collection: emptyCollection(), shopping: emptyShopping() })
     useSyncStore.setState({ status: 'local', conflict: null })
   })
   return true

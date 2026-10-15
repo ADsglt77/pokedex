@@ -1,6 +1,8 @@
 {
-  // Les options communes à l'app, aux scripts et aux tests ; chacun ajoute ses `lib`, `types` et `include`.
+  // Les options communes à l'app, au serveur et aux tests ; chacun ajoute ses `lib`, `types` et `include`.
   "compilerOptions": {
+    // Le défaut de TypeScript 6, écrit pour qui lit ce fichier.
+    "strict": true,
     "target": "es2023",
     "module": "esnext",
     "moduleResolution": "bundler",

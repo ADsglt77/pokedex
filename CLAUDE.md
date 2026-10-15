@@ -97,12 +97,12 @@ bun server/create-user.ts <e-mail>       # change le mot de passe du compte (ou 
 |---|---|
 | `src/config/` | Générations, couleurs des types, achats (budget par défaut, niveaux de budget, priorités, fournisseurs), tâches d'ingestion (`jobs` : leur rythme, que lisent le serveur et la page Données) : configuration, pas de logique |
 | `src/lib/` | Règles **pures** : `species` (espèces, données par le serveur avant le premier affichage ; carte d'un id), `cardmarket` (page et id saisis, le lien vers une carte), `card-code` (le code d'une carte dans sa référence, sa clé ; sans import, le serveur s'en sert : `jobs/catalog.ts`), `card-images` (l'image d'une carte chez Pokécardex, d'après sa série et son rang ou d'après sa référence ; d'où vient une image), `card-catalog` (les cartes japonaises d'un Pokémon, la carte d'une référence, l'image retrouvée : `findCardImage`), `pokedex` (modèle : la carte de chaque Pokémon, progression, résumé), `collection` (modifications : statut, prix payé, ajout et retrait d'une carte ; l'id d'une carte : `newCardId`), `filters` (adresse, liens filtrés, recherche), `transfer` (export, import, CSV, lecture du stockage), `prices` (prix Cardmarket d'une carte, écart à sa moyenne sur 30 jours : `priceChange`, valeur, coût pour compléter, courbes, plus fortes hausses et baisses : `priceMovers`), `format`, `settled` (une promesse que `use()` lit sans attendre), `cx` (classes CSS), `api` (lecture de l'API, mémoïsée ; ce qu'on en tire, calculé une fois par réponse : `derived`), `time` (durées en ms, jours : `addDays`, `daysBetween` ; le serveur s'en sert aussi), `auth-client` (client Better Auth ; l'adresse de connexion qui ramène à la page : `loginPath`), `sync` (la règle de la synchronisation) ; achats : `wishlist` (préférences, filtres, CSV de la liste), `orders` (coût, report sur la collection, doublons, commandes en retard), `budget` (par mois, par fournisseur), `purchase-planner` (prochaine commande) |
-| `src/store/` | Zustand : `collection` et `shopping` (liste d'achats, commandes, budget), dans `localStorage` ; `prices` (`/api/prices`) ; `sync` (la collection du compte connecté, `/api/collection`) ; `theme` (sombre ou clair, gardé dans ce navigateur). `persist` les enregistre et les garde d'accord entre onglets |
+| `src/store/` | Zustand : `collection` et `shopping` (liste d'achats, commandes, budget), dans `localStorage` ; `prices` (`/api/prices`) ; `sync` (la collection du compte connecté, `/api/collection`) ; `theme` (sombre ou clair, gardé dans ce navigateur, suivi par ses autres onglets). `persist` les enregistre et les garde d'accord entre onglets |
 | `src/hooks/` | `usePokedex` (modèle partagé par toutes les pages), `useNotify` (toasts + « Annuler »), `usePokedexFilters`, `useCardDraft` (saisie d'une carte), `useExportCollection`, `useMediaQuery`, `useWishlist` (la liste d'achats : Achats et accueil) |
-| `src/components/` | Composants métier partagés par plusieurs pages (carte, champs d'une carte, tuile, réglette, courbe, réglages d'achat d'une carte…) (lien « Voir sur Cardmarket » : `CardmarketLink` ; bouton d'export avant de remplacer ou d'effacer : `ExportCollectionButton`) et les seuls génériques absents de camply (confirmation, en-tête de page `PageHeader`, bloc de page `Panel`, lien externe, crédit d'une image, champ enregistré en le quittant, `SegmentedField`), la coquille (`AppShell` : navigation, logo ; `AppSearch` : la recherche Ctrl/⌘ K), le compte (`AccountMenu` ; la carte des pages de connexion et de première visite : `AuthCard`), la jauge du budget (`BudgetMeter`, accueil et achats) et la question d'un conflit (`SyncConflictDialog`) ; le reste vient de camply |
-| `src/pages/` | Une page par route ; les sous-composants d'une page vivent dans son dossier (`pokemon/CardForm` : ajouter ou corriger la carte d'un Pokémon ; `LoginPage` : `/connexion` ; `WelcomePage` : `/bienvenue`, la première visite ; `shopping/LateOrdersAlert` : les commandes en retard ; `ErrorPage`, `NotFoundPage`) |
+| `src/components/` | Composants métier partagés par plusieurs pages (carte, tuile, réglette, courbe, réglages d'achat d'une carte…) (lien « Voir sur Cardmarket » : `CardmarketLink` ; bouton d'export avant de remplacer ou d'effacer : `ExportCollectionButton`) et les seuls génériques absents de camply (confirmation, en-tête de page `PageHeader`, bloc de page `Panel` (`titleRef` : son titre, pour y mener le focus), lien externe, crédit d'une image, champ enregistré en le quittant, `SegmentedField`), la coquille (`AppShell` : navigation, logo ; `AppSearch` : la recherche Ctrl/⌘ K), le compte (`AccountMenu` ; la carte des pages de connexion et de première visite : `AuthCard`, `as` pour la balise du bloc), la jauge du budget (`BudgetMeter`, accueil et achats) et la question d'un conflit (`SyncConflictDialog`) ; le reste vient de camply |
+| `src/pages/` | Une page par route ; les sous-composants d'une page vivent dans son dossier (`pokemon/CardForm` : ajouter ou corriger la carte d'un Pokémon, ses champs `CardFields` et les options d'une carte neuve `NewCardOptions` ; `pokemon/PricePanel` : le prix Cardmarket de la fiche et sa courbe, `PriceHistory` ; `LoginPage` : `/connexion` ; `WelcomePage` : `/bienvenue`, la première visite ; `shopping/LateOrdersAlert` : les commandes en retard ; `ErrorPage`, `NotFoundPage`) |
 | `tests/` | Tests `bun test` de la logique des achats, de la synchronisation et de l'historique des prix (`tsconfig.tests.json`) |
-| `server/` | Bun, le serveur (`tsconfig.server.json`) : `index.ts` (lance le serveur ; écrit le code de première visite), `app.ts` (l'API, Elysia : un plugin par domaine, paramètres et corps validés par leurs schémas, 422 sinon ; 404 sans corps ; documentation OpenAPI à `/api/docs` en développement), `reference.ts` (les données de référence : état des tâches, espèces, catalogue, prix, historique), `db.ts` (SQLite dans `DATA_DIR`, `.data/` en local : `data.db`, les données de référence, et `app.db`, le compte et la collection ; schéma par étapes, `PRAGMA user_version`), `auth.ts` (Better Auth : un seul compte, créé à la première visite, une session ; `/api/auth/*`, `/api/account`, la macro `auth` des routes du compte : session, origine, `no-store`), `collection.ts` (`/api/collection`), `create-user.ts`, `jobs/species.ts`, `ingest.ts` (les tâches d'ingestion, une à la demande ou `--loop`), `jobs/catalog.ts`, `jobs/prices.ts`, `jobs/images.ts`, `jobs/backups.ts`, `images.ts` (les images copiées, dans `IMAGES_DIR` : leur adresse d'origine, la copie, la copie à la demande), `history.ts` (l'historique des prix, une ligne par carte et par année), `snapshots.ts` (les grosses réponses, calculées en fin de tâche et gardées compressées), `legacy-prices.ts` (reprise des anciens fichiers de prix), `lib/net.ts` (cache disque, requêtes identifiées de 2 min au plus, file à concurrence limitée qui attend les requêtes en cours avant de lever une erreur), `lib/pokecardex.ts` (les pages de Pokécardex, déchiffrées ; une toutes les 3 s) |
+| `server/` | Bun, le serveur (`tsconfig.server.json`) : `index.ts` (lance le serveur ; écrit le code de première visite), `app.ts` (l'API, Elysia : un plugin par domaine, paramètres et corps validés par leurs schémas, 422 sinon ; 404 sans corps ; une erreur imprévue est écrite dans le journal, 500 sans corps ; documentation OpenAPI à `/api/docs` en développement), `reference.ts` (les données de référence : état des tâches, espèces, catalogue, prix, historique), `db.ts` (SQLite dans `DATA_DIR`, `.data/` en local : `data.db`, les données de référence, et `app.db`, le compte et la collection ; schéma par étapes, `PRAGMA user_version` : à jour, aucun verrou au démarrage ; journal WAL ramené à 64 Mo), `auth.ts` (Better Auth : un seul compte, créé à la première visite, une session ; `/api/auth/*`, `/api/account`, la macro `auth` des routes du compte : session, origine, `no-store`), `collection.ts` (`/api/collection`), `create-user.ts`, `jobs/species.ts`, `ingest.ts` (les tâches d'ingestion, une à la demande ou `--loop`), `jobs/catalog.ts`, `jobs/prices.ts`, `jobs/images.ts`, `jobs/backups.ts`, `images.ts` (les images copiées, dans `IMAGES_DIR` : leur adresse d'origine, la copie, la copie à la demande), `history.ts` (l'historique des prix, une ligne par carte et par année), `snapshots.ts` (les grosses réponses, calculées en fin de tâche et gardées compressées), `legacy-prices.ts` (reprise des anciens fichiers de prix), `lib/net.ts` (cache disque, requêtes identifiées de 2 min au plus, file à concurrence limitée qui attend les requêtes en cours avant de lever une erreur), `lib/pokecardex.ts` (les pages de Pokécardex, déchiffrées ; une toutes les 3 s) |
 
 Points à connaître :
 
@@ -132,7 +132,9 @@ Points à connaître :
   minutes ; ensuite, une série est relue chaque semaine, chaque jour si elle est sortie depuis
   moins de 90 jours (`read_at`), et `--refresh` les relit toutes. Une page en échec n'empêche pas
   les autres (la tâche échoue ensuite, pour être relancée) ; dix d'affilée arrêtent la lecture
-  (le site a changé : on ne le sollicite pas davantage). Une page sans cartes (série annoncée, ou
+  (le site a changé : on ne le sollicite pas davantage). Une série qui donne moins de la moitié
+  des cartes qu'elle avait est refusée (format des pages changé : rien n'est gardé, c'est un échec).
+  Une page sans cartes (série annoncée, ou
   site changé) ne retire rien et n'est pas notée : elle est relue au passage suivant. Tant qu'aucune
   carte n'a été lue, rien n'est publié : `/api/catalog` répond 404 (« pas disponible »).
   Une carte qu'une lecture de sa série ne voit plus est retirée (`seen`). Sans serveur, la fenêtre
@@ -176,7 +178,8 @@ Points à connaître :
   tâche échoue à la fin (au-delà de 20 erreurs, elle s'arrête : la source est sans doute en panne).
   Une image absente du volume (référence saisie hors du
   catalogue, image pas encore copiée) est copiée à la demande par le serveur (`serveImage` :
-  seulement les chemins connus, `upstreamUrl` ; une absence retenue une semaine ; nginx limite à
+  seulement les chemins connus, `upstreamUrl` : chez Pokécardex, une série du catalogue et un
+  numéro ; jamais plus chez TCGplayer ; une absence retenue une semaine ; nginx limite à
   10 copies par seconde). Les images de TCGplayer qu'une ancienne version a enregistrées
   s'affichent encore si le volume en a la copie (jamais plus copiées, citées « TCGplayer ») ;
   Données › « Chercher les images » les remplace par celles de Pokécardex, comme il cherche celles
@@ -195,7 +198,8 @@ Points à connaître :
   `data.db` : le prix du jour de chaque carte (`cardmarket_prices` : prix, plus bas, moyenne 30
   jours, par id Cardmarket) et son historique (`cardmarket_history` : Cardmarket n'en garde pas ;
   une ligne par carte et par année, à partir de son premier jour avec un prix, `server/history.ts` ;
-  relancée le même jour, la tâche remplace le prix du jour). Rien n'est retéléchargé (29 Mo) tant
+  relancée le même jour, la tâche remplace le prix du jour ; moins de la moitié des prix d'avant :
+  format du guide changé, rien n'est écrit, la tâche échoue). Rien n'est retéléchargé (29 Mo) tant
   que le guide n'a pas changé (`sources` : son `Last-Modified`). En fin de tâche, la réponse de
   `/api/prices` est calculée et gardée compressée (`snapshots`, avec un ETag : 304 si le navigateur
   l'a déjà). L'app la charge au premier écran qui affiche un prix (l'accueil, pour sa valeur ;
@@ -229,7 +233,8 @@ Points à connaître :
     cours → commandée, reçue → possédée, annulée ou supprimée → l'état d'avant, gardé dans
     `OrderLine.previous`, `previousOf`). Une possession n'est jamais retirée ; une carte qui quitte
     une commande reçue (ligne retirée, commande annulée ou supprimée) reste possédée, sans la date
-    ni le prix payé que la commande lui avait donnés. Le prix payé est le prix de revient (port,
+    ni le prix payé que la commande lui avait donnés : ceux d'une autre commande reçue qui la
+    contient (réception, prix de revient), sinon aucun. Le prix payé est le prix de revient (port,
     frais et remboursé répartis au prorata, au centime ; les centimes d'arrondi vont aux lignes
     d'une seule carte, en plusieurs tours, jamais sous 0 €, pour que les prix de revient fassent le
     total). Corriger la date de réception corrige la date d'obtention. Une carte déjà dans une autre
@@ -261,7 +266,7 @@ Points à connaître :
   routeur (créé après cette réponse, `main.tsx` : ses `loader` lisent `accountExists` dès sa
   création) mène toute page à `/bienvenue` (`WelcomePage`, hors de la coquille). On y crée le
   compte avec ce code (en-tête `X-Setup-Code`, vérifié puis consommé au moment de créer le compte,
-  `databaseHooks.user.create.before`) ; ensuite, plus aucune inscription, et `/bienvenue` mène à
+  `databaseHooks.user.create.before`) ; ensuite, plus aucune inscription (403 avant même Better Auth), et `/bienvenue` mène à
   `/connexion`. Un visiteur arrivé avant l'utilisateur ne peut donc pas prendre le compte.
   `server/create-user.ts` le crée aussi depuis le serveur (jamais un second) ou change son mot de
   passe (ce qui ferme ses sessions). **Une seule session par compte** : se connecter sur un
@@ -276,12 +281,15 @@ Points à connaître :
   ligne, l'app marche ; l'envoi part au retour du réseau) et note la dernière version échangée
   (`pokedex-collection.sync` : version et empreinte SHA-256 ; les deux autres clés gardent leur
   format) : il synchronise une seconde après une modification, au retour de la page et du réseau,
-  et 30 s après une panne passagère (hors ligne, 502 pendant un redémarrage, réponse illisible),
+  et 30 s après une panne passagère (hors ligne, 502 pendant un redémarrage, réponse illisible) ou
+  trois échanges sans aboutir (l'appareil ou le serveur changeait à chaque fois),
   un onglet à la fois (`navigator.locks`). Seuls 400 et 422 (document refusé par le serveur) donnent
   « Envoi refusé ». La règle (`decide`, testée) : seul cet appareil a
   changé, il envoie ; seul le serveur, il reprend ; les deux, une fenêtre fait choisir la version à
   garder (`SyncConflictDialog`, avec un export de celle de l'appareil ; jamais de fusion, comme à
-  l'import). Avec une seule session, ce cas ne vient plus que d'un appareil déconnecté avec des
+  l'import) ; de même si le serveur en est à une version plus ancienne que celle échangée (sa base
+  restaurée d'une sauvegarde). Un budget réglé compte comme un contenu (`isEmptyDocument`). Lire,
+  comparer et remplacer le document (collection et achats ensemble) : `store/document.ts`. Avec une seule session, ce cas ne vient plus que d'un appareil déconnecté avec des
   modifications pas encore envoyées, qui se reconnecte : la fenêtre reste le filet de sécurité. À
   la première connexion d'un appareil, celui qui a quelque chose l'envoie (ou le reçoit). Le
   serveur garde une version remplacée par heure, 30 jours (`collection_versions`, à reprendre à la
@@ -323,7 +331,8 @@ Points à connaître :
   « poké »). Un
   avertissement de l'app (export, stockage) s'aligne sur le conteneur des pages. L'accueil est un
   tableau de bord : progression (anneau, réglette des régions), « À faire » (commandes en retard,
-  cartes sous leur prix maximum, cartes à compléter, chacune vers sa liste filtrée), indicateurs
+  cartes sous leur prix maximum, cartes à compléter, chacune vers sa liste filtrée :
+  `/achats?filtre=sous-max`, `pokedexUrl`), indicateurs
   (valeur, dépensé ce mois-ci, liste d'achats, commandes), dernières cartes obtenues (« Vos cartes
   choisies » tant qu'aucune n'est obtenue) ; une collection vide y trouve trois étapes pour
   commencer. Le Pokédex : recherche, filtres rapides de
@@ -350,7 +359,7 @@ Points à connaître :
   serveur redémarre mal et n'écoute plus (le relancer) ; et deux écritures très rapprochées d'un
   même fichier (outil, formateur) peuvent lui échapper : il sert alors l'ancienne version (page
   blanche, « … is not defined ») jusqu'à ce que le fichier soit de nouveau enregistré.
-- `noUncheckedIndexedAccess` est actif ; alias `@/` → `src/` (vite.config.ts, tsconfig.base.json
+- `strict` et `noUncheckedIndexedAccess` sont actifs ; alias `@/` → `src/` (vite.config.ts, tsconfig.base.json
   dont héritent tsconfig.app, .server et .tests, et tsconfig.json pour Bun).
 
 ## Déploiement
@@ -363,7 +372,11 @@ route inconnue reçoit `index.html`, le routage étant côté client ; `/api/` v
 `/images/` vient du volume `images` (gardé un mois), une image qui y manque va au serveur, qui la
 copie (10 par seconde au plus) ; un fichier manquant de `/assets/` répond 404 ; `/assets/` en
 cache un an ; compression gzip niveau 6, réponses de l'API comprises (`gzip_proxied` ; les prix du
-jour arrivent déjà compressés). `compose.yaml` :
+jour arrivent déjà compressés) ; version de nginx masquée (`server_tokens off`) et en-têtes de
+sécurité sur chaque réponse (`deploy/security-headers.conf` : `nosniff`, `Referrer-Policy`,
+`X-Frame-Options`, `Permissions-Policy` ; inclus aussi dans chaque `location` qui pose ses
+propres en-têtes, nginx n'héritant pas alors de ceux du serveur). `compose.yaml` (journaux limités à 3 × 10 Mo par service ; `init` pour `server` et `ingest`, qui
+transmet l'arrêt) :
 - `pokedex` : le site sur `127.0.0.1:${POKEDEX_PORT:-8080}`, que le tunnel publie ;
 - `server` : l'API, qui lit la base du volume `db`, y garde le compte et la collection (`app.db`),
   et copie à la demande dans le volume `images` ; ses secrets (`BETTER_AUTH_URL`, l'adresse
@@ -372,12 +385,14 @@ jour arrivent déjà compressés). `compose.yaml` :
   son mot de passe : `docker compose run --rm server bun server/create-user.ts <e-mail>` ;
 - `ingest` : `server/ingest.ts --loop`, les tâches à leur rythme (espèces chaque mois, catalogue
   chaque jour, puis prix toutes les 6 h, puis images et sauvegardes chaque jour ; après un échec : 10 min, puis 20, 40…
-  jusqu'à 6 h), dans les volumes `db`, `images` et `backups`. À chaque démarrage, il refait les
+  jusqu'à 6 h ; une tâche déjà en cours dans un autre processus, lancée à la main, n'est pas
+  doublée ; au démarrage, un passage resté « en cours » est noté interrompu), dans les volumes
+  `db`, `images` et `backups`. À chaque démarrage, il refait les
   réponses calculées de l'API (leur forme a pu changer avec le code) : le catalogue et les prix
   d'après leurs tables, les espèces en repassant leur tâche (depuis le cache disque de PokéAPI,
   sans requête s'il a moins d'un mois) ; au premier, il reprend
   l'historique de l'ancien volume `prices` (`LEGACY_PRICES`, l'ancien service des prix, retiré)
-  avant d'écrire.
+  avant d'écrire ; si sa vérification échoue, la tâche des prix attend (les autres tournent).
 
 Sauvegardes (`server/jobs/backups.ts`, volume `backups`) : chaque jour, `app.db` (30 gardées) et
 `data.db` compressée (7 gardées), copiées par `VACUUM INTO` pendant que le serveur tourne. Elles

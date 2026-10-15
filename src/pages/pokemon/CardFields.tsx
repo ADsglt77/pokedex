@@ -14,14 +14,14 @@ import styles from './CardFields.module.css'
  * (vide : celle retrouvée), son id Cardmarket (vérifié dans les prix), sa page Cardmarket, et
  * l'aperçu de la carte. `speciesId` : pour l'aperçu sans image.
  */
-export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: number | null }) {
+export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: number }) {
   const { errors } = draft
   return (
     <div className={styles.layout}>
       <Stack gap={4}>
         <Input
           label="Référence"
-          hint="Le nom, puis le code de la série et le numéro : « Bulbizarre (SV2A 166) ». Il sert à trouver l’image chez Pokécardex. Vide : le nom de la carte chez Cardmarket."
+          hint="Le nom, puis le code de l’extension et le numéro : « Bulbizarre (SV2A 166) ». Il sert à trouver l’image chez Pokécardex. Vide : le nom de la carte chez Cardmarket."
           value={draft.reference}
           onChange={(event) => draft.setReference(event.target.value)}
           onBlur={draft.searchImage}
@@ -35,10 +35,13 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
           onChange={(event) => draft.setImage(event.target.value)}
           error={errors.image}
         />
+        {/* Les réponses qui arrivent après la saisie sont annoncées (lecteurs d'écran). */}
         {draft.lookup !== null && (
-          <Suspense fallback={<p className="muted">Recherche de l’image…</p>}>
-            <FoundImage reference={draft.lookup} />
-          </Suspense>
+          <div role="status">
+            <Suspense fallback={<p className="muted">Recherche de l’image…</p>}>
+              <FoundImage reference={draft.lookup} />
+            </Suspense>
+          </div>
         )}
         <Input
           label="Id Cardmarket"
@@ -50,9 +53,11 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
           error={errors.cardmarket}
         />
         {draft.checkedId !== null && (
-          <Suspense fallback={<p className="muted">Recherche de la carte chez Cardmarket…</p>}>
-            <CardmarketCheck cardmarket={draft.checkedId} />
-          </Suspense>
+          <div role="status">
+            <Suspense fallback={<p className="muted">Recherche de la carte chez Cardmarket…</p>}>
+              <CardmarketCheck cardmarket={draft.checkedId} />
+            </Suspense>
+          </div>
         )}
         <Input
           label="Page Cardmarket"
@@ -64,11 +69,9 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
           error={errors.page}
         />
       </Stack>
-      {speciesId !== null && (
-        <Suspense fallback={<Preview draft={draft} speciesId={speciesId} searching />}>
-          <Preview draft={draft} speciesId={speciesId} />
-        </Suspense>
-      )}
+      <Suspense fallback={<Preview draft={draft} speciesId={speciesId} searching />}>
+        <Preview draft={draft} speciesId={speciesId} />
+      </Suspense>
     </div>
   )
 }

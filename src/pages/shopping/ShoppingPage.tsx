@@ -48,7 +48,7 @@ export function ShoppingPage() {
             Liste d’achats <Badge size="sm">{rows.filter(isToBuy).length}</Badge>
             {underMax > 0 && (
               <Badge size="sm" tone="success">
-                {underMax} sous le max
+                {underMax} sous le prix maximum
               </Badge>
             )}
           </Tab>

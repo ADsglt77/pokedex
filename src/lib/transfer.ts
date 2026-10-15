@@ -7,7 +7,13 @@ import { ORDER_STATE_LABELS, PRIORITY_LABELS, SUPPLIER_LABELS } from '@/config/s
 import { parseCardmarketLink } from '@/lib/cardmarket'
 import { euroInput, parseLink, today } from '@/lib/format'
 import { cardCount, linesTotal, orderSpent, refundFits, supplierLabel } from '@/lib/orders'
-import type { CollectionData, CollectionExportFile, Order, ShoppingData } from '@/types'
+import type {
+  BudgetSettings,
+  CollectionData,
+  CollectionExportFile,
+  Order,
+  ShoppingData,
+} from '@/types'
 
 export function buildExportFile(
   collection: CollectionData,
@@ -133,9 +139,14 @@ export function readShopping(value: unknown): ShoppingData | null {
   return isShopping ? (value as unknown as ShoppingData) : null
 }
 
-/** Chaque valeur d'un dictionnaire (ou d'une liste) est un objet qui passe `ok`. */
-const all = (values: object, ok: (value: Record<string, unknown>) => boolean = () => true) =>
-  Object.values(values).every((value) => isRecord(value) && ok(value))
+/** Chaque valeur d'un dictionnaire (ou d'une liste) est un objet qui passe `ok` (avec sa clé). */
+const all = (
+  values: object,
+  ok: (value: Record<string, unknown>, key: string) => boolean = () => true,
+) => Object.entries(values).every(([key, value]) => isRecord(value) && ok(value, key))
+
+/** Aucune valeur en double. */
+const distinct = (values: readonly unknown[]) => new Set(values).size === values.length
 
 /** Un montant en euros : un nombre, positif ou nul (pas « 5 » en texte, qui fausserait les sommes). */
 const isAmount = (value: unknown) =>
@@ -167,9 +178,14 @@ const isOwnership = (ownership: Record<string, unknown>) =>
   (ownership.acquiredAt == null || isTime(ownership.acquiredAt)) &&
   isOptional(ownership.paidPrice, isAmount)
 
-const isCard = (card: Record<string, unknown>) =>
-  typeof card.id === 'string' &&
+/**
+ * Une carte, rangée sous son id (l'app la retrouve par sa clé et l'enregistre sous son id : deux
+ * différents la dédoubleraient), d'au moins un Pokémon (elle n'aurait pas de place au Pokédex).
+ */
+const isCard = (card: Record<string, unknown>, key: string) =>
+  card.id === key &&
   Array.isArray(card.dexIds) &&
+  card.dexIds.length > 0 &&
   card.dexIds.every(Number.isInteger) &&
   isText(card.reference) &&
   (card.image == null ||
@@ -208,11 +224,14 @@ const isOrder = (order: Record<string, unknown>) =>
   isOptional(order.link, (link) => isText(link) && parseLink(link as string) !== null) &&
   Array.isArray(order.lines) &&
   all(order.lines, isLine) &&
+  // Une carte par ligne : deux lignes d'une même carte, la seconde effacerait le report de la
+  // première sur la collection.
+  distinct(order.lines.map((line: { cardId: string }) => line.cardId)) &&
   // Comme à la saisie : un remboursé plus grand que la commande ferait une dépense négative.
   refundFits(order as unknown as Order)
 
-const isBudget = (budget: Record<string, unknown>) =>
-  ['monthly', 'ceiling', 'shippingReserve'].every((key) => isAmount(budget[key]))
+const isBudget = (budget: BudgetSettings) =>
+  isAmount(budget.monthly) && isAmount(budget.ceiling) && isAmount(budget.shippingReserve)
 
 /** Une date de dernière modification : absente ou `null` avant la première. */
 const isUpdatedAt = (value: unknown) => value == null || isText(value)
@@ -232,8 +251,7 @@ const readable = (collection: CollectionData, shopping: ShoppingData | null) =>
       all(shopping.preferences, isPreference) &&
       all(shopping.orders, isOrder) &&
       // Une commande est retrouvée par son id : deux du même id se confondraient.
-      new Set(shopping.orders.map((order) => order.id)).size === shopping.orders.length &&
-      isRecord(shopping.budget) &&
+      distinct(shopping.orders.map((order) => order.id)) &&
       isBudget(shopping.budget)))
 
 /**

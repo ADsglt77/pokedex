@@ -20,7 +20,7 @@ class NotFoundError extends Error {}
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const USER_AGENT = 'pokedex-perso/1.0 (bun run ingest)'
+const USER_AGENT = 'pokedex-perso/1.0 (Pokédex personnel)'
 
 /**
  * Au-delà, une requête échoue, lecture de la réponse comprise : une connexion qui ne répond plus ne

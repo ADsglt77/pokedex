@@ -1,10 +1,12 @@
 # Le site, servi en local sur le VPS ; le tunnel Cloudflare l'expose sur le domaine.
 # Les volumes portent des données irremplaçables (historique des prix, votre collection) : jamais
 # `down -v`.
+# Les journaux de chaque service : 3 fichiers de 10 Mo au plus (`ingest` tourne en boucle).
 services:
   pokedex:
     build: { context: ., target: web }
     restart: unless-stopped
+    logging: { options: { max-size: 10m, max-file: '3' } }
     # Seulement sur 127.0.0.1 : on n'y accède que par le tunnel, jamais directement.
     ports:
       - '127.0.0.1:${POKEDEX_PORT:-8080}:80'
@@ -19,6 +21,9 @@ services:
   server:
     build: { context: ., target: server }
     restart: unless-stopped
+    # Un vrai processus 1 devant Bun : l'arrêt d'un déploiement lui parvient, sans 10 s d'attente.
+    init: true
+    logging: { options: { max-size: 10m, max-file: '3' } }
     environment:
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:?l'adresse publique du site, dans .env (voir le README)}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?la clé des sessions, dans .env (voir le README)}
@@ -37,6 +42,8 @@ services:
   ingest:
     build: { context: ., target: server }
     restart: unless-stopped
+    init: true
+    logging: { options: { max-size: 10m, max-file: '3' } }
     command: ['bun', 'server/ingest.ts', '--loop']
     environment:
       LEGACY_PRICES: /legacy-prices

@@ -96,11 +96,16 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
   )
 }
 
-/** Le coût pour compléter chaque génération. */
+/**
+ * Le coût pour compléter chaque génération. Sans les prix du jour (`priced`, pas encore arrivés ou
+ * indisponibles), « — » : ni coût, ni cartes sans prix.
+ */
 export function CompletionTable({
   rows,
+  priced,
 }: {
   rows: { generation: Generation; cost: CompletionCost }[]
+  priced: boolean
 }) {
   return (
     <Table
@@ -133,13 +138,13 @@ export function CompletionTable({
           key: 'unpriced',
           header: 'Sans prix',
           align: 'right',
-          cell: ({ cost }) => formatInteger(cost.unpriced),
+          cell: ({ cost }) => (priced ? formatInteger(cost.unpriced) : '—'),
         },
         {
           key: 'cost',
           header: 'Coût estimé',
           align: 'right',
-          cell: ({ cost }) => formatEuro(cost.value),
+          cell: ({ cost }) => (priced ? formatEuro(cost.value) : '—'),
         },
       ]}
     />

@@ -6,8 +6,7 @@ import { summarize } from '@/lib/pokedex'
 import { formatDateTime, plural } from '@/lib/format'
 import { type ImportedFile, parseImport } from '@/lib/transfer'
 import { acceptedCount } from '@/lib/wishlist'
-import { useCollectionStore } from '@/store/collection'
-import { useShoppingStore } from '@/store/shopping'
+import { replaceDocument } from '@/store/document'
 import { DataSection } from './DataSection'
 import { SummaryLedger } from './SummaryLedger'
 import styles from './DataPage.module.css'
@@ -44,10 +43,7 @@ export function ImportSection() {
   }
 
   const runImport = () => {
-    act(() => {
-      useCollectionStore.getState().replaceCollection(imported!.collection)
-      if (imported!.shopping) useShoppingStore.getState().replaceShopping(imported!.shopping)
-    }, 'Collection remplacée par celle du fichier.')
+    act(() => replaceDocument(imported!), 'Collection remplacée par celle du fichier.')
     reset()
   }
 

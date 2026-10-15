@@ -35,6 +35,7 @@ export const emptyShopping = (): ShoppingData => ({
 /**
  * Met une carte dans la liste d'achats (priorité et prix maximum d'avant gardés), ou l'en retire
  * avec ses réglages. Seul `accepted` s'écrit : `excluded`, d'une ancienne version, n'est que lu.
+ * Déjà dans la liste, ou retirée sans y être : `data`, inchangé (rien à synchroniser ni annuler).
  */
 export function setAccepted(
   data: ShoppingData,
@@ -43,6 +44,7 @@ export function setAccepted(
   now: string,
 ): ShoppingData {
   const { [cardId]: previous, ...preferences } = data.preferences
+  if (accepted ? previous?.decision === 'accepted' : !previous) return data
   if (accepted) {
     preferences[cardId] = { priority: 'normal', ...previous, decision: 'accepted', updatedAt: now }
   }
@@ -81,12 +83,6 @@ export function updatePreference(
   return { ...data, preferences: { ...data.preferences, [cardId]: updated }, updatedAt: now }
 }
 
-/** Le nombre de cartes de la liste d'achats, parmi celles de `collection`. */
-export const acceptedCount = (data: ShoppingData, collection: CollectionData) =>
-  Object.entries(data.preferences).filter(
-    ([cardId, preference]) => preference.decision === 'accepted' && findCard(cardId, collection),
-  ).length
-
 /** Une carte de la liste d'achats, prête à afficher et à planifier. */
 export interface WishRow {
   card: PokemonCard
@@ -119,6 +115,10 @@ export function wishlistRows(
     ]
   })
 }
+
+/** Le nombre de cartes de la liste d'achats, parmi celles de `collection`. */
+export const acceptedCount = (data: ShoppingData, collection: CollectionData) =>
+  wishlistRows(data.preferences, collection, null).length
 
 /** Les Pokémon déjà débloqués ou en route : une carte possédée ou commandée. */
 export const takenSpecies = (entries: readonly PokedexEntry[]): Set<number> =>
@@ -161,8 +161,7 @@ export const DEFAULT_WISHLIST_FILTERS: WishlistFilters = {
 }
 
 /** Le prix du marché est sous le prix maximum. */
-export const isUnderMax = (row: WishRow) =>
-  priceVerdict(row.price, row.preference.maxPrice) === 'under'
+const isUnderMax = (row: WishRow) => priceVerdict(row.price, row.preference.maxPrice) === 'under'
 
 /** Les cartes encore à acheter dont le prix du marché est passé sous le prix maximum. */
 export const underMaxCount = (rows: readonly WishRow[]) =>

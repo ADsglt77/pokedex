@@ -36,7 +36,7 @@ function newCode() {
 }
 
 /** Le code tel que saisi, comparable au vrai : majuscules, sans espace ni tiret. */
-const codeKey = (code: string | null | undefined) =>
+const comparableCode = (code: string | null | undefined) =>
   (code ?? '').toUpperCase().replace(/[^0-9A-Z]/g, '')
 
 /**
@@ -61,7 +61,7 @@ export async function createAuth(db: Database, { trusted = false } = {}) {
           before: async (_user, context) => {
             if (trusted) return
             const given = (context?.headers as Headers | undefined)?.get('x-setup-code')
-            if (!code || account.get() || codeKey(given) !== codeKey(code)) {
+            if (!code || account.get() || comparableCode(given) !== comparableCode(code)) {
               throw new APIError('FORBIDDEN', { message: 'Code de première visite incorrect' })
             }
             code = null
@@ -123,11 +123,20 @@ export const appOrigin = (auth: Accounts['auth']) => new URL(auth.options.baseUR
 export function accountRoutes({ auth, account }: Accounts) {
   const origin = appOrigin(auth)
   return new Elysia({ name: 'account' })
-    .all('/auth/*', ({ request }) => auth.handler(request), {
-      // Better Auth lit lui-même la requête.
-      parse: 'none',
-      detail: { hide: true },
-    })
+    .all(
+      '/auth/*',
+      ({ request, status }) =>
+        // Le compte existe : plus d'inscription, refusée d'emblée (sans dire si une adresse est
+        // celle du compte, ni calculer un mot de passe pour rien).
+        new URL(request.url).pathname.endsWith('/sign-up/email') && account() !== null
+          ? status(403, null)
+          : auth.handler(request),
+      {
+        // Better Auth lit lui-même la requête.
+        parse: 'none',
+        detail: { hide: true },
+      },
+    )
     .get(
       '/account',
       ({ set }) => {

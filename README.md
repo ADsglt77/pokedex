@@ -91,7 +91,7 @@ seulement par le tunnel. À côté :
 - le service `ingest` : il refait le catalogue des cartes chaque jour (le premier passage, série
   par série, prend une vingtaine de minutes ; la page Catalogue dit en attendant qu'il n'est pas
   disponible), regarde toutes les 6 h si Cardmarket a publié un nouveau guide des prix (il ne le
-  télécharge qu'une fois par jour) et en garde l'historique
+  télécharge que si sa date a changé) et en garde l'historique
   dans une base SQLite (volume Docker `db`), puis copie chaque jour les images manquantes (volume
   `images` ; le premier passage, environ 1 Go, prend une heure ou plus, et le serveur copie en
   attendant celles qui s'affichent), et sauvegarde les deux bases chaque jour (volume `backups`).
@@ -101,7 +101,10 @@ seulement par le tunnel. À côté :
 
 Ne jamais lancer `docker compose down -v`, qui effacerait ces volumes. Une fois sûr que
 l'historique est repris (`docker compose logs ingest` : « Vérifié : … cartes »), l'ancien volume
-peut partir : `docker volume rm pokedex_prices` (le nom exact : `docker volume ls`).
+peut partir, dans cet ordre (Docker refuse de supprimer un volume qu'un conteneur utilise encore) :
+retirer de `compose.yaml` le volume `prices` (sa ligne et `LEGACY_PRICES` dans `ingest`, sa
+déclaration en bas), redéployer (`docker compose up -d`), puis `docker volume rm pokedex_prices`
+(le nom exact : `docker volume ls`).
 
 **Une fois, sur le VPS**
 
@@ -169,7 +172,8 @@ Chaque jour, le service `ingest` copie les deux bases dans le volume `backups` :
 `app-AAAA-MM-JJ.db` (votre compte et votre collection, 30 jours gardés) et
 `data-AAAA-MM-JJ.db.gz` (catalogue, prix et leur historique, 7 jours gardés). Ce volume est sur le
 même disque que les bases : copiez-le aussi ailleurs, par exemple chaque nuit avec `rclone` ou
-`rsync` vers un autre serveur. Pour en sortir les fichiers (dans `./sauvegardes`) :
+`rsync` vers un autre serveur. Pour en sortir les fichiers (dans `./sauvegardes`, que git
+ignore) :
 
 ```sh
 mkdir -p sauvegardes

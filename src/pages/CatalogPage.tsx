@@ -1,5 +1,5 @@
 import { Combobox, Progress, SegmentedControl, Stack, Switch } from '@camply/ui'
-import { Suspense, use, useMemo, useRef, useState } from 'react'
+import { Suspense, use, useId, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useSearchParams } from 'react-router'
 import { CatalogCredit, CatalogGrid, CatalogTile } from '@/components/CatalogTile'
@@ -80,6 +80,8 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
   const [setOrder, setSetOrder] = useState<'recent' | 'useful'>('recent')
   const [addAs, setAddAs] = useState<AddAs>('none')
   const grid = useRef<HTMLUListElement>(null)
+  const setTitle = useRef<HTMLHeadingElement>(null)
+  const addAsLabel = useId()
 
   // Les Pokémon sans carte que chaque extension peut compléter.
   const openBySet = useMemo(() => {
@@ -149,7 +151,9 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
       )
     })
     const tiles = grid.current?.querySelectorAll<HTMLButtonElement>('button:enabled') ?? []
-    tiles[Math.min(rank, tiles.length - 1)]?.focus()
+    // Plus aucune carte à choisir : le focus va au titre de l'extension, sa progression dessous.
+    const next = tiles[Math.min(rank, tiles.length - 1)] ?? setTitle.current
+    next?.focus()
   }
 
   return (
@@ -181,6 +185,7 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
 
       <Panel
         title={set.name}
+        titleRef={setTitle}
         description={details(
           set.id,
           set.year && `sortie en ${set.year}`,
@@ -210,12 +215,13 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
             checked={missingOnly}
             onChange={(event) => setMissingOnly(event.target.checked)}
           />
-          <Stack direction="horizontal" align="center" gap={2}>
-            <span id="add-as" className={styles.label}>
+          <Stack direction="horizontal" align="center" gap={2} wrap>
+            <span id={addAsLabel} className={styles.label}>
               Ajouter comme
             </span>
             <SegmentedControl
-              aria-labelledby="add-as"
+              aria-labelledby={addAsLabel}
+              className={styles.addAs}
               size="sm"
               options={ADD_AS}
               value={addAs}

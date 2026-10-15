@@ -1,4 +1,5 @@
 import { Stack } from '@camply/ui'
+import { useEffect, useRef } from 'react'
 import { useParams } from 'react-router'
 import { PossessionMark } from '@/components/PossessionMark'
 import { usePokedex } from '@/hooks/usePokedex'
@@ -26,6 +27,21 @@ function SpeciesPage({ entry }: { entry: PokedexEntry }) {
   const { entries } = usePokedex()
   const nextWithoutCard =
     entries.find((other) => other.species.id > species.id && !other.card)?.species ?? null
+
+  // La carte ajoutée, retirée ou rétablie (« Annuler ») : le bouton ou la fenêtre qui avait le
+  // focus a disparu avec l'ancien panneau, le focus va au titre du nouveau. Seulement s'il était
+  // perdu : un changement venu d'un autre onglet ne le déplace pas.
+  const sheetTitle = useRef<HTMLHeadingElement>(null)
+  const cardId = card?.card.id ?? null
+  const shownCard = useRef(cardId)
+  useEffect(() => {
+    if (shownCard.current === cardId) return
+    shownCard.current = cardId
+    if (document.activeElement === null || document.activeElement === document.body) {
+      sheetTitle.current?.focus()
+    }
+  }, [cardId])
+
   return (
     <div className="container">
       <title>{pageTitle(species.names.fr)}</title>
@@ -60,9 +76,9 @@ function SpeciesPage({ entry }: { entry: PokedexEntry }) {
           <div className={styles.columns}>
             {/* Une clé par carte : une saisie en cours ne passe pas d'une carte à l'autre. */}
             {card ? (
-              <CardSheet key={card.card.id} view={card} species={species} />
+              <CardSheet key={card.card.id} view={card} species={species} titleRef={sheetTitle} />
             ) : (
-              <EmptySheet species={species} />
+              <EmptySheet species={species} titleRef={sheetTitle} />
             )}
             <SpeciesAbout species={species} showArtwork={card === null} />
           </div>

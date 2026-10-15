@@ -41,6 +41,15 @@ const NAMES = Object.keys(INGEST_JOBS) as IngestJob[]
 
 async function runJob(db: Database, name: IngestJob) {
   const now = () => new Date().toISOString()
+  // Déjà en cours dans un autre processus (une tâche lancée à la main pendant la boucle) : deux à
+  // la fois doubleraient le rythme des requêtes. Au-delà de 6 h, un reste d'arrêt brutal.
+  const running = db
+    .query('SELECT 1 FROM runs WHERE job = ? AND finished_at IS NULL AND started_at > ?')
+    .get(name, new Date(Date.now() - 6 * HOUR).toISOString())
+  if (running) {
+    console.warn(`Tâche ${name} déjà en cours dans un autre processus : rien de lancé.`)
+    return false
+  }
   const { id } = db
     .query('INSERT INTO runs (job, started_at) VALUES (?, ?) RETURNING id')
     .get(name, now()) as { id: number }
@@ -68,8 +77,9 @@ function isDue(db: Database, name: IngestJob) {
     .all(name) as { ok: number; finished_at: string }[]
   const last = runs[0]
   if (!last) return true
-  const failures = runs.findIndex((run) => run.ok === 1)
-  const streak = failures < 0 ? runs.length : failures
+  // Les échecs d'affilée : les passages avant la dernière réussite.
+  const lastSuccess = runs.findIndex((run) => run.ok === 1)
+  const streak = lastSuccess < 0 ? runs.length : lastSuccess
   const wait = streak ? Math.min(600_000 * 2 ** (streak - 1), 6 * HOUR) : INGEST_JOBS[name].every
   return Date.now() - Date.parse(last.finished_at) >= wait
 }
@@ -79,15 +89,26 @@ const [arg, dir] = process.argv.slice(2)
 const legacy = process.env.LEGACY_PRICES
 
 if (arg === '--loop') {
+  // Un passage arrêté net (redémarrage) reste « en cours » : il ne l'est plus.
+  db.query(
+    "UPDATE runs SET finished_at = ?, ok = 0, message = 'interrompue' WHERE finished_at IS NULL",
+  ).run(new Date().toISOString())
   saveCatalog(db)
   savePrices(db)
+  // La reprise des anciens prix ratée (vérification en échec) : les autres tâches tournent, sauf
+  // celle des prix, qui écrirait un historique et empêcherait de la refaire.
+  let skipPrices = false
   if (legacy && !hasHistory(db) && existsSync(join(legacy, 'latest.json'))) {
-    await importLegacyPrices(db, legacy)
+    await importLegacyPrices(db, legacy).catch((error: unknown) => {
+      console.error('Reprise des anciens prix en échec : la tâche des prix attend.', error)
+      skipPrices = true
+    })
   }
   // Les espèces sont enregistrées telles que les lit le code : repassées avec le code déployé.
   await runJob(db, 'species')
   for (;;) {
     for (const name of NAMES) {
+      if (name === 'prices' && skipPrices) continue
       if (isDue(db, name)) await runJob(db, name)
     }
     await Bun.sleep(60_000)

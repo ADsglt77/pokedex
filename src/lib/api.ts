@@ -1,6 +1,8 @@
 /**
- * La lecture de l'API du site (`/api/…`, `server/index.ts`) : le catalogue, les prix et leur
- * historique. Facultative : sans serveur, ou base encore vide, l'app s'affiche sans ces données.
+ * La lecture de l'API du site (`/api/…`, `server/app.ts` ; les données de référence :
+ * `server/reference.ts`) : les espèces, le catalogue, les prix et leur historique. Facultative,
+ * sauf les espèces (`main.tsx`) : sans serveur, ou base encore vide, l'app s'affiche sans ces
+ * données.
  */
 
 import { settled } from '@/lib/settled'

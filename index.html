@@ -9,15 +9,20 @@
     <title>Mon Pokédex</title>
     <script>
       // Le thème, posé avant le premier affichage (sans éclair de l'autre) : celui choisi dans ce
-      // navigateur, sinon celui du système. La même règle que `src/store/theme.ts`.
-      try {
-        const stored = localStorage.getItem('pokedex-collection.theme')
-        const light = stored ? stored === 'light' : matchMedia('(prefers-color-scheme: light)').matches
-        if (light) {
+      // navigateur, sinon (aucun choix, valeur inconnue, stockage bloqué) celui du système. La
+      // même règle que `src/store/theme.ts`.
+      {
+        let stored = null
+        try {
+          stored = localStorage.getItem('pokedex-collection.theme')
+        } catch {}
+        const system = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+        const theme = stored === 'light' || stored === 'dark' ? stored : system
+        if (theme === 'light') {
           document.documentElement.dataset.camplyTheme = 'light'
           document.querySelector('meta[name="theme-color"]').content = '#faf6f3'
         }
-      } catch {}
+      }
     </script>
   </head>
   <body>

@@ -77,6 +77,17 @@ export async function prices(db: Database) {
     if (price) cards.push([row.idProduct, [price, amount(row.low), amount(row.avg30)]])
   }
 
+  // Moins de la moitié des prix d'avant : le format du guide a changé (un champ renommé). Rien
+  // n'est écrit ; la tâche échoue, pour être relancée.
+  const before = (
+    db.query('SELECT COUNT(*) AS count FROM cardmarket_prices').get() as {
+      count: number
+    }
+  ).count
+  if (cards.length < before / 2) {
+    throw new Error(`Guide des prix : ${cards.length} prix, contre ${before} (format changé ?)`)
+  }
+
   const readYear = db.query(
     'SELECT first, prices FROM cardmarket_history WHERE id = ? AND year = ?',
   )

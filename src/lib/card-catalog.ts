@@ -1,9 +1,10 @@
 /**
  * Le catalogue des cartes Pokémon japonaises (`/api/catalog`, que la tâche `catalog` construit
  * d'après Pokécardex) : pour chaque Pokémon, ses cartes, des plus récentes aux plus anciennes, et
- * les séries (nom, date de sortie). Chargé au premier choix d'une carte. Aucun tri ni détection :
- * l'utilisateur choisit, l'app ne propose rien seule. Il donne aussi l'image exacte d'une carte
- * chez Pokécardex (`findCardImage`).
+ * les séries (nom, date de sortie). Chargé par la fenêtre d'ajout et la page Catalogue, et préparé
+ * d'avance par la fiche d'un Pokémon sans carte (quand le navigateur est libre). Aucun tri ni
+ * détection : l'utilisateur choisit, l'app ne propose rien seule. Il donne aussi l'image exacte
+ * d'une carte chez Pokécardex (`findCardImage`).
  */
 
 import { derived } from '@/lib/api'

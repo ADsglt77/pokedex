@@ -28,13 +28,19 @@ export function WelcomePage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
+  // La confirmation a été quittée (ou le formulaire envoyé) : l'écart se dit dès lors.
+  const [confirmLeft, setConfirmLeft] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const mismatch = confirmation !== '' && confirmation !== password
+  const differs = confirmation !== password
+  // Pas dès la première lettre : une fois la confirmation aussi longue que le mot de passe, ou
+  // le champ quitté.
+  const mismatch =
+    confirmation !== '' && differs && (confirmLeft || confirmation.length >= password.length)
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
-    if (password !== confirmation) return
+    if (differs) return setConfirmLeft(true)
     setBusy(true)
     setError(null)
     const { error: refused } = await authClient.signUp
@@ -54,6 +60,7 @@ export function WelcomePage() {
 
   return (
     <AuthCard
+      as="main"
       title="Bienvenue"
       description="Ce Pokédex n’a pas encore de compte : créez le vôtre. Ce sera le seul, personne d’autre ne pourra en créer. Il garde votre collection, vos achats et votre budget sur le serveur, pour les retrouver sur vos appareils (un seul connecté à la fois)."
     >
@@ -101,6 +108,7 @@ export function WelcomePage() {
             value={confirmation}
             error={mismatch ? 'Les deux mots de passe diffèrent.' : undefined}
             onChange={(event) => setConfirmation(event.target.value)}
+            onBlur={() => setConfirmLeft(true)}
           />
           <Button
             type="submit"

@@ -11,9 +11,11 @@
  */
 
 import { Database } from 'bun:sqlite'
-import { existsSync } from 'node:fs'
-import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { createReadStream, createWriteStream, existsSync } from 'node:fs'
+import { mkdir, readdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
+import { pipeline } from 'node:stream/promises'
+import { createGzip } from 'node:zlib'
 import { DATA_DIR } from '../db'
 
 const BACKUP_DIR = process.env.BACKUP_DIR ?? join(DATA_DIR, 'backups')
@@ -47,7 +49,8 @@ export async function backups() {
 
   const plain = join(BACKUP_DIR, `data-${day}.db`)
   await copy('data.db', plain)
-  await writeFile(`${plain}.gz`, Bun.gzipSync(await readFile(plain)))
+  // En flux : la base grossit avec l'historique, elle ne passe pas entière en mémoire.
+  await pipeline(createReadStream(plain), createGzip(), createWriteStream(`${plain}.gz`))
   await rm(plain)
   await prune('data-', 7)
   console.log(`Sauvegardes du ${day} dans ${BACKUP_DIR}`)

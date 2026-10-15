@@ -1,5 +1,5 @@
 import { Card, CardDescription, CardTitle } from '@camply/ui'
-import type { ReactNode } from 'react'
+import type { ReactNode, Ref } from 'react'
 import { cx } from '@/lib/cx'
 import styles from './Panel.module.css'
 
@@ -16,6 +16,7 @@ export function Panel({
   id,
   className,
   flush = false,
+  titleRef,
   children,
 }: {
   title: ReactNode
@@ -25,13 +26,20 @@ export function Panel({
   className?: string
   /** Le contenu touche les bords du panneau : un tableau, sans cadre en plus du panneau. */
   flush?: boolean
+  /** Le titre peut recevoir le focus : quand une action fait disparaître ce qui l'avait. */
+  titleRef?: Ref<HTMLHeadingElement>
   children?: ReactNode
 }) {
   return (
     <Card padding="none" id={id} className={cx(styles.panel, className)}>
       <div className={styles.head}>
         <div className={styles.titles}>
-          <CardTitle headingLevel={2} className={styles.title}>
+          <CardTitle
+            ref={titleRef}
+            tabIndex={titleRef ? -1 : undefined}
+            headingLevel={2}
+            className={styles.title}
+          >
             {title}
           </CardTitle>
           {description && <CardDescription>{description}</CardDescription>}

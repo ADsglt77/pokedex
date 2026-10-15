@@ -7,6 +7,7 @@
  * copiés : le serveur n'est pas un relais ouvert.
  */
 
+import type { Database } from 'bun:sqlite'
 import { mkdir, rename, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { WEEK } from '@/lib/time'
@@ -20,7 +21,7 @@ const SPRITES = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprite
 /** Les chemins locaux connus, et l'adresse d'origine de chacun. */
 const UPSTREAMS: [RegExp, (...parts: string[]) => string][] = [
   [
-    /^\/images\/cards\/pokecardex\/([A-Z0-9_-]+)\/([A-Z0-9]+)-(md|hd)\.webp$/,
+    /^\/images\/cards\/pokecardex\/([A-Z0-9_-]+)\/(\d{1,4})-(md|hd)\.webp$/,
     (set, number, size) =>
       `https://pokecardex-scans.b-cdn.net/sets_jp/${set}/${number}.jpg?class=${size}`,
   ],
@@ -88,14 +89,17 @@ const copies = new Map<string, Promise<boolean>>()
 /**
  * `/images/…` : la copie de l'image (en développement ; sur le VPS, nginx la sert lui-même), sinon
  * copiée à la demande — une référence saisie hors du catalogue, une image que la tâche `images`
- * n'a pas encore copiée.
+ * n'a pas encore copiée. Chez Pokécardex, seulement une extension du catalogue : des chemins
+ * inventés ne font pas solliciter son serveur.
  */
-export async function serveImage(request: Request) {
+export async function serveImage(data: Database, request: Request) {
   const path = new URL(request.url).pathname
   const notFound = () =>
     new Response(null, { status: 404, headers: { 'Cache-Control': 'no-cache' } })
   const upstream = upstreamUrl(path)
   if (!upstream && !LEGACY.test(path)) return notFound()
+  const set = /^\/images\/cards\/pokecardex\/([^/]+)\//.exec(path)?.[1]
+  if (set && !data.query('SELECT 1 FROM sets WHERE id = ?').get(set)) return notFound()
   const file = Bun.file(imageFile(path))
   if (await file.exists()) return new Response(file, { headers: IMAGE_HEADERS })
   if (!upstream) return notFound()

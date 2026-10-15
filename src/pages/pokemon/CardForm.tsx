@@ -1,14 +1,14 @@
 import { Button, Modal, Stack, Tab, TabList, TabPanel, Tabs } from '@camply/ui'
 import { Suspense, useRef, useState } from 'react'
-import { CardFields } from '@/components/CardFields'
-import { NewCardOptions } from '@/components/NewCardOptions'
 import { useCardDraft } from '@/hooks/useCardDraft'
 import { useCollectionAction } from '@/hooks/useNotify'
 import type { CatalogCard } from '@/lib/card-catalog'
 import { useCollectionStore } from '@/store/collection'
 import { addCard } from '@/store/shopping'
 import type { PokemonCard, PokemonSpecies } from '@/types'
+import { CardFields } from './CardFields'
 import { CatalogPicker, type PickerView } from './CatalogPicker'
+import { NewCardOptions } from './NewCardOptions'
 
 /**
  * Ajouter la carte d'un Pokémon (la choisir dans le catalogue des cartes japonaises, qui remplit la

@@ -79,7 +79,7 @@ function catalogResponse(db: Database): CatalogFile {
   cards.sort(
     (a, b) =>
       released.get(b.set)!.localeCompare(released.get(a.set)!) ||
-      b.set.localeCompare(a.set) ||
+      a.set.localeCompare(b.set) ||
       b.sort - a.sort,
   )
   // Des clés numériques : l'objet les garde dans l'ordre des numéros du Pokédex.
@@ -161,6 +161,7 @@ export async function catalog(db: Database) {
   const forget = db.query('DELETE FROM cards WHERE set_id = ? AND seen != ?')
 
   const save = db.transaction((code: string, page: PokecardexSeries, readAt: string) => {
+    const known = (countCards.get(code) as { count: number }).count
     const { fullName, releaseDateFR } = page.currentSeries
     writeSet.run(code, fullName, releaseDateFR?.slice(0, 10) ?? '', readAt)
     // Le numéro imprimé, sinon le rang. Si deux cartes de la série se confondraient (deux
@@ -190,6 +191,12 @@ export async function catalog(db: Database) {
       clearSpecies.run(card.id_card)
       dexIds.forEach((dexId, rank) => writeSpecies.run(card.id_card, rank, dexId))
       saved++
+    }
+    // Moins de la moitié des cartes d'avant : le format des pages a changé (un champ renommé),
+    // pas l'extension. Rien n'est gardé de cette lecture (la transaction est annulée) : elle
+    // compte comme un échec.
+    if (saved < known / 2) {
+      throw new Error(`${code} : ${saved} cartes retenues sur ${known} (format des pages changé ?)`)
     }
     forget.run(code, readAt)
     return saved

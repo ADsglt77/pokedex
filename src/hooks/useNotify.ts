@@ -1,7 +1,6 @@
 import { useToast, type ToastTone } from '@camply/ui'
 import { useCallback } from 'react'
-import { useCollectionStore } from '@/store/collection'
-import { useShoppingStore } from '@/store/shopping'
+import { currentDocument, replaceDocument, sameDocument } from '@/store/document'
 
 interface NotifyOptions {
   tone?: ToastTone
@@ -37,17 +36,6 @@ export function useNotify() {
   )
 }
 
-/** Tout ce qu'une action peut modifier : collection, achats. */
-const snapshot = () => ({
-  collection: useCollectionStore.getState().collection,
-  shopping: useShoppingStore.getState().shopping,
-})
-
-type Snapshot = ReturnType<typeof snapshot>
-
-const sameSnapshot = (a: Snapshot, b: Snapshot) =>
-  a.collection === b.collection && a.shopping === b.shopping
-
 /**
  * Lance une modification de la collection ou des achats, puis l'annonce avec
  * « Annuler ». Annuler rétablit l'état d'avant, seulement si rien n'a changé depuis : une
@@ -58,17 +46,17 @@ export function useCollectionAction() {
 
   return useCallback(
     (change: () => void, message: string, tone: ToastTone = 'success') => {
-      const before = snapshot()
+      // Tout ce qu'une action peut modifier : collection, achats.
+      const before = currentDocument()
       change()
-      const after = snapshot()
-      if (sameSnapshot(before, after)) return
+      const after = currentDocument()
+      if (sameDocument(before, after)) return
 
       notify(message, {
         tone,
         undo: () => {
-          if (!sameSnapshot(snapshot(), after)) return false
-          useCollectionStore.setState({ collection: before.collection })
-          useShoppingStore.setState({ shopping: before.shopping })
+          if (!sameDocument(currentDocument(), after)) return false
+          replaceDocument(before)
           return true
         },
       })

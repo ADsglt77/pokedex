@@ -17,7 +17,7 @@ import { referenceRoutes } from './reference'
 /** Bien au-delà d'une collection de 1 025 cartes et de ses commandes : 413 au-delà. */
 const MAX_BODY = 5_000_000
 
-interface Databases {
+interface AppContext {
   /** Les données de référence, en lecture seule. */
   data: Database
   /** Le compte et la collection. */
@@ -25,7 +25,7 @@ interface Databases {
   accounts: Accounts
 }
 
-export function createApp({ data, app, accounts }: Databases) {
+export function createApp({ data, app, accounts }: AppContext) {
   const account = accountRoutes(accounts)
   return (
     new Elysia({ serve: { maxRequestBodySize: MAX_BODY } })
@@ -38,16 +38,21 @@ export function createApp({ data, app, accounts }: Databases) {
           },
         }),
       )
-      // Une adresse inconnue : 404, sans corps.
-      .onError(({ code }) => {
+      // Une adresse inconnue : 404, sans corps. Une erreur inattendue : dans le journal du serveur,
+      // et 500 sans corps (rien de ses détails, une requête SQL par exemple, ne part vers le site).
+      .onError(({ code, error }) => {
         if (code === 'NOT_FOUND') {
           return new Response(null, { status: 404, headers: { 'Cache-Control': 'no-cache' } })
+        }
+        if (code === 'UNKNOWN' || code === 'INTERNAL_SERVER_ERROR') {
+          console.error('Erreur de l’API :', error)
+          return new Response(null, { status: 500, headers: { 'Cache-Control': 'no-store' } })
         }
       })
       .group('/api', (api) =>
         api.use(account).use(referenceRoutes(data)).use(collectionRoutes(app, account)),
       )
       // Les images copiées chez nous (sur le VPS, nginx ne renvoie ici que celles qu'il n'a pas).
-      .get('/images/*', ({ request }) => serveImage(request), { detail: { hide: true } })
+      .get('/images/*', ({ request }) => serveImage(data, request), { detail: { hide: true } })
   )
 }

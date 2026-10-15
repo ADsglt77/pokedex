@@ -9,8 +9,16 @@ import { searchText, wishlistCsv, type WishRow } from '@/lib/wishlist'
 export function ExportButtons({ rows, name }: { rows: readonly WishRow[]; name: string }) {
   const notify = useNotify()
 
-  const copy = () =>
-    navigator.clipboard.writeText(rows.map((row) => searchText(row.card)).join('\n')).then(
+  const copy = () => {
+    // Hors https (le site ouvert par l'adresse de la machine sur le réseau local…), le navigateur
+    // n'offre pas de presse-papiers.
+    if (!navigator.clipboard) {
+      notify('Copie impossible : le presse-papiers n’est accessible qu’en https.', {
+        tone: 'danger',
+      })
+      return
+    }
+    void navigator.clipboard.writeText(rows.map((row) => searchText(row.card)).join('\n')).then(
       () =>
         notify(
           `${plural(rows.length, 'recherche copiée', 'recherches copiées')} : collez-les dans la recherche de Cardmarket.`,
@@ -20,6 +28,7 @@ export function ExportButtons({ rows, name }: { rows: readonly WishRow[]; name: 
           tone: 'danger',
         }),
     )
+  }
 
   const download = () => {
     const file = downloadCsv(name, wishlistCsv(rows))

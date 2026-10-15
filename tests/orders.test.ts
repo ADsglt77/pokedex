@@ -28,6 +28,17 @@ describe('ce que coûte une commande', () => {
     expect(orderSpent(order({ lines: [line('a', 20)], shipping: 5, state: 'cancelled' }))).toBe(0)
   })
 
+  test('entièrement remboursée : 0 €, pas −0 (« -0,00 € »)', () => {
+    const refunded = order({ lines: [line('a', 0.7)], shipping: 0.1, refunded: 0.8 })
+    expect(Object.is(orderSpent(refunded), 0)).toBe(true)
+    expect(Object.is(unitCosts(refunded)[0], 0)).toBe(true)
+  })
+
+  test('sans carte lisible (quantité 0 à la saisie) : des prix finis, pas l’infini', () => {
+    const lines = [line('a', 0, { quantity: 0 })]
+    expect(unitCosts({ lines, shipping: 3, fees: 0, refunded: 0 })).toEqual([0])
+  })
+
   test('le port est réparti au prorata du prix', () => {
     const lines = [line('a', 30), line('b', 10, { quantity: 2 })]
     const costs = unitCosts({ lines, shipping: 5, fees: 0, refunded: 0 })
@@ -225,6 +236,48 @@ describe('commande reçue modifiée', () => {
     expect(collection.cards.b).toBe(owned.cards.b)
   })
 
+  test('une carte encore dans une autre commande reçue : la date et le prix de celle-ci', () => {
+    const first = order({
+      id: 'first',
+      lines: [line('a', 20)],
+      shipping: 2,
+      state: 'received',
+      receivedAt: '2026-10-07',
+    })
+    const second = order({
+      id: 'second',
+      lines: [line('a', 15)],
+      state: 'received',
+      receivedAt: '2026-10-09',
+    })
+    let both = applyOrder(collectionWith(), null, first, [], NOW)
+    both = applyOrder(both, null, second, [first], NOW)
+    expect(both.cards.a?.paidPrice).toBe(15)
+    // La seconde supprimée : la date et le prix de revient de la première.
+    expect(applyOrder(both, second, null, [first], NOW).cards.a).toEqual({
+      status: 'owned',
+      updatedAt: NOW,
+      acquiredAt: new Date('2026-10-07T12:00:00').toISOString(),
+      paidPrice: 22,
+    })
+    // La première annulée : ceux de la seconde.
+    const cancelled = { ...first, state: 'cancelled' as const }
+    expect(applyOrder(both, first, cancelled, [second], NOW).cards.a).toMatchObject({
+      status: 'owned',
+      acquiredAt: new Date('2026-10-09T12:00:00').toISOString(),
+      paidPrice: 15,
+    })
+  })
+
+  test('remise en cours : la carte reste possédée, telle quelle', () => {
+    const received = order({ lines: [line('a', 20)], state: 'received', receivedAt: '2026-10-09' })
+    const owned = applyOrder(collectionWith(), null, received, [], NOW)
+    const pending = { ...received, state: 'pending' as const, receivedAt: undefined }
+    const after = applyOrder(owned, received, pending, [], NOW)
+    expect(after).toBe(owned)
+    expect(after.cards.a).toMatchObject({ status: 'owned', paidPrice: 20 })
+  })
+
   test('une carte possédée avant la commande (doublon) n’est pas touchée', () => {
     const owned = ownership('owned', { acquiredAt: '2025-05-01T00:00:00.000Z', paidPrice: 12 })
     const received = order({
@@ -235,6 +288,21 @@ describe('commande reçue modifiée', () => {
     const start = applyOrder(collectionWith({ a: owned }), null, received, [], NOW)
     const edited = { ...received, lines: [received.lines[1]!] }
     expect(applyOrder(start, received, edited, [], NOW).cards.a).toBe(owned)
+  })
+})
+
+describe('rien ne change', () => {
+  test('une commande enregistrée telle quelle rend la même collection, sans rien réécrire', () => {
+    const later = '2026-10-12T10:00:00.000Z'
+    const pending = order({ lines: [line('a', 20), line('b', 5, { quantity: 2 })], shipping: 3 })
+    const ordered = applyOrder(collectionWith(), null, pending, [], NOW)
+    expect(applyOrder(ordered, pending, { ...pending }, [], later)).toBe(ordered)
+    const received = { ...pending, state: 'received' as const, receivedAt: '2026-10-09' }
+    const owned = applyOrder(ordered, pending, received, [], NOW)
+    expect(applyOrder(owned, received, { ...received }, [], later)).toBe(owned)
+    const empty = collectionWith()
+    const cancelled = { ...pending, state: 'cancelled' as const }
+    expect(applyOrder(empty, cancelled, { ...cancelled }, [], later)).toBe(empty)
   })
 })
 

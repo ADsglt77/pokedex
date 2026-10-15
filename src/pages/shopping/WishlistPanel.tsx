@@ -1,7 +1,7 @@
 import { Alert, Button, EmptyState, Input, Modal, Select, Stack, Switch } from '@camply/ui'
 import { ListChecks, Search } from '@camply/ui/icons'
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { PreferenceFields } from '@/components/PreferenceFields'
 import { GENERATION_OPTIONS } from '@/config/pokedex'
 import { PRIORITY_LABELS } from '@/config/shopping'
@@ -40,15 +40,38 @@ const PRIORITY_OPTIONS = [
   ...toOptions(PRIORITY_LABELS),
 ]
 
-/** La liste d'achats : chercher, filtrer, trier, modifier une carte, exporter. */
+/** Le filtre « sous le prix maximum » dans l'adresse : `/achats?filtre=sous-max`. */
+const UNDER_MAX = 'sous-max'
+
+/**
+ * La liste d'achats : chercher, filtrer, trier, modifier une carte, exporter. Le filtre « sous le
+ * prix maximum » suit l'adresse (`?filtre=sous-max`, le lien de l'accueil y mène).
+ */
 export function WishlistPanel() {
   const act = useCollectionAction()
   const { rows } = useWishlist()
-  const [filters, setFilters] = useState<WishlistFilters>(DEFAULT_WISHLIST_FILTERS)
+  const [params, setParams] = useSearchParams()
+  const [filters, setFilters] = useState<WishlistFilters>(() => ({
+    ...DEFAULT_WISHLIST_FILTERS,
+    underMax: params.get('filtre') === UNDER_MAX,
+  }))
   const [editingId, setEditingId] = useState<string | null>(null)
   const shown = filterWishlist(rows, filters)
   const editing = rows.find((row) => row.card.id === editingId)
-  const set = (change: Partial<WishlistFilters>) => setFilters({ ...filters, ...change })
+  const applyFilters = (next: WishlistFilters) => {
+    setFilters(next)
+    if (next.underMax === filters.underMax) return
+    setParams(
+      (current) => {
+        const address = new URLSearchParams(current)
+        if (next.underMax) address.set('filtre', UNDER_MAX)
+        else address.delete('filtre')
+        return address
+      },
+      { replace: true, preventScrollReset: true },
+    )
+  }
+  const set = (change: Partial<WishlistFilters>) => applyFilters({ ...filters, ...change })
   const preferences = useShoppingStore((state) => state.shopping.preferences)
   const collection = useCollectionStore((state) => state.collection)
   const toList = cardsToList(preferences, collection)
@@ -170,7 +193,7 @@ export function WishlistPanel() {
           title="Aucune carte ne correspond"
           description="Changez la recherche ou les filtres."
           actions={
-            <Button variant="secondary" onClick={() => setFilters(DEFAULT_WISHLIST_FILTERS)}>
+            <Button variant="secondary" onClick={() => applyFilters(DEFAULT_WISHLIST_FILTERS)}>
               Effacer les filtres
             </Button>
           }

@@ -115,12 +115,13 @@ function ThemeButton({ compact = false }: { compact?: boolean }) {
   )
 }
 
+/** Le logo et le nom ; sur un petit téléphone, « Mon » puis le nom s'effacent (le nom reste lu). */
 function Brand() {
   return (
     <Link to="/" className={styles.brand}>
       <Logo />
-      <span>
-        <span className={styles.brandMine}>Mon</span> Pokédex
+      <span className={styles.brandName}>
+        <span className={styles.brandMine}>Mon </span>Pokédex
       </span>
     </Link>
   )

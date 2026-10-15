@@ -60,6 +60,7 @@
   font-weight: 600;
 }
 
+/* Sous `--text-xs` : le décompte de chaque région tient sous son nom, même étroit. */
 .count {
   color: var(--camply-text-muted-2);
   font-size: 0.6875rem;

@@ -8,13 +8,13 @@ import { cardHistory, gainPercent, priceOf } from '@/lib/prices'
 import { useCollectionStore } from '@/store/collection'
 import { loadPriceHistory, usePrices, usePricesMissing } from '@/store/prices'
 import type { PokemonCard } from '@/types'
-import styles from './CardPrice.module.css'
+import styles from './PricePanel.module.css'
 
 /**
  * La carte chez Cardmarket : son id et sa page, son prix du jour, son évolution et, si le prix
  * payé est noté, l'écart.
  */
-export function CardPrice({ card }: { card: PokemonCard }) {
+export function PricePanel({ card }: { card: PokemonCard }) {
   const prices = usePrices()
   const missing = usePricesMissing()
   const paid = useCollectionStore((state) => state.collection.cards[card.id]?.paidPrice ?? null)
@@ -48,7 +48,7 @@ export function CardPrice({ card }: { card: PokemonCard }) {
           />
           {card.cardmarket !== undefined && (
             <Suspense fallback={<Skeleton height="7rem" />}>
-              <CardPriceHistory card={card} cardmarket={card.cardmarket} />
+              <PriceHistory card={card} cardmarket={card.cardmarket} />
             </Suspense>
           )}
         </>
@@ -69,7 +69,7 @@ export function CardPrice({ card }: { card: PokemonCard }) {
 }
 
 /** La courbe d'une carte qui a un prix (donc un id Cardmarket). */
-function CardPriceHistory({ card, cardmarket }: { card: PokemonCard; cardmarket: number }) {
+function PriceHistory({ card, cardmarket }: { card: PokemonCard; cardmarket: number }) {
   const history = use(loadPriceHistory(cardmarket))
   return <PriceChart points={cardHistory(history)} label={`Prix de la carte ${card.reference}`} />
 }

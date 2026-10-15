@@ -14,7 +14,8 @@ interface PokedexGridProps {
 }
 
 /**
- * Le classeur : un intertitre par génération dès que la liste en couvre plusieurs. Mémoïsé : à
+ * Le classeur : un intertitre par génération dès que la liste en couvre plusieurs (pas des régions
+ * nommées : neuf points de repère de plus, les titres suffisent à s'y retrouver). Mémoïsé : à
  * chaque frappe, le rendu urgent garde l'ancienne liste et passe la grille (environ 1 000 tuiles).
  */
 export const PokedexGrid = memo(function PokedexGrid({ entries, generations }: PokedexGridProps) {
@@ -24,14 +25,10 @@ export const PokedexGrid = memo(function PokedexGrid({ entries, generations }: P
   return groups.map(({ generation, entries: groupEntries }) => {
     const progress = generations.find((row) => row.generation.id === generation.id)!
     return (
-      <section
-        key={generation.id}
-        className={styles.group}
-        aria-labelledby={groups.length > 1 ? `generation-${generation.id}` : undefined}
-      >
+      <section key={generation.id} className={styles.group}>
         {groups.length > 1 && (
           <div className={styles.heading}>
-            <h2 id={`generation-${generation.id}`}>
+            <h2>
               {generation.region}{' '}
               <span className={styles.numeral}>génération {generation.numeral}</span>
             </h2>

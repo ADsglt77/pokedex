@@ -8,7 +8,9 @@
  *    dépasse le prix maximum fixé.
  * 3. Ordre : les cartes choisies à la main, puis la priorité, puis le prix le plus bas.
  * 4. Dans cet ordre, une carte est prise si aucun de ses Pokémon n'est déjà dans le plan et si
- *    elle tient dans le budget, port réservé. Une carte choisie à la main est toujours prise.
+ *    elle tient dans le budget, port réservé. Une carte choisie à la main est prise même au-delà
+ *    du budget ou de son prix maximum, ou si son Pokémon est déjà dans le plan ; mais seulement
+ *    si elle est candidate (étape 1), a un prix, et n'a pas été retirée à la main.
  */
 
 import { PRIORITY_RANK } from '@/config/shopping'

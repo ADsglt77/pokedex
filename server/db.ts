@@ -1,7 +1,8 @@
 /**
  * Les bases SQLite du serveur, dans `DATA_DIR` (`.data/` en local, le volume `db` sur le VPS) :
  * - `data.db` : les données de référence (catalogue, prix, historique…), écrites par les tâches
- *   d'ingestion (`ingest.ts`) seulement ; l'API la lit ;
+ *   d'ingestion (`ingest.ts`) seulement ; l'API la lit (elle n'y applique que les étapes du schéma
+ *   qui manquent, à son démarrage) ;
  * - `app.db` : le compte (Better Auth, `auth.ts`) et la collection synchronisée, écrite par l'API
  *   seulement. Petite mais irremplaçable : à part, elle ne risque rien quand on refait l'autre.
  * Le schéma évolue par étapes (`PRAGMA user_version`) : une étape ajoutée ne modifie jamais les
@@ -206,9 +207,15 @@ const APP_STEPS = [
   `,
 ]
 
-/** Applique les étapes du schéma pas encore passées, une transaction chacune. */
+const userVersion = (db: Database) =>
+  (db.query('PRAGMA user_version').get() as { user_version: number }).user_version
+
+/**
+ * Applique les étapes du schéma pas encore passées, une transaction chacune. À jour, aucun verrou :
+ * l'autre processus peut tenir une longue écriture sans faire échouer ce démarrage.
+ */
 function migrate(db: Database, steps: string[]) {
-  for (;;) {
+  while (userVersion(db) < steps.length) {
     const applied = db.transaction(() => {
       const { user_version: version } = db.query('PRAGMA user_version').get() as {
         user_version: number
@@ -262,6 +269,8 @@ function open(name: string, steps: string[]) {
   db.run('PRAGMA synchronous = NORMAL')
   db.run('PRAGMA busy_timeout = 5000')
   db.run('PRAGMA foreign_keys = ON')
+  // Le journal WAL retombe à 64 Mo après une grosse écriture (l'historique des prix du jour).
+  db.run('PRAGMA journal_size_limit = 67108864')
   migrate(db, steps)
   return db
 }

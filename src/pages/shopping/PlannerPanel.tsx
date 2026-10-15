@@ -12,7 +12,7 @@ import {
   Stack,
 } from '@camply/ui'
 import { Receipt, Sparkles } from '@camply/ui/icons'
-import { useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { PRIORITY_LABELS } from '@/config/shopping'
 import { spentThisMonth } from '@/lib/budget'
 import { isToBuy } from '@/lib/collection'
@@ -86,6 +86,7 @@ export function PlannerPanel({
   } = settings
   const change = (next: PlannerSettings) => onSettingsChange({ ...settings, ...next })
   const [draft, setDraft] = useState<Order | null>(null)
+  const planTitle = useId()
 
   const plan = planPurchase(rows, taken, {
     budget: amount,
@@ -159,9 +160,9 @@ export function PlannerPanel({
         </Stack>
       </Card>
 
-      <Stack as="section" gap={5} aria-labelledby="plan-title">
+      <Stack as="section" gap={5} aria-labelledby={planTitle}>
         <div className={styles.planSummary}>
-          <h2 id="plan-title" className={styles.sectionTitle}>
+          <h2 id={planTitle} className={styles.sectionTitle}>
             {plan.picked.length
               ? plural(plan.picked.length, 'carte proposée', 'cartes proposées')
               : 'Aucune carte proposée'}
@@ -338,7 +339,7 @@ function PlanLine({ row, children }: { row: WishRow; children?: ReactNode }) {
       card={row.card}
       detail={details(
         price === null ? 'sans prix' : priceLabel(price),
-        preference.maxPrice !== undefined && `max ${formatEuro(preference.maxPrice)}`,
+        preference.maxPrice !== undefined && `prix maximum ${formatEuro(preference.maxPrice)}`,
         `priorité ${PRIORITY_LABELS[preference.priority].toLowerCase()}`,
       )}
     >

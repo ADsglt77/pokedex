@@ -1,5 +1,5 @@
 /**
- * Les réponses volumineuses de l'API (prix du jour, catalogue) : calculées une fois en fin de tâche
+ * Les réponses volumineuses de l'API (prix du jour, catalogue, espèces) : calculées une fois en fin de tâche
  * d'ingestion et gardées compressées, avec leur ETag. L'API sert la ligne telle quelle : un
  * navigateur qui a déjà la version du jour reçoit un 304, sans corps.
  */
@@ -23,14 +23,15 @@ export function serveSnapshot(db: Database, name: string, request: Request) {
     etag: string
     body: Uint8Array<ArrayBuffer>
   } | null
-  if (!row) return Response.json(null, { status: 404 })
+  if (!row) return new Response(null, { status: 404, headers: { 'Cache-Control': 'no-cache' } })
   const headers = {
     'Content-Type': 'application/json',
     'Cache-Control': 'no-cache',
     ETag: row.etag,
     Vary: 'Accept-Encoding',
   }
-  if (request.headers.get('if-none-match') === row.etag) {
+  // Un relais (Cloudflare) peut l'affaiblir en `W/"…"` : c'est le même.
+  if (request.headers.get('if-none-match')?.replace(/^W\//, '') === row.etag) {
     return new Response(null, { status: 304, headers })
   }
   return /\bgzip\b/.test(request.headers.get('accept-encoding') ?? '')

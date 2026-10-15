@@ -19,9 +19,12 @@ export let SPECIES: readonly PokemonSpecies[] = []
 
 let speciesById = new Map<number, PokemonSpecies>()
 
-/** Demande les espèces au serveur et les donne à l'app ; `false` s'il ne répond pas. */
+/**
+ * Demande les espèces au serveur et les donne à l'app ; `false` s'il ne répond pas, ou pas en
+ * 15 s (un serveur bloqué donne l'écran « Réessayer », pas une page blanche).
+ */
 export async function loadSpecies() {
-  const file = await getJson<SpeciesFile>('/api/species')
+  const file = await getJson<SpeciesFile>('/api/species', 15_000)
   if (file) {
     SPECIES = file.species
     speciesById = new Map(file.species.map((species) => [species.id, species]))

@@ -1,9 +1,10 @@
 /**
  * Lance le serveur de l'app (`app.ts`), derrière nginx sur le VPS, derrière le proxy de Vite en
  * développement (`bun run dev:server`). Il lit `data.db`, que remplissent les tâches d'ingestion
- * (`ingest.ts`) ; il n'écrit que `app.db` (le compte, la collection synchronisée) et les images
- * copiées à la demande. Les données de référence sont publiques ; la collection exige la connexion.
- * Tant que le compte n'existe pas, il écrit dans son journal le code de la première visite.
+ * (`ingest.ts`) ; il n'écrit que `app.db` (le compte, la collection synchronisée), les images
+ * copiées à la demande et, à son démarrage, les étapes du schéma qui manquent aux deux bases. Les
+ * données de référence sont publiques ; la collection exige la connexion. Tant que le compte
+ * n'existe pas, il écrit dans son journal le code de la première visite.
  */
 
 import { createApp } from './app'

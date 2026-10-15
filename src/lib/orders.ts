@@ -26,8 +26,11 @@ export const newOrder = (date: string, lines: OrderLine[] = [], shipping = 0): O
   updatedAt: '',
 })
 
-/** Au centime : les sommes de prix à virgule ne tombent pas juste. */
-export const cents = (value: number) => Math.round(value * 100) / 100
+/**
+ * Au centime : les sommes de prix à virgule ne tombent pas juste. `+ 0` change −0 (un arrondi
+ * d'un reste à peine négatif) en 0, sans quoi il s'afficherait « -0,00 € ».
+ */
+export const cents = (value: number) => Math.round(value * 100) / 100 + 0
 
 export const cardCount = (lines: readonly Pick<OrderLine, 'quantity'>[]) =>
   lines.reduce((count, line) => count + line.quantity, 0)
@@ -56,7 +59,7 @@ export const refundFits = (order: Pick<Order, 'lines' | 'shipping' | 'fees' | 'r
  * carte, la plus grosse part d'arrondi d'abord, en plusieurs tours s'il le faut, sans passer une
  * carte sous 0 € : les prix de revient font le total de la commande dès qu'une ligne d'une seule
  * carte peut les prendre. (Une ligne de plusieurs cartes ne peut pas prendre un centime sans le
- * multiplier.)
+ * multiplier.) Sans aucune carte (quantités pas encore lisibles, à la saisie), rien à répartir.
  */
 export function unitCosts(
   order: Pick<Order, 'lines' | 'shipping' | 'fees' | 'refunded'>,
@@ -64,11 +67,10 @@ export function unitCosts(
   const extra = order.shipping + order.fees - order.refunded
   const subtotal = linesTotal(order.lines)
   const count = cardCount(order.lines)
+  const share = (unitPrice: number) =>
+    subtotal > 0 ? (extra * unitPrice) / subtotal : count > 0 ? extra / count : 0
   // En centimes, pour compter juste.
-  const exact = order.lines.map(
-    (line) =>
-      (line.unitPrice + (subtotal > 0 ? (extra * line.unitPrice) / subtotal : extra / count)) * 100,
-  )
+  const exact = order.lines.map((line) => (line.unitPrice + share(line.unitPrice)) * 100)
   const costs = exact.map(Math.round)
   const total = Math.round((subtotal + extra) * 100)
   let rest = order.lines.reduce((sum, line, index) => sum - line.quantity * costs[index]!, total)
@@ -84,8 +86,13 @@ export function unitCosts(
       rest -= step
     }
   }
-  return costs.map((cost) => cost / 100)
+  // `+ 0` : pas de −0, comme `cents`.
+  return costs.map((cost) => cost / 100 + 0)
 }
+
+/** Le prix de revient de la carte dans une commande qui la contient. */
+const costIn = (order: Order, cardId: string) =>
+  unitCosts(order)[order.lines.findIndex((line) => line.cardId === cardId)]
 
 /**
  * L'état d'une carte avant une commande : celui que garde la version enregistrée de la commande
@@ -114,7 +121,8 @@ const noonOf = (day: string) => new Date(`${day}T12:00:00`).toISOString()
  *   d'avant « commandée » venait d'une autre commande, disparue depuis : la carte perd alors son
  *   statut ;
  * - celles qui quittent une commande reçue restent possédées, mais sans la date ni le prix payé
- *   qu'elle leur avait donnés : ceux d'avant la commande, aucun (elles n'étaient pas possédées) ;
+ *   qu'elle leur avait donnés : ceux d'une autre commande reçue qui les contient (sa date de
+ *   réception, son prix de revient), sinon aucun (elles n'étaient pas possédées avant) ;
  * - les cartes d'une commande en cours deviennent « commandée », sauf si elles sont déjà possédées ;
  * - les cartes d'une commande reçue deviennent « possédée », datées du jour de réception (une date
  *   de réception corrigée les suit) ;
@@ -136,21 +144,29 @@ export function applyOrder(
     const current = cards[line.cardId]
     if (kept.has(line.cardId)) continue
     // Possédée grâce à cette commande : elle le reste (une possession n'est jamais retirée), sans
-    // la date ni le prix payé que la commande lui avait donnés.
+    // la date ni le prix payé que la commande lui avait donnés. Une autre commande reçue qui la
+    // contient lui donne les siens.
     if (
       before?.state === 'received' &&
       current?.status === 'owned' &&
       line.previous?.status !== 'owned'
     ) {
-      cards[line.cardId] = { status: 'owned', updatedAt: now, acquiredAt: null }
+      const received = orderWith(others, line.cardId, 'received')
+      cards[line.cardId] = received
+        ? {
+            status: 'owned',
+            updatedAt: now,
+            acquiredAt: noonOf(received.receivedAt ?? received.date),
+            paidPrice: costIn(received, line.cardId),
+          }
+        : { status: 'owned', updatedAt: now, acquiredAt: null }
       continue
     }
     if (current?.status !== 'ordered') continue
     // Une autre commande en cours la garde « commandée » : à son prix de revient à elle.
-    const other = orderWith(others, line.cardId, 'pending')
-    if (other) {
-      const index = other.lines.findIndex((known) => known.cardId === line.cardId)
-      cards[line.cardId] = { ...current, updatedAt: now, paidPrice: unitCosts(other)[index] }
+    const pending = orderWith(others, line.cardId, 'pending')
+    if (pending) {
+      cards[line.cardId] = { ...current, updatedAt: now, paidPrice: costIn(pending, line.cardId) }
       continue
     }
     if (line.previous && line.previous.status !== 'ordered') cards[line.cardId] = line.previous

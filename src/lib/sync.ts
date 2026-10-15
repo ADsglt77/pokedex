@@ -5,6 +5,7 @@
  * changé, c'est à l'utilisateur de choisir.
  */
 
+import { DEFAULT_BUDGET } from '@/config/shopping'
 import type { CollectionData, ShoppingData } from '@/types'
 
 /** Ce que les appareils d'un compte partagent. */
@@ -34,12 +35,18 @@ export async function documentHash(document: SyncDocument): Promise<string> {
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
-/** Un document sans rien à perdre : aucune carte, aucune préférence d'achat, aucune commande. */
+/**
+ * Un document sans rien à perdre : aucune carte, aucune préférence d'achat, aucune commande, le
+ * budget par défaut (un budget réglé serait perdu, remplacé par celui de l'autre version).
+ */
 export const isEmptyDocument = ({ collection, shopping }: SyncDocument) =>
   Object.keys(collection.cards).length === 0 &&
   Object.keys(collection.customCards).length === 0 &&
   Object.keys(shopping.preferences).length === 0 &&
-  shopping.orders.length === 0
+  shopping.orders.length === 0 &&
+  shopping.budget.monthly === DEFAULT_BUDGET.monthly &&
+  shopping.budget.ceiling === DEFAULT_BUDGET.ceiling &&
+  shopping.budget.shippingReserve === DEFAULT_BUDGET.shippingReserve
 
 /**
  * Que faire ? `local` : le document de cet appareil (son empreinte, s'il est vide) ; `base` : la
@@ -58,6 +65,9 @@ export function decide(
   if (local.hash === server.hash) return base?.version === server.version ? 'noop' : 'adopt'
   // Première connexion de cet appareil : il garde celle qui a quelque chose, ou il faut choisir.
   if (!base) return local.empty ? 'adopt' : server.empty ? 'push' : 'conflict'
+  // Le serveur en est à une version plus ancienne que celle échangée (sa base restaurée d'une
+  // sauvegarde) : la reprendre perdrait sans rien dire ce qu'il avait reçu depuis.
+  if (server.version < base.version) return 'conflict'
   const changedHere = local.hash !== base.hash
   if (base.version === server.version) return changedHere ? 'push' : 'noop'
   return changedHere ? 'conflict' : 'adopt'
