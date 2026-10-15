@@ -99,7 +99,7 @@ const optionalEuros = (text: string) => (text.trim() === '' ? 0 : parseEuros(tex
 
 /**
  * Le brouillon → la commande, et les erreurs de saisie (vides si tout est lisible). `previous` :
- * l'état d'une carte avant la commande, repris de la version enregistrée, sinon lu maintenant.
+ * l'état d'une carte avant la commande (`previousOf`, que le store relit à l'enregistrement).
  */
 function readDraft(draft: Draft, base: Order, stored: Order | null, collection: CollectionData) {
   const errors: Record<string, string> = {}

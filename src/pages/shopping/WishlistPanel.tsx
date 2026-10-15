@@ -1,7 +1,7 @@
 import { Alert, Button, EmptyState, Input, Modal, Select, Stack, Switch } from '@camply/ui'
 import { ListChecks, Search } from '@camply/ui/icons'
-import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { PreferenceFields } from '@/components/PreferenceFields'
 import { GENERATION_OPTIONS } from '@/config/pokedex'
 import { PRIORITY_LABELS } from '@/config/shopping'
@@ -9,6 +9,7 @@ import { cardTitle } from '@/lib/species'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { isToBuy } from '@/lib/collection'
 import { pokedexUrl } from '@/lib/filters'
+import { keepFocusInList } from '@/lib/focus'
 import { formatInteger, plural, toOptions } from '@/lib/format'
 import {
   cardsToList,
@@ -40,38 +41,25 @@ const PRIORITY_OPTIONS = [
   ...toOptions(PRIORITY_LABELS),
 ]
 
-/** Le filtre « sous le prix maximum » dans l'adresse : `/achats?filtre=sous-max`. */
-const UNDER_MAX = 'sous-max'
-
 /**
- * La liste d'achats : chercher, filtrer, trier, modifier une carte, exporter. Le filtre « sous le
- * prix maximum » suit l'adresse (`?filtre=sous-max`, le lien de l'accueil y mène).
+ * La liste d'achats : chercher, filtrer, trier, modifier une carte, exporter. Ses filtres sont
+ * gardés par la page (`ShoppingPage`) : l'onglet caché est démonté.
  */
-export function WishlistPanel() {
+export function WishlistPanel({
+  filters,
+  onFiltersChange,
+}: {
+  filters: WishlistFilters
+  onFiltersChange: (filters: WishlistFilters) => void
+}) {
   const act = useCollectionAction()
   const { rows } = useWishlist()
-  const [params, setParams] = useSearchParams()
-  const [filters, setFilters] = useState<WishlistFilters>(() => ({
-    ...DEFAULT_WISHLIST_FILTERS,
-    underMax: params.get('filtre') === UNDER_MAX,
-  }))
   const [editingId, setEditingId] = useState<string | null>(null)
+  const list = useRef<HTMLUListElement>(null)
+  const search = useRef<HTMLInputElement>(null)
   const shown = filterWishlist(rows, filters)
   const editing = rows.find((row) => row.card.id === editingId)
-  const applyFilters = (next: WishlistFilters) => {
-    setFilters(next)
-    if (next.underMax === filters.underMax) return
-    setParams(
-      (current) => {
-        const address = new URLSearchParams(current)
-        if (next.underMax) address.set('filtre', UNDER_MAX)
-        else address.delete('filtre')
-        return address
-      },
-      { replace: true, preventScrollReset: true },
-    )
-  }
-  const set = (change: Partial<WishlistFilters>) => applyFilters({ ...filters, ...change })
+  const set = (change: Partial<WishlistFilters>) => onFiltersChange({ ...filters, ...change })
   const preferences = useShoppingStore((state) => state.shopping.preferences)
   const collection = useCollectionStore((state) => state.collection)
   const toList = cardsToList(preferences, collection)
@@ -108,17 +96,25 @@ export function WishlistPanel() {
     )
   }
 
-  const remove = (card: PokemonCard) =>
-    act(
-      () => useShoppingStore.getState().setAccepted(card.id, false),
-      `Carte ${card.reference} retirée de la liste d’achats.`,
-      'info',
+  // Le focus passe à la carte suivante (à la recherche, s'il n'en reste plus).
+  const remove = (card: PokemonCard, index: number) =>
+    keepFocusInList(
+      list,
+      index,
+      () =>
+        act(
+          () => useShoppingStore.getState().setAccepted(card.id, false),
+          `Carte ${card.reference} retirée de la liste d’achats.`,
+          'info',
+        ),
+      search,
     )
 
   return (
     <Stack gap={5} className={styles.panel}>
       <div className={styles.toolbar}>
         <Input
+          ref={search}
           className={styles.search}
           type="search"
           aria-label="Rechercher dans la liste d’achats"
@@ -193,19 +189,19 @@ export function WishlistPanel() {
           title="Aucune carte ne correspond"
           description="Changez la recherche ou les filtres."
           actions={
-            <Button variant="secondary" onClick={() => applyFilters(DEFAULT_WISHLIST_FILTERS)}>
+            <Button variant="secondary" onClick={() => onFiltersChange(DEFAULT_WISHLIST_FILTERS)}>
               Effacer les filtres
             </Button>
           }
         />
       ) : (
-        <ul className={styles.wishGrid}>
-          {shown.map((row) => (
+        <ul ref={list} className={styles.wishGrid}>
+          {shown.map((row, index) => (
             <li key={row.card.id}>
               <WishCard
                 row={row}
                 onEdit={() => setEditingId(row.card.id)}
-                onRemove={() => remove(row.card)}
+                onRemove={() => remove(row.card, index)}
               />
             </li>
           ))}

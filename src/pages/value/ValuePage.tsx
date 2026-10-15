@@ -5,6 +5,7 @@ import { Link } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
 import { PriceChart } from '@/components/PriceChart'
+import { PricedValue } from '@/components/PricedValue'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { usePokedex } from '@/hooks/usePokedex'
 import { cx } from '@/lib/cx'
@@ -40,11 +41,12 @@ import { CardsTable, CompletionTable } from './ValueTables'
 import styles from './ValuePage.module.css'
 
 /** « 3 cartes · payées 120,00 € · 1 sans prix » */
-const tallyHint = (tally: Tally, withPaid: boolean) =>
+const tallyHint = (tally: Tally, withPaid: boolean, priced: boolean) =>
   details(
     plural(tally.count, 'carte', 'cartes'),
     withPaid && tally.paid > 0 && `payées ${formatEuro(tally.paid)}`,
-    tally.unpriced > 0 && `${formatInteger(tally.unpriced)} sans prix`,
+    // Sans les prix (pas encore là, ou indisponibles), chaque carte compterait « sans prix ».
+    priced && tally.unpriced > 0 && `${formatInteger(tally.unpriced)} sans prix`,
   )
 
 /**
@@ -61,9 +63,8 @@ export function ValuePage() {
   const completion = useMemo(() => completionByGeneration(entries, prices), [entries, prices])
   const toComplete = useMemo(() => completionCost(entries, prices), [entries, prices])
   const owned = cards.filter((card) => card.status === 'owned').map((card) => card.card)
-  // Un montant au prix du jour : « — » sans prix, une ébauche tant qu'ils arrivent.
-  const money = (value: number) =>
-    prices ? formatEuro(value) : pricesMissing ? '—' : <Skeleton width="7rem" height="1.75rem" />
+  const priced = prices !== null
+  const money = (value: number) => <PricedValue>{formatEuro(value)}</PricedValue>
 
   return (
     <div className="container">
@@ -95,27 +96,29 @@ export function ValuePage() {
               prices ? gainPercent(tallies.owned.paidCardsValue, tallies.owned.paid) : undefined
             }
             deltaSuffix={'\u00a0%'}
-            hint={tallyHint(tallies.owned, true)}
+            hint={tallyHint(tallies.owned, true, priced)}
           />
           <Stat
             label="Commandées"
             icon={<STATUS_ICONS.ordered size={18} />}
             value={money(tallies.ordered.value)}
-            hint={tallyHint(tallies.ordered, true)}
+            hint={tallyHint(tallies.ordered, true, priced)}
           />
           <Stat
             label="Souhaitées"
             icon={<STATUS_ICONS.wanted size={18} />}
             value={money(tallies.wanted.value)}
-            hint={tallyHint(tallies.wanted, false)}
+            hint={tallyHint(tallies.wanted, false, priced)}
           />
           <Stat
             label="Pour compléter le Pokédex"
             icon={<Flag size={18} />}
             value={money(toComplete.value)}
             hint={details(
-              plural(toComplete.priced, 'Pokémon chiffré', 'Pokémon chiffrés'),
-              toComplete.unpriced > 0 && `${formatInteger(toComplete.unpriced)} sans prix`,
+              priced && plural(toComplete.priced, 'Pokémon chiffré', 'Pokémon chiffrés'),
+              priced &&
+                toComplete.unpriced > 0 &&
+                `${formatInteger(toComplete.unpriced)} sans prix`,
               toComplete.noCard > 0 && `${formatInteger(toComplete.noCard)} sans carte`,
             )}
           />

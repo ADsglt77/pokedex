@@ -95,12 +95,20 @@ const costIn = (order: Order, cardId: string) =>
   unitCosts(order)[order.lines.findIndex((line) => line.cardId === cardId)]
 
 /**
- * L'état d'une carte avant une commande : celui que garde la version enregistrée de la commande
- * (`null` : aucun statut), sinon son état actuel (carte ajoutée à la commande).
+ * L'état d'une carte avant une commande (`null` : aucun statut), relu à chaque enregistrement :
+ * celui que garde la version enregistrée tant que la carte porte l'effet de la commande
+ * (« commandée » par elle en cours, « possédée » par elle reçue), sinon son état actuel : carte
+ * ajoutée, commande annulée (ses cartes ont retrouvé leur état), ou carte corrigée à la main
+ * depuis (possédée par erreur, achetée ailleurs).
  */
 export function previousOf(cardId: string, stored: Order | null, collection: CollectionData) {
+  const current = collection.cards[cardId] ?? null
   const line = stored?.lines.find((known) => known.cardId === cardId)
-  return line ? line.previous : (collection.cards[cardId] ?? null)
+  const effect =
+    stored?.state === 'pending' ? 'ordered' : stored?.state === 'received' ? 'owned' : null
+  return line && line.previous?.status !== 'owned' && current?.status === effect
+    ? line.previous
+    : current
 }
 
 /** La commande de `orders` dans cet état qui contient la carte ; `undefined` s'il n'y en a pas. */

@@ -184,6 +184,14 @@ img {
   }
 }
 
+/* Une hausse (`Stat` `delta`) est un gain : en vert, comme la colonne « Écart » de la page Valeur.
+   camply la met à la couleur de l'accent, rouge en clair et jaune en sombre, qu'on lirait comme une
+   alerte. Classe interne de camply (pas une API) : à revérifier après une mise à jour. */
+.camply-stat__good {
+  background: var(--camply-success-soft);
+  color: var(--camply-success);
+}
+
 .muted {
   color: var(--camply-text-muted);
 }

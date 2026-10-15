@@ -1,6 +1,7 @@
 import { Badge, Button, EmptyState, IconButton, Stack, Table } from '@camply/ui'
 import { Download, Eye, PackageCheck, Pencil, Plus, Receipt, Trash2 } from '@camply/ui/icons'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExternalLink } from '@/components/ExternalLink'
 import { LateOrdersAlert } from './LateOrdersAlert'
@@ -32,19 +33,32 @@ export function OrdersPanel() {
   const [openId, setOpenId] = useState<string | null>(null)
   const [editing, setEditing] = useState<Order | null>(null)
   const [deleting, setDeleting] = useState<Order | null>(null)
+  const newButton = useRef<HTMLButtonElement>(null)
   // Suivie par son id : ouverte, elle reflète ce qu'on y change (« Marquer reçue »).
   const opened = orders.find((order) => order.id === openId)
   const late = new Set(latePendingOrders(orders, today()).map((order) => order.id))
 
+  // Affichée tout de suite : « Marquer reçue » disparaît, le focus va ailleurs (voir ses appels).
   const receive = (order: Order) =>
-    act(
-      () =>
-        useShoppingStore.getState().saveOrder({ ...order, state: 'received', receivedAt: today() }),
-      `Commande reçue : ${plural(cardCount(order.lines), 'carte possédée', 'cartes possédées')}.`,
+    flushSync(() =>
+      act(
+        () =>
+          useShoppingStore
+            .getState()
+            .saveOrder({ ...order, state: 'received', receivedAt: today() }),
+        `Commande reçue : ${plural(cardCount(order.lines), 'carte possédée', 'cartes possédées')}.`,
+      ),
     )
 
-  const remove = (order: Order) =>
-    act(() => useShoppingStore.getState().deleteOrder(order.id), 'Commande supprimée.', 'info')
+  // La fenêtre fermée d'abord, puis le focus à « Nouvelle commande » : elle le rendrait au bouton
+  // de la commande supprimée.
+  const remove = (order: Order) => {
+    flushSync(() => {
+      setDeleting(null)
+      act(() => useShoppingStore.getState().deleteOrder(order.id), 'Commande supprimée.', 'info')
+    })
+    newButton.current?.focus()
+  }
 
   const exportCsv = () => {
     const file = downloadCsv('commandes', ordersCsv(orders))
@@ -67,7 +81,11 @@ export function OrdersPanel() {
           >
             Exporter en CSV
           </Button>
-          <Button leftIcon={<Plus size={16} />} onClick={() => setEditing(newOrder(today()))}>
+          <Button
+            ref={newButton}
+            leftIcon={<Plus size={16} />}
+            onClick={() => setEditing(newOrder(today()))}
+          >
             Nouvelle commande
           </Button>
         </Stack>
@@ -122,7 +140,11 @@ export function OrdersPanel() {
                       size="sm"
                       variant="secondary"
                       leftIcon={<PackageCheck size={14} />}
-                      onClick={() => receive(order)}
+                      onClick={() => {
+                        receive(order)
+                        // Le bouton disparaît avec l'état « en cours » : « Voir » la commande.
+                        document.querySelector<HTMLElement>(`[data-order="${order.id}"]`)?.focus()
+                      }}
                     >
                       Marquer reçue
                     </Button>
@@ -175,6 +197,7 @@ export function OrdersPanel() {
                 return (
                   <span className={styles.rowActions}>
                     <IconButton
+                      data-order={order.id}
                       label={`Voir ${name}`}
                       size="sm"
                       variant="ghost"

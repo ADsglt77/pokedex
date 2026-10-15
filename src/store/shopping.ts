@@ -6,7 +6,7 @@
 
 import { create } from 'zustand'
 import { updateBudget } from '@/lib/budget'
-import { applyOrder, sortOrders } from '@/lib/orders'
+import { applyOrder, previousOf, sortOrders } from '@/lib/orders'
 import { parseStored, readShopping } from '@/lib/transfer'
 import * as rules from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
@@ -36,16 +36,25 @@ export const useShoppingStore = create<ShoppingStore>()((set, get) => {
   const update = (change: (shopping: ShoppingData, now: string) => ShoppingData) =>
     set({ shopping: change(get().shopping, new Date().toISOString()) })
 
-  /** Passe la commande `orderId` à `order` (`null` : supprimée), dans le registre et la collection. */
-  const replaceOrder = (orderId: string, order: Order | null) => {
+  /**
+   * Passe la commande `orderId` à `order` (`null` : supprimée), dans le registre et la collection.
+   * L'état d'avant de chaque carte est relu (`previousOf`) : « Marquer reçue » comme le formulaire.
+   */
+  const replaceOrder = (orderId: string, edited: Order | null) => {
     const now = new Date().toISOString()
     const { shopping } = get()
     const before = shopping.orders.find((known) => known.id === orderId) ?? null
     const others = shopping.orders.filter((known) => known.id !== orderId)
     const collectionStore = useCollectionStore.getState()
-    collectionStore.replaceCollection(
-      applyOrder(collectionStore.collection, before, order, others, now),
-    )
+    const { collection } = collectionStore
+    const order = edited && {
+      ...edited,
+      lines: edited.lines.map((line) => ({
+        ...line,
+        previous: previousOf(line.cardId, before, collection),
+      })),
+    }
+    collectionStore.replaceCollection(applyOrder(collection, before, order, others, now))
     const orders = order ? sortOrders([...others, { ...order, updatedAt: now }]) : others
     set({ shopping: { ...shopping, orders, updatedAt: now } })
   }

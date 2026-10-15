@@ -10,6 +10,7 @@
 import type { Database } from 'bun:sqlite'
 import { mkdir, rename, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { TOTAL_SPECIES } from '@/config/pokedex'
 import { WEEK } from '@/lib/time'
 import { DATA_DIR } from './db'
 import { politeFetch } from './lib/net'
@@ -87,10 +88,25 @@ const misses = new Map<string, number>()
 const copies = new Map<string, Promise<boolean>>()
 
 /**
+ * Un chemin plausible : chez Pokécardex, une série du catalogue et un numéro d'image jusqu'au plus
+ * grand des siens ; un Pokémon du Pokédex. Des chemins inventés ne font pas solliciter les sources.
+ */
+function plausible(data: Database, path: string) {
+  const card = /^\/images\/cards\/pokecardex\/([^/]+)\/(\d+)-/.exec(path)
+  if (card) {
+    const { max } = data
+      .query('SELECT MAX(sort) AS max FROM cards WHERE set_id = ?')
+      .get(card[1]!) as { max: number | null }
+    return max !== null && Number(card[2]) >= 1 && Number(card[2]) <= max
+  }
+  const species = /^\/images\/species\/(?:artwork\/)?(\d+)\.png$/.exec(path)
+  return !species || (Number(species[1]) >= 1 && Number(species[1]) <= TOTAL_SPECIES)
+}
+
+/**
  * `/images/…` : la copie de l'image (en développement ; sur le VPS, nginx la sert lui-même), sinon
  * copiée à la demande — une référence saisie hors du catalogue, une image que la tâche `images`
- * n'a pas encore copiée. Chez Pokécardex, seulement une extension du catalogue : des chemins
- * inventés ne font pas solliciter son serveur.
+ * n'a pas encore copiée. Seulement un chemin plausible (`plausible`).
  */
 export async function serveImage(data: Database, request: Request) {
   const path = new URL(request.url).pathname
@@ -98,8 +114,7 @@ export async function serveImage(data: Database, request: Request) {
     new Response(null, { status: 404, headers: { 'Cache-Control': 'no-cache' } })
   const upstream = upstreamUrl(path)
   if (!upstream && !LEGACY.test(path)) return notFound()
-  const set = /^\/images\/cards\/pokecardex\/([^/]+)\//.exec(path)?.[1]
-  if (set && !data.query('SELECT 1 FROM sets WHERE id = ?').get(set)) return notFound()
+  if (!plausible(data, path)) return notFound()
   const file = Bun.file(imageFile(path))
   if (await file.exists()) return new Response(file, { headers: IMAGE_HEADERS })
   if (!upstream) return notFound()

@@ -12,10 +12,11 @@ import {
   Stack,
 } from '@camply/ui'
 import { Receipt, Sparkles } from '@camply/ui/icons'
-import { useId, useState, type ReactNode } from 'react'
+import { useId, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { PRIORITY_LABELS } from '@/config/shopping'
 import { spentThisMonth } from '@/lib/budget'
 import { isToBuy } from '@/lib/collection'
+import { keepFocusInList } from '@/lib/focus'
 import { details, formatEuro, plural, today } from '@/lib/format'
 import { priceLabel } from '@/lib/prices'
 import { cents, newOrder } from '@/lib/orders'
@@ -87,6 +88,8 @@ export function PlannerPanel({
   const change = (next: PlannerSettings) => onSettingsChange({ ...settings, ...next })
   const [draft, setDraft] = useState<Order | null>(null)
   const planTitle = useId()
+  const heading = useRef<HTMLHeadingElement>(null)
+  const pickedList = useRef<HTMLUListElement>(null)
 
   const plan = planPurchase(rows, taken, {
     budget: amount,
@@ -102,15 +105,10 @@ export function PlannerPanel({
       skipped: toggled(skipped, row.card.id, on),
       forced: on ? toggled(forced, row.card.id, false) : forced,
     })
-  const addAnyway = (row: WishRow) => (
-    <Button
-      size="sm"
-      variant="ghost"
-      onClick={() => change({ forced: toggled(forced, row.card.id, true) })}
-    >
-      Ajouter quand même
-    </Button>
-  )
+  const addAnyway: PlanAction = {
+    label: 'Ajouter quand même',
+    run: (row) => change({ forced: toggled(forced, row.card.id, true) }),
+  }
 
   if (rows.length === 0) {
     return (
@@ -162,7 +160,7 @@ export function PlannerPanel({
 
       <Stack as="section" gap={5} aria-labelledby={planTitle}>
         <div className={styles.planSummary}>
-          <h2 id={planTitle} className={styles.sectionTitle}>
+          <h2 ref={heading} id={planTitle} tabIndex={-1} className={styles.sectionTitle}>
             {plan.picked.length
               ? plural(plan.picked.length, 'carte proposée', 'cartes proposées')
               : 'Aucune carte proposée'}
@@ -174,7 +172,7 @@ export function PlannerPanel({
           <Progress
             value={Math.min(plan.total, amount)}
             max={Math.max(amount, 1)}
-            tone={plan.overBudget ? 'danger' : 'accent'}
+            tone={plan.overBudget ? 'danger' : 'info'}
             size="sm"
             aria-label="Part du budget utilisée"
           />
@@ -198,8 +196,8 @@ export function PlannerPanel({
         )}
 
         {plan.picked.length > 0 ? (
-          <ul className={styles.lines}>
-            {plan.picked.map((row) => (
+          <ul ref={pickedList} className={styles.lines}>
+            {plan.picked.map((row, index) => (
               <li key={row.card.id}>
                 <PlanLine row={row}>
                   {forced.has(row.card.id) && (
@@ -207,7 +205,13 @@ export function PlannerPanel({
                       Ajoutée à la main
                     </Badge>
                   )}
-                  <Button size="sm" variant="ghost" onClick={() => skip(row, true)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      keepFocusInList(pickedList, index, () => skip(row, true), heading)
+                    }
+                  >
                     Retirer
                   </Button>
                 </PlanLine>
@@ -244,6 +248,7 @@ export function PlannerPanel({
         <Accordion multiple>
           <PlanGroup
             value="left"
+            fallback={heading}
             title="Hors budget"
             rows={plan.left}
             empty="Toutes les cartes possibles tiennent dans le budget."
@@ -251,6 +256,7 @@ export function PlannerPanel({
           />
           <PlanGroup
             value="covered"
+            fallback={heading}
             title="Pokémon déjà prévu"
             rows={plan.covered}
             empty="Aucune carte d’un Pokémon déjà dans le plan."
@@ -259,6 +265,7 @@ export function PlannerPanel({
           />
           <PlanGroup
             value="above-max"
+            fallback={heading}
             title="Au-dessus de leur prix maximum"
             rows={plan.aboveMax}
             empty="Aucune carte ne dépasse son prix maximum."
@@ -266,6 +273,7 @@ export function PlannerPanel({
           />
           <PlanGroup
             value="unpriced"
+            fallback={heading}
             title="Sans prix"
             rows={plan.unpriced}
             empty="Toutes les cartes possibles ont un prix."
@@ -273,14 +281,11 @@ export function PlannerPanel({
           />
           <PlanGroup
             value="skipped"
+            fallback={heading}
             title="Retirées à la main"
             rows={plan.skipped}
             empty="Aucune carte retirée."
-            action={(row) => (
-              <Button size="sm" variant="ghost" onClick={() => skip(row, false)}>
-                Remettre
-              </Button>
-            )}
+            action={{ label: 'Remettre', run: (row) => skip(row, false) }}
           />
           <AccordionItem value="how" title="Comment le plan est construit" headingLevel={3}>
             <ol className={styles.steps}>
@@ -348,8 +353,18 @@ function PlanLine({ row, children }: { row: WishRow; children?: ReactNode }) {
   )
 }
 
+/**
+ * L'action d'une carte d'un groupe, qui l'envoie dans un autre : le focus va alors à la carte
+ * suivante du groupe, au titre du plan (`fallback`) s'il se vide.
+ */
+interface PlanAction {
+  label: string
+  run: (row: WishRow) => void
+}
+
 function PlanGroup({
   value,
+  fallback,
   title,
   rows,
   empty,
@@ -357,22 +372,34 @@ function PlanGroup({
   action,
 }: {
   value: string
+  fallback: RefObject<HTMLElement | null>
   title: string
   rows: WishRow[]
   empty: string
   hint?: string
-  action?: (row: WishRow) => ReactNode
+  action?: PlanAction
 }) {
+  const list = useRef<HTMLUListElement>(null)
   return (
     <AccordionItem value={value} title={`${title} (${rows.length})`} headingLevel={3}>
       {hint && rows.length > 0 && <p className="muted">{hint}</p>}
       {rows.length === 0 ? (
         <p className="muted">{empty}</p>
       ) : (
-        <ul className={styles.lines}>
-          {rows.map((row) => (
+        <ul ref={list} className={styles.lines}>
+          {rows.map((row, index) => (
             <li key={row.card.id}>
-              <PlanLine row={row}>{action?.(row)}</PlanLine>
+              <PlanLine row={row}>
+                {action && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => keepFocusInList(list, index, () => action.run(row), fallback)}
+                  >
+                    {action.label}
+                  </Button>
+                )}
+              </PlanLine>
             </li>
           ))}
         </ul>

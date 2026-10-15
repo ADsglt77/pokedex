@@ -1,5 +1,6 @@
 import { Badge, Button, Modal, Stack } from '@camply/ui'
 import { PackageCheck, Pencil, Trash2 } from '@camply/ui/icons'
+import { useRef } from 'react'
 import { ExternalLink } from '@/components/ExternalLink'
 import { LateOrdersAlert } from './LateOrdersAlert'
 import { ORDER_STATE_LABELS } from '@/config/shopping'
@@ -43,6 +44,7 @@ export function OrderDetail({
   const collection = useCollectionStore((state) => state.collection)
   const costs = unitCosts(order)
   const late = latePendingOrders([order], today()).length > 0
+  const editButton = useRef<HTMLButtonElement>(null)
 
   return (
     <Modal
@@ -52,11 +54,23 @@ export function OrderDetail({
       description={order.reference && `Référence ${order.reference}`}
       footer={
         <>
-          <Button variant="secondary" leftIcon={<Pencil size={16} />} onClick={onEdit}>
+          <Button
+            ref={editButton}
+            variant="secondary"
+            leftIcon={<Pencil size={16} />}
+            onClick={onEdit}
+          >
             Modifier
           </Button>
           {order.state === 'pending' && (
-            <Button leftIcon={<PackageCheck size={16} />} onClick={onReceive}>
+            <Button
+              leftIcon={<PackageCheck size={16} />}
+              onClick={() => {
+                // Le bouton disparaît avec l'état « en cours » (`onReceive` affiche tout de suite).
+                onReceive()
+                editButton.current?.focus()
+              }}
+            >
               Marquer reçue
             </Button>
           )}

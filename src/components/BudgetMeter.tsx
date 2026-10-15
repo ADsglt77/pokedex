@@ -5,7 +5,10 @@ import { formatEuro } from '@/lib/format'
 import type { BudgetSettings } from '@/types'
 import styles from './BudgetMeter.module.css'
 
-/** Ce qu'un mois a coûté face à son budget et à son plafond : une réglette, colorée au-delà. */
+/**
+ * Ce qu'un mois a coûté face à son budget et à son plafond : une réglette, colorée au-delà. Dans le
+ * budget, `info` : l'accent (rouge en clair, jaune en sombre) se confondrait avec les dépassements.
+ */
 export function BudgetMeter({ spent, budget }: { spent: number; budget: BudgetSettings }) {
   const level = budgetLevel(spent, budget)
   return (
@@ -16,7 +19,7 @@ export function BudgetMeter({ spent, budget }: { spent: number; budget: BudgetSe
       <Progress
         value={Math.min(spent, budget.ceiling)}
         max={budget.ceiling}
-        tone={level ? BUDGET_LEVELS[level].tone : 'accent'}
+        tone={level ? BUDGET_LEVELS[level].tone : 'info'}
         size="sm"
         aria-label="Part du plafond du mois dépensée"
       />

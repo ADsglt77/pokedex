@@ -1,31 +1,29 @@
-import { Button, RadialProgress, Skeleton, Stat, Steps } from '@camply/ui'
+import { Button, RadialProgress, Stat, Steps } from '@camply/ui'
 import {
   ChevronRight,
   Clock,
   Grid3x3,
   ImageOff,
   Layers,
-  ListChecks,
   Package,
   Receipt,
   TrendingDown,
   Unlink,
-  Wallet,
   type IconProps,
 } from '@camply/ui/icons'
 import { useMemo, type ComponentType, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { BudgetMeter } from '@/components/BudgetMeter'
 import { CardArt } from '@/components/CardArt'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
+import { PricedValue } from '@/components/PricedValue'
 import { ProgressRuler } from '@/components/ProgressRuler'
+import { SpentThisMonthStat, WishlistStat } from '@/components/ShoppingStats'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { usePokedex } from '@/hooks/usePokedex'
 import { useWishlist } from '@/hooks/useWishlist'
-import { monthOf, spentThisMonth } from '@/lib/budget'
-import { isToBuy } from '@/lib/collection'
+import { monthOf } from '@/lib/budget'
 import { cx } from '@/lib/cx'
 import { DEFAULT_FILTERS, filterEntries, pokedexUrl, type CardFilter } from '@/lib/filters'
 import {
@@ -42,7 +40,7 @@ import { latePendingOrders } from '@/lib/orders'
 import { acquisitions, summarize, type Progress, type RecentCard } from '@/lib/pokedex'
 import { gainPercent, tallyByStatus, trackedCards } from '@/lib/prices'
 import { cardTitle } from '@/lib/species'
-import { underMaxCount, wishlistEstimate } from '@/lib/wishlist'
+import { underMaxCount } from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
 import { usePrices, usePricesMissing } from '@/store/prices'
 import { useShoppingStore } from '@/store/shopping'
@@ -315,14 +313,11 @@ function Indicators() {
   const prices = usePrices()
   const pricesMissing = usePricesMissing()
   const collection = useCollectionStore((state) => state.collection)
-  const { orders, budget } = useShoppingStore((state) => state.shopping)
-  const { rows, taken } = useWishlist()
+  const orders = useShoppingStore((state) => state.shopping.orders)
   const owned = useMemo(
     () => tallyByStatus(trackedCards(collection, prices)).owned,
     [collection, prices],
   )
-  const spent = spentThisMonth(orders)
-  const estimate = wishlistEstimate(rows, taken)
   const pending = orders.filter((order) => order.state === 'pending').length
   const late = latePendingOrders(orders, today()).length
 
@@ -332,15 +327,7 @@ function Indicators() {
         <Stat
           label="Valeur de ma collection"
           icon={<STATUS_ICONS.owned size={18} />}
-          value={
-            prices ? (
-              formatEuro(owned.value)
-            ) : pricesMissing ? (
-              '—'
-            ) : (
-              <Skeleton width="7rem" height="1.75rem" />
-            )
-          }
+          value={<PricedValue>{formatEuro(owned.value)}</PricedValue>}
           delta={prices ? gainPercent(owned.paidCardsValue, owned.paid) : undefined}
           deltaSuffix={'\u00a0%'}
           hint={
@@ -354,23 +341,10 @@ function Indicators() {
         />
       </StatLink>
       <StatLink to="/achats?vue=budget">
-        <Stat
-          label="Dépensé ce mois-ci"
-          icon={<Wallet size={18} />}
-          value={formatEuro(spent)}
-          hint={<BudgetMeter spent={spent} budget={budget} />}
-        />
+        <SpentThisMonthStat />
       </StatLink>
       <StatLink to="/achats">
-        <Stat
-          label="Liste d’achats"
-          icon={<ListChecks size={18} />}
-          value={plural(rows.filter(isToBuy).length, 'carte', 'cartes')}
-          hint={details(
-            prices && `environ ${formatEuro(estimate.value)}`,
-            estimate.unpriced > 0 && `${formatInteger(estimate.unpriced)} sans prix`,
-          )}
-        />
+        <WishlistStat />
       </StatLink>
       <StatLink to="/achats?vue=commandes">
         <Stat

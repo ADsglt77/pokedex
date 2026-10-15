@@ -158,6 +158,56 @@ describe('report sur la collection', () => {
     expect(cancelled.cards.a).toBeUndefined()
   })
 
+  test('possédée par erreur, puis corrigée : à la réception, possédée et au prix de revient', () => {
+    const pending = order({ lines: [line('a', 20, { previous: ownership('owned') })] })
+    // Corrigée à la main en « souhaitée » après l'enregistrement de la commande.
+    const corrected = collectionWith({ a: ownership('wanted') })
+    const previous = previousOf('a', pending, corrected)
+    expect(previous).toEqual(ownership('wanted'))
+    const received = {
+      ...pending,
+      state: 'received' as const,
+      receivedAt: '2026-10-09',
+      lines: [line('a', 20, { previous })],
+    }
+    expect(applyOrder(corrected, pending, received, [], NOW).cards.a).toEqual({
+      status: 'owned',
+      updatedAt: NOW,
+      acquiredAt: new Date('2026-10-09T12:00:00').toISOString(),
+      paidPrice: 20,
+    })
+  })
+
+  test('annulée puis réactivée : une carte achetée ailleurs entre-temps garde date et prix', () => {
+    const cancelled = order({
+      lines: [line('a', 20, { previous: ownership('wanted') })],
+      state: 'cancelled',
+    })
+    const bought = ownership('owned', { acquiredAt: '2026-10-08T09:00:00.000Z', paidPrice: 30 })
+    const start = collectionWith({ a: bought })
+    const received = {
+      ...cancelled,
+      state: 'received' as const,
+      receivedAt: '2026-10-09',
+      lines: [line('a', 20, { previous: previousOf('a', cancelled, start) })],
+    }
+    const after = applyOrder(start, cancelled, received, [], NOW)
+    expect(after.cards.a).toBe(bought)
+    expect(applyOrder(after, received, { ...received, state: 'cancelled' }, [], NOW).cards.a).toBe(
+      bought,
+    )
+  })
+
+  test('tant que la carte porte l’effet de la commande, son état d’avant reste celui noté', () => {
+    const wanted = ownership('wanted')
+    const pending = order({ lines: [line('a', 20, { previous: wanted })] })
+    const ordered = applyOrder(collectionWith({ a: wanted }), null, pending, [], NOW)
+    expect(previousOf('a', pending, ordered)).toBe(wanted)
+    const received = { ...pending, state: 'received' as const, receivedAt: '2026-10-09' }
+    const owned = applyOrder(ordered, pending, received, [], NOW)
+    expect(previousOf('a', received, owned)).toBe(wanted)
+  })
+
   test('annuler une commande reçue ne retire pas la possession', () => {
     const received = order({ lines: [line('a', 20)], state: 'received', receivedAt: '2026-10-09' })
     const owned = applyOrder(collectionWith(), null, received, [], NOW)

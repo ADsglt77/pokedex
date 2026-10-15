@@ -124,8 +124,13 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
     price: priceOf(prices, card),
   }))
   const shown = missingOnly ? rows.filter((row) => row.open !== null) : rows
-  // Le rang d'une carte parmi celles qu'on peut encore choisir : celui du focus après l'ajout.
-  const choosable = shown.filter((row) => row.open !== null)
+  // Le rang du focus après l'ajout de la carte `index` à `speciesId` : les cartes d'avant qui
+  // resteront à choisir (celles de ce Pokémon disparaissent ou se désactivent, même avant elle).
+  const rankAfter = (index: number, speciesId: number) =>
+    shown
+      .slice(0, index)
+      .filter((row) => row.card.dexIds.some((id) => id !== speciesId && !entryById.get(id)?.card))
+      .length
   // Les Pokémon de l'extension, et ceux d'entre eux qui ont déjà leur carte (d'ici ou d'ailleurs).
   const setSpecies = new Set(cards.flatMap((card) => card.dexIds))
   const covered = [...setSpecies].filter((id) => entryById.get(id)?.card).length
@@ -238,8 +243,7 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
         <p className="muted">Tous les Pokémon de cette extension ont déjà leur carte.</p>
       ) : (
         <CatalogGrid ref={grid}>
-          {shown.map((row) => {
-            const { card, open, price } = row
+          {shown.map(({ card, open, price }, index) => {
             const speciesId = open ?? card.dexIds[0]!
             return (
               <li key={card.key}>
@@ -248,7 +252,7 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
                   price={price}
                   speciesId={speciesId}
                   disabled={open === null}
-                  onPick={() => open !== null && choose(card, open, choosable.indexOf(row))}
+                  onPick={() => open !== null && choose(card, open, rankAfter(index, open))}
                 >
                   {open === null
                     ? `${getSpecies(speciesId)!.names.fr} a déjà sa carte`
