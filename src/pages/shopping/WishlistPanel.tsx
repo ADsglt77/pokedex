@@ -1,11 +1,23 @@
-import { Alert, Button, EmptyState, Input, Modal, Select, Stack, Switch } from '@camply/ui'
-import { ListChecks, Search } from '@camply/ui/icons'
+import {
+  Alert,
+  Badge,
+  Button,
+  EmptyState,
+  Input,
+  Modal,
+  Popover,
+  Select,
+  Stack,
+  Switch,
+} from '@camply/ui'
+import { ListChecks, Search, SlidersHorizontal } from '@camply/ui/icons'
 import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { PreferenceFields } from '@/components/PreferenceFields'
 import { GENERATION_OPTIONS } from '@/config/pokedex'
 import { PRIORITY_LABELS } from '@/config/shopping'
 import { cardTitle } from '@/lib/species'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { isToBuy } from '@/lib/collection'
 import { pokedexUrl } from '@/lib/filters'
@@ -63,6 +75,9 @@ export function WishlistPanel({
   const preferences = useShoppingStore((state) => state.shopping.preferences)
   const collection = useCollectionStore((state) => state.collection)
   const toList = cardsToList(preferences, collection)
+  // Sur téléphone, les listes et les interrupteurs passent dans un panneau « Filtres » : la liste
+  // commence plus haut.
+  const compact = useMediaQuery('(max-width: 40rem)')
 
   // Les cartes choisies, ni possédées ni commandées, d'un coup dans la liste : « Annuler » les retire.
   const listAll = () =>
@@ -96,6 +111,46 @@ export function WishlistPanel({
     )
   }
 
+  const panelCount = [filters.generation, filters.priority, filters.underMax, filters.all].filter(
+    Boolean,
+  ).length
+  const selects = (
+    <>
+      <Select
+        aria-label="Génération"
+        options={GENERATION_OPTIONS}
+        value={String(filters.generation ?? '')}
+        onChange={(value) => set({ generation: (Number(value) || null) as GenerationId | null })}
+      />
+      <Select
+        aria-label="Priorité"
+        options={PRIORITY_OPTIONS}
+        value={filters.priority ?? ''}
+        onChange={(value) => set({ priority: (value || null) as Priority | null })}
+      />
+      <Select
+        aria-label="Trier par"
+        options={toOptions(SORT_LABELS)}
+        value={filters.sort}
+        onChange={(sort) => set({ sort })}
+      />
+    </>
+  )
+  const switches = (
+    <>
+      <Switch
+        label="Sous le prix maximum"
+        checked={filters.underMax}
+        onChange={(event) => set({ underMax: event.target.checked })}
+      />
+      <Switch
+        label="Aussi possédées et commandées"
+        checked={filters.all}
+        onChange={(event) => set({ all: event.target.checked })}
+      />
+    </>
+  )
+
   // Le focus passe à la carte suivante (à la recherche, s'il n'en reste plus).
   const remove = (card: PokemonCard, index: number) =>
     keepFocusInList(
@@ -123,37 +178,35 @@ export function WishlistPanel({
           value={filters.search}
           onChange={(event) => set({ search: event.target.value })}
         />
-        <Select
-          aria-label="Génération"
-          options={GENERATION_OPTIONS}
-          value={String(filters.generation ?? '')}
-          onChange={(value) => set({ generation: (Number(value) || null) as GenerationId | null })}
-        />
-        <Select
-          aria-label="Priorité"
-          options={PRIORITY_OPTIONS}
-          value={filters.priority ?? ''}
-          onChange={(value) => set({ priority: (value || null) as Priority | null })}
-        />
-        <Select
-          aria-label="Trier par"
-          options={toOptions(SORT_LABELS)}
-          value={filters.sort}
-          onChange={(sort) => set({ sort })}
-        />
+        {compact ? (
+          <Popover
+            placement="bottom-end"
+            trigger={
+              <Button
+                variant="secondary"
+                leftIcon={<SlidersHorizontal size={15} />}
+                aria-label={`Filtres et tri${panelCount ? ` (${plural(panelCount, 'filtre actif', 'filtres actifs')})` : ''}`}
+                className={styles.filtersButton}
+              >
+                Filtres
+                {panelCount > 0 && (
+                  <Badge variant="solid" size="sm">
+                    {panelCount}
+                  </Badge>
+                )}
+              </Button>
+            }
+          >
+            <Stack gap={3} className={styles.filtersPanel}>
+              {selects}
+              {switches}
+            </Stack>
+          </Popover>
+        ) : (
+          selects
+        )}
       </div>
-      <div className={styles.switches}>
-        <Switch
-          label="Sous le prix maximum"
-          checked={filters.underMax}
-          onChange={(event) => set({ underMax: event.target.checked })}
-        />
-        <Switch
-          label="Aussi possédées et commandées"
-          checked={filters.all}
-          onChange={(event) => set({ all: event.target.checked })}
-        />
-      </div>
+      {!compact && <div className={styles.switches}>{switches}</div>}
 
       {filters.underMax && (
         <Alert tone="info" title="Un indicateur de marché, pas une offre.">

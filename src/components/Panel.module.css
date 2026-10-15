@@ -29,15 +29,19 @@
   font-size: var(--title-sm);
 }
 
+/* À droite, même passées sous le titre faute de place. */
 .actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--camply-space-2);
+  margin-left: auto;
 }
 
+/* Le contenu remplit le panneau quand une grille l'étire à la hauteur de son voisin. */
 .body {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: var(--camply-space-4);
   min-width: 0;
@@ -55,12 +59,11 @@
   border-radius: 0;
 }
 
-.flush :global(.camply-table__th:first-child),
-.flush :global(.camply-table__td:first-child) {
+/* `:where` : sans poids, ces marges cèdent à celles d'un tableau devenu liste (`.stack-table`). */
+.flush :global(:where(.camply-table__th, .camply-table__td):first-child) {
   padding-left: var(--space-panel);
 }
 
-.flush :global(.camply-table__th:last-child),
-.flush :global(.camply-table__td:last-child) {
+.flush :global(:where(.camply-table__th, .camply-table__td):last-child) {
   padding-right: var(--space-panel);
 }

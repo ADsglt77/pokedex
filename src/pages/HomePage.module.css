@@ -5,10 +5,17 @@
   gap: var(--space-block);
 }
 
-@media (min-width: 72rem) {
+/* Côte à côte, la progression et « À faire » ont la même hauteur : leurs bas s'alignent. À parts
+   égales d'abord (« À faire » trop étroit s'allongerait), la progression plus large ensuite. */
+@container page (min-width: 56rem) {
+  .dashboard {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container page (min-width: 80rem) {
   .dashboard {
     grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
-    align-items: start;
   }
 }
 
@@ -24,6 +31,11 @@
   align-items: center;
   gap: var(--camply-space-6);
   padding-bottom: var(--camply-space-2);
+}
+
+/* La réglette des générations au bas du panneau, quand il s'étire à la hauteur de « À faire ». */
+.ruler {
+  margin-top: auto;
 }
 
 .ring {
@@ -162,10 +174,78 @@
 
 /* Cartes : les dernières obtenues, ou les premières choisies */
 
+/* Une rangée, autant de cartes que la largeur du panneau en tient (dix au plus) : de trois sur
+   téléphone à dix sur un très grand écran ; les autres sont cachées, pas seulement rognées (elles
+   ne reçoivent pas le focus). */
 .cards {
+  --shown: 3;
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--shown), minmax(0, 1fr));
   gap: 1.5rem 1rem;
+}
+
+.cards > :nth-child(n + 4) {
+  display: none;
+}
+
+@container page (min-width: 32rem) {
+  .cards {
+    --shown: 4;
+  }
+
+  .cards > :nth-child(4) {
+    display: block;
+  }
+}
+
+@container page (min-width: 42rem) {
+  .cards {
+    --shown: 5;
+  }
+
+  .cards > :nth-child(5) {
+    display: block;
+  }
+}
+
+@container page (min-width: 52rem) {
+  .cards {
+    --shown: 6;
+  }
+
+  .cards > :nth-child(6) {
+    display: block;
+  }
+}
+
+@container page (min-width: 66rem) {
+  .cards {
+    --shown: 7;
+  }
+
+  .cards > :nth-child(7) {
+    display: block;
+  }
+}
+
+@container page (min-width: 78rem) {
+  .cards {
+    --shown: 8;
+  }
+
+  .cards > :nth-child(8) {
+    display: block;
+  }
+}
+
+@container page (min-width: 98rem) {
+  .cards {
+    --shown: 10;
+  }
+
+  .cards > :nth-child(n + 9) {
+    display: block;
+  }
 }
 
 .card {
@@ -202,15 +282,5 @@
   from {
     opacity: 0;
     transform: translate(-1.25rem, -0.75rem) rotate(-4deg);
-  }
-}
-
-@media (max-width: 63.99rem) {
-  .cards {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .cards > :nth-child(n + 4) {
-    display: none;
   }
 }

@@ -20,14 +20,14 @@
 
 .line {
   fill: none;
-  stroke: var(--camply-accent);
+  stroke: var(--chart-line);
   stroke-width: 2;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
 }
 
 .area {
-  fill: var(--camply-accent-soft);
+  fill: var(--chart-fill);
 }
 
 .max,

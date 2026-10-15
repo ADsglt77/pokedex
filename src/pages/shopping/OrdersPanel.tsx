@@ -4,9 +4,11 @@ import { useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExternalLink } from '@/components/ExternalLink'
+import { TableCount } from '@/components/TableCount'
 import { LateOrdersAlert } from './LateOrdersAlert'
 import { useCollectionAction, useNotify } from '@/hooks/useNotify'
-import { formatDate, formatEuro, formatInteger, plural, today } from '@/lib/format'
+import { cx } from '@/lib/cx'
+import { formatDate, formatEuro, plural, today } from '@/lib/format'
 import {
   cardCount,
   LATE_AFTER_DAYS,
@@ -106,7 +108,7 @@ export function OrdersPanel() {
         />
       ) : (
         <Table
-          className="data-table"
+          className={cx('data-table stack-table', styles.orders)}
           data={orders}
           rowKey={(order) => order.id}
           // L'état et « Marquer reçue » juste après la date : sur téléphone, sans faire défiler.
@@ -171,7 +173,9 @@ export function OrdersPanel() {
               header: 'Cartes',
               align: 'right',
               sortValue: (order) => cardCount(order.lines),
-              cell: (order) => formatInteger(cardCount(order.lines)),
+              cell: (order) => (
+                <TableCount count={cardCount(order.lines)} one="carte" many="cartes" />
+              ),
             },
             {
               key: 'total',

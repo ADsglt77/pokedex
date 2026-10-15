@@ -11,6 +11,41 @@
   max-width: 50rem;
 }
 
+/* Grand écran : deux colonnes plutôt qu'une bande étroite et du vide. La collection à gauche,
+   l'export et l'import à droite ; les sources et l'effacement sur toute la largeur. */
+@container page (min-width: 84rem) {
+  .sections {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'collection exporter'
+      'collection importer'
+      'reference reference'
+      'effacer effacer';
+    align-items: start;
+    max-width: 104rem;
+  }
+
+  .sections > [id='collection'] {
+    grid-area: collection;
+  }
+
+  .sections > [id='exporter'] {
+    grid-area: exporter;
+  }
+
+  .sections > [id='importer'] {
+    grid-area: importer;
+  }
+
+  .sections > [id='reference'] {
+    grid-area: reference;
+  }
+
+  .sections > [id='effacer'] {
+    grid-area: effacer;
+  }
+}
+
 /* Le sommaire : une rangée de liens qui défile de côté, puis une colonne sur grand écran. */
 .toc ul {
   display: flex;
@@ -45,7 +80,7 @@
   color: var(--camply-text-strong);
 }
 
-@media (min-width: 80rem) {
+@container page (min-width: 60rem) {
   .layout {
     grid-template-columns: 12rem minmax(0, 1fr);
     align-items: start;
@@ -77,11 +112,14 @@
 }
 
 /* L'effacement : bordé de rouge, son titre aussi. */
-.danger {
-  border-color: color-mix(in srgb, var(--camply-danger) 35%, var(--camply-border-soft));
+.section.danger {
+  border-color: var(--camply-danger-border);
+  /* Un fond teinté : une zone à part, qu'on ne confond pas avec une action de la page (l'export,
+     au rouge de l'accent en thème clair). */
+  background: color-mix(in srgb, var(--camply-danger) 5%, var(--camply-surface));
 }
 
-.danger h2 {
+.section.danger h2 {
   color: var(--camply-danger);
 }
 

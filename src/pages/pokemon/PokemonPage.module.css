@@ -60,23 +60,20 @@
   align-items: start;
 }
 
-@container (min-width: 46rem) {
+@container (min-width: 64rem) {
   .columns {
     grid-template-columns: minmax(0, 1fr) 20rem;
   }
 }
 
+/* La carte à gauche, à la mesure de la page (`cqi` : la largeur de la page, barre latérale déduite) :
+   assez petite à côté de la barre latérale pour laisser place à la fiche, plus grande sur un grand
+   écran. */
 @media (min-width: 40rem) {
   .layout {
-    grid-template-columns: clamp(14rem, 36vw, 20rem) minmax(0, 1fr);
+    grid-template-columns: clamp(14rem, 30cqi, 26rem) minmax(0, 1fr);
     grid-template-rows: auto 1fr;
     grid-template-areas: 'stage head' 'stage body';
-  }
-}
-
-@media (min-width: 64rem) {
-  .layout {
-    grid-template-columns: 22rem minmax(0, 1fr);
   }
 }
 

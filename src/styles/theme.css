@@ -19,6 +19,12 @@
   /* Le sprite grisé d'un Pokémon sans carte (`CardArt`) : sur fond sombre, il ressort de lui-même. */
   --empty-sprite-opacity: 0.35;
   --empty-sprite-opacity-large: 0.5;
+  /* Les liens et les courbes : à l'accent en sombre (le jaune ne se lit pas comme une alerte). */
+  --link: var(--camply-accent);
+  --link-underline: color-mix(in srgb, var(--camply-accent) 45%, transparent);
+  --link-underline-hover: var(--camply-accent);
+  --chart-line: var(--camply-accent);
+  --chart-fill: var(--camply-accent-soft);
 
   /* Sombre : gris foncé, sans teinte. */
   --camply-bg: #141414;
@@ -94,6 +100,14 @@
   /* Sur le blanc, le sprite grisé s'effacerait : moins transparent. */
   --empty-sprite-opacity: 0.7;
   --empty-sprite-opacity-large: 0.8;
+  /* Le rouge est la marque et l'action principale, pas la couleur de tout : un lien rouge, une
+     courbe rouge se liraient comme une erreur ou une perte. Liens à l'encre, soulignés de rouge ;
+     courbes à l'encre. */
+  --link: var(--camply-text-strong);
+  --link-underline: color-mix(in srgb, var(--camply-accent) 55%, transparent);
+  --link-underline-hover: var(--camply-accent);
+  --chart-line: #4a3f3b;
+  --chart-fill: rgba(74, 63, 59, 0.08);
 
   --camply-bg: #faf6f3;
   --camply-surface: #ffffff;
@@ -168,4 +182,23 @@
   --camply-tooltip-dark: #17110f;
   --camply-checker-fg: rgba(60, 35, 28, 0.1);
   --camply-checker-bg: #f4eeea;
+}
+
+/* Thème clair : le choix d'un `SegmentedControl` (ordre, « Ajouter comme », liste d'achats) est un
+   bouton blanc en relief sur un rail gris, pas un pavé rouge qui ressemblerait à une alerte.
+   Classes internes de camply (pas une API) : à revérifier après une mise à jour. */
+:root[data-camply-theme='light'] .camply-segmentedcontrol__root {
+  border-color: var(--camply-border-soft);
+  background: var(--camply-surface-2);
+}
+
+:root[data-camply-theme='light'] .camply-segmentedcontrol__thumb {
+  background: var(--camply-surface);
+  box-shadow:
+    0 0 0 1px var(--camply-border),
+    var(--camply-shadow-sm);
+}
+
+:root[data-camply-theme='light'] .camply-segmentedcontrol__active {
+  color: var(--camply-text-strong);
 }

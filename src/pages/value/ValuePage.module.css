@@ -6,7 +6,7 @@
   gap: var(--space-block);
 }
 
-@media (min-width: 64rem) {
+@container page (min-width: 48rem) {
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
@@ -70,4 +70,82 @@
   margin-left: auto;
   font-variant-numeric: tabular-nums;
   text-align: right;
+}
+
+/* Téléphone : chaque carte en fiche (`.stack-table`) : son nom et sa valeur, puis son statut, le
+   prix payé et l'écart. */
+@container table (max-width: 36rem) {
+  .cardsTable tbody tr {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'name name value'
+      'status paid gain';
+  }
+
+  .cardsTable td:nth-child(1) {
+    grid-area: name;
+  }
+
+  .cardsTable td:nth-child(2) {
+    grid-area: status;
+    color: var(--camply-text-muted);
+    font-size: var(--text-md);
+  }
+
+  .cardsTable td:nth-child(3) {
+    grid-area: paid;
+    color: var(--camply-text-muted);
+    font-size: var(--text-md);
+  }
+
+  .cardsTable td:nth-child(4) {
+    grid-area: value;
+    color: var(--camply-text-strong);
+    font-weight: 600;
+  }
+
+  .cardsTable td:nth-child(5) {
+    grid-area: gain;
+    font-size: var(--text-md);
+  }
+}
+
+/* Téléphone : chaque génération en fiche : son nom et le coût, puis ses Pokémon à débloquer, sans
+   carte et sans prix. */
+@container table (max-width: 36rem) {
+  .completion tbody tr {
+    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      'generation generation cost'
+      'unlock noCard unpriced';
+  }
+
+  .completion td:nth-child(1) {
+    grid-area: generation;
+  }
+
+  .completion td:nth-child(2) {
+    grid-area: unlock;
+  }
+
+  .completion td:nth-child(3) {
+    grid-area: noCard;
+  }
+
+  .completion td:nth-child(4) {
+    grid-area: unpriced;
+  }
+
+  .completion td:nth-child(2),
+  .completion td:nth-child(3),
+  .completion td:nth-child(4) {
+    color: var(--camply-text-muted);
+    font-size: var(--text-md);
+  }
+
+  .completion td:nth-child(5) {
+    grid-area: cost;
+    color: var(--camply-text-strong);
+    font-weight: 600;
+  }
 }

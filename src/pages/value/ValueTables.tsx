@@ -1,9 +1,10 @@
 import { Table } from '@camply/ui'
 import { Link } from 'react-router'
 import { cardTitle } from '@/lib/species'
+import { TableCount } from '@/components/TableCount'
 import { cx } from '@/lib/cx'
 import { pokedexUrl, speciesPath } from '@/lib/filters'
-import { formatEuro, formatEuroChange, formatInteger, statusLabel } from '@/lib/format'
+import { formatEuro, formatEuroChange, statusLabel } from '@/lib/format'
 import type { CompletionCost, TrackedCard } from '@/lib/prices'
 import { type Generation, generationLabel } from '@/config/pokedex'
 import type { CardStatus } from '@/types'
@@ -40,7 +41,7 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
 
   return (
     <Table
-      className="data-table"
+      className={cx('data-table stack-table', styles.cardsTable)}
       data={rows}
       rowKey={(row) => row.id}
       defaultSort={{ key: 'value', dir: 'desc' }}
@@ -68,7 +69,16 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
           header: 'Payé',
           align: 'right',
           sortValue: (row) => row.paid ?? -1,
-          cell: (row) => money(row.paid),
+          // Sur téléphone, « payé » n'est dit que s'il est connu.
+          cell: (row) =>
+            row.paid === null ? (
+              <span className="stack-hidden">—</span>
+            ) : (
+              <>
+                <span className="stack-label">payé </span>
+                {formatEuro(row.paid)}
+              </>
+            ),
         },
         {
           key: 'value',
@@ -84,9 +94,10 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
           sortValue: (row) => row.gain ?? Number.NEGATIVE_INFINITY,
           cell: (row) =>
             row.gain === null ? (
-              '—'
+              <span className="stack-hidden">—</span>
             ) : (
               <span className={cx(row.gain > 0 && styles.up, row.gain < 0 && styles.down)}>
+                <span className="stack-label">écart </span>
                 {formatEuroChange(row.gain)}
               </span>
             ),
@@ -109,7 +120,7 @@ export function CompletionTable({
 }) {
   return (
     <Table
-      className="data-table"
+      className={cx('data-table stack-table', styles.completion)}
       data={rows}
       rowKey={(row) => row.generation.id}
       columns={[
@@ -126,19 +137,30 @@ export function CompletionTable({
           key: 'toUnlock',
           header: 'À débloquer',
           align: 'right',
-          cell: ({ cost }) => formatInteger(cost.priced + cost.unpriced + cost.noCard),
+          cell: ({ cost }) => (
+            <TableCount
+              count={cost.priced + cost.unpriced + cost.noCard}
+              one="à débloquer"
+              many="à débloquer"
+            />
+          ),
         },
         {
           key: 'noCard',
           header: 'Sans carte',
           align: 'right',
-          cell: ({ cost }) => formatInteger(cost.noCard),
+          cell: ({ cost }) => <TableCount count={cost.noCard} one="sans carte" many="sans carte" />,
         },
         {
           key: 'unpriced',
           header: 'Sans prix',
           align: 'right',
-          cell: ({ cost }) => (priced ? formatInteger(cost.unpriced) : '—'),
+          cell: ({ cost }) =>
+            priced ? (
+              <TableCount count={cost.unpriced} one="sans prix" many="sans prix" />
+            ) : (
+              <span className="stack-hidden">—</span>
+            ),
         },
         {
           key: 'cost',

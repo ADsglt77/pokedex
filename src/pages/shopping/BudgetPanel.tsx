@@ -13,6 +13,8 @@ import { details, formatEuro, formatInteger, formatMonth, plural } from '@/lib/f
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
 import { Panel } from '@/components/Panel'
+import { TableCount } from '@/components/TableCount'
+import { cx } from '@/lib/cx'
 import { BudgetField } from './BudgetField'
 import styles from './ShoppingPage.module.css'
 
@@ -24,9 +26,14 @@ const COUNT_COLUMNS: Column<Row>[] = [
     key: 'orders',
     header: 'Commandes',
     align: 'right',
-    cell: (row) => formatInteger(row.orders),
+    cell: (row) => <TableCount count={row.orders} one="commande" many="commandes" />,
   },
-  { key: 'cards', header: 'Cartes', align: 'right', cell: (row) => formatInteger(row.cards) },
+  {
+    key: 'cards',
+    header: 'Cartes',
+    align: 'right',
+    cell: (row) => <TableCount count={row.cards} one="carte" many="cartes" />,
+  },
 ]
 
 /** Le budget : ses réglages, et ce que disent les commandes, par mois et par fournisseur. */
@@ -89,7 +96,7 @@ export function BudgetPanel() {
         description="Chaque commande compte une fois, dans le mois de sa date d’achat : cartes, port et frais, moins le remboursé. Une commande annulée ne compte pas."
       >
         <Table
-          className="data-table"
+          className={cx('data-table stack-table', styles.months)}
           data={months}
           rowKey={(row) => row.key}
           emptyState="Aucune commande enregistrée."
@@ -100,7 +107,12 @@ export function BudgetPanel() {
               key: 'shipping',
               header: 'Port et frais',
               align: 'right',
-              cell: (row) => formatEuro(row.shipping),
+              cell: (row) => (
+                <>
+                  <span className="stack-label">port </span>
+                  {formatEuro(row.shipping)}
+                </>
+              ),
             },
             {
               key: 'spent',
@@ -126,7 +138,7 @@ export function BudgetPanel() {
 
       <Panel title="Par fournisseur" flush>
         <Table
-          className="data-table"
+          className={cx('data-table stack-table', styles.suppliers)}
           data={suppliers}
           rowKey={(row) => row.key}
           emptyState="Aucune commande enregistrée."

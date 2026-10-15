@@ -22,9 +22,16 @@
   gap: 0.75rem;
 }
 
+/* Un champ peut rétrécir sous la largeur par défaut d'un `input` : sinon, il prendrait la ligne
+   et renverrait le panneau de filtres dessous. */
 .search {
   flex: 1 1 16rem;
+  min-width: 0;
   max-width: 24rem;
+}
+
+.search input {
+  min-width: 0;
 }
 
 /* Les filtres rapides : à la ligne quand la place manque (sur téléphone, ils défilent). */
@@ -104,17 +111,26 @@
   }
 }
 
-/* Téléphone : la recherche et le panneau sur une ligne, puis les filtres rapides, qui défilent de
-   côté. */
-@media (max-width: 40rem) {
+/* Quand tout ne tient pas sur une ligne : la recherche, le panneau et l'ordre en haut, les filtres
+   rapides sur toute la ligne dessous (plutôt que trois lignes à moitié vides). */
+@container page (max-width: 66rem) {
   .search {
-    flex-basis: 10rem;
-    max-width: none;
+    max-width: 32rem;
   }
 
   .chips {
     order: 3;
     flex: 1 1 100%;
+  }
+}
+
+/* Téléphone : les filtres rapides défilent de côté. */
+@media (max-width: 40rem) {
+  .search {
+    flex-basis: 10rem;
+  }
+
+  .chips {
     flex-wrap: nowrap;
     margin-inline: calc(-1 * var(--gutter));
     /* De la place autour : l'anneau du focus n'est pas rogné par le défilement. */

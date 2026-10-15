@@ -1,5 +1,5 @@
 import { Badge, Tab, TabList, TabPanel, Tabs } from '@camply/ui'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { SHOPPING_VIEWS, UNDER_MAX } from '@/lib/filters'
@@ -56,6 +56,15 @@ export function ShoppingPage() {
     focusOrders.current = false
     ordersTab.current?.focus()
   }, [view])
+  // Sur téléphone, les onglets défilent de côté : l'onglet ouvert est amené dans la rangée (sans
+  // faire défiler la page, contrairement à `scrollIntoView`).
+  const tabList = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const list = tabList.current
+    const tab = list?.querySelector<HTMLElement>('[aria-selected="true"]')
+    if (!list || !tab) return
+    list.scrollLeft = tab.offsetLeft - (list.clientWidth - tab.offsetWidth) / 2
+  }, [view])
   const underMax = underMaxCount(rows)
   const pending = useShoppingStore(
     (state) => state.shopping.orders.filter((order) => order.state === 'pending').length,
@@ -72,18 +81,24 @@ export function ShoppingPage() {
       <BudgetOverview />
 
       <Tabs value={view} onChange={openView} defaultValue="liste" className={styles.tabs}>
-        <TabList aria-label="Achats" className={styles.tabList}>
+        <TabList ref={tabList} aria-label="Achats" className={styles.tabList}>
           <Tab value="liste">
             Liste d’achats <Badge size="sm">{rows.filter(isToBuy).length}</Badge>
             {underMax > 0 && (
-              <Badge size="sm" tone="success">
+              <Badge size="sm" tone="success" className={styles.secondaryBadge}>
                 {underMax} sous le prix maximum
               </Badge>
             )}
           </Tab>
           <Tab value="prochaine-commande">Prochaine commande</Tab>
           <Tab ref={ordersTab} value="commandes">
-            Commandes {pending > 0 && <Badge size="sm">{pending} en cours</Badge>}
+            Commandes{' '}
+            {pending > 0 && (
+              <Badge size="sm">
+                {pending}
+                <span className={styles.badgeWords}> en cours</span>
+              </Badge>
+            )}
           </Tab>
           <Tab value="budget">Budget</Tab>
         </TabList>

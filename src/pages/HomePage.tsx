@@ -82,6 +82,9 @@ function trackingSentence(ordered: number, wanted: number): string | null {
   return null
 }
 
+/** Les cartes de la rangée de l'accueil : le panneau en montre autant que sa largeur en tient. */
+const SHOWN_CARDS = 10
+
 /**
  * L'accueil, un tableau de bord : la progression (en tout, par génération), ce qui attend une
  * action, la valeur et le budget du mois, puis les dernières cartes obtenues. Une collection vide
@@ -123,7 +126,11 @@ export function HomePage() {
         <ProgressPanel />
         {started ? <TodoPanel /> : <StartPanel />}
         {started && <Indicators />}
-        {obtained.length > 0 ? <RecentPanel cards={obtained.slice(0, 6)} /> : started && <Chosen />}
+        {obtained.length > 0 ? (
+          <RecentPanel cards={obtained.slice(0, SHOWN_CARDS)} />
+        ) : (
+          started && <Chosen />
+        )}
       </div>
     </div>
   )
@@ -162,7 +169,7 @@ function ProgressPanel() {
           {tracking && <p className="muted">{tracking}</p>}
         </div>
       </div>
-      <div inert={narrow}>
+      <div inert={narrow} className={styles.ruler}>
         <ProgressRuler generations={generations} />
       </div>
       {narrow && (
@@ -443,7 +450,7 @@ function CardLink({
 /** Aucune carte obtenue, mais des cartes choisies : les premières, à obtenir. */
 function Chosen() {
   const { entries } = usePokedex()
-  const chosen = entries.filter((entry) => entry.card?.card.image).slice(0, 6)
+  const chosen = entries.filter((entry) => entry.card?.card.image).slice(0, SHOWN_CARDS)
   if (chosen.length === 0) return null
   return (
     <Panel

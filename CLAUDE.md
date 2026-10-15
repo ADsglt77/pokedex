@@ -65,7 +65,10 @@ bun server/create-user.ts <e-mail>       # change le mot de passe du compte (ou 
   synchronisée) ; sans choix, celui du système, posé avant le premier affichage par le script
   d'`index.html` (même règle). Les couleurs se changent dans `theme.css`, jamais dans un
   composant ; ce qui diffère d'un thème à l'autre hors camply y a aussi son jeton
-  (`--empty-sprite-opacity` : le sprite grisé d'un Pokémon sans carte, `--card-glare`). Le logo
+  (`--empty-sprite-opacity` : le sprite grisé d'un Pokémon sans carte, `--card-glare` ; `--link`
+  et `--chart-*` : en clair, liens et courbes à l'encre, liens soulignés de rouge, pour que le
+  rouge reste la marque et l'action principale, pas une alerte ; le choix d'un `SegmentedControl`
+  y est un bouton blanc en relief). Le logo
   est une Poké Ball plate (`Logo`, `AppShell` ; couleurs `--brand-*`, les mêmes dans les deux
   thèmes), la même que l'icône de l'onglet (`public/favicon.svg`). Un composant maison seulement
   s'il est métier ou absent de la lib.
@@ -101,7 +104,7 @@ bun server/create-user.ts <e-mail>       # change le mot de passe du compte (ou 
 | `src/lib/` | Règles **pures** : `species` (espèces, données par le serveur avant le premier affichage ; carte d'un id), `cardmarket` (page et id saisis, le lien vers une carte), `card-code` (le code d'une carte dans sa référence, sa clé ; sans import, le serveur s'en sert : `jobs/catalog.ts`), `card-images` (l'image d'une carte chez Pokécardex, d'après sa série et son rang ou d'après sa référence ; d'où vient une image), `card-catalog` (les cartes japonaises d'un Pokémon, la carte d'une référence, l'image retrouvée : `findCardImage`), `pokedex` (modèle : la carte de chaque Pokémon, progression, résumé), `collection` (modifications : statut, prix payé, ajout et retrait d'une carte ; l'id d'une carte : `newCardId` ; une carte encore à acheter, et pour un Pokémon pas encore pris : `isToBuy`, `stillWanted`), `filters` (adresse, liens : `pokedexUrl`, `shoppingUrl`, la fiche d'un Pokémon `speciesPath` ; recherche), `transfer` (export, import, CSV, lecture du stockage), `prices` (prix Cardmarket d'une carte, écart à sa moyenne sur 30 jours : `priceChange`, valeur, coût pour compléter, courbes, plus fortes hausses et baisses : `priceMovers`), `format`, `settled` (une promesse que `use()` lit sans attendre), `cx` (classes CSS), `focus` (une action qui retire ou déplace son propre bouton d’une liste : le focus va à l’élément suivant, `keepFocusInList` ; un raccourci clavier qui ne s’applique pas, `shortcutBlocked`), `api` (lecture de l'API, mémoïsée ; ce qu'on en tire, calculé une fois par réponse : `derived`), `time` (durées en ms, jours : `addDays`, `daysBetween` ; le serveur s'en sert aussi), `auth-client` (client Better Auth ; l'adresse de connexion qui ramène à la page : `loginPath`), `sync` (la règle de la synchronisation) ; achats : `wishlist` (préférences, filtres, CSV de la liste), `orders` (coût, report sur la collection, doublons, commandes en retard), `budget` (par mois, par fournisseur), `purchase-planner` (prochaine commande) |
 | `src/store/` | Zustand : `collection` et `shopping` (liste d'achats, commandes, budget), dans `localStorage` ; `prices` (`/api/prices`) ; `sync` (la collection du compte connecté, `/api/collection`) ; `theme` (sombre ou clair, gardé dans ce navigateur, suivi par ses autres onglets). `persist` les enregistre et les garde d'accord entre onglets |
 | `src/hooks/` | `usePokedex` (modèle partagé par toutes les pages), `useNotify` (toasts + « Annuler »), `usePokedexFilters`, `useCardDraft` (saisie d'une carte), `useExportCollection`, `useMediaQuery`, `useWishlist` (la liste d'achats : Achats et accueil) |
-| `src/components/` | Composants métier partagés par plusieurs pages (carte, tuile du catalogue, réglette, courbe, réglages d'achat d'une carte…) (lien « Voir sur Cardmarket » : `CardmarketLink` ; bouton d'export avant de remplacer ou d'effacer : `ExportCollectionButton`) et les seuls génériques absents de camply (confirmation, en-tête de page `PageHeader`, bloc de page `Panel` (`titleRef` : son titre, pour y mener le focus), lien externe, champ enregistré en le quittant, `SegmentedField`), la coquille (`AppShell` : navigation, logo ; `AppSearch` : la recherche Ctrl/⌘ K), le compte (`AccountMenu` ; la carte des pages de connexion et de première visite : `AuthCard`, `as` pour la balise du bloc), la jauge du budget (`BudgetMeter`), les statistiques « Dépensé ce mois-ci » et « Liste d’achats » (`ShoppingStats`, accueil et achats), un montant au prix du jour (`PricedValue` : « — » sans prix, une ébauche tant qu’ils arrivent ; sans prix, rien n’est compté « sans prix ») et la question d'un conflit (`SyncConflictDialog`) ; le reste vient de camply |
+| `src/components/` | Composants métier partagés par plusieurs pages (carte, tuile du catalogue, réglette, courbe, réglages d'achat d'une carte…) (lien « Voir sur Cardmarket » : `CardmarketLink` ; bouton d'export avant de remplacer ou d'effacer : `ExportCollectionButton`) et les seuls génériques absents de camply (confirmation, en-tête de page `PageHeader`, bloc de page `Panel` (`titleRef` : son titre, pour y mener le focus), lien externe, champ enregistré en le quittant, `SegmentedField`), la coquille (`AppShell` : navigation, logo ; `AppSearch` : la recherche Ctrl/⌘ K), le compte (`AccountMenu` ; la carte des pages de connexion et de première visite : `AuthCard`, `as` pour la balise du bloc), la jauge du budget (`BudgetMeter`), un nombre de tableau qui dit ce qu'il compte quand le tableau devient une liste de fiches (`TableCount`), les statistiques « Dépensé ce mois-ci » et « Liste d’achats » (`ShoppingStats`, accueil et achats), un montant au prix du jour (`PricedValue` : « — » sans prix, une ébauche tant qu’ils arrivent ; sans prix, rien n’est compté « sans prix ») et la question d'un conflit (`SyncConflictDialog`) ; le reste vient de camply |
 | `src/pages/` | Une page par route ; les sous-composants d'une page vivent dans son dossier (`pokedex/PokedexTile` : la pochette d'un Pokémon ; `pokemon/ImageCredit` : la source de l'image d'une carte ; `pokemon/CardForm` : ajouter ou corriger la carte d'un Pokémon, ses champs `CardFields` et, pour une carte neuve, « Ajouter comme » (sans statut, possédée ou à acheter : un seul choix, `ADD_AS_LABELS`, comme la page Catalogue) ; `pokemon/PricePanel` : le prix Cardmarket de la fiche et sa courbe, `PriceHistory` ; `LoginPage` : `/connexion` ; `WelcomePage` : `/bienvenue`, la première visite ; `shopping/LateOrdersAlert` : les commandes en retard ; `ErrorPage`, `NotFoundPage`) |
 | `tests/` | Tests `bun test` de la logique des achats, de la synchronisation et de l'historique des prix (`tsconfig.tests.json`) |
 | `server/` | Bun, le serveur (`tsconfig.server.json`) : `index.ts` (lance le serveur ; écrit le code de première visite), `app.ts` (l'API, Elysia : un plugin par domaine, paramètres et corps validés par leurs schémas, 422 sinon ; 404 sans corps ; une erreur imprévue est écrite dans le journal, 500 sans corps ; documentation OpenAPI à `/api/docs` en développement), `reference.ts` (les données de référence : état des tâches, espèces, catalogue, prix, historique), `db.ts` (SQLite dans `DATA_DIR`, `.data/` en local : `data.db`, les données de référence, et `app.db`, le compte et la collection ; schéma par étapes, `PRAGMA user_version` : à jour, aucun verrou au démarrage ; journal WAL ramené à 64 Mo), `auth.ts` (Better Auth : un seul compte, créé à la première visite, une session ; `/api/auth/*`, `/api/account`, la macro `auth` des routes du compte : session, origine, `no-store`), `collection.ts` (`/api/collection`), `create-user.ts`, `jobs/species.ts`, `ingest.ts` (les tâches d'ingestion, une à la demande ou `--loop`), `jobs/catalog.ts`, `jobs/prices.ts`, `jobs/images.ts`, `jobs/backups.ts`, `images.ts` (les images copiées, dans `IMAGES_DIR` : leur adresse d'origine, la copie, la copie à la demande), `history.ts` (l'historique des prix, une ligne par carte et par année), `snapshots.ts` (les grosses réponses, calculées en fin de tâche et gardées compressées ; pour toute l'API, le 404 sans corps `notFound` et la comparaison des ETag `matchesEtag`), `legacy-prices.ts` (reprise des anciens fichiers de prix), `lib/net.ts` (cache disque, requêtes identifiées de 2 min au plus, file à concurrence limitée qui attend les requêtes en cours avant de lever une erreur), `lib/pokecardex.ts` (les pages de Pokécardex, déchiffrées ; une toutes les 3 s) |
@@ -326,8 +329,16 @@ Points à connaître :
   (`--sidebar-width`, `--tabbar-height`), mouvement (`--ease-out`, `--duration-fast`) : une valeur
   hors d'eux doit avoir une raison. Une page : `PageHeader` (titre, phrase, actions à droite),
   puis ses blocs en `Panel` (une `Card` de camply : titre `h2`, phrase, actions, contenu ; `flush`
-  pour un tableau bord à bord ; pas une région nommée : trop de points de repère) ; statistiques par deux, par quatre au-delà de 56rem
-  (`.stat-grid`, plus compactes sur téléphone). Navigation (`AppShell`) : à partir de 64rem, une
+  pour un tableau bord à bord ; pas une région nommée : trop de points de repère) ; statistiques par
+  deux, par quatre quand la page a 50rem (`.stat-grid`, plus compactes sur téléphone). Occuper
+  l'écran : une page va jusqu'à 120rem (`--page-max`, toute la largeur jusqu'au très grand écran,
+  où elle reste centrée) et c'est un conteneur (`.container` : `container: page`) ; ses blocs se
+  règlent sur la place qu'elle a vraiment (`@container page`, barre latérale déduite), pas sur la
+  largeur de l'écran (à 1 024 px, la barre latérale en prend un quart). Un tableau de données
+  devient une liste de fiches quand il est étroit (`.stack-table`, `@container table` ; la page
+  place les cellules par `grid-area`, une valeur y montre son libellé, `.stack-label`, `TableCount`
+  pour « 4 cartes », et un « — » s'efface, `.stack-hidden`) : commandes, budget, « Mes cartes »,
+  « Pour compléter ». Navigation (`AppShell`) : à partir de 64rem, une
   barre latérale collée (Collection : Accueil, Pokédex, Catalogue ; Achats et valeur : Achats,
   Valeur ; la progression ; Données et le compte en pied) ; en dessous, une barre en haut (nom,
   recherche, Données, thème, compte en icône) et cinq onglets en bas ; le bouton du thème est aussi
@@ -341,14 +352,21 @@ Points à connaître :
   cartes sous leur prix maximum, cartes à compléter, chacune vers sa liste filtrée :
   `/achats?filtre=sous-max`, `pokedexUrl`), indicateurs
   (valeur, dépensé ce mois-ci, liste d'achats, commandes), dernières cartes obtenues (« Vos cartes
-  choisies » tant qu'aucune n'est obtenue) ; une collection vide y trouve trois étapes pour
-  commencer. Le Pokédex : recherche, filtres rapides de
+  choisies » tant qu'aucune n'est obtenue : une rangée, de trois cartes sur téléphone à dix sur un
+  très grand écran) ; une collection vide y trouve trois étapes pour commencer. La progression et
+  « À faire » côte à côte ont la même hauteur. Le Pokédex : recherche, filtres rapides de
   possession avec leur nombre (les autres filtres appliqués), les autres filtres dans un panneau
-  (génération, type, carte), chacun rappelé en étiquette retirable. Le catalogue : l'extension,
-  puis un panneau (ses Pokémon qui ont déjà leur carte, réglages de l'ajout). Données : un
-  sommaire (collé à gauche sur grand écran) et un panneau par section, l'effacement bordé de
-  rouge. La fiche d'un Pokémon : fil d'Ariane (Pokédex › région › nom), puis la carte, collée à
-  l'écran, et ses panneaux (statut et prix payé, prix Cardmarket, achat, « Dans le Pokédex ») ;
+  (génération, type, carte), chacun rappelé en étiquette retirable ; quand tout ne tient pas sur
+  une ligne, les filtres rapides passent dessous (sur téléphone, ils défilent de côté). Achats :
+  sur téléphone, les filtres de la liste dans un panneau « Filtres », l'onglet ouvert amené dans
+  la rangée d'onglets qui défile ; page étroite, les badges des onglets se resserrent. Le
+  catalogue : l'extension, puis un panneau (ses Pokémon qui ont déjà leur carte, réglages de
+  l'ajout). Données : un sommaire (collé à gauche sur grand écran) et un panneau par section, deux
+  colonnes sur très grand écran, l'effacement sur fond teinté de rouge. La fiche d'un Pokémon :
+  fil d'Ariane (Pokédex › région › nom), puis la carte, collée à l'écran (sa largeur suit la
+  page : `cqi`), et ses panneaux (statut et prix payé, prix Cardmarket, achat, « Dans le
+  Pokédex ») : sur deux colonnes dès que la fiche a la place, « Dans le Pokédex » à part sur grand
+  écran ;
   seul effet appuyé de l'app, la carte en grand suit la souris et la lumière y glisse
   (`CardStage` : variables CSS, sans rendu React ; ni au toucher ni en mouvement réduit). Les
   nombres formatés gardent une espace insécable visible (`spaced`, `lib/format.ts` : l'espace fine
