@@ -60,8 +60,9 @@ son site.
 
 En développement : `bun run dev:server` (l'API, sur le port 3000) à côté de `bun dev`, qui lui
 renvoie `/api` et `/images` ; la base vit dans `.data/`. La remplir une fois :
-`bun run ingest species`, `bun run ingest catalog`, puis `bun run ingest prices` (et `bun run ingest legacy-prices ./prices`
-pour reprendre un ancien dossier `prices/`). Inutile de lancer `bun run ingest images` (1 Go) : le
+`bun run ingest species`, `bun run ingest catalog`, puis `bun run ingest prices` (pour reprendre un
+ancien dossier `prices/`, `bun run ingest legacy-prices ./prices` **avant** toute tâche `prices` :
+la reprise refuse une base qui a déjà un historique). Inutile de lancer `bun run ingest images` (1 Go) : le
 serveur copie à la demande les images affichées. Pour la connexion, un fichier `.env.local` (ignoré
 par git) :
 
@@ -97,7 +98,14 @@ seulement par le tunnel. À côté :
   attendant celles qui s'affichent), et sauvegarde les deux bases chaque jour (volume `backups`).
   À son premier démarrage, il reprend de lui-même l'historique de l'ancien service `prices` (des
   fichiers, dans le volume `prices`), vérifié avant d'être gardé. L'ancien service est retiré :
-  le déploiement l'arrête (`--remove-orphans`).
+  le déploiement l'arrête (`--remove-orphans`). Pour lancer une tâche à la main (par exemple
+  relire tout le catalogue), arrêtez d'abord ce service, qui la relancerait en même temps s'il
+  redémarrait pendant ce temps :
+  ```sh
+  docker compose stop ingest
+  docker compose run --rm ingest bun server/ingest.ts catalog --refresh
+  docker compose start ingest
+  ```
 
 Ne jamais lancer `docker compose down -v`, qui effacerait ces volumes. Une fois sûr que
 l'historique est repris (`docker compose logs ingest` : « Vérifié : … cartes »), l'ancien volume
@@ -160,7 +168,7 @@ Secrets à créer dans le dépôt (Settings › Secrets and variables › Action
 | `VPS_SSH_KEY` | clé privée dédiée au déploiement (sa clé publique dans `~/.ssh/authorized_keys` du VPS) |
 | `VPS_PATH` | dossier du clone, par exemple `/home/moi/pokedex` |
 | `VPS_PORT` | port SSH, seulement s'il n'est pas 22 |
-| `VPS_FINGERPRINT` | empreinte de la clé d'hôte du VPS, pour ne parler qu'à lui : la sortie de `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub \| cut -d ' ' -f2` (`SHA256:…`). Sans elle, l'hôte n'est pas vérifié |
+| `VPS_FINGERPRINT` | empreinte de la clé d'hôte du VPS, pour ne parler qu'à lui : la sortie de `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub \| cut -d ' ' -f2` (`SHA256:…`). Obligatoire : sans elle, le déploiement s'arrête |
 
 Le port SSH doit être joignable depuis GitHub. S'il ne passe que par le tunnel (Cloudflare
 Access), ce workflow ne peut pas s'y connecter : il faut alors un runner GitHub auto-hébergé sur

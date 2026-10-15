@@ -210,7 +210,8 @@ Points à connaître :
   le nom affiché dans le formulaire pour vérifier l'id saisi (au départ du champ). Sans serveur,
   ou base encore vide, l'app marche sans prix. Une réponse manquante (404) n'est pas redemandée ;
   après une panne passagère (réseau, délai, réponse illisible), elle l'est la fois suivante où elle
-  sert, au plus une fois par minute (`store/prices.ts`). Une carte sans id Cardmarket, ou dont
+  sert, au plus une fois par minute (`getJson`, `lib/api.ts` : la règle vaut pour toute lecture de
+  l'API, catalogue et historiques compris). Une carte sans id Cardmarket, ou dont
   l'id n'a pas de prix ce jour, n'a pas de prix (aucun n'est inventé ; Pokécardex donne l'id de presque toutes).
   L'ancien historique (les fichiers du volume `prices`,
   un par carte) est repris au premier démarrage d'`ingest` (`legacy-prices.ts`), vérifié avant
@@ -370,7 +371,7 @@ Points à connaître :
 
 ## Déploiement
 
-VPS derrière un tunnel Cloudflare. `Dockerfile`, trois cibles : `build` (Bun lance les tests puis
+VPS derrière un tunnel Cloudflare. `Dockerfile` (Bun figé sur sa version mineure, `oven/bun:1.3-alpine`, comme nginx), trois cibles : `build` (Bun lance les tests puis
 construit `dist/`), `server` (Bun lance `server/` tel quel, avec `src/` et `tsconfig.json` pour
 l'alias `@/` ; `NODE_ENV=production`) et `web` (nginx sert `dist/`). `deploy/nginx.conf` : une
 route inconnue reçoit `index.html`, le routage étant côté client ; `/api/` va au service `server`
@@ -407,7 +408,7 @@ prix, votre collection) et `backups` sont irremplaçables, `images` porte un Go 
 `docker compose down -v` ; `prices` (l'ancien historique, repris) se supprime à la main quand tout
 va bien. `.github/workflows/deploy.yml` : lancé à la main tant que le domaine n'est pas prêt (le
 push sur `main` à remettre, voir son en-tête), SSH sur le VPS (action épinglée sur un commit,
-empreinte d'hôte `VPS_FINGERPRINT`), `git pull --ff-only`, `docker compose build --pull` puis
+empreinte d'hôte `VPS_FINGERPRINT`, exigée : sans elle, le déploiement s'arrête), `git pull --ff-only`, `docker compose build --pull` puis
 `up -d --remove-orphans`. Marche à suivre complète : README.
 
 ## Skills du projet (`.claude/skills/`)

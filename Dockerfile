@@ -1,6 +1,9 @@
+# Bun figé sur sa version mineure, comme nginx : `build --pull` prend ses correctifs, jamais une
+# nouvelle version de `bun:sqlite`, de `Bun.serve` ou du format de `bun.lock` sans prévenir.
+
 # 1. Tests de la logique d'argent, puis construction du site statique (dist/) avec Bun : un test en
 #    échec arrête la construction, et l'ancien conteneur reste en ligne.
-FROM oven/bun:1-alpine AS build
+FROM oven/bun:1.3-alpine AS build
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
@@ -10,7 +13,7 @@ RUN bun test && bun run build
 # 2. Le serveur (API) et les tâches d'ingestion (services `server` et `ingest`) : Bun lance le code
 #    tel quel ; `tsconfig.json` lui donne l'alias `@/` vers `src/`, dont il lit les règles et les
 #    données. Les bases vivent dans le volume `db` (`DATA_DIR`), les images dans `images`.
-FROM oven/bun:1-alpine AS server
+FROM oven/bun:1.3-alpine AS server
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
