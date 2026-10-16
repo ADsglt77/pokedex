@@ -57,6 +57,17 @@ describe('import', () => {
     expect(reimport()).toEqual({ collection, shopping })
   })
 
+  test('« souhaitée », d’une ancienne version : la carte reste choisie, sans statut', () => {
+    const wanted = { status: 'wanted', updatedAt: NOW, acquiredAt: null }
+    expect(reimport(['collection', 'cards', 'c'], wanted)?.collection.cards).toEqual(
+      collection.cards,
+    )
+    // Annulée, la commande la rendrait à un statut qui n'existe plus : aucun, plutôt.
+    const read = reimport([...ORDER, 'lines', 0, 'previous'], wanted)
+    expect(read?.shopping?.orders[0]?.lines[0]?.previous).toBeNull()
+    expect(reimport(['collection', 'cards', 'c'], { ...wanted, status: 'lost' })).toBeNull()
+  })
+
   test('un montant en texte est refusé : il fausserait le budget', () => {
     expect(reimport([...ORDER, 'shipping'], '5')).toBeNull()
     expect(reimport([...ORDER, 'lines', 0, 'unitPrice'], '12')).toBeNull()

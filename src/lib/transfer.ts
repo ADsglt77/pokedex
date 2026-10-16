@@ -122,22 +122,45 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
 
 /**
+ * « Souhaitée », un statut d'une ancienne version : la carte choisie suffit à dire qu'on la veut,
+ * elle se lit comme sans statut.
+ */
+const isWanted = (ownership: unknown) => isRecord(ownership) && ownership.status === 'wanted'
+
+/**
  * Une collection, telle qu'enregistrée ; `null` si ce n'en est pas une (mauvais fichier). Ce
- * qu'une ancienne version y gardait en plus (illustrations choisies) est ignoré.
+ * qu'une ancienne version y gardait en plus (illustrations choisies, statut « souhaitée ») est
+ * ignoré.
  */
 export function readCollection(value: unknown): CollectionData | null {
-  const isCollection = isRecord(value) && isRecord(value.cards) && isRecord(value.customCards)
-  return isCollection ? (value as unknown as CollectionData) : null
+  if (!isRecord(value) || !isRecord(value.cards) || !isRecord(value.customCards)) return null
+  const cards = Object.entries(value.cards).filter(([, ownership]) => !isWanted(ownership))
+  return { ...value, cards: Object.fromEntries(cards) } as unknown as CollectionData
 }
 
-/** Les achats (liste, commandes, budget) ; `null` si ce n'en sont pas. */
+/**
+ * Les achats (liste, commandes, budget) ; `null` si ce n'en sont pas. Une ligne qui notait
+ * « souhaitée » comme état d'avant (ancienne version) y revient sans statut.
+ */
 export function readShopping(value: unknown): ShoppingData | null {
-  const isShopping =
-    isRecord(value) &&
-    isRecord(value.preferences) &&
-    Array.isArray(value.orders) &&
-    isRecord(value.budget)
-  return isShopping ? (value as unknown as ShoppingData) : null
+  if (
+    !isRecord(value) ||
+    !isRecord(value.preferences) ||
+    !Array.isArray(value.orders) ||
+    !isRecord(value.budget)
+  )
+    return null
+  const orders = value.orders.map((order: unknown) =>
+    isRecord(order) && Array.isArray(order.lines)
+      ? {
+          ...order,
+          lines: order.lines.map((line: unknown) =>
+            isRecord(line) && isWanted(line.previous) ? { ...line, previous: null } : line,
+          ),
+        }
+      : order,
+  )
+  return { ...value, orders } as unknown as ShoppingData
 }
 
 /** Chaque valeur d'un dictionnaire (ou d'une liste) est un objet qui passe `ok` (avec sa clé). */
@@ -172,7 +195,7 @@ function isDay(value: unknown) {
 const isTime = (value: unknown) => isText(value) && !Number.isNaN(Date.parse(value as string))
 
 const isOwnership = (ownership: Record<string, unknown>) =>
-  ['owned', 'ordered', 'wanted'].includes(ownership.status as string) &&
+  ['owned', 'ordered'].includes(ownership.status as string) &&
   isText(ownership.updatedAt) &&
   (ownership.acquiredAt == null || isTime(ownership.acquiredAt)) &&
   isOptional(ownership.paidPrice, isAmount)

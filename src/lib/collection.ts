@@ -17,7 +17,7 @@ export const emptyCollection = (): CollectionData => ({
 
 /**
  * Le statut d'une carte ; `null` le retire, prix payé compris. Le prix payé suit la carte de
- * commandée à possédée ; souhaitée, elle n'en a pas.
+ * commandée à possédée.
  */
 export function setCardStatus(
   data: CollectionData,
@@ -28,8 +28,7 @@ export function setCardStatus(
   const { [card.id]: previous, ...cards } = data.cards
   if (status) {
     const acquiredAt = status === 'owned' ? now : null
-    const paidPrice = status === 'wanted' ? undefined : previous?.paidPrice
-    cards[card.id] = { status, updatedAt: now, acquiredAt, paidPrice }
+    cards[card.id] = { status, updatedAt: now, acquiredAt, paidPrice: previous?.paidPrice }
   }
   return { ...data, cards, updatedAt: now }
 }

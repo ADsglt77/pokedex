@@ -1,7 +1,6 @@
 /**
  * Ce que montre le Pokédex public (`server/vitrine.ts`) : ce qu'il laisserait passer serait public.
- * Jamais un prix payé, une page Cardmarket notée, ni ce qui dit un achat (« commandée »,
- * « souhaitée »).
+ * Jamais un prix payé, une page Cardmarket notée, ni ce qui dit un achat (« commandée »).
  */
 
 import { describe, expect, test } from 'bun:test'
@@ -21,7 +20,6 @@ describe('shownCollection', () => {
     ...collectionWith({
       a: ownership('owned', { acquiredAt: '2026-10-01T10:00:00.000Z', paidPrice: 30 }),
       b: ownership('ordered', { paidPrice: 12 }),
-      c: ownership('wanted'),
     }),
     customCards: {
       a: card('a', 25, { cardmarket: 719445, page: 'https://www.cardmarket.com/fr/Pokemon/x' }),
@@ -42,7 +40,7 @@ describe('shownCollection', () => {
     })
   })
 
-  test('rien de ce qui dit un achat : commandée et souhaitée disparaissent', () => {
+  test('rien de ce qui dit un achat : commandée disparaît', () => {
     expect(Object.keys(shown.cards)).toEqual(['a'])
     expect(JSON.stringify(shown)).not.toContain('paidPrice')
   })

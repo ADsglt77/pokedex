@@ -20,7 +20,9 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   Pokémon l'en détache seulement (`removeCard` : elle reste aux autres, avec son statut, son prix
   payé, ses achats ; possible même dans une commande) ; du dernier, elle part. La fiche dit « aussi
   celle de … ».
-  « Souhaitée » (statut) et « À acheter » (liste d'achats) sont indépendants : la fiche le dit.
+  Choisir la carte d'un Pokémon dit déjà qu'on la veut : pas de statut « souhaitée » (retiré à la
+  demande de l'utilisateur, octobre 2026). Le statut (commandée, possédée) et « À acheter » (liste
+  d'achats) sont indépendants : la fiche le dit.
 - Catalogue (tâche `catalog`, `server/jobs/catalog.ts`, une fois par jour → tables `sets`, `cards`,
   `card_species` → `/api/catalog`, `lib/card-catalog.ts`) : les cartes Pokémon japonaises de
   Pokécardex (`server/lib/pokecardex.ts`), ≈ 450 séries de 1996 à aujourd'hui, decks, promos et

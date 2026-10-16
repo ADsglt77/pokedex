@@ -1,5 +1,5 @@
 import { Alert, Skeleton, SkeletonText, Stack, Stat } from '@camply/ui'
-import { Flag } from '@camply/ui/icons'
+import { Flag, Wallet } from '@camply/ui/icons'
 import { Suspense, use, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { speciesPath } from '@/lib/filters'
@@ -22,7 +22,7 @@ import {
   plural,
   today,
 } from '@/lib/format'
-import { spendingEvents } from '@/lib/budget'
+import { spendingEvents, spentOn } from '@/lib/budget'
 import {
   firstDate,
   inWindow,
@@ -72,6 +72,8 @@ export function ValuePage() {
   const { entries } = usePokedex()
   const cards = useMemo(() => trackedCards(collection, prices), [collection, prices])
   const tallies = tallyByStatus(cards)
+  // Ce qu'elle a coûté : les commandes (pas les prix payés notés à la main, partiels).
+  const spent = spentOn(useShoppingStore((state) => state.shopping.orders))
   const completion = useMemo(() => completionByGeneration(entries, prices), [entries, prices])
   const toComplete = useMemo(() => completionCost(entries, prices), [entries, prices])
   const owned = cards.filter((card) => card.status === 'owned').map((card) => card.card)
@@ -117,10 +119,13 @@ export function ValuePage() {
             hint={tallyHint(tallies.ordered, true, priced)}
           />
           <Stat
-            label="Souhaitées"
-            icon={<STATUS_ICONS.wanted size={18} />}
-            value={money(tallies.wanted.value)}
-            hint={tallyHint(tallies.wanted, false, priced)}
+            label="Dépensé en tout"
+            icon={<Wallet size={18} />}
+            value={formatEuro(spent.spent)}
+            hint={details(
+              plural(spent.orders, 'commande', 'commandes'),
+              spent.shipping > 0 && `dont ${formatEuro(spent.shipping)} de port et frais`,
+            )}
           />
           <Stat
             label="Pour compléter le Pokédex"

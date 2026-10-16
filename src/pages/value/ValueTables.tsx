@@ -12,7 +12,7 @@ import styles from './ValuePage.module.css'
 
 const money = (value: number | null) => (value === null ? '—' : formatEuro(value))
 
-const STATUS_ORDER: Record<CardStatus, number> = { owned: 0, ordered: 1, wanted: 2 }
+const STATUS_ORDER: Record<CardStatus, number> = { owned: 0, ordered: 1 }
 
 interface CardRow {
   id: string
@@ -45,7 +45,7 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
       data={rows}
       rowKey={(row) => row.id}
       defaultSort={{ key: 'value', dir: 'desc' }}
-      emptyState="Aucune carte suivie : marquez une carte comme possédée, commandée ou souhaitée."
+      emptyState="Aucune carte suivie : marquez une carte comme possédée ou commandée."
       columns={[
         {
           key: 'name',

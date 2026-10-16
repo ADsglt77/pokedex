@@ -38,7 +38,6 @@ const CHIPS: { value: PossessionFilter; label: string }[] = [
   { value: 'owned', label: 'Débloqués' },
   { value: 'missing', label: 'À débloquer' },
   { value: 'ordered', label: 'Carte commandée' },
-  { value: 'wanted', label: 'Carte souhaitée' },
 ]
 
 // Les listes de camply n'acceptent que des chaînes : '' veut dire « tout ».

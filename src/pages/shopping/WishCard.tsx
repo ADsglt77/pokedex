@@ -87,7 +87,7 @@ export function WishCard({
           <Badge size="sm" tone={PRIORITY_TONES[preference.priority]}>
             Priorité {PRIORITY_LABELS[preference.priority].toLowerCase()}
           </Badge>
-          {status && status !== 'wanted' && (
+          {status && (
             <Badge size="sm" tone={status === 'owned' ? 'success' : 'info'}>
               {statusLabel(status)}
             </Badge>

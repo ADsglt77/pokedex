@@ -24,7 +24,7 @@ export interface PokedexEntry {
   species: PokemonSpecies
   /** La carte du Pokémon ; `null` tant que l'utilisateur n'en a pas ajouté. */
   card: CardView | null
-  /** Débloqué : sa carte est possédée. Souhaitée ou commandée ne suffit pas. */
+  /** Débloqué : sa carte est possédée. Choisie ou commandée ne suffit pas. */
   unlocked: boolean
 }
 
@@ -105,12 +105,11 @@ export interface CollectionSummary {
   cards: number
   owned: number
   ordered: number
-  wanted: number
 }
 
 /** Ce que contient la collection. */
 export function summarize(data: CollectionData): CollectionSummary {
-  const summary = { cards: Object.keys(data.customCards).length, owned: 0, ordered: 0, wanted: 0 }
+  const summary = { cards: Object.keys(data.customCards).length, owned: 0, ordered: 0 }
   for (const { ownership } of cardsWithStatus(data)) summary[ownership.status]++
   return summary
 }

@@ -70,7 +70,9 @@ export interface PokemonCard {
 
 /* Données de l'utilisateur : `localStorage` et fichier d'export */
 
-export type CardStatus = 'wanted' | 'ordered' | 'owned'
+/** Commandée ou possédée ; une carte choisie sans statut est à débloquer (« souhaitée », d'une
+ * ancienne version, se lit comme sans statut : `readCollection`). */
+export type CardStatus = 'ordered' | 'owned'
 
 export interface CardOwnership {
   status: CardStatus

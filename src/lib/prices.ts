@@ -81,9 +81,9 @@ export interface Tally {
 
 const emptyTally = (): Tally => ({ count: 0, value: 0, unpriced: 0, paid: 0, paidCardsValue: 0 })
 
-/** Les totaux de chaque statut : possédées, commandées, souhaitées. */
+/** Les totaux de chaque statut : possédées, commandées. */
 export function tallyByStatus(cards: readonly TrackedCard[]): Record<CardStatus, Tally> {
-  const tallies = { owned: emptyTally(), ordered: emptyTally(), wanted: emptyTally() }
+  const tallies = { owned: emptyTally(), ordered: emptyTally() }
   for (const { status, paid, value } of cards) {
     const tally = tallies[status]
     tally.count++

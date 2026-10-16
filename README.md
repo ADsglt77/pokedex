@@ -24,13 +24,13 @@ bun run format   # Prettier
   partageables dans l'adresse.
 - **Fiche** : la carte du Pokémon, choisie parmi ses cartes japonaises (image, prix du jour, tri
   par date ou par prix) ou saisie à la main, puis corrigée ou retirée ; en grand, son statut
-  (possédée / commandée / souhaitée) et son prix payé, son prix Cardmarket et sa courbe, le lien
+  (commandée / possédée) et son prix payé, son prix Cardmarket et sa courbe, le lien
   vers sa page Cardmarket, l'achat (dans la liste d'achats ou non, priorité, prix maximum, note), les détails
   de l'espèce.
 - **Catalogue** : les cartes japonaises extension par extension ; un clic donne sa carte au
   premier Pokémon qui n'en a pas.
 - **Valeur** : prix Cardmarket du jour, valeur de la collection (et gain par rapport au prix
-  payé), commandes, souhaits, coût pour compléter le Pokédex ; courbes jour par jour (valeur,
+  payé), commandes, dépensé en tout, coût pour compléter le Pokédex ; courbes jour par jour (valeur,
   Pokémon débloqués, dépenses) sur 7 jours, 30 jours, 1 an ou tout, avec leurs chiffres.
 - **Achats** : liste d'achats (les cartes acceptées, avec priorité et prix maximum),
   assistant « prochaine commande » dans un budget (100 € par mois, 150 € au plus, réglables),

@@ -7,7 +7,6 @@ const ROWS: { key: keyof CollectionSummary; label: string }[] = [
   { key: 'cards', label: 'Cartes ajoutées' },
   { key: 'owned', label: 'Possédées' },
   { key: 'ordered', label: 'Commandées' },
-  { key: 'wanted', label: 'Souhaitées' },
 ]
 
 /** L'inventaire d'une collection, une ligne par type de donnée. */

@@ -91,7 +91,6 @@ function SpeciesPage({ entry }: { entry: PokedexEntry }) {
 const STATEMENTS: Record<CardStatus | 'none' | 'no-card', string> = {
   owned: 'carte possédée',
   ordered: 'carte commandée',
-  wanted: 'carte souhaitée',
   none: 'carte choisie, pas encore obtenue',
   'no-card': 'pas encore de carte',
 }

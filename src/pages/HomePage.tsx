@@ -74,15 +74,6 @@ function progressSentence(progress: Progress) {
   ]
 }
 
-function trackingSentence(ordered: number, wanted: number): string | null {
-  const orderedText = plural(ordered, 'carte commandée', 'cartes commandées')
-  if (ordered > 0 && wanted > 0)
-    return `${orderedText}, ${plural(wanted, 'souhaitée', 'souhaitées')}.`
-  if (ordered > 0) return `${orderedText}.`
-  if (wanted > 0) return `${plural(wanted, 'carte souhaitée', 'cartes souhaitées')}.`
-  return null
-}
-
 /** Les cartes de la rangée de l'accueil : le panneau en montre autant que sa largeur en tient. */
 const SHOWN_CARDS = 10
 
@@ -141,9 +132,8 @@ export function HomePage() {
 function ProgressPanel() {
   const { progress, generations } = usePokedex()
   const collection = useCollectionStore((state) => state.collection)
-  const { ordered, wanted } = summarize(collection)
+  const { ordered } = summarize(collection)
   const [unlockedText, remainingText] = progressSentence(progress)
-  const tracking = trackingSentence(ordered, wanted)
   // Sur téléphone, la réglette n'est qu'une image : la liste des régions mène au Pokédex.
   const narrow = useMediaQuery('(max-width: 40rem)')
 
@@ -167,7 +157,9 @@ function ProgressPanel() {
         <div className={styles.sentence}>
           <p className={styles.lead}>{unlockedText}</p>
           <p className="muted">{remainingText}</p>
-          {tracking && <p className="muted">{tracking}</p>}
+          {ordered > 0 && (
+            <p className="muted">{plural(ordered, 'carte commandée', 'cartes commandées')}.</p>
+          )}
         </div>
       </div>
       <div inert={narrow} className={styles.ruler}>

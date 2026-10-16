@@ -26,7 +26,7 @@ Le seul compte, la collection synchronisée entre les appareils, le Pokédex pub
   choisies grisées ; les pochettes ne mènent pas aux fiches, celles du visiteur). Le serveur ne
   montre que les cartes (sans leur page notée) et les possessions avec leur date
   (`shownCollection`, testé) : jamais un prix payé, une commande, le budget, la liste d'achats ni
-  les statuts « commandée » et « souhaitée » ; 404 tant que le compte ne le montre pas. Il montre
+  le statut « commandée » ; 404 tant que le compte ne le montre pas. Il montre
   la version que le serveur a reçue. Connecté, la collection et les achats
   forment un seul document par compte (une commande modifie les deux), dans `app.db`, numéroté par
   le serveur (`/api/collection` : `PUT` refusé, 409, si l'appareil part d'une version dépassée ; le

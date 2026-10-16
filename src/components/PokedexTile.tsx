@@ -11,7 +11,6 @@ import styles from './PokedexTile.module.css'
 const SPECIES_LABELS: Record<CardStatus | 'none', string> = {
   owned: 'Débloqué',
   ordered: 'À débloquer, carte commandée',
-  wanted: 'À débloquer, carte souhaitée',
   none: 'À débloquer',
 }
 

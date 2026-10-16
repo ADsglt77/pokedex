@@ -3,7 +3,7 @@
  * - `GET /api/vitrine` : pour tout visiteur, sans session. La collection du compte, réduite à ce
  *   qui se montre : ses cartes (référence, image, id Cardmarket pour la valeur au prix du jour ; pas
  *   leur page) et, pour celles possédées, la date d'obtention (pas le prix payé). Rien des achats :
- *   ni commandes, ni budget, ni liste d'achats, ni statuts « commandée » ou « souhaitée ». 404 tant
+ *   ni commandes, ni budget, ni liste d'achats, ni statut « commandée ». 404 tant
  *   que le compte ne le montre pas.
  * - `GET` et `PUT /api/vitrine/settings` : pour le compte, le montrer ou non (`{ public }`).
  */

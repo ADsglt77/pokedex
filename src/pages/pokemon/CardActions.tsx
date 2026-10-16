@@ -19,14 +19,12 @@ import styles from './CardActions.module.css'
 const STATUS_BUTTONS: { status: CardStatus; label: string }[] = [
   { status: 'owned', label: 'Je possède cette carte' },
   { status: 'ordered', label: 'Marquer comme commandée' },
-  { status: 'wanted', label: 'Marquer comme souhaitée' },
 ]
 
 /** Ce que coûte de quitter « possédée » : la date d'obtention, et le prix payé sauf « commandée ». */
 const LEAVING_OWNED: Record<Exclude<CardStatus, 'owned'> | 'none', string> = {
   none: 'Son statut, sa date d’obtention et son prix payé seront effacés.',
   ordered: 'Sa date d’obtention sera effacée.',
-  wanted: 'Sa date d’obtention et son prix payé seront effacés.',
 }
 
 /**

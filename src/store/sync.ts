@@ -15,7 +15,7 @@ import { create } from 'zustand'
 import { authClient } from '@/lib/auth-client'
 import { emptyCollection } from '@/lib/collection'
 import { decide, documentHash, isEmptyDocument, type SyncDocument } from '@/lib/sync'
-import { parseStored } from '@/lib/transfer'
+import { parseStored, readCollection, readShopping } from '@/lib/transfer'
 import { emptyShopping } from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
 import { currentDocument, replaceDocument, sameDocument } from '@/store/document'
@@ -115,7 +115,11 @@ async function call(method: 'GET' | 'PUT', init: { body?: string; etag?: string 
 async function readServer(response: Response): Promise<ServerDocument | null> {
   const body = (await response.json()) as { version: number } & Partial<SyncDocument>
   if (!body.collection || !body.shopping) return null
-  const document = { collection: body.collection, shopping: body.shopping }
+  // Lu comme le stockage du navigateur : un document d'une ancienne version (« souhaitée ») aussi.
+  const document = {
+    collection: readCollection(body.collection)!,
+    shopping: readShopping(body.shopping)!,
+  }
   return { version: body.version, document, hash: await documentHash(document) }
 }
 

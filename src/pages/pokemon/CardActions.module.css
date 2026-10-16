@@ -29,9 +29,3 @@
   background: var(--camply-info-soft);
   color: var(--camply-info);
 }
-
-.status[aria-pressed='true'].wanted {
-  border-color: var(--camply-warn-border);
-  background: var(--camply-warn-soft);
-  color: var(--camply-warn);
-}

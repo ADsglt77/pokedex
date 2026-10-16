@@ -3,7 +3,7 @@
 Le système de design, la navigation, les pages, les courbes, les filtres et ce qui tient la grille de 1 025 pochettes. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
 - Filtres du Pokédex dans l'adresse : `q` (raccourci « / »), `generation`, `type`, `possession` (`owned` : débloqués,
-  `missing` : à débloquer, `ordered`, `wanted`), `card` (`with` : avec carte, `without` : sans ;
+  `missing` : à débloquer, `ordered` ; `wanted`, d'une ancienne version, est ignoré), `card` (`with` : avec carte, `without` : sans ;
   à compléter : `no-image`, `no-cardmarket`, `no-paid` : possédée sans prix payé), `order=desc` ;
   un lien filtré se
   construit avec `pokedexUrl`. La recherche passe par `flushSync` (le routeur met l'adresse à jour

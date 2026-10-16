@@ -1,6 +1,6 @@
 /**
  * La liste d'achats : les cartes acceptées à l'achat, avec leur priorité et leur prix maximum. Une
- * préférence ne touche jamais au statut de la carte (souhaitée, commandée, possédée).
+ * préférence ne touche jamais au statut de la carte (commandée, possédée).
  */
 
 import { DEFAULT_BUDGET, PRIORITY_LABELS, PRIORITY_RANK } from '@/config/shopping'

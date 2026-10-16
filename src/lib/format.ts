@@ -133,7 +133,6 @@ export const formatDexNumber = (id: number) => `N°\u00a0${String(id).padStart(4
 const STATUS_LABELS: Record<CardStatus | 'none', string> = {
   owned: 'Possédée',
   ordered: 'Commandée',
-  wanted: 'Souhaitée',
   none: 'Non possédée',
 }
 

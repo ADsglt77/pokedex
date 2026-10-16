@@ -2,10 +2,15 @@
 
 La collection (statuts, prix payés), la liste d'achats, les commandes et le budget, dans le navigateur. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
-- Collection : un statut par carte (possédée, commandée, souhaitée), le prix payé (`paidPrice`) qui
-  le suit, et les cartes (`customCards`). Clé `pokedex-collection.collection` : ne pas changer son
-  format. Ce qu'une ancienne version y gardait en plus (`entries` des illustrations choisies, clé
-  `.settings` des raretés suivies, statuts des cartes `tcgdex:ja:…` de l'ancien index) est ignoré.
+- Collection : les cartes choisies (`customCards`), un statut par carte (commandée, possédée ;
+  sans statut, elle est à débloquer) et le prix payé (`paidPrice`) qui le suit. Clé
+  `pokedex-collection.collection` : ne pas changer son format. Ce qu'une ancienne version y gardait
+  en plus (`entries` des illustrations choisies, clé `.settings` des raretés suivies, statuts des
+  cartes `tcgdex:ja:…` de l'ancien index) est ignoré ; le statut « souhaitée » (retiré en octobre
+  2026 : choisir la carte dit déjà qu'on la veut) se lit comme sans statut, dans le stockage, un
+  import ou le document du serveur (`readCollection`), et comme état d'avant d'une ligne de
+  commande (`readShopping` : annulée, la carte revient sans statut). La page Valeur montre à sa
+  place ce que les commandes ont coûté en tout (« Dépensé en tout »).
 - Achats (`/achats`), clé `pokedex-collection.shopping` (`ShoppingData`, à part : la collection
   garde son format) :
   - préférence par carte (`accepted` : dans la liste d'achats ; `excluded`, d'une ancienne
