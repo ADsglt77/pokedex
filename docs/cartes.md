@@ -1,0 +1,92 @@
+# Cartes, catalogue et images
+
+La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et leurs images. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
+
+- Une carte (`PokemonCard`) : id `manual:<uuid>`, ses Pokémon (`dexIds`), une référence (vide à la
+  saisie : le nom de la carte chez Cardmarket, sinon le nom du Pokémon), son image (`image` :
+  celle de Pokécardex en deux tailles (ou de TCGplayer, d'une ancienne version), ou l'adresse
+  collée, `small` = `large` ; `null` sans image),
+  son id Cardmarket (`cardmarket`) et sa page chez Cardmarket (`page`), tous deux facultatifs ;
+  sans page notée, le lien « Voir sur Cardmarket » se fait par l'id (`cardmarketPage`).
+  Une par Pokémon : on la corrige (« Modifier la carte », même id, son statut et ses achats la
+  suivent) ou on la retire (« Retirer la carte » : avec son statut, son prix payé et sa préférence
+  d'achat ; confirmation si elle est possédée ; impossible tant qu'une commande la contient) avant
+  d'en ajouter une autre. Si une ancienne version en a gardé plusieurs, la première compte.
+  « Souhaitée » (statut) et « À acheter » (liste d'achats) sont indépendants : la fiche le dit.
+- Catalogue (tâche `catalog`, `server/jobs/catalog.ts`, une fois par jour → tables `sets`, `cards`,
+  `card_species` → `/api/catalog`, `lib/card-catalog.ts`) : les cartes Pokémon japonaises de
+  Pokécardex (`server/lib/pokecardex.ts`), ≈ 450 séries de 1996 à aujourd'hui, decks, promos et
+  anciennes séries compris (27 Herbizarre japonaises, contre 8 chez TCGdex), sans les exclusivités
+  d'autres pays d'Asie (bloc « Asia Exclusive » de son menu, `asiaExclusive`). La liste des séries
+  vient de son plan du site (`sitemap_fr.xml`, `/series/jp/<code>`) ; chaque série, de sa page :
+  son nom, sa sortie au Japon, et ses cartes (id Pokécardex, numéro imprimé « 001/165 », `sort`,
+  nom français, Pokémon `id_pokedex_list`, id Cardmarket). Seules les cartes Pokémon (dresseurs et
+  énergies n'ont pas de Pokémon). Ses pages portent leurs données chiffrées
+  (`__INITIAL_DATA_ENCRYPTED__`, AES-CBC) : déchiffrées avec la clé que contient son JavaScript,
+  relue à chaque passage (son adresse change à chaque mise en ligne), jamais recopiée dans le
+  dépôt. Une page toutes les 3 s, User-Agent identifié : le premier passage prend une vingtaine de
+  minutes ; ensuite, une série est relue chaque semaine, chaque jour si elle est sortie depuis
+  moins de 90 jours (`read_at`), et `--refresh` les relit toutes. Une page en échec n'empêche pas
+  les autres (la tâche échoue ensuite, pour être relancée) ; dix d'affilée arrêtent la lecture
+  (le site a changé : on ne le sollicite pas davantage). Une série qui donne moins de la moitié
+  des cartes qu'elle avait est refusée (format des pages changé : rien n'est gardé, c'est un échec).
+  Une page sans cartes (série annoncée, ou
+  site changé) ne retire rien et n'est pas notée : elle est relue au passage suivant. Tant qu'aucune
+  carte n'a été lue, rien n'est publié : `/api/catalog` répond 404 (« pas disponible »).
+  Une carte qu'une lecture de sa série ne voit plus est retirée (`seen`). Sans serveur, la fenêtre
+  d'ajout et la page Catalogue le disent (« pas disponible pour le moment »). Par Pokémon, des plus
+  récentes aux plus anciennes : `[série, numéro (sans numéro imprimé : `sort`), id Cardmarket (0 :
+  aucun), nom français, numéro de son image (`sort`, 0 : Pokécardex ne l'a pas), Pokémon s'ils
+  sont plusieurs]`. La référence d'une carte : « Dracaufeu ex (SV2A 006) », son nom puis le code de
+  sa série et son numéro. « Ajouter une carte »
+  (`pokemon/CardForm`) s'ouvre sur l'onglet « Cartes japonaises » (`CatalogPicker` : image
+  Pokécardex, code, prix du jour, tri par date ou par prix ; ses réglages vivent
+  dans `CardForm`, l'onglet caché étant démonté) ; choisir une carte remplit la saisie (`fill` :
+  référence « Pikachu ex (SV8 033) » et id, d'où l'image, le prix et le lien Cardmarket) et y mène le focus ; on la vérifie puis l'enregistre (« Enregistrer » attend que la
+  carte soit choisie, ou l'onglet de saisie). « Modifier la carte » n'a que la saisie : choisir une autre carte, ce serait
+  lui transmettre le statut, le prix payé et les commandes de celle-ci. Le catalogue n'est qu'une
+  aide : la carte enregistrée est une carte saisie comme les autres (`manual:<uuid>`).
+  L'enregistrement (`useCardDraft.save`) attend le prix et l'image : une seule fois à la fois, la
+  fenêtre ne se ferme pas pendant ce temps. Une page Cardmarket qui n'était que celle de l'id de
+  départ est oubliée quand l'id change (le lien suit alors le nouvel id). La page Catalogue
+  (`/catalogue?set=…`, dans le menu) : une extension (une série de Pokécardex), cherchée par code ou nom (`Combobox`), les
+  plus récentes, les plus utiles (celles qui donnent leur carte au plus de Pokémon qui
+  n'en ont pas) ou les plus avancées d'abord (la plus grande part de leurs Pokémon a déjà sa carte ;
+  chaque extension dit combien l'ont, sur tous les siens) ; un clic donne la carte au premier de ses Pokémon sans carte, sans statut,
+  possédée ou à acheter (« Ajouter comme »), et le focus passe à la carte suivante.
+- Plus de favori « Ajouter au Pokédex » (un lien `javascript:` qui reprenait une page produit de
+  Cardmarket, `/ajouter`) : retiré à la demande de l'utilisateur (octobre 2026), le catalogue
+  Pokécardex donnant presque toutes les cartes avec leur id Cardmarket ; une carte qu'il n'a pas se
+  saisit à la main. Ne pas le réintroduire sans demande.
+- Images (`lib/card-images.ts`, `server/images.ts`, tâche `images`) : chez Pokécardex,
+  `pokecardex-scans.b-cdn.net/sets_jp/<série>/<sort>.jpg?class=md` (son code tel quel, « S8A-G »
+  compris ; tailles `md` pour la grille, `hd` pour la fiche) : `pokecardexImage`. Le catalogue
+  donne l'adresse exacte de chaque carte ; pour une référence hors du catalogue, `cardImage` la
+  déduit du code de la référence (série en majuscules sans tiret, SV-P → SVP ; numéro sans zéro),
+  sans certitude. La collection garde les adresses d'origine (son format ne change pas), mais le
+  navigateur ne charge que la copie du serveur (condition de Pokécardex) : `localSrc` en donne le
+  chemin (`/images/cards/pokecardex/SV2A/6-md.webp`), pour le `src` de `CardArt` et pour
+  `findCardImage`. La tâche `images` (chaque jour, après les prix ; deux téléchargements à la
+  fois, seulement ce qui manque ; le premier passage, environ 1 Go, prend une heure ou plus) copie
+  les sprites et illustrations des 1 025 Pokémon et, pour chaque carte du catalogue, son scan en
+  deux tailles, et note s'il existe (`cards.image`) : le catalogue le dit d'avance. Une carte sans
+  scan est recherchée chaque semaine. Une image en erreur (panne, réponse qui n'est pas une image)
+  n'arrête pas les autres : rien n'est noté pour elle, elle est redemandée au passage suivant, et la
+  tâche échoue à la fin (au-delà de 20 erreurs, elle s'arrête : la source est sans doute en panne).
+  Une image absente du volume (référence saisie hors du
+  catalogue, image pas encore copiée) est copiée à la demande par le serveur (`serveImage` :
+  seulement les chemins connus, `upstreamUrl` : chez Pokécardex, une série du catalogue et un
+  numéro d'image jusqu'au plus grand des siens ; un Pokémon de 1 à 1 025 ; jamais plus chez TCGplayer ; une absence retenue une semaine ; nginx limite à
+  10 copies par seconde). Les images de TCGplayer qu'une ancienne version a enregistrées
+  s'affichent encore si le volume en a la copie (jamais plus copiées, citées « TCGplayer ») ;
+  Données › « Chercher les images » les remplace par celles de Pokécardex, comme il cherche celles
+  des cartes sans image. `findCardImage` (`lib/card-catalog.ts`) : l'image du catalogue pour
+  cette référence, sinon celle que la référence désigne, si elle se charge (sans réponse en 10 s :
+  absente, pour ne pas bloquer l'enregistrement) ; la saisie le dit, et la fiche et l'aperçu citent
+  sa source sous la carte (`imageSource`, `ImageCredit`, d'après l'adresse d'origine). Un échec
+  est redemandé à l'enregistrement (panne passagère), et une image déjà enregistrée reste si elle
+  ne répond pas. Une adresse collée s'affiche telle quelle, sans crédit : la seule image que le
+  navigateur va chercher ailleurs. Sans adresse collée, l'image suit la référence (cherchée en
+  quittant le champ). Le code d'une carte (`lib/card-code.ts`) :
+  `codeKey` en fait une clé (« SV2A 166 », « S8AG 1 » : série en majuscules sans tiret, numéro sans
+  zéro), pour retrouver la carte du catalogue d'une référence.
