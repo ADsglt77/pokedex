@@ -19,7 +19,8 @@ interface CollectionStore {
   setCardStatus: (card: PokemonCard, status: CardStatus | null) => void
   setPaidPrice: (card: PokemonCard, paidPrice: number | undefined) => void
   saveCard: (card: PokemonCard) => void
-  removeCard: (cardId: string) => void
+  /** Retire la carte de ce Pokémon (une carte de plusieurs Pokémon reste celle des autres). */
+  removeCard: (cardId: string, speciesId: number) => void
   /** Remplace toute la collection : import, effacement. */
   replaceCollection: (collection: CollectionData) => void
 }
@@ -36,7 +37,8 @@ export const useCollectionStore = create<CollectionStore>()((set, get) => {
     setPaidPrice: (card, paidPrice) =>
       update((collection, now) => rules.setPaidPrice(collection, card, paidPrice, now)),
     saveCard: (card) => update((collection, now) => rules.saveCard(collection, card, now)),
-    removeCard: (cardId) => update((collection, now) => rules.removeCard(collection, cardId, now)),
+    removeCard: (cardId, speciesId) =>
+      update((collection, now) => rules.removeCard(collection, cardId, speciesId, now)),
     replaceCollection: (collection) => set({ collection }),
   }
 })

@@ -15,6 +15,11 @@ const spaced = (text: string) => text.replaceAll(' ', ' ')
 
 export const formatInteger = (value: number) => spaced(integerFormat.format(value))
 
+const listFormat = new Intl.ListFormat('fr-FR', { type: 'conjunction' })
+
+/** « Pikachu et Zekrom », « Pikachu, Zekrom et Mew » */
+export const formatList = (items: readonly string[]) => listFormat.format(items)
+
 export const formatDecimal = (value: number) => spaced(decimalFormat.format(value))
 
 /** Le jour (YYYY-MM-DD) d'une date, dans le fuseau de l'utilisateur. */

@@ -10,7 +10,10 @@ import { CardFields } from './CardFields'
 import { CatalogPicker, type PickerView } from './CatalogPicker'
 import { SegmentedField } from '@/components/SegmentedField'
 import { ADD_AS_LABELS, ADDED_AS } from '@/config/shopping'
+import { usePokedex } from '@/hooks/usePokedex'
+import { cardSpecies } from '@/lib/collection'
 import { toOptions } from '@/lib/format'
+import { speciesNames } from '@/lib/species'
 
 /**
  * Ajouter la carte d'un Pokémon (la choisir dans le catalogue des cartes japonaises, qui remplit la
@@ -30,7 +33,15 @@ export function CardForm({
   const act = useCollectionAction()
   const draft = useCardDraft(card)
   const [tab, setTab] = useState('catalogue')
-  const [picked, setPicked] = useState<string | null>(null)
+  const [picked, setPicked] = useState<CatalogCard | null>(null)
+  const { entryById } = usePokedex()
+  // Les Pokémon qui recevront la carte : celle choisie dans le catalogue (tant que la référence
+  // reste la sienne) va aussi à ceux de ses Pokémon qui n'ont pas de carte (TAG TEAM).
+  const receivers =
+    card?.dexIds ??
+    (picked && draft.reference.trim() === picked.reference
+      ? cardSpecies(picked.dexIds, species.id, (id) => entryById.get(id)?.card != null)
+      : [species.id])
   const [addAs, setAddAs] = useState<AddAs>('none')
   // L'onglet caché est démonté : ses réglages vivent ici.
   const [view, setView] = useState<PickerView>({ order: 'recent', set: '', pricedOnly: false })
@@ -40,18 +51,18 @@ export function CardForm({
   // La carte choisie s'ouvre dans la saisie, à vérifier ; le focus suit, la grille disparaissant.
   const pick = (chosen: CatalogCard) => {
     draft.fill(chosen)
-    setPicked(chosen.key)
+    setPicked(chosen)
     setTab('saisie')
     entryTab.current?.focus()
   }
 
   const save = () =>
-    draft.save(card?.dexIds ?? [species.id], species.names.fr, (saved) => {
+    draft.save(receivers, species.names.fr, (saved) => {
       act(
         () => (card ? useCollectionStore.getState().saveCard(saved) : addCard(saved, addAs)),
         card
           ? `Carte de ${species.names.fr} modifiée.`
-          : `Carte ajoutée à ${species.names.fr}${ADDED_AS[addAs]}.`,
+          : `Carte ajoutée à ${speciesNames(receivers)}${ADDED_AS[addAs]}.`,
       )
       onClose()
     })
@@ -107,7 +118,7 @@ export function CardForm({
             <Suspense fallback={<p className="muted">Chargement des cartes…</p>}>
               <CatalogPicker
                 species={species}
-                selected={picked}
+                selected={picked?.key ?? null}
                 onPick={pick}
                 view={view}
                 onView={setView}

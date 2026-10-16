@@ -12,6 +12,14 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   suivent) ou on la retire (« Retirer la carte » : avec son statut, son prix payé et sa préférence
   d'achat ; confirmation si elle est possédée ; impossible tant qu'une commande la contient) avant
   d'en ajouter une autre. Si une ancienne version en a gardé plusieurs, la première compte.
+  Une carte de plusieurs Pokémon (TAG TEAM : `dexIds` en a plusieurs) est **une seule carte**,
+  achetée une fois (décision de l'utilisateur, octobre 2026) : choisie dans le catalogue, elle va
+  aussi à ceux de ses Pokémon qui n'ont pas de carte (`cardSpecies`, le Pokémon de la fiche en
+  tête) ; son statut, son prix payé et sa préférence d'achat valent pour tous ; la valeur, le coût
+  pour compléter et la prochaine commande ne la comptent qu'une fois. La retirer d'un de ses
+  Pokémon l'en détache seulement (`removeCard` : elle reste aux autres, avec son statut, son prix
+  payé, ses achats ; possible même dans une commande) ; du dernier, elle part. La fiche dit « aussi
+  celle de … ».
   « Souhaitée » (statut) et « À acheter » (liste d'achats) sont indépendants : la fiche le dit.
 - Catalogue (tâche `catalog`, `server/jobs/catalog.ts`, une fois par jour → tables `sets`, `cards`,
   `card_species` → `/api/catalog`, `lib/card-catalog.ts`) : les cartes Pokémon japonaises de
@@ -42,7 +50,9 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   (`pokemon/CardForm`) s'ouvre sur l'onglet « Cartes japonaises » (`CatalogPicker` : image
   Pokécardex, code, prix du jour, tri par date ou par prix ; ses réglages vivent
   dans `CardForm`, l'onglet caché étant démonté) ; choisir une carte remplit la saisie (`fill` :
-  référence « Pikachu ex (SV8 033) » et id, d'où l'image, le prix et le lien Cardmarket) et y mène le focus ; on la vérifie puis l'enregistre (« Enregistrer » attend que la
+  référence « Pikachu ex (SV8 033) » et id, d'où l'image, le prix et le lien Cardmarket ; une carte
+  TAG TEAM dit « avec … » dans la grille, et va à tous ses Pokémon sans carte tant que la référence
+  reste la sienne) et y mène le focus ; on la vérifie puis l'enregistre (« Enregistrer » attend que la
   carte soit choisie, ou l'onglet de saisie). « Modifier la carte » n'a que la saisie : choisir une autre carte, ce serait
   lui transmettre le statut, le prix payé et les commandes de celle-ci. Le catalogue n'est qu'une
   aide : la carte enregistrée est une carte saisie comme les autres (`manual:<uuid>`).
@@ -52,7 +62,7 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   (`/catalogue?set=…`, dans le menu) : une extension (une série de Pokécardex), cherchée par code ou nom (`Combobox`), les
   plus récentes, les plus utiles (celles qui donnent leur carte au plus de Pokémon qui
   n'en ont pas) ou les plus avancées d'abord (la plus grande part de leurs Pokémon a déjà sa carte ;
-  chaque extension dit combien l'ont, sur tous les siens) ; un clic donne la carte au premier de ses Pokémon sans carte, sans statut,
+  chaque extension dit combien l'ont, sur tous les siens) ; un clic donne la carte à ses Pokémon sans carte (tous, pour une TAG TEAM), sans statut,
   possédée ou à acheter (« Ajouter comme »), et le focus passe à la carte suivante.
 - Plus de favori « Ajouter au Pokédex » (un lien `javascript:` qui reprenait une page produit de
   Cardmarket, `/ajouter`) : retiré à la demande de l'utilisateur (octobre 2026), le catalogue

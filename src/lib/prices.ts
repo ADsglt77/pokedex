@@ -151,7 +151,7 @@ export interface CompletionCost {
 /**
  * Ce que coûterait de débloquer les Pokémon qui restent, au prix de leur carte. Un Pokémon dont la
  * carte est déjà commandée compte dans les commandes, pas ici. Une carte de plusieurs Pokémon
- * (TAG TEAM d'une ancienne version) n'est comptée qu'une fois.
+ * (TAG TEAM) n'est comptée qu'une fois : on ne l'achète qu'une fois.
  */
 export function completionCost(
   entries: readonly PokedexEntry[],

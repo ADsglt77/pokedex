@@ -48,6 +48,17 @@ describe('prochaine commande', () => {
     expect(ids(plan.covered)).toEqual(['other'])
   })
 
+  test('une carte TAG TEAM, achetée une fois, prévoit tous ses Pokémon', () => {
+    const plan = planPurchase(
+      [wish('tag', [25, 644], 15), wish('pikachu', [25], 40), wish('zekrom', [644], 20)],
+      new Set(),
+      options(),
+    )
+    expect(ids(plan.picked)).toEqual(['tag'])
+    expect(plan.total).toBe(20)
+    expect(ids(plan.covered)).toEqual(['zekrom', 'pikachu'])
+  })
+
   test('hors budget, puis son Pokémon pris par une autre carte : « Pokémon déjà prévu »', () => {
     const plan = planPurchase(
       [wish('high', [25], 200, { priority: 'high' }), wish('low', [25], 10, { priority: 'low' })],

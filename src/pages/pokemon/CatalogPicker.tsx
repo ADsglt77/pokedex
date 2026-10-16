@@ -5,6 +5,7 @@ import { CatalogCredit, CatalogGrid, CatalogTile } from '@/components/CatalogTil
 import { loadCatalog, setOption, type CatalogCard } from '@/lib/card-catalog'
 import { plural } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
+import { speciesNames } from '@/lib/species'
 import { usePrices } from '@/store/prices'
 import type { PokemonSpecies } from '@/types'
 
@@ -24,7 +25,8 @@ export interface PickerView {
 /**
  * Les cartes japonaises du Pokémon, à choisir : leur image (Pokécardex), leur série, leur numéro
  * et leur année, leur prix Cardmarket du jour ; à filtrer par série ou aux cartes qui ont un prix.
- * `selected` : la clé de la carte choisie (« SV2A 166 »).
+ * `selected` : la clé de la carte choisie (« SV2A 166 »). Une carte de plusieurs Pokémon (TAG
+ * TEAM) dit avec qui.
  */
 export function CatalogPicker({
   species,
@@ -114,7 +116,10 @@ export function CatalogPicker({
               speciesId={species.id}
               pressed={selected === card.key}
               onPick={() => onPick(card)}
-            />
+            >
+              {card.dexIds.length > 1 &&
+                `avec ${speciesNames(card.dexIds.filter((id) => id !== species.id))}`}
+            </CatalogTile>
           </li>
         ))}
       </CatalogGrid>

@@ -48,6 +48,17 @@ export function setPaidPrice(
 }
 
 /**
+ * Les Pokémon qui reçoivent une carte choisie pour `speciesId` : lui, et pour une carte de plusieurs
+ * Pokémon (TAG TEAM), ceux d'entre eux qui n'ont pas encore de carte (`hasCard`). Une seule carte,
+ * achetée une fois, qui les débloque tous ; un Pokémon qui a déjà la sienne la garde.
+ */
+export const cardSpecies = (
+  cardDexIds: readonly number[],
+  speciesId: number,
+  hasCard: (id: number) => boolean,
+) => [speciesId, ...cardDexIds.filter((id) => id !== speciesId && !hasCard(id))]
+
+/**
  * Ajoute la carte d'un Pokémon, ou la corrige (même id : son statut et ses achats la suivent). Le
  * Pokémon n'en a qu'une : on retire l'ancienne avant d'en ajouter une autre.
  */
@@ -55,8 +66,21 @@ export function saveCard(data: CollectionData, card: PokemonCard, now: string): 
   return { ...data, customCards: { ...data.customCards, [card.id]: card }, updatedAt: now }
 }
 
-/** Retire une carte du Pokédex, avec son statut et son prix payé. */
-export function removeCard(data: CollectionData, cardId: string, now: string): CollectionData {
+/**
+ * Retire la carte d'un Pokémon (`speciesId`). Une carte de plusieurs Pokémon reste celle des
+ * autres, avec son statut, son prix payé et ses achats ; seule, elle quitte le Pokédex avec eux.
+ */
+export function removeCard(
+  data: CollectionData,
+  cardId: string,
+  speciesId: number,
+  now: string,
+): CollectionData {
+  const card = data.customCards[cardId]!
+  if (card.dexIds.length > 1) {
+    const kept = { ...card, dexIds: card.dexIds.filter((id) => id !== speciesId) }
+    return { ...data, customCards: { ...data.customCards, [cardId]: kept }, updatedAt: now }
+  }
   const customCards = { ...data.customCards }
   const cards = { ...data.cards }
   delete customCards[cardId]

@@ -5,6 +5,7 @@
  */
 
 import { derived, getJson } from '@/lib/api'
+import { formatList } from '@/lib/format'
 import type {
   CollectionData,
   PokemonCard,
@@ -38,9 +39,13 @@ export const getSpecies = (id: number): PokemonSpecies | null => speciesById.get
 export const findCard = (id: string, collection: CollectionData): PokemonCard | null =>
   collection.customCards[id] ?? null
 
-/** Les Pokémon d'une carte : plusieurs pour une carte TAG TEAM d'une ancienne version. */
+/** Les Pokémon d'une carte : plusieurs pour une carte TAG TEAM. */
 export const speciesOf = (card: PokemonCard): PokemonSpecies[] =>
   card.dexIds.flatMap((id) => getSpecies(id) ?? [])
+
+/** Les noms de ces Pokémon, en phrase : « Pikachu et Zekrom ». */
+export const speciesNames = (ids: readonly number[]) =>
+  formatList(ids.map((id) => getSpecies(id)!.names.fr))
 
 /** « Pikachu & Zekrom » ; la référence pour une carte sans Pokémon connu. */
 export const cardTitle = (card: PokemonCard) =>

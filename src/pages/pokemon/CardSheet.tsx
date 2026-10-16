@@ -3,8 +3,9 @@ import { Plus } from '@camply/ui/icons'
 import { useEffect, useState, type Ref } from 'react'
 import { Panel } from '@/components/Panel'
 import { loadCatalog } from '@/lib/card-catalog'
-import { statusCaption } from '@/lib/format'
+import { details, statusCaption } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
+import { speciesNames } from '@/lib/species'
 import type { PokemonSpecies } from '@/types'
 import { CardActions } from './CardActions'
 import { CardForm } from './CardForm'
@@ -32,7 +33,12 @@ export function CardSheet({
       {/* Les actions d'abord : sur téléphone, « Je possède cette carte » reste près de l'écran. */}
       <Panel
         title={`Carte ${card.reference}`}
-        description={statusCaption(view.status, view.acquiredAt)}
+        description={details(
+          statusCaption(view.status, view.acquiredAt),
+          // Une carte TAG TEAM : la même, achetée une fois, pour ses autres Pokémon.
+          card.dexIds.length > 1 &&
+            `aussi celle de ${speciesNames(card.dexIds.filter((id) => id !== species.id))}`,
+        )}
         titleRef={titleRef}
       >
         <CardActions view={view} species={species} />

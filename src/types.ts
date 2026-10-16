@@ -53,7 +53,10 @@ export interface CardImage {
 export interface PokemonCard {
   /** `manual:<uuid>`. */
   id: string
-  /** Le Pokémon de la carte (plusieurs pour une carte TAG TEAM d'une ancienne version). */
+  /**
+   * Les Pokémon dont c'est la carte : plusieurs pour une carte TAG TEAM, achetée une fois, qui les
+   * débloque tous (`cardSpecies`).
+   */
   dexIds: number[]
   /** « Bulbizarre (SV2a 166) » : son nom, puis le code de l'extension et le numéro (d'où l'image). */
   reference: string

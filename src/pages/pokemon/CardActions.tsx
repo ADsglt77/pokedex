@@ -6,6 +6,7 @@ import { STATUS_ICONS } from '@/components/statusIcons'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { isToBuy } from '@/lib/collection'
 import { cx } from '@/lib/cx'
+import { speciesNames } from '@/lib/species'
 import { statusLabel } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
 import { useCollectionStore } from '@/store/collection'
@@ -41,7 +42,11 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
   const [leaving, setLeaving] = useState<{ next: Exclude<CardStatus, 'owned'> | null } | null>(null)
   const [removing, setRemoving] = useState(false)
   const { card, status } = view
-  // Une carte d'une commande y reste : la retirer fausserait le registre.
+  // Les autres Pokémon de la carte (TAG TEAM) : la retirer d'ici la leur laisse.
+  const others = card.dexIds.filter((id) => id !== species.id)
+  const shared = others.length > 0
+  // Une carte d'une commande y reste : la retirer fausserait le registre (sauf d'un seul de ses
+  // Pokémon : elle reste alors celle des autres).
   const inAnOrder = useShoppingStore((state) =>
     state.shopping.orders.some((order) => order.lines.some((line) => line.cardId === card.id)),
   )
@@ -61,10 +66,13 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
   const remove = () =>
     act(
       () => {
-        useCollectionStore.getState().removeCard(card.id)
-        useShoppingStore.getState().setAccepted(card.id, false)
+        useCollectionStore.getState().removeCard(card.id, species.id)
+        // Partagée, la carte garde sa préférence d'achat : elle reste celle des autres.
+        if (!shared) useShoppingStore.getState().setAccepted(card.id, false)
       },
-      `Carte ${card.reference} retirée de ${species.names.fr}.`,
+      shared
+        ? `Carte ${card.reference} retirée de ${species.names.fr} : elle reste celle de ${speciesNames(others)}.`
+        : `Carte ${card.reference} retirée de ${species.names.fr}.`,
       'info',
     )
 
@@ -116,16 +124,18 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
             tone="danger"
             size="sm"
             leftIcon={<Trash2 size={15} />}
-            disabled={inAnOrder}
+            disabled={inAnOrder && !shared}
             onClick={() => (status === 'owned' ? setRemoving(true) : remove())}
           >
             Retirer la carte
           </Button>
         </Stack>
         <p className="hint">
-          {inAnOrder
-            ? 'Elle figure dans une commande : elle reste, pour que le registre tienne.'
-            : 'Pour en choisir une autre, retirez celle-ci : son statut, son prix payé et sa préférence d’achat partent avec elle.'}
+          {shared
+            ? `Elle est aussi celle de ${speciesNames(others)} : la retirer d’ici la leur laisse, avec son statut, son prix payé et ses achats.`
+            : inAnOrder
+              ? 'Elle figure dans une commande : elle reste, pour que le registre tienne.'
+              : 'Pour en choisir une autre, retirez celle-ci : son statut, son prix payé et sa préférence d’achat partent avec elle.'}
         </p>
       </Stack>
 
@@ -155,8 +165,8 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
         onConfirm={remove}
       >
         <p>
-          {LEAVING_OWNED.none} {species.names.fr} ne sera plus débloqué, et vous pourrez lui choisir
-          une autre carte.
+          {shared ? `Elle reste celle de ${speciesNames(others)}, possédée.` : LEAVING_OWNED.none}{' '}
+          {species.names.fr} ne sera plus débloqué, et vous pourrez lui choisir une autre carte.
         </p>
       </ConfirmDialog>
     </Stack>
