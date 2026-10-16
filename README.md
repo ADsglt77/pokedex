@@ -114,6 +114,12 @@ Au tout premier démarrage, il répond 503 le temps du premier catalogue (une vi
 Sans surveillance, un trou dans l'historique des prix passerait inaperçu : Cardmarket ne le garde
 pas, un jour manqué l'est pour toujours.
 
+**Le journal** : le serveur écrit une ligne par évènement, à l'heure de Paris : connexions
+(réussies ou refusées, avec l'adresse du visiteur), création du compte, cartes ajoutées, possédées
+ou retirées, commandes enregistrées, reçues ou annulées, budget, exports et imports, visites du
+Pokédex public. Pour le suivre : `docker compose logs -f server` (en développement, le terminal de
+`bun run dev:server`).
+
 L'image Docker construit le site avec Bun et le sert avec nginx (`deploy/nginx.conf` renvoie
 `index.html` pour les adresses du routage côté client, `/api/` au serveur, et sert les images
 copiées). `compose.yaml` l'expose sur `127.0.0.1:8080` (variable `POKEDEX_PORT`), joignable

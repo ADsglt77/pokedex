@@ -17,6 +17,7 @@ import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
 import type { Database } from 'bun:sqlite'
 import { Elysia } from 'elysia'
+import { journal } from './journal'
 
 /** Un jour, en secondes (Better Auth compte ses durées en secondes ; `@/lib/time` en ms). */
 const DAY_IN_SECONDS = 24 * 60 * 60
@@ -34,10 +35,10 @@ export async function createAuth(db: Database) {
         create: {
           // Une seule session par compte : les autres appareils sont déconnectés.
           after: async (session) => {
-            db.query('DELETE FROM session WHERE userId = ? AND id != ?').run(
-              session.userId,
-              session.id,
-            )
+            const { changes } = db
+              .query('DELETE FROM session WHERE userId = ? AND id != ?')
+              .run(session.userId, session.id)
+            if (changes > 0) journal('compte', 'L’autre appareil connecté est déconnecté')
           },
         },
       },
@@ -74,6 +75,36 @@ export async function createAuth(db: Database) {
 
 export type Accounts = Awaited<ReturnType<typeof createAuth>>
 
+/** L'e-mail d'une connexion ou d'une création du compte, pour le journal (jamais le mot de passe). */
+const emailOf = async (request: Request) => {
+  const body = (await request.json().catch(() => null)) as { email?: unknown } | null
+  return typeof body?.email === 'string' ? body.email : '?'
+}
+
+/** Pour le journal : connexion, création du compte, déconnexion, d'après la réponse. */
+function journalAuth(path: string, request: Request, response: Response, email: string) {
+  const ok = response.ok
+  if (path.endsWith('/sign-in/email')) {
+    journal(
+      'compte',
+      ok
+        ? `Connexion : ${email}`
+        : response.status === 429
+          ? `Connexion bloquée (trop de tentatives) : ${email}`
+          : `Connexion refusée : ${email}`,
+      request,
+    )
+  } else if (path.endsWith('/sign-up/email')) {
+    journal(
+      'compte',
+      ok ? `Compte créé : ${email}` : `Création du compte refusée : ${email}`,
+      request,
+    )
+  } else if (path.endsWith('/sign-out') && ok) {
+    journal('compte', `Déconnexion : ${email}`, request)
+  }
+}
+
 /** L'origine publique du site, que doivent avoir les requêtes qui modifient des données. */
 export const appOrigin = (auth: Accounts['auth']) => new URL(auth.options.baseURL as string).origin
 
@@ -90,12 +121,29 @@ export function accountRoutes({ auth, account }: Accounts) {
   return new Elysia({ name: 'account' })
     .all(
       '/auth/*',
-      ({ request, status }) =>
+      async ({ request, status }) => {
+        const path = new URL(request.url).pathname
         // Le compte existe : plus d'inscription, refusée d'emblée (sans dire si une adresse est
         // celle du compte, ni calculer un mot de passe pour rien).
-        new URL(request.url).pathname.endsWith('/sign-up/email') && account() !== null
-          ? status(403, null)
-          : auth.handler(request),
+        if (path.endsWith('/sign-up/email') && account() !== null) {
+          journal(
+            'compte',
+            `Création d’un second compte refusée : ${await emailOf(request)}`,
+            request,
+          )
+          return status(403, null)
+        }
+        // L'e-mail, lu avant que Better Auth ne lise la requête (une copie) ; à la déconnexion,
+        // celui de la session.
+        const email = /\/sign-(in|up)\/email$/.test(path)
+          ? await emailOf(request.clone())
+          : path.endsWith('/sign-out')
+            ? ((await auth.api.getSession({ headers: request.headers }))?.user.email ?? '?')
+            : ''
+        const response = await auth.handler(request)
+        if (email) journalAuth(path, request, response, email)
+        return response
+      },
       {
         // Better Auth lit lui-même la requête.
         parse: 'none',

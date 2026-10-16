@@ -7,6 +7,18 @@
 
 import { settled } from '@/lib/settled'
 
+/**
+ * Note dans le journal du serveur ce que le navigateur fait seul (`server/journal.ts`) : un export,
+ * un import. Sans réponse, tant pis : ce n'est qu'un journal.
+ */
+export function report(event: 'export' | 'import') {
+  fetch('/api/journal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event }),
+  }).catch(() => {})
+}
+
 /** Une réponse demandée : sa promesse, et l'heure d'une panne passagère. */
 interface Request {
   response: Promise<unknown>

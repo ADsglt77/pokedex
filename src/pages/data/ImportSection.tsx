@@ -5,6 +5,7 @@ import { useCollectionAction } from '@/hooks/useNotify'
 import { summarize } from '@/lib/pokedex'
 import { formatDateTime, plural } from '@/lib/format'
 import { type ImportedFile, parseImport } from '@/lib/transfer'
+import { report } from '@/lib/api'
 import { replaceDocument } from '@/store/document'
 import { DataSection } from './DataSection'
 import { SummaryLedger } from './SummaryLedger'
@@ -43,6 +44,7 @@ export function ImportSection() {
 
   const runImport = () => {
     act(() => replaceDocument(imported!), 'Collection remplacée par celle du fichier.')
+    report('import')
     reset()
   }
 

@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { useNotify } from '@/hooks/useNotify'
+import { report } from '@/lib/api'
 import { buildExportFile, downloadExport } from '@/lib/transfer'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
@@ -11,6 +12,7 @@ export function useExportCollection() {
     const { collection } = useCollectionStore.getState()
     const { shopping } = useShoppingStore.getState()
     const name = downloadExport(buildExportFile(collection, shopping))
+    report('export')
     notify(`Collection exportée : ${name}.`)
   }, [notify])
 }

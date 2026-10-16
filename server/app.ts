@@ -13,6 +13,7 @@ import { accountRoutes, type Accounts } from './auth'
 import { collectionRoutes } from './collection'
 import { serveImage } from './images'
 import { referenceRoutes } from './reference'
+import { journalRoutes } from './journal'
 import { vitrineRoutes } from './vitrine'
 import { notFound } from './snapshots'
 
@@ -54,6 +55,7 @@ export function createApp({ data, app, accounts }: AppContext) {
           .use(account)
           .use(referenceRoutes(data))
           .use(collectionRoutes(app, account))
+          .use(journalRoutes(account))
           .use(vitrineRoutes(app)),
       )
       // Les images copiées chez nous (sur le VPS, nginx ne renvoie ici que celles qu'il n'a pas).

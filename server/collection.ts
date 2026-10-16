@@ -15,6 +15,7 @@ import { Elysia, t } from 'elysia'
 import { DAY, HOUR } from '@/lib/time'
 import { readDocument } from '@/lib/transfer'
 import type { accountRoutes } from './auth'
+import { documentChanges, journal } from './journal'
 import { matchesEtag } from './snapshots'
 
 interface Row {
@@ -73,13 +74,22 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
       '/collection',
       ({ user, body }) => {
         const document = readDocument(body)
-        if (!document) return json('null', 400)
+        if (!document) {
+          journal('collection', 'Envoi refusé : la collection ne passe pas les contrôles')
+          return json('null', 400)
+        }
         const { baseVersion } = body
 
         const now = new Date()
         const saved = app.transaction(() => {
           const row = read.get(user.id) as Row | null
           if ((row?.version ?? 0) !== baseVersion) return { conflict: row }
+          const previous =
+            row &&
+            readDocument({
+              collection: JSON.parse(row.collection),
+              shopping: JSON.parse(row.shopping),
+            })
           const version = baseVersion + 1
           const values = [JSON.stringify(document.collection), JSON.stringify(document.shopping)]
           if (row) {
@@ -96,10 +106,17 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
               )
               .run(user.id, version, ...values, now.toISOString())
           }
-          return { version }
+          return { version, previous }
         })
         // `immediate` : la version lue est encore celle du serveur au moment d'écrire.
         const result = saved.immediate()
+        if ('version' in result) {
+          for (const [topic, message] of documentChanges(result.previous ?? null, document)) {
+            journal(topic, message)
+          }
+        } else {
+          journal('collection', 'Envoi refusé : la collection a changé ailleurs entre-temps')
+        }
         return 'version' in result
           ? json(JSON.stringify({ version: result.version }), 200, {
               ETag: `"v${result.version}"`,

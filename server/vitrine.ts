@@ -10,6 +10,7 @@ import type { Database } from 'bun:sqlite'
 import { Elysia } from 'elysia'
 import { emptyCollection } from '@/lib/collection'
 import type { CardOwnership, CollectionData, PokemonCard } from '@/types'
+import { journal } from './journal'
 
 /** La collection telle que la voit un visiteur (testé : jamais un prix payé ni un achat). */
 export function shownCollection(collection: CollectionData): CollectionData {
@@ -32,7 +33,8 @@ export function vitrineRoutes(app: Database) {
 
   return new Elysia({ name: 'vitrine' }).get(
     '/vitrine',
-    () => {
+    ({ request }) => {
+      journal('vitrine', 'Pokédex public consulté', request)
       const row = readShown.get() as { collection: string } | null
       const shown = row ? shownCollection(JSON.parse(row.collection)) : emptyCollection()
       return new Response(JSON.stringify(shown), {
