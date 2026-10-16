@@ -125,7 +125,9 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
           </Button>
         }
       >
-        <MenuLabel className={styles.email}>{session.user.email}</MenuLabel>
+        <MenuLabel className={styles.email}>
+          {session.user.name} · {session.user.email}
+        </MenuLabel>
         <MenuLabel className={styles.text}>{text}</MenuLabel>
         <MenuSeparator />
         {status === 'conflict' && (

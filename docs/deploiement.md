@@ -21,8 +21,8 @@ transmet l'arrêt) :
 - `server` : l'API, qui lit la base du volume `db`, y garde le compte et la collection (`app.db`),
   et copie à la demande dans le volume `images` ; ses secrets (`BETTER_AUTH_URL`, l'adresse
   publique en https, et `BETTER_AUTH_SECRET`) viennent du `.env` du clone (ignoré par git) : sans
-  eux, docker compose refuse de démarrer. Le compte : à la première visite, avec le code du journal (`docker compose logs server`) ;
-  son mot de passe : `docker compose run --rm server bun server/create-user.ts <e-mail>` ;
+  eux, docker compose refuse de démarrer. Le compte : à la première visite (pseudo, e-mail, mot de passe), le premier
+  créé étant le seul : à créer dès le premier démarrage ;
 - `ingest` : `server/ingest.ts --loop`, les tâches à leur rythme (espèces chaque mois, catalogue
   chaque jour, puis prix toutes les 6 h, puis images et sauvegardes chaque jour ; après un échec : 10 min, puis 20, 40…
   jusqu'à 6 h ; une tâche déjà en cours dans un autre processus, lancée à la main, n'est pas

@@ -1,9 +1,8 @@
 /**
  * La connexion (Better Auth) : un seul compte, le vôtre, par e-mail et mot de passe, dans `app.db`.
- * - Il se crée à la première visite du site (`/bienvenue`), avec le code de première visite : tant
- *   qu'aucun compte n'existe, le serveur l'écrit dans son journal (`index.ts`), que vous seul lisez.
- *   Un visiteur arrivé avant vous ne peut donc pas le prendre. Ensuite, plus aucune inscription.
- *   `create-user.ts` le crée aussi depuis le serveur, ou change son mot de passe.
+ * - Il se crée à la première visite du site (`/bienvenue`) : pseudo, e-mail, mot de passe. Le
+ *   premier créé est le seul : ensuite, plus aucune inscription (refusée d'emblée, et la base
+ *   refuse un second compte, même si deux créations arrivent ensemble).
  * - Une seule session : se connecter sur un appareil déconnecte les autres. La collection n'est
  *   donc modifiée que d'un appareil à la fois.
  * Sessions de 60 jours, renouvelées chaque jour d'usage, dans un cookie (`__Secure-`, SameSite
@@ -15,7 +14,6 @@
  */
 
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
-import { APIError } from 'better-auth/api'
 import { getMigrations } from 'better-auth/db/migration'
 import type { Database } from 'bun:sqlite'
 import { Elysia } from 'elysia'
@@ -23,28 +21,8 @@ import { Elysia } from 'elysia'
 /** Un jour, en secondes (Better Auth compte ses durées en secondes ; `@/lib/time` en ms). */
 const DAY_IN_SECONDS = 24 * 60 * 60
 
-/** Sans les caractères qui se confondent (I, L, O, U) : « 7KQM-3XPA ». */
-const CODE_LETTERS = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
-
-/** Un code de première visite : 8 caractères, 40 bits, à 5 essais par minute. */
-function newCode() {
-  const letters = Array.from(
-    crypto.getRandomValues(new Uint8Array(8)),
-    (byte) => CODE_LETTERS[byte % 32],
-  )
-  return `${letters.slice(0, 4).join('')}-${letters.slice(4).join('')}`
-}
-
-/** Le code tel que saisi, comparable au vrai : majuscules, sans espace ni tiret. */
-const comparableCode = (code: string | null | undefined) =>
-  (code ?? '').toUpperCase().replace(/[^0-9A-Z]/g, '')
-
-/**
- * La connexion, une fois créées les tables du compte qui manquent ; et la première visite. `trusted`
- * : seulement pour `create-user.ts`, qui crée le compte sans code.
- */
-export async function createAuth(db: Database, { trusted = false } = {}) {
-  let code: string | null = null
+/** La connexion, une fois créées les tables du compte qui manquent. */
+export async function createAuth(db: Database) {
   const options = {
     database: db,
     baseURL: process.env.BETTER_AUTH_URL,
@@ -52,22 +30,6 @@ export async function createAuth(db: Database, { trusted = false } = {}) {
     emailAndPassword: { enabled: true },
     session: { expiresIn: 60 * DAY_IN_SECONDS, updateAge: DAY_IN_SECONDS },
     databaseHooks: {
-      user: {
-        create: {
-          // Au moment de créer le compte (une adresse invalide ou un mot de passe trop court sont
-          // refusés avant) : le code sert une fois, un second compte n'en trouve plus, pas plus
-          // qu'après un compte créé par `create-user.ts` pendant que le serveur tourne. Si la
-          // création échoue ensuite, redémarrer le serveur en donne un nouveau.
-          before: async (_user, context) => {
-            if (trusted) return
-            const given = (context?.headers as Headers | undefined)?.get('x-setup-code')
-            if (!code || account.get() || comparableCode(given) !== comparableCode(code)) {
-              throw new APIError('FORBIDDEN', { message: 'Code de première visite incorrect' })
-            }
-            code = null
-          },
-        },
-      },
       session: {
         create: {
           // Une seule session par compte : les autres appareils sont déconnectés.
@@ -95,15 +57,18 @@ export async function createAuth(db: Database, { trusted = false } = {}) {
     },
   } satisfies BetterAuthOptions
   await (await getMigrations(options)).runMigrations()
+  // Un seul compte, même si deux créations arrivent ensemble : la base refuse le second.
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS one_account BEFORE INSERT ON "user"
+    WHEN EXISTS (SELECT 1 FROM "user")
+    BEGIN SELECT RAISE(ABORT, 'un seul compte'); END
+  `)
 
   const account = db.query('SELECT email FROM "user" LIMIT 1')
-  if (!trusted && !account.get()) code = newCode()
   return {
     auth: betterAuth(options),
     /** Le compte (son e-mail), `null` tant qu'il n'est pas créé. */
     account: () => (account.get() as { email: string } | null)?.email ?? null,
-    /** Le code de première visite, `null` une fois le compte créé. */
-    setupCode: () => code,
   }
 }
 

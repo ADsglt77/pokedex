@@ -75,9 +75,7 @@ BETTER_AUTH_SECRET=…        # openssl rand -base64 32
 ```
 
 Au premier lancement, le site n'a pas de compte : toute page mène à `/bienvenue`, où vous créez le
-vôtre, le seul, avec le code de première visite que `bun run dev:server` écrit dans son terminal
-(il change à chaque démarrage du serveur). Pour changer le mot de passe ensuite :
-`bun server/create-user.ts moi@exemple.fr` (demandé au clavier). La documentation de l'API
+vôtre (pseudo, e-mail, mot de passe) ; le premier créé est le seul. La documentation de l'API
 (Elysia, OpenAPI) est à `http://localhost:5173/api/docs`, en développement seulement.
 
 Votre collection : le site ne s'ouvre que connecté (« Se connecter », en haut du Pokédex public) ;
@@ -175,17 +173,10 @@ déclaration en bas), redéployer (`docker compose up -d`), puis `docker volume 
    ```
    Si cloudflared tourne lui-même dans Docker, mettre les deux conteneurs sur un même réseau et
    viser `http://pokedex:80`.
-4. Créer votre compte, le seul : ouvrez le site, la première visite le demande, avec le code que
-   le serveur écrit dans son journal tant qu'aucun compte n'existe (un visiteur arrivé avant vous
-   ne peut donc pas le créer ; le code change à chaque redémarrage du serveur) :
-   ```sh
-   docker compose logs server | grep "première visite"
-   ```
-   Pour changer le mot de passe ensuite (demandé deux fois, sans s'afficher ; les sessions ouvertes
-   se ferment) :
-   ```sh
-   docker compose run --rm server bun server/create-user.ts moi@exemple.fr
-   ```
+4. Créer votre compte, le seul, **tout de suite** : ouvrez le site, la première visite le demande
+   (pseudo, e-mail, mot de passe). Le premier compte créé est le seul : tant qu'il n'existe pas,
+   n'importe quel visiteur pourrait le créer, alors ne partagez l'adresse qu'ensuite. Gardez bien
+   le mot de passe : le site n'envoie pas d'e-mail, il n'y a pas de « mot de passe oublié ».
 
 **Ensuite, à chaque déploiement** (`.github/workflows/deploy.yml`, lancé à la main depuis l'onglet
 Actions tant que le domaine n'est pas prêt ; son en-tête dit comment le relancer à chaque push sur

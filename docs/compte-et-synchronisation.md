@@ -5,15 +5,15 @@ Le seul compte, la collection synchronisée entre les appareils, le Pokédex pub
 - Comptes et synchronisation (`server/auth.ts`, `server/collection.ts`, `lib/sync.ts`,
   `store/sync.ts`) : Better Auth, e-mail et mot de passe, **un seul compte**, celui de
   l'utilisateur (les invitations ont été retirées à sa demande, octobre 2026). Tant qu'il n'existe
-  pas, c'est la première visite : le serveur écrit dans son journal un code de première visite
-  (8 caractères, nouveau à chaque démarrage), `GET /api/account` répond `{ exists: false }` et le
-  routeur (créé après cette réponse, `main.tsx` : ses `loader` lisent `accountExists` dès sa
-  création) mène toute page à `/bienvenue` (`WelcomePage`, hors de la coquille). On y crée le
-  compte avec ce code (en-tête `X-Setup-Code`, vérifié puis consommé au moment de créer le compte,
-  `databaseHooks.user.create.before`) ; ensuite, plus aucune inscription (403 avant même Better Auth), et `/bienvenue` mène à
-  `/connexion`. Un visiteur arrivé avant l'utilisateur ne peut donc pas prendre le compte.
-  `server/create-user.ts` le crée aussi depuis le serveur (jamais un second) ou change son mot de
-  passe (ce qui ferme ses sessions). **Une seule session par compte** : se connecter sur un
+  pas, c'est la première visite : `GET /api/account` répond `{ exists: false }` et le routeur (créé
+  après cette réponse, `main.tsx` : ses `loader` lisent `accountExists` dès sa création) mène toute
+  page à `/bienvenue` (`WelcomePage`, hors de la coquille), un formulaire : pseudo (le `name` de
+  Better Auth, montré dans le menu du compte), e-mail, mot de passe (8 caractères au moins). Le
+  premier compte créé est le seul (décision de l'utilisateur, octobre 2026 : plus de code de
+  première visite ni de `create-user.ts`) : ensuite, plus aucune inscription (403 avant même Better
+  Auth), la base refuse un second compte (déclencheur `one_account` sur `user`, même pour deux
+  créations simultanées), et `/bienvenue` mène à `/connexion`. Pas de mot de passe oublié (le
+  site n'envoie pas d'e-mail). **Une seule session par compte** : se connecter sur un
   appareil déconnecte les autres (crochet `session.create.after`) ; l'appareil déconnecté garde
   ses modifications et affiche « Reconnectez-vous ». Sessions de 60 jours dans un cookie
   (`__Secure-` en https, SameSite Lax) ; en production, 5 tentatives de connexion ou de création du compte

@@ -4,7 +4,7 @@
  * (`ingest.ts`) ; il n'écrit que `app.db` (le compte, la collection synchronisée), les images
  * copiées à la demande et, à son démarrage, les étapes du schéma qui manquent aux deux bases. Les
  * données de référence sont publiques ; la collection exige la connexion. Tant que le compte
- * n'existe pas, il écrit dans son journal le code de la première visite.
+ * n'existe pas, il le rappelle dans son journal.
  */
 
 import { createApp } from './app'
@@ -22,7 +22,4 @@ const server = createApp({ data, app, accounts }).listen(Number(process.env.PORT
 
 const site = appOrigin(accounts.auth)
 console.log(`API sur ${server.server?.url} (site : ${site})`)
-const code = accounts.setupCode()
-if (code) {
-  console.log(`Pas encore de compte : ouvrez ${site} et entrez le code de première visite ${code}`)
-}
+if (!accounts.account()) console.log(`Pas encore de compte : ouvrez ${site} pour créer le vôtre.`)
