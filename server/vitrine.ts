@@ -34,7 +34,7 @@ export function vitrineRoutes(app: Database) {
   return new Elysia({ name: 'vitrine' }).get(
     '/vitrine',
     ({ request }) => {
-      journal({ topic: 'vitrine', icon: '👀', message: 'Pokédex public consulté' }, request)
+      journal({ topic: 'vitrine', message: 'Pokédex public consulté' }, request)
       const row = readShown.get() as { collection: string } | null
       const shown = row ? shownCollection(JSON.parse(row.collection)) : emptyCollection()
       return new Response(JSON.stringify(shown), {

@@ -17,7 +17,7 @@ import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
 import type { Database } from 'bun:sqlite'
 import { Elysia } from 'elysia'
-import { journal, type JournalTone } from './journal'
+import { journal, type JournalLevel } from './journal'
 
 /** Un jour, en secondes (Better Auth compte ses durées en secondes ; `@/lib/time` en ms). */
 const DAY_IN_SECONDS = 24 * 60 * 60
@@ -29,6 +29,13 @@ export async function createAuth(db: Database) {
     baseURL: process.env.BETTER_AUTH_URL,
     secret: process.env.BETTER_AUTH_SECRET,
     emailAndPassword: { enabled: true },
+    // Ses messages dans le journal de l'app, ses erreurs seulement : une connexion refusée y est
+    // déjà (« Invalid password » en plus serait du bruit).
+    logger: {
+      level: 'error',
+      log: (_level, message) =>
+        journal({ topic: 'serveur', level: 'error', message: `Better Auth : ${message}` }),
+    },
     session: { expiresIn: 60 * DAY_IN_SECONDS, updateAge: DAY_IN_SECONDS },
     databaseHooks: {
       session: {
@@ -39,7 +46,7 @@ export async function createAuth(db: Database) {
               .query('DELETE FROM session WHERE userId = ? AND id != ?')
               .run(session.userId, session.id)
             if (changes > 0) {
-              journal({ topic: 'compte', icon: '📴', message: 'L’autre appareil est déconnecté' })
+              journal({ topic: 'compte', level: 'warn', message: 'Autre appareil déconnecté' })
             }
           },
         },
@@ -86,18 +93,16 @@ const emailOf = async (request: Request) => {
 /** Pour le journal : connexion, création du compte, déconnexion, d'après la réponse. */
 function journalAuth(path: string, request: Request, response: Response, email: string) {
   const ok = response.ok
-  const log = (icon: string, message: string, tone: JournalTone) =>
-    journal({ topic: 'compte', icon, message, tone }, request)
+  const log = (message: string, level: JournalLevel) =>
+    journal({ topic: 'compte', level, message, details: { email } }, request)
   if (path.endsWith('/sign-in/email')) {
-    if (ok) log('🔓', `Connexion : ${email}`, 'ok')
-    else if (response.status === 429)
-      log('🚨', `Connexion bloquée (trop d’essais) : ${email}`, 'bad')
-    else log('⛔', `Connexion refusée : ${email}`, 'bad')
+    if (ok) log('Connexion', 'ok')
+    else if (response.status === 429) log('Connexion bloquée (trop d’essais)', 'error')
+    else log('Connexion refusée', 'error')
   } else if (path.endsWith('/sign-up/email')) {
-    if (ok) log('🎉', `Compte créé : ${email}`, 'ok')
-    else log('⛔', `Création du compte refusée : ${email}`, 'bad')
+    log(ok ? 'Compte créé' : 'Création du compte refusée', ok ? 'ok' : 'error')
   } else if (path.endsWith('/sign-out') && ok) {
-    log('👋', `Déconnexion : ${email}`, 'info')
+    log('Déconnexion', 'info')
   }
 }
 
@@ -126,9 +131,9 @@ export function accountRoutes({ auth, account }: Accounts) {
           journal(
             {
               topic: 'compte',
-              icon: '🛑',
-              message: `Second compte refusé : ${email}`,
-              tone: 'bad',
+              level: 'error',
+              message: 'Second compte refusé',
+              details: { email },
             },
             request,
           )

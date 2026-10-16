@@ -18,7 +18,7 @@ import { vitrineRoutes } from './vitrine'
 import { notFound } from './snapshots'
 
 /** Bien au-delà d'une collection de 1 025 cartes et de ses commandes : 413 au-delà. */
-const MAX_BODY = 5_000_000
+export const MAX_BODY = 5_000_000
 
 interface AppContext {
   /** Les données de référence, en lecture seule. */
@@ -31,7 +31,7 @@ interface AppContext {
 export function createApp({ data, app, accounts }: AppContext) {
   const account = accountRoutes(accounts)
   return (
-    new Elysia({ serve: { maxRequestBodySize: MAX_BODY } })
+    new Elysia()
       .use(
         openapi({
           enabled: process.env.NODE_ENV !== 'production',
@@ -43,10 +43,16 @@ export function createApp({ data, app, accounts }: AppContext) {
       )
       // Une adresse inconnue : 404, sans corps. Une erreur inattendue : dans le journal du serveur,
       // et 500 sans corps (rien de ses détails, une requête SQL par exemple, ne part vers le site).
-      .onError(({ code, error }) => {
+      .onError(({ code, error, request }) => {
         if (code === 'NOT_FOUND') return notFound()
         if (code === 'UNKNOWN' || code === 'INTERNAL_SERVER_ERROR') {
-          journal({ topic: 'serveur', icon: '💥', message: 'Erreur de l’API', tone: 'bad' })
+          const { pathname } = new URL(request.url)
+          journal({
+            topic: 'serveur',
+            level: 'error',
+            message: 'Erreur de l’API',
+            details: { route: `${request.method} ${pathname}` },
+          })
           console.error(error)
           return new Response(null, { status: 500, headers: { 'Cache-Control': 'no-store' } })
         }

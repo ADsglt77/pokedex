@@ -77,9 +77,9 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
         if (!document) {
           journal({
             topic: 'collection',
-            icon: '🚧',
-            message: 'Envoi refusé : la collection ne passe pas les contrôles',
-            tone: 'bad',
+            level: 'error',
+            message: 'Envoi refusé',
+            details: { raison: 'ne passe pas les contrôles' },
           })
           return json('null', 400)
         }
@@ -120,9 +120,9 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
         } else {
           journal({
             topic: 'collection',
-            icon: '🔀',
-            message: 'Envoi refusé : la collection a changé ailleurs entre-temps (conflit)',
-            tone: 'warn',
+            level: 'warn',
+            message: 'Envoi refusé',
+            details: { raison: 'conflit, changée ailleurs entre-temps' },
           })
         }
         return 'version' in result
