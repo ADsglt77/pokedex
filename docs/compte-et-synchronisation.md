@@ -20,15 +20,25 @@ Le seul compte, la collection synchronisée entre les appareils, le Pokédex pub
   par minute et par visiteur (`cf-connecting-ip`). **L'app ne s'ouvre que connecté** (décision de
   l'utilisateur, octobre 2026 : vitrine pour un visiteur, tableau de bord pour lui ; plus de
   collection « dans ce navigateur » sans compte, ni de rappel de sauvegarde) : `signedIn`
-  (`store/sync.ts`), lu au démarrage avant le routeur (`loadSession` : la session ; sans réponse du
-  serveur, un appareil déjà synchronisé et pas déconnecté l'est encore, pour marcher hors ligne),
-  suivi à la connexion et à la déconnexion. Pas connecté, `/` mène à `/vitrine` et toute autre page
+  (`store/sync.ts`), fixé au démarrage avant le routeur (`startSession`, d'après `GET /api/account`,
+  qui dit en une requête si le compte existe et qui est connecté ; sans réponse du serveur, un
+  appareil déjà synchronisé et pas déconnecté l'est encore, pour marcher hors ligne, avec l'e-mail
+  et le pseudo gardés dans `pokedex-collection.sync`), puis à la connexion et à la création du
+  compte (`signIn`, d'après la réponse de Better Auth) et à la déconnexion. Plus de `useSession`
+  de Better Auth (il redemandait la session à chaque montage) : le menu du compte lit le store
+  (`account`). Le compte : Données › Mon compte (`AccountSection`), le pseudo (`updateUser`) et le
+  mot de passe (`changePassword`, l'actuel exigé, les autres sessions fermées ; 5 essais par
+  minute), au journal. Pas connecté, `/` mène à `/vitrine` et toute autre page
   de la coquille à `/connexion?retour=…` (`appLoader`, `router.tsx`) ; `/connexion` est hors de la
   coquille, comme `/bienvenue`, et mène aussi au Pokédex public. Se déconnecter ramène à la vitrine.
   Le Pokédex public (`/vitrine`, à sa demande, octobre 2026) : une adresse fixe, **toujours
   publique** (plus de réglage : la colonne `public` de `collections` est retirée), la page
   d'accueil d'un visiteur ; en tête, « Se connecter », ou « Mon Pokédex » une fois connecté ;
-  Données › Pokédex public en donne l'adresse. Une page seule, hors de la coquille, en lecture seule et pas indexée (`noindex`) : la progression, les régions, la valeur au
+  son titre : « Le Pokédex de … », le pseudo du compte (`GET /api/vitrine` : `{ owner, collection }`).
+  Données › Pokédex public en donne l'adresse. Un lien partagé (Discord, WhatsApp…) a son aperçu :
+  nginx envoie les robots d'aperçu (`map $vitrine_preview`, `deploy/nginx.conf`) à
+  `/api/vitrine/apercu`, une page faite par le serveur avec le titre et la progression
+  (`vitrineSummary`, testé : rien d'autre que le pseudo et le nombre de Pokémon débloqués). Une page seule, hors de la coquille, en lecture seule et pas indexée (`noindex`) : la progression, les régions, la valeur au
   prix du jour, la courbe des Pokémon débloqués et le classeur (débloqués en couleur, cartes
   choisies grisées ; les pochettes ne mènent pas aux fiches, celles du visiteur). Le serveur ne
   montre que les cartes (sans leur page notée) et les possessions avec leur date

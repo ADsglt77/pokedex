@@ -72,10 +72,12 @@ par git) :
 ```sh
 BETTER_AUTH_URL=http://localhost:5173
 BETTER_AUTH_SECRET=…        # openssl rand -base64 32
+ACCOUNT_EMAIL=moi@exemple.fr   # facultatif en développement : la seule adresse qui crée le compte
 ```
 
 Au premier lancement, le site n'a pas de compte : toute page mène à `/bienvenue`, où vous créez le
-vôtre (pseudo, e-mail, mot de passe) ; le premier créé est le seul. La documentation de l'API
+vôtre (pseudo, e-mail, mot de passe) ; le premier créé est le seul. Pseudo et mot de passe se
+changent ensuite dans Données › Mon compte. La documentation de l'API
 (Elysia, OpenAPI) est à `http://localhost:5173/api/docs`, en développement seulement.
 
 Votre collection : le site ne s'ouvre que connecté (« Se connecter », en haut du Pokédex public) ;
@@ -89,7 +91,8 @@ déconnecte le précédent, qui garde ses modifications). Personne d'autre ne pe
 - [ ] **Avant tout** : exporter sa collection depuis le site actuel (Données › Exporter).
 - [ ] Sur le VPS : Docker, `git` et le tunnel Cloudflare (`cloudflared`).
 - [ ] Le clone en SSH, avec une clé de déploiement en lecture seule (étape 1 plus bas).
-- [ ] Le fichier `.env` : l'adresse publique en https et la clé des sessions (étape 2).
+- [ ] Le fichier `.env` : l'adresse publique en https, la clé des sessions et l'adresse de votre
+      compte (étape 2).
 - [ ] L'ancien historique des prix : `docker volume ls | grep prices`. Si l'ancien service des prix
       a tourné sur ce VPS, `ingest` reprend son historique tout seul au premier démarrage
       (« Vérifié : … cartes » dans `docker compose logs ingest`) : les courbes commencent plus tôt.
@@ -104,8 +107,9 @@ déconnecte le précédent, qui garde ses modifications). Personne d'autre ne pe
 - [ ] La surveillance : un service gratuit (UptimeRobot, Healthchecks…) qui demande
       `https://votre-domaine/api/health` toutes les 5 minutes et vous écrit s'il ne répond plus
       200 (voir plus bas).
-- [ ] Sur téléphone, « Ajouter à l'écran d'accueil » : le site s'ouvre comme une application. Il lui
-      faut le réseau pour démarrer ; la collection, elle, reste sur l'appareil.
+- [ ] Sur téléphone, « Ajouter à l'écran d'accueil » : le site s'ouvre comme une application, même
+      sans réseau (après une première ouverture en ligne) ; les modifications partent au retour du
+      réseau.
 
 **La surveillance** : `/api/health` répond 200 quand le serveur répond et que chaque tâche
 nécessaire a réussi récemment (en deux intervalles au plus : les prix en 12 h, le catalogue et les
@@ -117,7 +121,7 @@ pas, un jour manqué l'est pour toujours.
 **Le journal** : le serveur écrit une ligne par évènement, alignée, à l'heure de Paris : un symbole
 de niveau en couleur (✔ réussi, • info, ▲ à surveiller, ✖ refusé), le thème, un message court et
 ses détails en `clé=valeur` ; au démarrage, une Poké Ball en pixel art avec les adresses et le
-compte ; en développement, chaque requête de l'API (méthode, chemin, statut, durée). Sans couleurs
+compte (pas les requêtes une à une : seulement ce qui se passe). Sans couleurs
 avec `NO_COLOR=1`. Il note les connexions
 (réussies ou refusées, avec l'adresse du visiteur), création du compte, cartes ajoutées, possédées
 ou retirées, commandes enregistrées, reçues ou annulées, budget, exports et imports, visites du
@@ -165,10 +169,12 @@ déclaration en bas), redéployer (`docker compose up -d`), puis `docker volume 
    cd pokedex
    ```
 2. Créer, dans le clone, le fichier `.env` des secrets (ignoré par git ; sans lui, docker compose
-   refuse de démarrer) : l'adresse publique du site, en https, et la clé qui signe les sessions.
+   refuse de démarrer) : l'adresse publique du site, en https, la clé qui signe les sessions et
+   l'adresse e-mail de votre compte, la seule qui pourra le créer.
    ```sh
    echo "BETTER_AUTH_URL=https://pokedex.ton-domaine.fr" > .env
    echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+   echo "ACCOUNT_EMAIL=moi@exemple.fr" >> .env
    chmod 600 .env
    docker compose up -d --build
    ```
@@ -183,10 +189,10 @@ déclaration en bas), redéployer (`docker compose up -d`), puis `docker volume 
    ```
    Si cloudflared tourne lui-même dans Docker, mettre les deux conteneurs sur un même réseau et
    viser `http://pokedex:80`.
-4. Créer votre compte, le seul, **tout de suite** : ouvrez le site, la première visite le demande
-   (pseudo, e-mail, mot de passe). Le premier compte créé est le seul : tant qu'il n'existe pas,
-   n'importe quel visiteur pourrait le créer, alors ne partagez l'adresse qu'ensuite. Gardez bien
-   le mot de passe : le site n'envoie pas d'e-mail, il n'y a pas de « mot de passe oublié ».
+4. Créer votre compte, le seul : ouvrez le site, la première visite le demande (pseudo, e-mail,
+   mot de passe). Seule l'adresse `ACCOUNT_EMAIL` peut le créer : personne ne peut le prendre avant
+   vous. Gardez bien le mot de passe : le site n'envoie pas d'e-mail, il n'y a pas de « mot de
+   passe oublié » ; il se change dans Données › Mon compte, en donnant l'actuel.
 
 **Ensuite, à chaque déploiement** (`.github/workflows/deploy.yml`, lancé à la main depuis l'onglet
 Actions tant que le domaine n'est pas prêt ; son en-tête dit comment le relancer à chaque push sur

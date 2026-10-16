@@ -1,16 +1,15 @@
 import { Button, DropdownMenu, MenuItem, MenuLabel, MenuSeparator } from '@camply/ui'
 import { CloudAlert, CloudCheck, CloudOff, LogIn, LogOut, RefreshCw } from '@camply/ui/icons'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SyncConflictDialog } from '@/components/SyncConflictDialog'
 import { useNotify } from '@/hooks/useNotify'
-import { authClient, loginPath } from '@/lib/auth-client'
+import { loginPath } from '@/lib/auth-client'
 import { cx } from '@/lib/cx'
 import {
   hasUnsentChanges,
   setConflictQuestion,
-  setSyncUser,
   signOut,
   sync,
   useSyncStore,
@@ -57,12 +56,12 @@ const STATUS: Record<
 
 /**
  * Le compte : « Se connecter » ; connecté, l'état de la synchronisation et un menu (synchroniser,
- * se reconnecter, se déconnecter). Il suit la session pour la synchronisation (`setSyncUser`) et
- * ouvre la question d'un conflit : un seul dans la page. En bas de la barre latérale, de sa largeur ;
+ * se reconnecter, se déconnecter), d'après le compte que suit le store (`signIn`), et ouvre la
+ * question d'un conflit : un seul dans la page. En bas de la barre latérale, de sa largeur ;
  * `compact` (barre du haut), son icône seule (le texte reste lu).
  */
 export function AccountMenu({ compact = false }: { compact?: boolean }) {
-  const { data: session, isPending } = authClient.useSession()
+  const account = useSyncStore((state) => state.account)
   const status = useSyncStore((state) => state.status)
   const conflict = useSyncStore((state) => state.conflict)
   const navigate = useNavigate()
@@ -72,14 +71,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const notify = useNotify()
   const dismissed = useSyncStore((state) => state.dismissed)
   const [confirmingSignOut, setConfirmingSignOut] = useState(false)
-  const userId = session?.user.id ?? null
-
-  useEffect(() => {
-    if (!isPending) setSyncUser(userId)
-  }, [isPending, userId])
-
-  if (isPending) return null
-  if (!session) {
+  if (!account) {
     return (
       <Button
         asChild
@@ -126,7 +118,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
         }
       >
         <MenuLabel className={styles.email}>
-          {session.user.name} · {session.user.email}
+          {[account.name, account.email].filter(Boolean).join(' · ')}
         </MenuLabel>
         <MenuLabel className={styles.text}>{text}</MenuLabel>
         <MenuSeparator />

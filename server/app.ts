@@ -9,7 +9,7 @@
 import { openapi } from '@elysiajs/openapi'
 import type { Database } from 'bun:sqlite'
 import { Elysia } from 'elysia'
-import { accountRoutes, type Accounts } from './auth'
+import { accountRoutes, appOrigin, type Accounts } from './auth'
 import { collectionRoutes } from './collection'
 import { serveImage } from './images'
 import { referenceRoutes } from './reference'
@@ -18,7 +18,7 @@ import { vitrineRoutes } from './vitrine'
 import { notFound } from './snapshots'
 
 /** Bien au-delà d'une collection de 1 025 cartes et de ses commandes : 413 au-delà. */
-export const MAX_BODY = 5_000_000
+const MAX_BODY = 5_000_000
 
 interface AppContext {
   /** Les données de référence, en lecture seule. */
@@ -31,7 +31,7 @@ interface AppContext {
 export function createApp({ data, app, accounts }: AppContext) {
   const account = accountRoutes(accounts)
   return (
-    new Elysia()
+    new Elysia({ serve: { maxRequestBodySize: MAX_BODY } })
       .use(
         openapi({
           enabled: process.env.NODE_ENV !== 'production',
@@ -63,7 +63,7 @@ export function createApp({ data, app, accounts }: AppContext) {
           .use(referenceRoutes(data))
           .use(collectionRoutes(app, account))
           .use(journalRoutes(account))
-          .use(vitrineRoutes(app)),
+          .use(vitrineRoutes(app, appOrigin(accounts.auth))),
       )
       // Les images copiées chez nous (sur le VPS, nginx ne renvoie ici que celles qu'il n'a pas).
       .get('/images/*', ({ request }) => serveImage(data, request), { detail: { hide: true } })

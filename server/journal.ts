@@ -11,8 +11,8 @@
  * - `données` : l'export et l'import, que le navigateur signale (`POST /api/journal`) : le serveur
  *   ne les voit pas autrement ;
  * - `vitrine` : une visite du Pokédex public ;
- * - `serveur` : une erreur imprévue de l'API ; `http` : chaque requête, en développement seulement
- *   (`index.ts`).
+ * - `serveur` : une erreur imprévue de l'API ou de Better Auth.
+ * Pas les requêtes une à une : seulement ce qui se passe.
  * Au démarrage, une Poké Ball en pixel art (`banner`). Jamais un mot de passe ; l'adresse du
  * visiteur quand le tunnel la donne (`cf-connecting-ip`). Sans couleurs avec `NO_COLOR` (la
  * convention des terminaux).
@@ -26,8 +26,7 @@ import type { SyncDocument } from '@/lib/sync'
 import type { CollectionData, Order, ShoppingData } from '@/types'
 import type { accountRoutes } from './auth'
 
-export type JournalTopic =
-  'compte' | 'collection' | 'achats' | 'données' | 'vitrine' | 'serveur' | 'http'
+export type JournalTopic = 'compte' | 'collection' | 'achats' | 'données' | 'vitrine' | 'serveur'
 
 /** Réussi, simple information, à surveiller, refusé ou en erreur. */
 export type JournalLevel = 'ok' | 'info' | 'warn' | 'error'
@@ -53,7 +52,6 @@ const yellow = paint('33')
 const blue = paint('34')
 const magenta = paint('35')
 const cyan = paint('36')
-const gray = paint('90')
 
 const LEVELS: Record<JournalLevel, string> = {
   ok: green('✔'),
@@ -69,7 +67,6 @@ const TOPICS: Record<JournalTopic, (text: string) => string> = {
   données: blue,
   vitrine: green,
   serveur: red,
-  http: gray,
 }
 
 /** « 16/10 14:03:12 », à l'heure de Paris (le VPS est à l'heure universelle). */
@@ -88,7 +85,7 @@ const detail = (key: string, value: string | number) => {
   return `${dim(`${key}=`)}${/[\s="]/.test(text) ? `"${text.replaceAll('"', '\\"')}"` : text}`
 }
 
-/** La colonne du message (ou de la requête) : les détails commencent tous au même endroit. */
+/** La colonne du message : les détails commencent tous au même endroit. */
 const WIDTH = 32
 
 /** Le début de chaque ligne : l'heure, le niveau, le thème. */
@@ -109,16 +106,6 @@ export function journal(
     .map(([key, value]) => detail(key, value))
     .join(' ')
   console.log(`${head(LEVELS[level], topic)}  ${message.padEnd(WIDTH)} ${rest}`.trimEnd())
-}
-
-/** Une requête de l'API, en développement : méthode, chemin, statut (en couleur), durée. */
-export function journalRequest(request: Request, response: Response, milliseconds: number) {
-  const { pathname, search } = new URL(request.url)
-  const { status } = response
-  const shade = status >= 500 ? red : status >= 400 ? yellow : status >= 300 ? cyan : green
-  const route = `${request.method.padEnd(6)} ${pathname}${search}`
-  const time = dim(`${Math.round(milliseconds)} ms`)
-  console.log(`${head(gray('·'), 'http')}  ${route.padEnd(WIDTH)} ${shade(String(status))} ${time}`)
 }
 
 /*

@@ -12,7 +12,7 @@
  */
 
 import { create } from 'zustand'
-import { authClient } from '@/lib/auth-client'
+import { authClient, startupAccount, type AccountUser } from '@/lib/auth-client'
 import { emptyCollection } from '@/lib/collection'
 import { decide, documentHash, isEmptyDocument, type SyncDocument } from '@/lib/sync'
 import { parseStored, readCollection, readShopping } from '@/lib/transfer'
@@ -41,11 +41,13 @@ interface ServerDocument {
 }
 
 export const useSyncStore = create<{
+  /** Le compte connecté, pour le menu du compte ; `null` : personne. */
+  account: AccountUser | null
   status: SyncStatus
   conflict: ServerDocument | null
   /** Le conflit dont la question a été fermée (« Plus tard ») ; un nouveau la rouvre. */
   dismissed: ServerDocument | null
-}>(() => ({ status: 'local', conflict: null, dismissed: null }))
+}>(() => ({ account: null, status: 'local', conflict: null, dismissed: null }))
 
 /**
  * Ferme la question du conflit en cours (`open` à faux) ou la rouvre. Gardé ici, pas dans le menu
@@ -72,8 +74,10 @@ function readBase() {
 }
 
 function writeBase(version: number, hash: string) {
+  // L'e-mail et le pseudo aussi : hors ligne au démarrage, le menu du compte les montre encore.
+  const { email, name } = useSyncStore.getState().account ?? {}
   try {
-    localStorage.setItem(BASE_KEY, JSON.stringify({ user, version, hash }))
+    localStorage.setItem(BASE_KEY, JSON.stringify({ user, email, name, version, hash }))
   } catch {
     // Sans stockage, le bandeau d'échec le dit ; la version sera redemandée.
   }
@@ -83,25 +87,42 @@ const setStatus = (status: SyncStatus) => useSyncStore.setState({ status })
 
 /**
  * Ce navigateur est-il connecté au compte ? Sinon, il ne voit que le Pokédex public (`/vitrine`) et
- * la connexion (`router.tsx`). Lu au démarrage (`loadSession`), puis suivi à la connexion
- * (`setSignedIn`) et à la déconnexion (`signOut`).
+ * la connexion (`router.tsx`). Fixé au démarrage (`startSession`), puis à la connexion
+ * (`signIn`) et à la déconnexion (`signOut`).
  */
 export let signedIn = false
 
-export const setSignedIn = (value: boolean) => {
-  signedIn = value
+/** Connecté (connexion, création du compte, démarrage) : la synchronisation commence. */
+export function signIn(account: AccountUser) {
+  signedIn = true
+  useSyncStore.setState({ account })
+  if (account.id === user) return
+  user = account.id
+  useSyncStore.setState({ status: 'syncing', conflict: null })
+  void sync()
 }
 
 /**
- * La session, au démarrage. Sans réponse du serveur (hors ligne, en panne), un appareil déjà
- * synchronisé avec le compte et pas déconnecté depuis l'est encore : l'app marche hors ligne.
+ * Au démarrage, d'après `/api/account` (`loadAccount`). Sans réponse du serveur (hors ligne, en
+ * panne), un appareil déjà synchronisé avec le compte et pas déconnecté depuis l'est encore : l'app
+ * marche hors ligne.
  */
-export async function loadSession() {
-  const { data, error } = await authClient
-    .getSession()
-    .catch(() => ({ data: null, error: true as const }))
-  const base = parseStored(readStored(BASE_KEY)) as { user?: unknown } | null
-  signedIn = error ? typeof base?.user === 'string' : data !== null
+export function startSession() {
+  if (startupAccount !== undefined) {
+    if (startupAccount) signIn(startupAccount)
+    return
+  }
+  const base = parseStored(readStored(BASE_KEY)) as Record<string, unknown> | null
+  const text = (value: unknown) => (typeof value === 'string' ? value : '')
+  if (typeof base?.user === 'string') {
+    signIn({ id: base.user, email: text(base.email), name: text(base.name) })
+  }
+}
+
+/** Le pseudo vient de changer (Données › Mon compte). */
+export function renameAccount(name: string) {
+  const { account } = useSyncStore.getState()
+  if (account) useSyncStore.setState({ account: { ...account, name } })
 }
 
 let retry: ReturnType<typeof setTimeout> | undefined
@@ -247,17 +268,6 @@ export function keepServer() {
 }
 
 /**
- * Le compte connecté (`null` : aucun), que suit la coquille de l'app (`useSessionSync`) : à la
- * connexion, la synchronisation commence.
- */
-export function setSyncUser(next: string | null) {
-  if (next === user) return
-  user = next
-  useSyncStore.setState({ status: next ? 'syncing' : 'local', conflict: null })
-  if (next) void sync()
-}
-
-/**
  * Les modifications de cet appareil pas encore envoyées (la dernière synchronisation a échoué) :
  * à dire avant de se déconnecter, qui les effacerait.
  */
@@ -286,7 +296,7 @@ export async function signOut() {
       // Sans stockage, rien n'était gardé.
     }
     replaceDocument({ collection: emptyCollection(), shopping: emptyShopping() })
-    useSyncStore.setState({ status: 'local', conflict: null })
+    useSyncStore.setState({ account: null, status: 'local', conflict: null })
   })
   return true
 }

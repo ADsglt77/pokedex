@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { shownCollection } from '../server/vitrine'
+import { shownCollection, vitrineSummary } from '../server/vitrine'
 import { collectionWith, ownership } from './fixtures'
 
 const card = (id: string, dexId: number, extra = {}) => ({
@@ -49,5 +49,23 @@ describe('shownCollection', () => {
     expect(Object.keys(shown.customCards)).toEqual(['a', 'b', 'c', 'd'])
     expect(shown.customCards.a).toEqual(card('a', 25, { cardmarket: 719445 }))
     expect(JSON.stringify(shown)).not.toContain('cardmarket.com')
+  })
+})
+
+describe('vitrineSummary', () => {
+  test('l’aperçu d’un lien partagé : le pseudo et la progression, rien d’autre', () => {
+    const collection = {
+      ...collectionWith({
+        a: ownership('owned', { paidPrice: 30 }),
+        b: ownership('ordered', { paidPrice: 12 }),
+      }),
+      customCards: { a: card('a', 25), b: card('b', 1), c: card('c', 4) },
+    }
+    const summary = vitrineSummary('Sacha', collection)
+    expect(summary.title).toBe('Le Pokédex de Sacha')
+    expect(summary.description).toStartWith('1 Pokémon débloqué sur 1')
+    expect(JSON.stringify(summary)).not.toMatch(/30|12|commandée/)
+    expect(vitrineSummary('Adrien', collection).title).toBe('Le Pokédex d’Adrien')
+    expect(vitrineSummary(null, collection).title).toBe('Un Pokédex de cartes japonaises')
   })
 })

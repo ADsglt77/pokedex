@@ -57,9 +57,13 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   seul effet appuyé de l'app, la carte en grand suit la souris et la lumière y glisse
   (`CardStage` : variables CSS, sans rendu React ; ni au toucher ni en mouvement réduit). Les
   site s'installe sur téléphone et ordinateur (`public/manifest.webmanifest`, icônes de `public/icons`
-  et `public/apple-touch-icon.png`, dessinées d'après `favicon.svg` ; pas de service worker : il faut
-  le réseau pour démarrer), et un lien partagé a son aperçu (`og:` dans `index.html`, l'icône pour
-  image). Les
+  et `public/apple-touch-icon.png`, dessinées d'après `favicon.svg`) et démarre hors ligne : le
+  service worker (`public/sw.js`, en production seulement, `main.tsx`) garde l'app (la liste de ses
+  fichiers, écrite à chaque construction par le plugin `precache` de `vite.config.ts` : un nouveau
+  service worker à chaque version), les données de référence (espèces, catalogue, prix : le
+  réseau d'abord) et les images affichées (3 000 au plus) ; jamais le compte ni la collection, qui
+  viennent du stockage du navigateur. Un lien partagé a son aperçu (`og:` dans `index.html`,
+  l'icône pour image ; celui du Pokédex public, son titre et sa progression). Les
   courbes (`PriceChart`, `lib/chart.ts`) vont jour par jour, sur la période choisie (7 jours,
   30 jours, 1 an, tout ; 7 jours au moins, l'axe la couvre en entier) : Valeur › Évolution (valeur
   de la collection, Pokémon débloqués, dépenses cumulées depuis le début de la période) et le prix

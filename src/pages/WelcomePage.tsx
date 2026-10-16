@@ -4,14 +4,14 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { accountCreated, authClient } from '@/lib/auth-client'
 import { pageTitle } from '@/lib/format'
-import { setSignedIn, sync } from '@/store/sync'
+import { signIn } from '@/store/sync'
 import { AuthCard, TOO_MANY_ATTEMPTS } from '@/components/AuthCard'
 import styles from './AuthPage.module.css'
 
 /** Le message d'un refus, d'après la réponse du serveur. */
 const failure = (status: number) =>
   status === 403
-    ? 'Le compte vient d’être créé : il n’y en a qu’un. Rechargez la page pour vous connecter.'
+    ? 'Création refusée : ce site attend une autre adresse, ou son compte vient d’être créé (rechargez alors la page pour vous connecter).'
     : status === 400
       ? 'Vérifiez l’e-mail et le mot de passe (8 caractères au moins).'
       : status === 429
@@ -35,14 +35,13 @@ export function WelcomePage() {
     event.preventDefault()
     setBusy(true)
     setError(null)
-    const { error: refused } = await authClient.signUp
+    const { data, error: refused } = await authClient.signUp
       .email({ name: name.trim(), email: email.trim(), password })
-      .catch(() => ({ error: { status: 0 } }))
+      .catch(() => ({ data: null, error: { status: 0 } }))
     setBusy(false)
-    if (refused) return setError(failure(refused.status))
+    if (refused || !data) return setError(failure(refused?.status ?? 0))
     accountCreated()
-    setSignedIn(true)
-    void sync()
+    signIn(data.user)
     navigate('/', { replace: true })
   }
 

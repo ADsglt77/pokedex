@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { authClient } from '@/lib/auth-client'
 import { pageTitle } from '@/lib/format'
-import { setSignedIn, sync } from '@/store/sync'
+import { signIn, sync } from '@/store/sync'
 import { AuthCard, TOO_MANY_ATTEMPTS } from '@/components/AuthCard'
 import styles from './AuthPage.module.css'
 
@@ -29,7 +29,6 @@ const failure = (status: number) =>
  * Ensuite, retour à la page d'où l'on venait (`?retour=`), l'accueil sinon.
  */
 export function LoginPage() {
-  const { data: session } = authClient.useSession()
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
@@ -42,12 +41,12 @@ export function LoginPage() {
     event.preventDefault()
     setBusy(true)
     setError(null)
-    const { error: refused } = await authClient.signIn
+    const { data, error: refused } = await authClient.signIn
       .email({ email: email.trim(), password })
-      .catch(() => ({ error: { status: 0 } }))
+      .catch(() => ({ data: null, error: { status: 0 } }))
     setBusy(false)
-    if (refused) return setError(failure(refused.status))
-    setSignedIn(true)
+    if (refused || !data) return setError(failure(refused?.status ?? 0))
+    signIn(data.user)
     // Après une session expirée, le même compte : la synchronisation reprend.
     void sync()
     navigate(back, { replace: true })
@@ -60,39 +59,30 @@ export function LoginPage() {
       description="Pour ouvrir votre Pokédex : votre collection, vos achats et votre budget, les mêmes sur tous vos appareils."
     >
       <title>{pageTitle('Connexion')}</title>
-      {session ? (
+      <form onSubmit={submit} className={styles.form}>
         <Stack gap={4}>
-          <p>Vous êtes connecté avec {session.user.email}.</p>
-          <Button asChild>
-            <Link to={back}>Continuer</Link>
+          {error && <Alert tone="danger" title={error} />}
+          <Input
+            label="E-mail"
+            type="email"
+            autoComplete="username"
+            required
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+          <Input
+            label="Mot de passe"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          <Button type="submit" fullWidth loading={busy} leftIcon={<LogIn size={16} />}>
+            Se connecter
           </Button>
         </Stack>
-      ) : (
-        <form onSubmit={submit} className={styles.form}>
-          <Stack gap={4}>
-            {error && <Alert tone="danger" title={error} />}
-            <Input
-              label="E-mail"
-              type="email"
-              autoComplete="username"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-            <Input
-              label="Mot de passe"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-            <Button type="submit" fullWidth loading={busy} leftIcon={<LogIn size={16} />}>
-              Se connecter
-            </Button>
-          </Stack>
-        </form>
-      )}
+      </form>
       <Link to="/vitrine" className={styles.back}>
         Voir le Pokédex public
       </Link>

@@ -116,6 +116,10 @@ export const euroInput = (value: number) => value.toFixed(2).replace('.', ',')
 export const details = (...parts: (string | 0 | false | null | undefined)[]) =>
   parts.filter(Boolean).join(' · ')
 
+/** « Le Pokédex » + « de Sacha », « d’Adrien » : l’élision devant une voyelle ou un h. */
+export const ofName = (name: string) =>
+  /^[aeiouyàâäéèêëîïôöùûüh]/i.test(name) ? `d’${name}` : `de ${name}`
+
 /** « 1 carte », « 3 cartes » ; « Pokémon » reste invariable. */
 export function plural(count: number, singular: string, pluralForm: string): string {
   return `${formatInteger(count)} ${count > 1 ? pluralForm : singular}`

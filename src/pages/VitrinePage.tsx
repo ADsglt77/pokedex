@@ -21,6 +21,7 @@ import {
   formatDecimal,
   formatEuro,
   formatInteger,
+  ofName,
   pageTitle,
   today,
   unlockedOf,
@@ -41,7 +42,6 @@ import styles from './VitrinePage.module.css'
 export function VitrinePage() {
   return (
     <div className={cx('container', styles.page)}>
-      <title>{pageTitle('Pokédex public')}</title>
       <meta name="robots" content="noindex" />
       <header className={styles.header}>
         <span className={styles.brand}>
@@ -71,11 +71,12 @@ export function VitrinePage() {
 }
 
 function VitrineContent() {
-  const collection = use(getJson<CollectionData>('/api/vitrine'))
-  if (!collection) {
+  const shown = use(getJson<{ owner: string | null; collection: CollectionData }>('/api/vitrine'))
+  if (!shown) {
     // camply n'offre pas de titre `h1` à `EmptyState` : celui de la page, pour les lecteurs d'écran.
     return (
       <>
+        <title>{pageTitle('Pokédex public')}</title>
         <h1 className="visually-hidden">Pokédex public</h1>
         <EmptyState
           headingLevel={2}
@@ -86,7 +87,7 @@ function VitrineContent() {
       </>
     )
   }
-  return <Vitrine collection={collection} />
+  return <Vitrine owner={shown.owner} collection={shown.collection} />
 }
 
 type Shown = 'all' | 'unlocked' | 'chosen'
@@ -94,7 +95,9 @@ type Shown = 'all' | 'unlocked' | 'chosen'
 /** Une carte choisie, pas encore obtenue : l'objectif. */
 const isChosen = (entry: PokedexEntry) => entry.card !== null && !entry.unlocked
 
-function Vitrine({ collection }: { collection: CollectionData }) {
+/** `owner` : le pseudo du compte, pour « Le Pokédex de … » ; `null` sans pseudo. */
+function Vitrine({ owner, collection }: { owner: string | null; collection: CollectionData }) {
+  const heading = owner ? `Le Pokédex ${ofName(owner)}` : 'Un Pokédex de cartes japonaises'
   const { entries, progress, generations } = useMemo(() => buildPokedex(collection), [collection])
   const prices = usePrices()
   const owned = useMemo(
@@ -129,7 +132,8 @@ function Vitrine({ collection }: { collection: CollectionData }) {
           </span>
         </RadialProgress>
         <div>
-          <h1 className={styles.title}>Un Pokédex de cartes japonaises</h1>
+          <title>{heading}</title>
+          <h1 className={styles.title}>{heading}</h1>
           <p className="muted">
             Une carte par Pokémon : {unlockedOf(progress, 'Pokémon')}.
             {updated && ` Mis à jour le ${updated}.`}

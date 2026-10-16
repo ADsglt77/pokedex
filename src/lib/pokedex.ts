@@ -47,12 +47,20 @@ export interface Pokedex {
   generations: GenerationProgress[]
 }
 
+/**
+ * La part débloquée, en pour cent au dixième : jamais 0 % dès un Pokémon, ni 100 % avant le dernier
+ * (le Pokédex public la montre aussi, `server/vitrine.ts`).
+ */
+export function progressPercent(unlocked: number, total: number) {
+  const tenths = Math.round((unlocked * 1000) / total)
+  const shown = unlocked === 0 || unlocked === total ? tenths : Math.min(Math.max(tenths, 1), 999)
+  return shown / 10
+}
+
 function progressOf(entries: readonly PokedexEntry[]): Progress {
   const total = entries.length
   const unlocked = entries.filter((entry) => entry.unlocked).length
-  const tenths = Math.round((unlocked * 1000) / total)
-  const shown = unlocked === 0 || unlocked === total ? tenths : Math.min(Math.max(tenths, 1), 999)
-  return { total, unlocked, missing: total - unlocked, percent: shown / 10 }
+  return { total, unlocked, missing: total - unlocked, percent: progressPercent(unlocked, total) }
 }
 
 function describeCard(card: PokemonCard, collection: CollectionData): CardView {

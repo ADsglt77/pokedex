@@ -20,9 +20,10 @@ transmet l'arrêt) :
 - `pokedex` : le site sur `127.0.0.1:${POKEDEX_PORT:-8080}`, que le tunnel publie ;
 - `server` : l'API, qui lit la base du volume `db`, y garde le compte et la collection (`app.db`),
   et copie à la demande dans le volume `images` ; ses secrets (`BETTER_AUTH_URL`, l'adresse
-  publique en https, et `BETTER_AUTH_SECRET`) viennent du `.env` du clone (ignoré par git) : sans
-  eux, docker compose refuse de démarrer. Le compte : à la première visite (pseudo, e-mail, mot de passe), le premier
-  créé étant le seul : à créer dès le premier démarrage. Son journal (`server/journal.ts` :
+  publique en https, `BETTER_AUTH_SECRET` et `ACCOUNT_EMAIL`, la seule adresse qui crée le compte)
+  viennent du `.env` du clone (ignoré par git) : sans
+  eux, docker compose refuse de démarrer. Le compte : à la première visite (pseudo, e-mail, mot de passe), avec
+  l'adresse `ACCOUNT_EMAIL` ; le premier créé est le seul. Son journal (`server/journal.ts` :
   connexions, cartes, commandes, exports…) : `docker compose logs -f server` ;
 - `ingest` : `server/ingest.ts --loop`, les tâches à leur rythme (espèces chaque mois, catalogue
   chaque jour, puis prix toutes les 6 h, puis images et sauvegardes chaque jour ; après un échec : 10 min, puis 20, 40…
