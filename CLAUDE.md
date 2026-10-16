@@ -384,7 +384,10 @@ Points à connaître :
   de la collection, Pokémon débloqués, dépenses cumulées depuis le début de la période) et le prix
   d'une carte sur sa fiche, chacune avec ses chiffres dessous (`ChartStats` : évolution, plus haut,
   plus bas, moyenne ; pour un total, ce qu'il a gagné et son rythme par semaine). Aucun point
-  inventé : un jour sans prix n'en a pas ; un total (`fromZero`) part de zéro. Les
+  inventé : un jour sans prix n'en a pas ; un total (`fromZero`) part de zéro. Cardmarket ne publie
+  que le guide du jour (aucune archive) : l'historique n'existe que depuis que le serveur le relève,
+  un point par jour où la tâche `prices` passe. En repère sur la courbe d'une carte, la moyenne de
+  ses ventes sur 30 jours que donne ce guide (`reference`, en pointillés). Les
   nombres formatés gardent une espace insécable visible (`spaced`, `lib/format.ts` : l'espace fine
   de `Intl` manque à certaines polices).
 - Performance (mesurer en production, `bun run build` puis `bun run preview` : `bun dev` est 3 à 4
