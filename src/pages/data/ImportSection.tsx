@@ -5,7 +5,6 @@ import { useCollectionAction } from '@/hooks/useNotify'
 import { summarize } from '@/lib/pokedex'
 import { formatDateTime, plural } from '@/lib/format'
 import { type ImportedFile, parseImport } from '@/lib/transfer'
-import { acceptedCount } from '@/lib/wishlist'
 import { replaceDocument } from '@/store/document'
 import { DataSection } from './DataSection'
 import { SummaryLedger } from './SummaryLedger'
@@ -79,8 +78,8 @@ export function ImportSection() {
           <SummaryLedger summary={summarize(imported.collection)} />
           <p className="muted">
             {imported.shopping
-              ? `Achats : ${plural(acceptedCount(imported.shopping, imported.collection), 'carte', 'cartes')} dans la liste d’achats, ${plural(imported.shopping.orders.length, 'commande', 'commandes')}.`
-              : 'Ce fichier date d’avant le module d’achats : votre liste d’achats, vos commandes et votre budget actuels sont conservés.'}
+              ? `Achats : ${plural(imported.shopping.orders.length, 'commande', 'commandes')}.`
+              : 'Ce fichier date d’avant le module d’achats : vos commandes et votre budget actuels sont conservés.'}
           </p>
           <div className={styles.buttons}>
             <Button onClick={() => setConfirming(true)}>Importer</Button>

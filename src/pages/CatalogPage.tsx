@@ -20,15 +20,15 @@ import { searchForm } from '@/lib/filters'
 import { details, formatInteger, pageTitle, plural, toOptions } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
 import { speciesNames } from '@/lib/species'
+import { addCard } from '@/store/collection'
 import { usePrices } from '@/store/prices'
-import { addCard } from '@/store/shopping'
 import type { AddAs } from '@/types'
 import styles from './CatalogPage.module.css'
 
 /**
  * Le catalogue par extension (`/catalogue?set=SV2a`) : toutes les cartes japonaises d'une
  * extension, pour donner d'un clic sa carte à chacun de vos Pokémon qui n'en a pas encore (remplir
- * la 1ʳᵉ génération depuis « 151 »…), sans statut, possédée ou à acheter. Les extensions se
+ * la 1ʳᵉ génération depuis « 151 »…), à acheter ou possédée. Les extensions se
  * cherchent par code ou par nom, et se classent par nombre de vos Pokémon sans carte qu'elles
  * complètent. C'est vous qui choisissez : rien n'est ajouté seul.
  */

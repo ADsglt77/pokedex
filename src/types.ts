@@ -104,21 +104,8 @@ export interface CollectionExportFile {
 
 /* Achats : `localStorage` (`pokedex-collection.shopping`) et fichier d'export */
 
-export type Priority = 'high' | 'normal' | 'low'
-
-/** Ce qu'on fait d'une carte en l'ajoutant : rien, possédée, ou dans la liste d'achats. */
-export type AddAs = 'none' | 'owned' | 'toBuy'
-
-/** Ce que l'utilisateur pense d'une carte à l'achat ; indépendant de son statut. */
-export interface PurchasePreference {
-  /** `accepted` : dans la liste d'achats ; `excluded` (ancienne version) : compte comme non décidée. */
-  decision: 'accepted' | 'excluded'
-  priority: Priority
-  /** Prix maximum, en euros. */
-  maxPrice?: number
-  note?: string
-  updatedAt: string
-}
+/** Ce qu'on fait d'une carte en l'ajoutant : rien (elle est à acheter), ou possédée. */
+export type AddAs = 'none' | 'owned'
 
 export type Supplier = 'cardmarket' | 'myutsu' | 'hikaru' | 'other'
 
@@ -167,8 +154,13 @@ export interface BudgetSettings {
 export interface ShoppingData {
   schemaVersion: 1
   updatedAt: string | null
-  /** Clé : id de carte. */
-  preferences: Record<string, PurchasePreference>
+  /**
+   * Toujours vide. Une ancienne version y gardait sa liste d'achats (une carte à la fois, avec
+   * priorité, prix maximum et note), retirée en octobre 2026 : toute carte choisie pas encore
+   * obtenue est à acheter. Gardée vide pour qu'une ancienne version (un onglet resté ouvert)
+   * relise ces données sans les prendre pour abîmées.
+   */
+  preferences: Record<string, never>
   /** La plus récente d'abord. */
   orders: Order[]
   budget: BudgetSettings

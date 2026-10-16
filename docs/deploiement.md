@@ -37,7 +37,7 @@ transmet l'arrêt) :
 Sauvegardes (`server/jobs/backups.ts`, volume `backups`) : chaque jour, `app.db` (30 gardées) et
 `data.db` compressée (7 gardées), copiées par `VACUUM INTO` pendant que le serveur tourne. Elles
 sont sur le disque du VPS : à copier ailleurs aussi (README). Les volumes `db` (historique des
-prix, votre collection) et `backups` sont irremplaçables, `images` porte un Go de copies : jamais
+prix, votre collection) et `backups` sont irremplaçables, `images` porte 1,5 Go de copies : jamais
 `docker compose down -v` ; `prices` (l'ancien historique, repris) se supprime à la main quand tout
 va bien. `.github/workflows/deploy.yml` : lancé à la main tant que le domaine n'est pas prêt (le
 push sur `main` à remettre, voir son en-tête), SSH sur le VPS (action épinglée sur un commit,

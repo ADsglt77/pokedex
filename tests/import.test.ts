@@ -21,7 +21,7 @@ const collection: CollectionData = {
 const shopping: ShoppingData = {
   schemaVersion: 1,
   updatedAt: null,
-  preferences: { a: { decision: 'accepted', priority: 'normal', note: 'Mint', updatedAt: NOW } },
+  preferences: {},
   orders: [
     order({
       lines: [line('a', 12)],
@@ -101,7 +101,6 @@ describe('import', () => {
 
   test('un texte qui n’en est pas un est refusé : les pages le liraient comme tel', () => {
     expect(reimport(['collection', 'customCards', 'a', 'reference'], 5)).toBeNull()
-    expect(reimport(['shopping', 'preferences', 'a', 'note'], 5)).toBeNull()
     expect(reimport([...ORDER, 'supplierName'], 5)).toBeNull()
     expect(reimport([...ORDER, 'reference'], 5)).toBeNull()
     expect(reimport([...ORDER, 'note'], ['Bien emballée'])).toBeNull()
@@ -140,8 +139,10 @@ describe('import', () => {
     expect(reimport([...ORDER, 'lines'], [line('a', 12), line('b', 3)])).not.toBeNull()
   })
 
-  test('une priorité inconnue est refusée', () => {
-    expect(reimport(['shopping', 'preferences', 'a', 'priority'], 'urgente')).toBeNull()
+  test('la liste d’achats d’une ancienne version (priorité, prix maximum…) est ignorée', () => {
+    const old = { a: { decision: 'accepted', priority: 'urgente', maxPrice: '5', updatedAt: NOW } }
+    expect(reimport(['shopping', 'preferences'], old)).toEqual({ collection, shopping })
+    expect(reimport(['shopping', 'preferences'])).toEqual({ collection, shopping })
   })
 
   test('un export d’avant le module d’achats garde les achats en place', () => {
@@ -178,9 +179,5 @@ describe('document envoyé au serveur', () => {
     const lines = [line('a', 12), line('a', 3)]
     const twice = { ...shopping, orders: [{ ...shopping.orders[0]!, lines }] }
     expect(received({ collection, shopping: twice })).toBeNull()
-    const unknown = { ...shopping.preferences.a!, priority: 'urgente' }
-    expect(
-      received({ collection, shopping: { ...shopping, preferences: { a: unknown } } }),
-    ).toBeNull()
   })
 })

@@ -9,20 +9,19 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   son id Cardmarket (`cardmarket`) et sa page chez Cardmarket (`page`), tous deux facultatifs ;
   sans page notée, le lien « Voir sur Cardmarket » se fait par l'id (`cardmarketPage`).
   Une par Pokémon : on la corrige (« Modifier la carte », même id, son statut et ses achats la
-  suivent) ou on la retire (« Retirer la carte » : avec son statut, son prix payé et sa préférence
-  d'achat ; confirmation si elle est possédée ; impossible tant qu'une commande la contient) avant
+  suivent) ou on la retire (« Retirer la carte » : avec son statut et son prix payé ; confirmation si elle est possédée ; impossible tant qu'une commande la contient) avant
   d'en ajouter une autre. Si une ancienne version en a gardé plusieurs, la première compte.
   Une carte de plusieurs Pokémon (TAG TEAM : `dexIds` en a plusieurs) est **une seule carte**,
   achetée une fois (décision de l'utilisateur, octobre 2026) : choisie dans le catalogue, elle va
   aussi à ceux de ses Pokémon qui n'ont pas de carte (`cardSpecies`, le Pokémon de la fiche en
-  tête) ; son statut, son prix payé et sa préférence d'achat valent pour tous ; la valeur, le coût
+  tête) ; son statut et son prix payé valent pour tous ; la valeur, le coût
   pour compléter et la prochaine commande ne la comptent qu'une fois. La retirer d'un de ses
   Pokémon l'en détache seulement (`removeCard` : elle reste aux autres, avec son statut, son prix
-  payé, ses achats ; possible même dans une commande) ; du dernier, elle part. La fiche dit « aussi
+  payé ; possible même dans une commande) ; du dernier, elle part. La fiche dit « aussi
   celle de … ».
-  Choisir la carte d'un Pokémon dit déjà qu'on la veut : pas de statut « souhaitée » (retiré à la
-  demande de l'utilisateur, octobre 2026). Le statut (commandée, possédée) et « À acheter » (liste
-  d'achats) sont indépendants : la fiche le dit.
+  Choisir la carte d'un Pokémon dit déjà qu'on la veut : ni statut « souhaitée » ni « À acheter »
+  (retirés à la demande de l'utilisateur, octobre 2026) ; tant qu'elle n'est ni commandée ni
+  possédée, elle est dans la liste d'achats.
 - Catalogue (tâche `catalog`, `server/jobs/catalog.ts`, une fois par jour → tables `sets`, `cards`,
   `card_species` → `/api/catalog`, `lib/card-catalog.ts`) : les cartes Pokémon japonaises de
   Pokécardex (`server/lib/pokecardex.ts`), ≈ 450 séries de 1996 à aujourd'hui, decks, promos et
@@ -64,8 +63,8 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   (`/catalogue?set=…`, dans le menu) : une extension (une série de Pokécardex), cherchée par code ou nom (`Combobox`), les
   plus récentes, les plus utiles (celles qui donnent leur carte au plus de Pokémon qui
   n'en ont pas) ou les plus avancées d'abord (la plus grande part de leurs Pokémon a déjà sa carte ;
-  chaque extension dit combien l'ont, sur tous les siens) ; un clic donne la carte à ses Pokémon sans carte (tous, pour une TAG TEAM), sans statut,
-  possédée ou à acheter (« Ajouter comme »), et le focus passe à la carte suivante.
+  chaque extension dit combien l'ont, sur tous les siens) ; un clic donne la carte à ses Pokémon sans carte (tous, pour une TAG TEAM), à acheter
+  ou possédée (« Ajouter comme »), et le focus passe à la carte suivante.
 - Plus de favori « Ajouter au Pokédex » (un lien `javascript:` qui reprenait une page produit de
   Cardmarket, `/ajouter`) : retiré à la demande de l'utilisateur (octobre 2026), le catalogue
   Pokécardex donnant presque toutes les cartes avec leur id Cardmarket ; une carte qu'il n'a pas se
@@ -79,7 +78,7 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   navigateur ne charge que la copie du serveur (condition de Pokécardex) : `localSrc` en donne le
   chemin (`/images/cards/pokecardex/SV2A/6-md.webp`), pour le `src` de `CardArt` et pour
   `findCardImage`. La tâche `images` (chaque jour, après les prix ; deux téléchargements à la
-  fois, seulement ce qui manque ; le premier passage, environ 1 Go, prend une heure ou plus) copie
+  fois, seulement ce qui manque ; le premier passage, environ 1,5 Go, prend une heure ou plus) copie
   les sprites et illustrations des 1 025 Pokémon et, pour chaque carte du catalogue, son scan en
   deux tailles, et note s'il existe (`cards.image`) : le catalogue le dit d'avance. Une carte sans
   scan est recherchée chaque semaine. Une image en erreur (panne, réponse qui n'est pas une image)

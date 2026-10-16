@@ -4,7 +4,7 @@
  */
 
 import { TOTAL_SPECIES } from '@/config/pokedex'
-import { ORDER_STATE_LABELS, PRIORITY_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
+import { ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { parseCardmarketLink } from '@/lib/cardmarket'
 import { euroInput, parseLink, today } from '@/lib/format'
 import { cardCount, linesTotal, orderSpent, refundFits, supplierLabel } from '@/lib/orders'
@@ -139,17 +139,12 @@ export function readCollection(value: unknown): CollectionData | null {
 }
 
 /**
- * Les achats (liste, commandes, budget) ; `null` si ce n'en sont pas. Une ligne qui notait
- * « souhaitée » comme état d'avant (ancienne version) y revient sans statut.
+ * Les achats (commandes, budget) ; `null` si ce n'en sont pas. La liste d'achats d'une ancienne
+ * version (`preferences`) est ignorée, et une ligne qui notait « souhaitée » comme état d'avant
+ * y revient sans statut.
  */
 export function readShopping(value: unknown): ShoppingData | null {
-  if (
-    !isRecord(value) ||
-    !isRecord(value.preferences) ||
-    !Array.isArray(value.orders) ||
-    !isRecord(value.budget)
-  )
-    return null
+  if (!isRecord(value) || !Array.isArray(value.orders) || !isRecord(value.budget)) return null
   const orders = value.orders.map((order: unknown) =>
     isRecord(order) && Array.isArray(order.lines)
       ? {
@@ -160,7 +155,7 @@ export function readShopping(value: unknown): ShoppingData | null {
         }
       : order,
   )
-  return { ...value, orders } as unknown as ShoppingData
+  return { ...value, preferences: {}, orders } as unknown as ShoppingData
 }
 
 /** Chaque valeur d'un dictionnaire (ou d'une liste) est un objet qui passe `ok` (avec sa clé). */
@@ -215,13 +210,6 @@ const isCard = (card: Record<string, unknown>, key: string) =>
   isOptional(card.cardmarket, Number.isInteger) &&
   isOptional(card.page, (page) => isText(page) && parseCardmarketLink(page as string) !== null)
 
-const isPreference = (preference: Record<string, unknown>) =>
-  isText(preference.decision) &&
-  Object.hasOwn(PRIORITY_LABELS, preference.priority as string) &&
-  isText(preference.updatedAt) &&
-  isOptional(preference.maxPrice, isAmount) &&
-  isOptional(preference.note, isText)
-
 const isLine = (line: Record<string, unknown>) =>
   isText(line.cardId) &&
   Number.isInteger(line.quantity) &&
@@ -270,7 +258,6 @@ const readable = (collection: CollectionData, shopping: ShoppingData | null) =>
   all(collection.customCards, isCard) &&
   (!shopping ||
     (isUpdatedAt(shopping.updatedAt) &&
-      all(shopping.preferences, isPreference) &&
       all(shopping.orders, isOrder) &&
       // Une commande est retrouvée par son id : deux du même id se confondraient.
       distinct(shopping.orders.map((order) => order.id)) &&

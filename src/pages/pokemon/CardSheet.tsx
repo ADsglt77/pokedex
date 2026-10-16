@@ -10,12 +10,11 @@ import type { PokemonSpecies } from '@/types'
 import { CardActions } from './CardActions'
 import { CardForm } from './CardForm'
 import { PricePanel } from './PricePanel'
-import { PurchaseSection } from './PurchaseSection'
 import styles from './CardSheet.module.css'
 
 /**
- * La fiche de la carte du Pokémon, en trois panneaux : ce que l'utilisateur en fait (statut, prix
- * payé), ce qu'elle vaut chez Cardmarket, son achat. `titleRef` : le titre du premier, qui reçoit
+ * La fiche de la carte du Pokémon, en deux panneaux : ce que l'utilisateur en fait (statut, prix
+ * payé), ce qu'elle vaut chez Cardmarket. `titleRef` : le titre du premier, qui reçoit
  * le focus quand la carte vient d'être ajoutée.
  */
 export function CardSheet({
@@ -44,7 +43,6 @@ export function CardSheet({
         <CardActions view={view} species={species} />
       </Panel>
       <PricePanel card={card} paid={view.paidPrice} />
-      <PurchaseSection view={view} />
     </div>
   )
 }

@@ -1,19 +1,17 @@
-/** Les achats : budget par défaut, priorités, fournisseurs et états d'une commande. */
+/** Les achats : budget par défaut, fournisseurs et états d'une commande. */
 
-import type { AddAs, BudgetSettings, OrderState, Priority, Supplier } from '@/types'
+import type { AddAs, BudgetSettings, OrderState, Supplier } from '@/types'
 
 /** Ajouter une carte « comme » (fenêtre d'ajout, page Catalogue) : un seul choix. */
 export const ADD_AS_LABELS: Record<AddAs, string> = {
-  none: 'Sans statut',
+  none: 'À acheter',
   owned: 'Possédée',
-  toBuy: 'À acheter',
 }
 
-/** La fin du message d'ajout : « Carte ajoutée à Pikachu, à acheter. » */
+/** La fin du message d'ajout : « Carte ajoutée à Pikachu, possédée. » */
 export const ADDED_AS: Record<AddAs, string> = {
   none: '',
   owned: ', possédée',
-  toBuy: ', à acheter',
 }
 
 /** 100 € par mois d'habitude, 150 € au plus. */
@@ -24,18 +22,6 @@ export const BUDGET_LEVELS = {
   monthly: { tone: 'warn', label: 'Au-delà du budget' },
   ceiling: { tone: 'danger', label: 'Plafond dépassé' },
 } as const
-
-/** Dans l'ordre d'affichage, la plus haute d'abord. */
-export const PRIORITY_LABELS: Record<Priority, string> = {
-  high: 'Haute',
-  normal: 'Normale',
-  low: 'Basse',
-}
-
-/** 0 pour la plus haute : l'ordre de `PRIORITY_LABELS`. */
-export const PRIORITY_RANK = Object.fromEntries(
-  Object.keys(PRIORITY_LABELS).map((priority, rank) => [priority, rank]),
-) as Record<Priority, number>
 
 export const SUPPLIER_LABELS: Record<Supplier, string> = {
   cardmarket: 'Cardmarket',

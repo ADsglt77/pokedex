@@ -23,7 +23,7 @@ export const INGEST_JOBS: Record<
   catalog: { label: 'Catalogue (Pokécardex)', every: DAY },
   // Les prix changent une fois par jour ; la tâche ne retélécharge que ce qui a changé.
   prices: { label: 'Prix (Cardmarket)', every: 6 * HOUR },
-  // Après le catalogue et les prix : son premier passage (environ 1 Go) est long. En attendant, le
+  // Après le catalogue et les prix : son premier passage (environ 1,5 Go) est long. En attendant, le
   // serveur copie à la demande les images affichées.
   images: { label: 'Images copiées', every: DAY, optional: true },
   // Les deux bases, copiées chaque jour (`BACKUP_DIR`).

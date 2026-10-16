@@ -37,8 +37,7 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   avertissement de l'app (export, stockage) s'aligne sur le conteneur des pages. L'accueil est un
   tableau de bord (dès qu'il y a une carte ou une commande) : progression (anneau, réglette des
   régions), « À faire » (commandes en retard,
-  cartes sous leur prix maximum, cartes à compléter, chacune vers sa liste filtrée :
-  `/achats?filtre=sous-max`, `pokedexUrl`), indicateurs
+  cartes à compléter, chacune vers sa liste filtrée : `shoppingUrl`, `pokedexUrl`), indicateurs
   (valeur, dépensé ce mois-ci, liste d'achats, commandes), dernières cartes obtenues (« Vos cartes
   choisies » tant qu'aucune n'est obtenue : une rangée, de trois cartes sur téléphone à dix sur un
   très grand écran) ; une collection vide y trouve trois étapes pour commencer. La progression et

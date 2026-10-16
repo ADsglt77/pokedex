@@ -5,7 +5,6 @@ import {
   Badge,
   Button,
   Card,
-  Checkbox,
   EmptyState,
   Progress,
   Slider,
@@ -13,25 +12,21 @@ import {
 } from '@camply/ui'
 import { Receipt, Sparkles } from '@camply/ui/icons'
 import { useId, useRef, useState, type ReactNode, type RefObject } from 'react'
-import { PRIORITY_LABELS } from '@/config/shopping'
 import { spentThisMonth } from '@/lib/budget'
-import { isToBuy } from '@/lib/collection'
 import { keepFocusInList } from '@/lib/focus'
-import { details, formatEuro, plural, today } from '@/lib/format'
+import { formatEuro, plural, today } from '@/lib/format'
 import { priceLabel } from '@/lib/prices'
 import { cents, newOrder } from '@/lib/orders'
 import { planPurchase } from '@/lib/purchase-planner'
 import type { WishRow } from '@/lib/wishlist'
 import { useShoppingStore } from '@/store/shopping'
-import type { Order, Priority } from '@/types'
+import type { Order } from '@/types'
 import { BudgetField } from './BudgetField'
 import { CardLine } from './CardLine'
 import { OrderForm } from './OrderForm'
 import { ExportButtons } from './ExportButtons'
 import { useWishlist } from '@/hooks/useWishlist'
 import styles from './ShoppingPage.module.css'
-
-const ALL_PRIORITIES = Object.keys(PRIORITY_LABELS) as Priority[]
 
 /** Le pas du curseur de budget, en euros. */
 const BUDGET_STEP = 5
@@ -53,7 +48,6 @@ const NONE: ReadonlySet<string> = new Set()
 export interface PlannerSettings {
   /** Budget de la commande ; par défaut, le reste du budget du mois. */
   amount?: number
-  priorities?: Priority[]
   /** Ajoutées à la main. */
   forced?: ReadonlySet<string>
   /** Retirées à la main. */
@@ -81,7 +75,6 @@ export function PlannerPanel({
     amount = Math.floor(
       Math.min(Math.max(budget.monthly - spent, 0), budget.ceiling) / BUDGET_STEP,
     ) * BUDGET_STEP,
-    priorities = ALL_PRIORITIES,
     forced = NONE,
     skipped = NONE,
   } = settings
@@ -94,7 +87,6 @@ export function PlannerPanel({
   const plan = planPurchase(rows, taken, {
     budget: amount,
     shippingReserve: budget.shippingReserve,
-    priorities,
     forced,
     skipped,
   })
@@ -117,7 +109,7 @@ export function PlannerPanel({
         className={styles.panel}
         icon={<Sparkles size={22} />}
         title="Rien à planifier pour l’instant"
-        description="L’assistant choisit parmi les cartes de votre liste d’achats : ajoutez-en depuis la fiche d’un Pokémon (« À acheter »)."
+        description="L’assistant choisit parmi les cartes de vos Pokémon pas encore obtenues : choisissez-les dans le catalogue ou sur la fiche d’un Pokémon."
       />
     )
   }
@@ -138,23 +130,6 @@ export function PlannerPanel({
             formatValue={formatEuro}
           />
           <BudgetField field="shippingReserve" />
-          <fieldset className={styles.fieldset}>
-            <legend className="camply-field__label">Priorités prises en compte</legend>
-            {ALL_PRIORITIES.map((priority) => (
-              <Checkbox
-                key={priority}
-                label={PRIORITY_LABELS[priority]}
-                checked={priorities.includes(priority)}
-                onChange={(event) =>
-                  change({
-                    priorities: ALL_PRIORITIES.filter((known) =>
-                      known === priority ? event.target.checked : priorities.includes(known),
-                    ),
-                  })
-                }
-              />
-            ))}
-          </fieldset>
         </Stack>
       </Card>
 
@@ -220,11 +195,9 @@ export function PlannerPanel({
           </ul>
         ) : (
           <p className="muted">
-            {!rows.some(isToBuy)
-              ? 'Toutes les cartes de votre liste d’achats sont possédées ou commandées : rien à commander.'
-              : plan.left.length > 0
-                ? 'Aucune carte ne tient dans ce budget avec ces règles. Augmentez le budget, ou regardez ci-dessous les cartes mises de côté.'
-                : 'Aucune carte à proposer avec ces règles : regardez ci-dessous les cartes mises de côté.'}
+            {plan.left.length > 0
+              ? 'Aucune carte ne tient dans ce budget. Augmentez le budget, ou regardez ci-dessous les cartes mises de côté.'
+              : 'Aucune carte à proposer : regardez ci-dessous les cartes mises de côté.'}
           </p>
         )}
 
@@ -260,15 +233,7 @@ export function PlannerPanel({
             title="Pokémon déjà prévu"
             rows={plan.covered}
             empty="Aucune carte d’un Pokémon déjà dans le plan."
-            hint="Une seule carte par Pokémon : celle du plan a été préférée (ajoutée à la main, priorité, puis prix)."
-            action={addAnyway}
-          />
-          <PlanGroup
-            value="above-max"
-            fallback={heading}
-            title="Au-dessus de leur prix maximum"
-            rows={plan.aboveMax}
-            empty="Aucune carte ne dépasse son prix maximum."
+            hint="Une seule carte par Pokémon : celle du plan a été préférée (ajoutée à la main, sinon la moins chère)."
             action={addAnyway}
           />
           <PlanGroup
@@ -290,13 +255,11 @@ export function PlannerPanel({
           <AccordionItem value="how" title="Comment le plan est construit" headingLevel={3}>
             <ol className={styles.steps}>
               <li>
-                Les cartes de votre liste d’achats, ni possédées ni commandées, des priorités
-                cochées, et d’un Pokémon que vous n’avez pas.
+                Les cartes de vos Pokémon, ni possédées ni commandées, d’un Pokémon que vous n’avez
+                pas.
               </li>
-              <li>
-                Les cartes sans prix et celles au-dessus de leur prix maximum sont mises de côté.
-              </li>
-              <li>Dans l’ordre : vos ajouts à la main, la priorité, puis le prix le plus bas.</li>
+              <li>Les cartes sans prix sont mises de côté.</li>
+              <li>Dans l’ordre : vos ajouts à la main, puis le prix le plus bas.</li>
               <li>
                 Une carte est prise si son Pokémon n’est pas déjà dans le plan et si elle tient dans
                 le budget, port réservé.
@@ -338,16 +301,8 @@ const planOrder = (rows: readonly WishRow[], shipping: number) =>
   )
 
 function PlanLine({ row, children }: { row: WishRow; children?: ReactNode }) {
-  const { price, preference } = row
   return (
-    <CardLine
-      card={row.card}
-      detail={details(
-        price === null ? 'sans prix' : priceLabel(price),
-        preference.maxPrice !== undefined && `prix maximum ${formatEuro(preference.maxPrice)}`,
-        `priorité ${PRIORITY_LABELS[preference.priority].toLowerCase()}`,
-      )}
-    >
+    <CardLine card={row.card} detail={row.price === null ? 'sans prix' : priceLabel(row.price)}>
       {children}
     </CardLine>
   )

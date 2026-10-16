@@ -4,7 +4,6 @@ import { BudgetMeter } from '@/components/BudgetMeter'
 import { PricedValue } from '@/components/PricedValue'
 import { useWishlist } from '@/hooks/useWishlist'
 import { spentThisMonth } from '@/lib/budget'
-import { isToBuy } from '@/lib/collection'
 import { details, formatEuro, formatInteger, plural } from '@/lib/format'
 import { wishlistEstimate } from '@/lib/wishlist'
 import { useShoppingStore } from '@/store/shopping'
@@ -25,13 +24,13 @@ export function SpentThisMonthStat() {
 
 /** La liste d'achats : ses cartes à acheter et leur coût au prix du jour (accueil et Achats). */
 export function WishlistStat() {
-  const { rows, taken } = useWishlist()
-  const estimate = wishlistEstimate(rows, taken)
+  const { rows } = useWishlist()
+  const estimate = wishlistEstimate(rows)
   return (
     <Stat
       label="Liste d’achats"
       icon={<ListChecks size={18} />}
-      value={plural(rows.filter(isToBuy).length, 'carte', 'cartes')}
+      value={plural(rows.length, 'carte', 'cartes')}
       hint={
         <PricedValue text>
           {details(

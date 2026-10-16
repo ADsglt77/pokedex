@@ -36,13 +36,11 @@ export async function documentHash(document: SyncDocument): Promise<string> {
 }
 
 /**
- * Un document sans rien à perdre : aucune carte, aucune préférence d'achat, aucune commande, le
- * budget par défaut (un budget réglé serait perdu, remplacé par celui de l'autre version).
+ * Un document sans rien à perdre : aucune carte, aucune commande, le budget par défaut (un budget réglé serait perdu, remplacé par celui de l'autre version).
  */
 export const isEmptyDocument = ({ collection, shopping }: SyncDocument) =>
   Object.keys(collection.cards).length === 0 &&
   Object.keys(collection.customCards).length === 0 &&
-  Object.keys(shopping.preferences).length === 0 &&
   shopping.orders.length === 0 &&
   shopping.budget.monthly === DEFAULT_BUDGET.monthly &&
   shopping.budget.ceiling === DEFAULT_BUDGET.ceiling &&

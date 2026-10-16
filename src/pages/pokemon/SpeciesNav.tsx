@@ -26,7 +26,7 @@ export function SpeciesNav({ species, previous, next, nextWithoutCard }: Species
   const navigate = useNavigate()
 
   // ← et → changent de Pokémon, sauf dans un champ ou une fenêtre ouverte, ou quand un réglage s'en
-  // est déjà servi (« Achat », « Priorité » : un choix au clavier ne doit pas quitter la page).
+  // est déjà servi (un choix au clavier ne doit pas quitter la page).
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (shortcutBlocked(event) || event.shiftKey) return

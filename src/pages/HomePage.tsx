@@ -7,7 +7,6 @@ import {
   Layers,
   Package,
   Receipt,
-  TrendingDown,
   Unlink,
   type IconProps,
 } from '@camply/ui/icons'
@@ -23,7 +22,6 @@ import { SpentThisMonthStat, WishlistStat } from '@/components/ShoppingStats'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { usePokedex } from '@/hooks/usePokedex'
-import { useWishlist } from '@/hooks/useWishlist'
 import { monthOf } from '@/lib/budget'
 import { cx } from '@/lib/cx'
 import {
@@ -49,7 +47,6 @@ import { latePendingOrders } from '@/lib/orders'
 import { acquisitions, summarize, type Progress, type RecentCard } from '@/lib/pokedex'
 import { gainPercent, tallyByStatus, trackedCards } from '@/lib/prices'
 import { cardTitle } from '@/lib/species'
-import { underMaxCount } from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
 import { usePrices, usePricesMissing } from '@/store/prices'
 import { useShoppingStore } from '@/store/shopping'
@@ -224,13 +221,11 @@ const TO_COMPLETE: {
   },
 ]
 
-/** Ce qui attend une action : commandes en retard, bonnes affaires, cartes à compléter. */
+/** Ce qui attend une action : commandes en retard, cartes à compléter. */
 function TodoPanel() {
   const { entries } = usePokedex()
   const orders = useShoppingStore((state) => state.shopping.orders)
-  const { rows } = useWishlist()
   const late = latePendingOrders(orders, today()).length
-  const underMax = underMaxCount(rows)
   const toComplete = useMemo(
     () =>
       TO_COMPLETE.map((todo) => ({
@@ -253,22 +248,6 @@ function TodoPanel() {
             to: shoppingUrl({ view: 'commandes' }),
             icon: Clock,
             tone: 'warn' as const,
-          },
-        ]
-      : []),
-    ...(underMax > 0
-      ? [
-          {
-            key: 'under-max',
-            label: plural(
-              underMax,
-              'carte sous votre prix maximum',
-              'cartes sous votre prix maximum',
-            ),
-            hint: 'Le prix du marché est passé sous ce que vous vous êtes fixé',
-            to: shoppingUrl({ underMax: true }),
-            icon: TrendingDown,
-            tone: 'success' as const,
           },
         ]
       : []),
@@ -475,7 +454,7 @@ function StartPanel() {
           {
             label: 'Préparez vos achats',
             description:
-              'Les autres vont dans la liste d’achats, avec un prix maximum : l’app vous dit quand le marché passe dessous.',
+              'Les autres forment votre liste d’achats : l’assistant prépare votre prochaine commande dans votre budget.',
           },
         ]}
       />

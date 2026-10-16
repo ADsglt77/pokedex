@@ -3,7 +3,7 @@
 import { emptyCollection } from '@/lib/collection'
 import { newOrder } from '@/lib/orders'
 import type { PlannableCard } from '@/lib/purchase-planner'
-import type { CardOwnership, CollectionData, Order, OrderLine, Priority } from '@/types'
+import type { CardOwnership, CollectionData, Order, OrderLine } from '@/types'
 
 export const NOW = '2026-10-11T10:00:00.000Z'
 
@@ -35,10 +35,5 @@ export const wish = (
   id: string,
   dexIds: number[],
   price: number | null,
-  extra: { priority?: Priority; maxPrice?: number } & Partial<Pick<PlannableCard, 'status'>> = {},
-): PlannableCard => ({
-  card: { id, dexIds },
-  preference: { priority: extra.priority ?? 'normal', maxPrice: extra.maxPrice },
-  status: extra.status ?? null,
-  price,
-})
+  status: PlannableCard['status'] = null,
+): PlannableCard => ({ card: { id, dexIds }, status, price })

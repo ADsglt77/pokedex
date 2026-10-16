@@ -63,11 +63,7 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
 
   const remove = () =>
     act(
-      () => {
-        useCollectionStore.getState().removeCard(card.id, species.id)
-        // Partagée, la carte garde sa préférence d'achat : elle reste celle des autres.
-        if (!shared) useShoppingStore.getState().setAccepted(card.id, false)
-      },
+      () => useCollectionStore.getState().removeCard(card.id, species.id),
       shared
         ? `Carte ${card.reference} retirée de ${species.names.fr} : elle reste celle de ${speciesNames(others)}.`
         : `Carte ${card.reference} retirée de ${species.names.fr}.`,
@@ -130,10 +126,10 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
         </Stack>
         <p className="hint">
           {shared
-            ? `Elle est aussi celle de ${speciesNames(others)} : la retirer d’ici la leur laisse, avec son statut, son prix payé et ses achats.`
+            ? `Elle est aussi celle de ${speciesNames(others)} : la retirer d’ici la leur laisse, avec son statut et son prix payé.`
             : inAnOrder
               ? 'Elle figure dans une commande : elle reste, pour que le registre tienne.'
-              : 'Pour en choisir une autre, retirez celle-ci : son statut, son prix payé et sa préférence d’achat partent avec elle.'}
+              : 'Pour en choisir une autre, retirez celle-ci : son statut et son prix payé partent avec elle.'}
         </p>
       </Stack>
 

@@ -6,7 +6,7 @@
 import { create } from 'zustand'
 import * as rules from '@/lib/collection'
 import { parseStored, readCollection } from '@/lib/transfer'
-import type { CardStatus, CollectionData, PokemonCard } from '@/types'
+import type { AddAs, CardStatus, CollectionData, PokemonCard } from '@/types'
 import { persist, readStored } from './persist'
 
 const COLLECTION_KEY = 'pokedex-collection.collection'
@@ -49,3 +49,10 @@ persist(
   (state) => state.collection,
   (text) => ({ collection: loadCollection(text) }),
 )
+
+/** Enregistre une carte ajoutée, possédée si `addAs` le dit (sinon, elle est à acheter). */
+export function addCard(card: PokemonCard, addAs: AddAs) {
+  const collection = useCollectionStore.getState()
+  collection.saveCard(card)
+  if (addAs === 'owned') collection.setCardStatus(card, 'owned')
+}

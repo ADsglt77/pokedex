@@ -13,9 +13,15 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   place ce que les commandes ont coûté en tout (« Dépensé en tout »).
 - Achats (`/achats`), clé `pokedex-collection.shopping` (`ShoppingData`, à part : la collection
   garde son format) :
-  - préférence par carte (`accepted` : dans la liste d'achats ; `excluded`, d'une ancienne
-    version, compte comme non décidée), avec priorité, prix maximum, note ; indépendante du statut
-    de la carte (le lien vers Cardmarket est `cardmarketPage` : la page notée, sinon l'id) ;
+  - la liste d'achats n'est pas enregistrée : c'est la carte de chaque Pokémon ni possédée ni
+    commandée (`wishlistRows`, une TAG TEAM une fois), toutes voulues autant (décision de
+    l'utilisateur, octobre 2026 : choisir la carte suffit ; plus de « À acheter » carte par carte, ni
+    priorité, ni prix maximum, ni note). L'ancienne liste (`preferences`) est ignorée à la lecture
+    (stockage, import, serveur : `readShopping`) et toujours écrite vide, pour qu'une ancienne
+    version (un onglet resté ouvert) relise les achats sans les croire abîmés. Le lien vers
+    Cardmarket est `cardmarketPage` : la page notée, sinon l'id. La prochaine commande
+    (`purchase-planner`) y prend les moins chères d'abord, une par Pokémon, dans le budget, port
+    réservé ; on peut en retirer ou en ajouter à la main ;
   - commandes : `applyOrder` (`lib/orders.ts`) reporte chaque enregistrement sur la collection (en
     cours → commandée, reçue → possédée, annulée ou supprimée → l'état d'avant, gardé dans
     `OrderLine.previous`, `previousOf`, relu à chaque enregistrement, formulaire comme « Marquer
@@ -34,14 +40,14 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     remboursé déduit (jamais plus que la commande), rien si annulée. Au-delà du plafond :
     confirmation, jamais de blocage ; le formulaire montre le mois avec la commande en cours de
     saisie. Les filtres de la liste et les réglages de l'assistant (prochaine commande) sont gardés
-    par la page, l'onglet caché étant démonté ; changer d'onglet garde `filtre=sous-max` ;
+    par la page, l'onglet caché étant démonté ;
   - l'export contient `shopping` (un export plus ancien, sans lui, s'importe et garde les achats
     en place). Un import demande toujours confirmation ; un fichier abîmé (enregistrement ou bloc
-    d'achats illisible : image, priorité, montant en texte, état de commande, date ou jour qui
+    d'achats illisible : image, montant en texte, état de commande, date ou jour qui
     n'existe pas, remboursé plus grand que la commande, commande sans id ou en double, carte d'un
     Pokémon hors du Pokédex, texte qui n'en est pas un, lien…) est refusé (`lib/transfer.ts`). « Effacer ma
-    collection » efface aussi la liste d'achats, qui renverrait à des cartes disparues ; les
-    commandes et le budget restent.
+    collection » efface les cartes, leurs statuts et leurs prix payés ; les commandes et le budget
+    restent.
 - Deux onglets ouverts restent d'accord : chacun reprend ce que l'autre enregistre (évènement
   `storage`, `store/persist.ts`, pour les deux clés), sans quoi il l'écraserait ; connectés, ils
   partagent aussi la dernière version échangée avec le serveur. Si le navigateur

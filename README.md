@@ -25,14 +25,13 @@ bun run format   # Prettier
 - **Fiche** : la carte du Pokémon, choisie parmi ses cartes japonaises (image, prix du jour, tri
   par date ou par prix) ou saisie à la main, puis corrigée ou retirée ; en grand, son statut
   (commandée / possédée) et son prix payé, son prix Cardmarket et sa courbe, le lien
-  vers sa page Cardmarket, l'achat (dans la liste d'achats ou non, priorité, prix maximum, note), les détails
-  de l'espèce.
+  vers sa page Cardmarket, les détails de l'espèce.
 - **Catalogue** : les cartes japonaises extension par extension ; un clic donne sa carte au
   premier Pokémon qui n'en a pas.
 - **Valeur** : prix Cardmarket du jour, valeur de la collection (et gain par rapport au prix
   payé), commandes, dépensé en tout, coût pour compléter le Pokédex ; courbes jour par jour (valeur,
   Pokémon débloqués, dépenses) sur 7 jours, 30 jours, 1 an ou tout, avec leurs chiffres.
-- **Achats** : liste d'achats (les cartes acceptées, avec priorité et prix maximum),
+- **Achats** : liste d'achats (la carte de chaque Pokémon, ni possédée ni commandée),
   assistant « prochaine commande » dans un budget (100 € par mois, 150 € au plus, réglables),
   registre des commandes (Cardmarket, Myutsu, Hikaru…) qui met à jour les statuts, suivi du
   budget par mois et par fournisseur. Export CSV et recherches à coller dans Cardmarket.
@@ -67,7 +66,7 @@ En développement : `bun run dev:server` (l'API, sur le port 3000) à côté de 
 renvoie `/api` et `/images` ; la base vit dans `.data/`. La remplir une fois :
 `bun run ingest species`, `bun run ingest catalog`, puis `bun run ingest prices` (pour reprendre un
 ancien dossier `prices/`, `bun run ingest legacy-prices ./prices` **avant** toute tâche `prices` :
-la reprise refuse une base qui a déjà un historique). Inutile de lancer `bun run ingest images` (1 Go) : le
+la reprise refuse une base qui a déjà un historique). Inutile de lancer `bun run ingest images` (1,5 Go) : le
 serveur copie à la demande les images affichées. Pour la connexion, un fichier `.env.local` (ignoré
 par git) :
 
@@ -130,7 +129,7 @@ seulement par le tunnel. À côté :
   disponible), regarde toutes les 6 h si Cardmarket a publié un nouveau guide des prix (il ne le
   télécharge que si sa date a changé) et en garde l'historique
   dans une base SQLite (volume Docker `db`), puis copie chaque jour les images manquantes (volume
-  `images` ; le premier passage, environ 1 Go, prend une heure ou plus, et le serveur copie en
+  `images` ; le premier passage, environ 1,5 Go, prend une heure ou plus, et le serveur copie en
   attendant celles qui s'affichent), et sauvegarde les deux bases chaque jour (volume `backups`).
   À son premier démarrage, il reprend de lui-même l'historique de l'ancien service `prices` (des
   fichiers, dans le volume `prices`), vérifié avant d'être gardé. L'ancien service est retiré :

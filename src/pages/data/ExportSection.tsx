@@ -10,7 +10,7 @@ export function ExportSection() {
     <DataSection
       id="exporter"
       title="Exporter"
-      description="Un fichier JSON avec toute votre collection (vos cartes, leurs statuts et prix payés), votre liste d’achats, vos commandes et votre budget. Gardez-le pour sauvegarder votre collection, ou importez-le dans un autre navigateur."
+      description="Un fichier JSON avec toute votre collection (vos cartes, leurs statuts et prix payés), vos commandes et votre budget. Gardez-le pour sauvegarder votre collection, ou importez-le dans un autre navigateur."
     >
       <div>
         <Button variant="primary" leftIcon={<Download size={16} />} onClick={exportCollection}>

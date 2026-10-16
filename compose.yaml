@@ -34,7 +34,7 @@ services:
   # Les tâches d'ingestion (`server/ingest.ts`), chacune à son rythme : les espèces chaque mois,
   # le catalogue chaque jour (le premier passage prend une vingtaine de minutes), les prix toutes
   # les 6 h (ils changent une fois par jour ; la tâche ne retélécharge que ce qui a changé), les
-  # images chaque jour (le premier passage, environ 1 Go, prend une heure ou plus), les sauvegardes
+  # images chaque jour (le premier passage, environ 1,5 Go, prend une heure ou plus), les sauvegardes
   # des bases chaque jour. Après un échec, de nouveau 10 min plus tard, puis 20, 40… jusqu'à 6 h.
   # Même image que `server`.
   # L'ancien volume `prices` n'est lu qu'une fois : au premier démarrage, son historique est repris
@@ -57,7 +57,7 @@ volumes:
   # Les bases SQLite (`data.db`, `app.db` : le compte et la collection) et le cache des
   # téléchargements.
   db:
-  # Les images copiées chez nous (environ 1 Go) : cartes et Pokémon.
+  # Les images copiées chez nous (environ 1,5 Go) : cartes et Pokémon.
   images:
   # Les sauvegardes des bases, chaque jour (tâche `backups`) : à copier aussi hors du VPS.
   backups:

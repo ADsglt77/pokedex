@@ -2,10 +2,9 @@ import { Badge, Tab, TabList, TabPanel, Tabs } from '@camply/ui'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
-import { SHOPPING_VIEWS, UNDER_MAX } from '@/lib/filters'
+import { SHOPPING_VIEWS } from '@/lib/filters'
 import { pageTitle } from '@/lib/format'
-import { isToBuy } from '@/lib/collection'
-import { DEFAULT_WISHLIST_FILTERS, underMaxCount, type WishlistFilters } from '@/lib/wishlist'
+import { DEFAULT_WISHLIST_FILTERS, type WishlistFilters } from '@/lib/wishlist'
 import { useShoppingStore } from '@/store/shopping'
 import { BudgetOverview } from './BudgetOverview'
 import { BudgetPanel } from './BudgetPanel'
@@ -17,8 +16,7 @@ import styles from './ShoppingPage.module.css'
 
 /**
  * Achats (`/achats`) : le budget du mois, la liste d'achats, l'assistant de la prochaine commande,
- * le registre des commandes et le suivi du budget. L'onglet ouvert est dans l'adresse (`?vue=`),
- * comme le filtre « sous le prix maximum » (`?filtre=sous-max`, le lien de l'accueil y mène) ;
+ * le registre des commandes et le suivi du budget. L'onglet ouvert est dans l'adresse (`?vue=`) ;
  * les filtres de la liste et les réglages de l'assistant sont gardés ici, l'onglet caché étant
  * démonté.
  */
@@ -38,14 +36,7 @@ export function ShoppingPage() {
     )
   const openView = (next: string) => setParam('vue', next === 'liste' ? null : next)
   const { rows } = useWishlist()
-  const [filters, setFilters] = useState<WishlistFilters>(() => ({
-    ...DEFAULT_WISHLIST_FILTERS,
-    underMax: params.get('filtre') === UNDER_MAX,
-  }))
-  const changeFilters = (next: WishlistFilters) => {
-    setFilters(next)
-    if (next.underMax !== filters.underMax) setParam('filtre', next.underMax ? UNDER_MAX : null)
-  }
+  const [filters, setFilters] = useState<WishlistFilters>(DEFAULT_WISHLIST_FILTERS)
   const [planner, setPlanner] = useState<PlannerSettings>({})
   // Une commande enregistrée depuis le plan ouvre « Commandes » : le focus va à son onglet, le
   // bouton du plan disparaissant avec le sien.
@@ -65,7 +56,6 @@ export function ShoppingPage() {
     if (!list || !tab) return
     list.scrollLeft = tab.offsetLeft - (list.clientWidth - tab.offsetWidth) / 2
   }, [view])
-  const underMax = underMaxCount(rows)
   const pending = useShoppingStore(
     (state) => state.shopping.orders.filter((order) => order.state === 'pending').length,
   )
@@ -74,8 +64,8 @@ export function ShoppingPage() {
     <div className="container">
       <title>{pageTitle('Achats')}</title>
       <PageHeader title="Achats">
-        Votre liste d’achats, votre budget et vos commandes. Les prix sont ceux du marché
-        (Cardmarket) : une indication, pas une offre de vendeur.
+        Les cartes de vos Pokémon pas encore obtenues, votre budget et vos commandes. Les prix sont
+        ceux du marché (Cardmarket) : une indication, pas une offre de vendeur.
       </PageHeader>
 
       <BudgetOverview />
@@ -83,12 +73,7 @@ export function ShoppingPage() {
       <Tabs value={view} onChange={openView} defaultValue="liste" className={styles.tabs}>
         <TabList ref={tabList} aria-label="Achats" className={styles.tabList}>
           <Tab value="liste">
-            Liste d’achats <Badge size="sm">{rows.filter(isToBuy).length}</Badge>
-            {underMax > 0 && (
-              <Badge size="sm" tone="success" className={styles.secondaryBadge}>
-                {underMax} sous le prix maximum
-              </Badge>
-            )}
+            Liste d’achats <Badge size="sm">{rows.length}</Badge>
           </Tab>
           <Tab value="prochaine-commande">Prochaine commande</Tab>
           <Tab ref={ordersTab} value="commandes">
@@ -103,7 +88,7 @@ export function ShoppingPage() {
           <Tab value="budget">Budget</Tab>
         </TabList>
         <TabPanel value="liste">
-          <WishlistPanel filters={filters} onFiltersChange={changeFilters} />
+          <WishlistPanel filters={filters} onFiltersChange={setFilters} />
         </TabPanel>
         <TabPanel value="prochaine-commande">
           <PlannerPanel

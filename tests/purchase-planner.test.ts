@@ -1,4 +1,4 @@
-/** La prochaine commande : budget, une carte par Pokémon, priorités, ajouts et retraits. */
+/** La prochaine commande : budget, une carte par Pokémon, la moins chère d'abord, ajouts et retraits. */
 
 import { describe, expect, test } from 'bun:test'
 import { planPurchase, type PlanOptions } from '@/lib/purchase-planner'
@@ -7,7 +7,6 @@ import { wish } from './fixtures'
 const options = (extra: Partial<PlanOptions> = {}): PlanOptions => ({
   budget: 100,
   shippingReserve: 5,
-  priorities: ['high', 'normal', 'low'],
   forced: new Set(),
   skipped: new Set(),
   ...extra,
@@ -59,31 +58,11 @@ describe('prochaine commande', () => {
     expect(ids(plan.covered)).toEqual(['zekrom', 'pikachu'])
   })
 
-  test('hors budget, puis son Pokémon pris par une autre carte : « Pokémon déjà prévu »', () => {
-    const plan = planPurchase(
-      [wish('high', [25], 200, { priority: 'high' }), wish('low', [25], 10, { priority: 'low' })],
-      new Set(),
-      options(),
-    )
-    expect(ids(plan.picked)).toEqual(['low'])
-    expect(plan.left).toEqual([])
-    expect(ids(plan.covered)).toEqual(['high'])
-  })
-
-  test('la priorité passe avant le prix', () => {
-    const plan = planPurchase(
-      [wish('low', [1], 10, { priority: 'low' }), wish('high', [2], 80, { priority: 'high' })],
-      new Set(),
-      options(),
-    )
-    expect(ids(plan.picked)).toEqual(['high', 'low'])
-  })
-
   test('jamais une carte possédée ou commandée, ni un Pokémon déjà obtenu', () => {
     const plan = planPurchase(
       [
-        wish('owned', [1], 5, { status: 'owned' }),
-        wish('ordered', [2], 5, { status: 'ordered' }),
+        wish('owned', [1], 5, 'owned'),
+        wish('ordered', [2], 5, 'ordered'),
         wish('taken', [3], 5),
         wish('new', [4], 5),
       ],
@@ -93,24 +72,15 @@ describe('prochaine commande', () => {
     expect(ids(plan.picked)).toEqual(['new'])
   })
 
-  test('sans prix et au-dessus du prix maximum : à part, jamais chiffrées', () => {
+  test('sans prix : à part, jamais chiffrée', () => {
     const plan = planPurchase(
-      [wish('unpriced', [1], null), wish('expensive', [2], 30, { maxPrice: 20 })],
+      [wish('unpriced', [1], null), wish('a', [2], 30)],
       new Set(),
       options(),
     )
-    expect(plan.picked).toEqual([])
+    expect(ids(plan.picked)).toEqual(['a'])
     expect(ids(plan.unpriced)).toEqual(['unpriced'])
-    expect(ids(plan.aboveMax)).toEqual(['expensive'])
-  })
-
-  test('seulement les priorités retenues', () => {
-    const plan = planPurchase(
-      [wish('low', [1], 10, { priority: 'low' })],
-      new Set(),
-      options({ priorities: ['high', 'normal'] }),
-    )
-    expect(plan.picked).toEqual([])
+    expect(plan.total).toBe(35)
   })
 
   test('ajout et retrait à la main', () => {

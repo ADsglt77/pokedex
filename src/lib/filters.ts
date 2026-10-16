@@ -73,14 +73,11 @@ export const speciesPath = (id: number) => `/pokemon/${id}`
 /** Les onglets des Achats, dans l'adresse (`?vue=`) ; la liste d'achats est celui par défaut. */
 export const SHOPPING_VIEWS = ['liste', 'prochaine-commande', 'commandes', 'budget'] as const
 export type ShoppingView = (typeof SHOPPING_VIEWS)[number]
-/** Le filtre « sous le prix maximum » de la liste d'achats, dans l'adresse (`?filtre=`). */
-export const UNDER_MAX = 'sous-max'
 
 /** L'adresse des Achats : `shoppingUrl({ view: 'commandes' })` → `/achats?vue=commandes`. */
-export function shoppingUrl({ view, underMax }: { view?: ShoppingView; underMax?: boolean } = {}) {
+export function shoppingUrl({ view }: { view?: ShoppingView } = {}) {
   const params = new URLSearchParams()
   if (view && view !== 'liste') params.set('vue', view)
-  if (underMax) params.set('filtre', UNDER_MAX)
   const search = params.toString()
   return search ? `/achats?${search}` : '/achats'
 }

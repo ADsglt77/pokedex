@@ -8,7 +8,7 @@
  *   quelle carte n'a pas d'image. Une carte sans scan est recherchée chaque semaine (Pokécardex en
  *   ajoute).
  * Seules les images qui manquent sont téléchargées, deux à la fois : Pokécardex prête ses images,
- * on ne l'inonde pas. Le premier passage (environ 1 Go) prend une heure ou plus. Une image en
+ * on ne l'inonde pas. Le premier passage (environ 1,5 Go) prend une heure ou plus. Une image en
  * erreur (panne, réponse qui n'est pas une image) n'empêche pas les autres : rien n'est noté pour
  * elle, la tâche échoue à la fin pour être relancée, et l'image est redemandée. À la 20e
  * erreur, la source est sans doute en panne : la tâche s'arrête là. En fin de tâche, même
