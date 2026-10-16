@@ -1,11 +1,12 @@
 /**
  * Ce que l'utilisateur saisit et qui compte en argent : les montants (lignes de commande, port,
  * frais, remboursé, budget, prix maximum, prix payé) et l'id Cardmarket d'une carte (d'où son
- * prix). Un montant mal lu fausserait le budget sans rien dire.
+ * prix). Un montant mal lu fausserait le budget sans rien dire. Et le lien vers Cardmarket : ses
+ * offres en japonais, Near Mint au moins (une autre langue, ce serait une autre carte achetée).
  */
 
 import { describe, expect, test } from 'bun:test'
-import { readCardmarketId } from '@/lib/cardmarket'
+import { cardmarketPage, readCardmarketId } from '@/lib/cardmarket'
 import { parseEuros } from '@/lib/format'
 
 describe('parseEuros', () => {
@@ -44,5 +45,22 @@ describe('readCardmarketId', () => {
     expect(readCardmarketId('1.5')).toBeUndefined()
     expect(readCardmarketId('-3')).toBeUndefined()
     expect(readCardmarketId('0')).toBeUndefined()
+  })
+})
+
+describe('cardmarketPage', () => {
+  const page =
+    'https://www.cardmarket.com/fr/Pokemon/Products/Singles/Pokemon-Card-151/Bulbasaur-V2-sv2a166'
+
+  test('les offres en japonais, Near Mint au moins : page notée ou page de l’id', () => {
+    expect(cardmarketPage({ page })).toBe(`${page}?language=7&minCondition=2`)
+    expect(cardmarketPage({ cardmarket: 719442 })).toBe(
+      'https://www.cardmarket.com/fr/Pokemon/Products?idProduct=719442&language=7&minCondition=2',
+    )
+    expect(cardmarketPage({})).toBeNull()
+  })
+
+  test('une page collée avec ses propres filtres les garde', () => {
+    expect(cardmarketPage({ page: `${page}?language=1` })).toBe(`${page}?language=1&minCondition=2`)
   })
 })

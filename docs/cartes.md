@@ -7,7 +7,8 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   celle de Pokécardex en deux tailles (ou de TCGplayer, d'une ancienne version), ou l'adresse
   collée, `small` = `large` ; `null` sans image),
   son id Cardmarket (`cardmarket`) et sa page chez Cardmarket (`page`), tous deux facultatifs ;
-  sans page notée, le lien « Voir sur Cardmarket » se fait par l'id (`cardmarketPage`).
+  sans page notée, le lien « Voir sur Cardmarket » se fait par l'id (`cardmarketPage`). Il
+  ouvre les offres en japonais, Near Mint au moins (`?language=7&minCondition=2`).
   Une par Pokémon : on la corrige (« Modifier la carte », même id, son statut et ses achats la
   suivent) ou on la retire (« Retirer la carte » : avec son statut et son prix payé ; confirmation si elle est possédée ; impossible tant qu'une commande la contient) avant
   d'en ajouter une autre. Si une ancienne version en a gardé plusieurs, la première compte.

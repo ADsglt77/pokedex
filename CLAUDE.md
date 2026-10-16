@@ -90,7 +90,10 @@ bun server/create-user.ts <e-mail>       # change le mot de passe du compte (ou 
   construit : la page d'un produit par son id (`cardmarketPage` :
   `/fr/Pokemon/Products?idProduct=…`, vérifié par l'utilisateur en octobre 2026, le site bloquant
   les robots ;
-  `/Products/Singles?idProduct=` ne marche pas). Aucune autre adresse devinée. La page exacte vient
+  `/Products/Singles?idProduct=` ne marche pas). Aucune autre adresse devinée. Chaque lien vers une
+  carte (celui de l'id comme une page collée) porte les filtres des offres choisis par
+  l'utilisateur (octobre 2026) : `language=7` (japonais) et `minCondition=2` (Near Mint au
+  moins), sauf ceux qu'une page collée fixe déjà. La page exacte vient
   d'une adresse collée (« Page Cardmarket » de la saisie). Les images de
   Cardmarket ne s'affichent que sur son site (son serveur refuse les autres) : refusées comme image
   de carte. Pas d'export « Wants » : le format d'import de Cardmarket pour les cartes japonaises

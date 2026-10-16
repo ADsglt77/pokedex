@@ -8,16 +8,31 @@ import { parseLink } from '@/lib/format'
 import type { PokemonCard } from '@/types'
 
 /**
- * La page d'une carte chez Cardmarket : celle notée (adresse collée), sinon celle de son
- * id, `/fr/Pokemon/Products?idProduct=864066`, qui mène à la page du produit (vérifié par
- * l'utilisateur en octobre 2026 ; `/Products/Singles?idProduct=` ne marche pas). `null` sans l'un
- * ni l'autre.
+ * Les filtres des offres, ajoutés à la page d'une carte (choix de l'utilisateur, octobre 2026) : en
+ * japonais (`language=7`), Near Mint au moins (`minCondition=2`). Ceux d'une adresse collée qui
+ * en porte déjà restent les siens.
  */
-export const cardmarketPage = (card: Pick<PokemonCard, 'page' | 'cardmarket'>) =>
-  card.page ??
-  (card.cardmarket === undefined
-    ? null
-    : `https://www.cardmarket.com/fr/Pokemon/Products?idProduct=${card.cardmarket}`)
+const OFFER_FILTERS = { language: '7', minCondition: '2' }
+
+/**
+ * La page d'une carte chez Cardmarket, avec les filtres des offres : celle notée (adresse collée),
+ * sinon celle de son id, `/fr/Pokemon/Products?idProduct=864066`, qui mène à la page du produit
+ * (vérifié par l'utilisateur en octobre 2026 ; `/Products/Singles?idProduct=` ne marche pas).
+ * `null` sans l'un ni l'autre.
+ */
+export function cardmarketPage(card: Pick<PokemonCard, 'page' | 'cardmarket'>) {
+  const page =
+    card.page ??
+    (card.cardmarket === undefined
+      ? null
+      : `https://www.cardmarket.com/fr/Pokemon/Products?idProduct=${card.cardmarket}`)
+  if (!page) return null
+  const url = new URL(page)
+  for (const [name, value] of Object.entries(OFFER_FILTERS)) {
+    if (!url.searchParams.has(name)) url.searchParams.set(name, value)
+  }
+  return url.href
+}
 
 /** Un lien collé vers une page de Cardmarket ; `null` s'il ne mène pas à www.cardmarket.com. */
 export function parseCardmarketLink(text: string): string | null {
