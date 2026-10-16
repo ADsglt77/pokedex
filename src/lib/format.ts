@@ -49,11 +49,16 @@ const monthFormat = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'num
 export const formatMonth = (month: string) => monthFormat.format(toDate(`${month}-01`)!)
 
 const shortDateFormat = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
+const shortDateYearFormat = new Intl.DateTimeFormat('fr-FR', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+})
 
-/** « 11 oct. » */
-export function formatShortDate(iso: string | null | undefined): string | null {
+/** « 11 oct. » ; `withYear` : « 11 oct. 2026 ». */
+export function formatShortDate(iso: string | null | undefined, withYear = false): string | null {
   const date = toDate(iso)
-  return date && shortDateFormat.format(date)
+  return date && (withYear ? shortDateYearFormat : shortDateFormat).format(date)
 }
 
 export function formatDateTime(iso: string | null | undefined): string | null {

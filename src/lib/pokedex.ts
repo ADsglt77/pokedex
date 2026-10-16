@@ -5,7 +5,8 @@
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
 import { isToBuy } from '@/lib/collection'
-import { localDayOf, monthRange } from '@/lib/format'
+import { localDayOf } from '@/lib/format'
+import type { PricePoint } from '@/lib/prices'
 import { findCard, SPECIES } from '@/lib/species'
 import type { CardStatus, CollectionData, PokemonCard, PokemonSpecies } from '@/types'
 
@@ -130,26 +131,16 @@ export const acquisitions = (collection: CollectionData): RecentCard[] =>
     .sort((a, b) => (b.acquiredAt ?? '').localeCompare(a.acquiredAt ?? ''))
 
 /**
- * Les Pokémon débloqués au fil des mois : à chaque mois (`YYYY-MM-01`), le total débloqué à sa
- * fin, du mois de la première carte obtenue à `month` (`YYYY-MM`, le mois en cours). Le mois
- * d'une carte est son mois local ; une carte possédée sans date compte dès le début, pour que la
+ * Les Pokémon débloqués, un évènement chacun (à cumuler, `runningTotal`) : le jour local de sa
+ * première carte obtenue. Une carte possédée sans date compte avant tout (jour « »), pour que la
  * courbe finisse sur la progression.
  */
-export function unlockedByMonth(collection: CollectionData, month: string) {
-  const firstMonth = new Map<number, string | null>()
-  // Des plus récentes aux plus anciennes (sans date en dernier) : le mois noté en dernier est le
+export function unlockEvents(collection: CollectionData): PricePoint[] {
+  const first = new Map<number, string>()
+  // Des plus récentes aux plus anciennes (sans date en dernier) : le jour noté en dernier est le
   // premier.
   for (const { card, acquiredAt } of acquisitions(collection)) {
-    for (const id of card.dexIds) {
-      firstMonth.set(id, acquiredAt && localDayOf(acquiredAt).slice(0, 7))
-    }
+    for (const id of card.dexIds) first.set(id, acquiredAt ? localDayOf(acquiredAt) : '')
   }
-  const months = [...firstMonth.values()]
-  const dated = months.filter((first) => first !== null).sort()
-  const start = dated[0] ?? (months.length > 0 ? month : null)
-  if (start === null) return []
-  return monthRange(start, month).map((current) => ({
-    date: `${current}-01`,
-    value: months.filter((first) => first === null || first <= current).length,
-  }))
+  return [...first.values()].map((date) => ({ date, value: 1 }))
 }

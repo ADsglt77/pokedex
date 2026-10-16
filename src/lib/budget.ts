@@ -6,6 +6,7 @@
 
 import { today } from '@/lib/format'
 import { cardCount, cents, orderSpent, supplierLabel } from '@/lib/orders'
+import type { PricePoint } from '@/lib/prices'
 import type { BudgetSettings, Order, ShoppingData } from '@/types'
 
 /** `2026-10` */
@@ -47,6 +48,12 @@ function spendingBy(orders: readonly Order[], keyOf: (order: Order) => string) {
 /** Un total par mois (`key` : `2026-10`), le plus récent d'abord. */
 export const spendingByMonth = (orders: readonly Order[]) =>
   spendingBy(orders, (order) => monthOf(order.date)).sort((a, b) => b.key.localeCompare(a.key))
+
+/** Ce que coûte chaque commande, au jour de son achat (à cumuler, `runningTotal`). */
+export const spendingEvents = (orders: readonly Order[]): PricePoint[] =>
+  orders
+    .filter((order) => order.state !== 'cancelled')
+    .map((order) => ({ date: order.date, value: orderSpent(order) }))
 
 /** Un total par fournisseur (`key` : son nom), le plus gros d'abord. */
 export const spendingBySupplier = (orders: readonly Order[]) =>

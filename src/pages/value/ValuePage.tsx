@@ -1,8 +1,9 @@
 import { Alert, Skeleton, SkeletonText, Stack, Stat } from '@camply/ui'
 import { Flag } from '@camply/ui/icons'
-import { Suspense, use, useMemo } from 'react'
+import { Suspense, use, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { speciesPath } from '@/lib/filters'
+import { ChartPeriodControl, ChartStats } from '@/components/ChartParts'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
 import { PriceChart } from '@/components/PriceChart'
@@ -13,15 +14,25 @@ import { cx } from '@/lib/cx'
 import {
   details,
   formatDate,
+  formatDecimal,
   formatEuro,
   formatInteger,
   formatPercent,
-  monthRange,
   pageTitle,
   plural,
   today,
 } from '@/lib/format'
-import { monthOf, spendingByMonth } from '@/lib/budget'
+import { spendingEvents } from '@/lib/budget'
+import {
+  firstDate,
+  inWindow,
+  levelStats,
+  periodWindow,
+  runningTotal,
+  windowDays,
+  type ChartPeriod,
+  type ChartWindow,
+} from '@/lib/chart'
 import {
   collectionHistory,
   completionByGeneration,
@@ -30,10 +41,11 @@ import {
   priceMovers,
   tallyByStatus,
   trackedCards,
+  type PricePoint,
   type Tally,
   type TrackedCard,
 } from '@/lib/prices'
-import { unlockedByMonth } from '@/lib/pokedex'
+import { unlockEvents } from '@/lib/pokedex'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
 import { loadPriceHistories, usePrices, usePricesMissing } from '@/store/prices'
@@ -125,23 +137,9 @@ export function ValuePage() {
           />
         </div>
 
-        <Panel
-          className={styles.wide}
-          title="Valeur de ma collection"
-          description="Vos cartes possédées aujourd’hui, au prix de chaque jour. Un nouveau point chaque jour."
-        >
-          {owned.length > 0 ? (
-            <Suspense fallback={<Skeleton height="7rem" />}>
-              <CollectionChart cards={owned} />
-            </Suspense>
-          ) : (
-            <p className="muted">Aucune carte possédée pour l’instant : pas de courbe à tracer.</p>
-          )}
-        </Panel>
+        <Evolution owned={owned} />
 
         <Movers cards={cards} />
-
-        <MonthlyCharts />
 
         <Panel
           className={styles.wide}
@@ -165,13 +163,120 @@ export function ValuePage() {
   )
 }
 
-function CollectionChart({ cards }: { cards: PokemonCard[] }) {
+/**
+ * L'évolution, jour par jour sur la période choisie (7 jours au moins) : la valeur de la collection,
+ * les Pokémon débloqués et les dépenses, chacune avec ses chiffres.
+ */
+function Evolution({ owned }: { owned: PokemonCard[] }) {
+  const [period, setPeriod] = useState<ChartPeriod>('month')
+  const collection = useCollectionStore((state) => state.collection)
+  const orders = useShoppingStore((state) => state.shopping.orders)
+  const day = today()
+  const unlocks = useMemo(() => unlockEvents(collection), [collection])
+  const spending = useMemo(() => spendingEvents(orders), [orders])
+
+  return (
+    <Panel
+      className={styles.wide}
+      title="Évolution"
+      description="Jour par jour, sur la période choisie."
+      actions={<ChartPeriodControl value={period} onChange={setPeriod} />}
+    >
+      <div className={styles.charts}>
+        <section className={cx(styles.chart, styles.chartWide)}>
+          <h3 className={styles.subtitle}>Valeur de ma collection</h3>
+          <p className="hint">Vos cartes possédées aujourd’hui, au prix de chaque jour.</p>
+          {owned.length > 0 ? (
+            <Suspense fallback={<Skeleton height="7rem" />}>
+              <CollectionChart cards={owned} period={period} day={day} />
+            </Suspense>
+          ) : (
+            <p className="muted">Aucune carte possédée pour l’instant : pas de courbe à tracer.</p>
+          )}
+        </section>
+        <section className={styles.chart}>
+          <h3 className={styles.subtitle}>Pokémon débloqués</h3>
+          <p className="hint">Le total, jour après jour.</p>
+          <UnlockedChart events={unlocks} period={period} day={day} />
+        </section>
+        <section className={styles.chart}>
+          <h3 className={styles.subtitle}>Dépenses</h3>
+          <p className="hint">Vos commandes, cumulées depuis le début de la période.</p>
+          <SpendingChart events={spending} period={period} day={day} />
+        </section>
+      </div>
+    </Panel>
+  )
+}
+
+interface ChartProps {
+  period: ChartPeriod
+  /** Aujourd'hui : le dernier jour de la période. */
+  day: string
+}
+
+function CollectionChart({ cards, period, day }: ChartProps & { cards: PokemonCard[] }) {
   // Les cartes sans id Cardmarket n'ont pas d'historique : elles ne pèsent pas sur la courbe. La
   // même carte Cardmarket possédée pour deux Pokémon compte deux fois, comme dans la valeur du
   // jour ; son historique n'est demandé qu'une fois.
   const ids = cards.flatMap((card) => card.cardmarket ?? []).sort((a, b) => a - b)
   const histories = use(loadPriceHistories(ids))
-  return <PriceChart points={collectionHistory(histories)} label="Valeur de ma collection" />
+  const series = collectionHistory(histories)
+  const window = periodWindow(period, day, series[0]?.date ?? null)
+  const points = inWindow(series, window)
+  return (
+    <>
+      <PriceChart points={points} window={window} label="Valeur de ma collection" />
+      <ChartStats items={levelStats(points)} />
+    </>
+  )
+}
+
+/** Le nombre de semaines d'une période, pour un rythme « par semaine ». */
+const weeksOf = (window: ChartWindow) => windowDays(window) / 7
+
+function UnlockedChart({ events, period, day }: ChartProps & { events: PricePoint[] }) {
+  if (events.length === 0) return <p className="muted">Aucun Pokémon débloqué pour l’instant.</p>
+  const window = periodWindow(period, day, firstDate(events))
+  const points = runningTotal(events, window, true)
+  const gained = inWindow(events, window).length
+  return (
+    <>
+      <PriceChart
+        points={points}
+        window={window}
+        label="Pokémon débloqués"
+        format={formatInteger}
+        fromZero
+      />
+      <ChartStats
+        items={[
+          { label: 'Sur la période', value: `+${formatInteger(gained)}` },
+          { label: 'Au total', value: formatInteger(points.at(-1)!.value) },
+          { label: 'Par semaine', value: formatDecimal(gained / weeksOf(window)) },
+        ]}
+      />
+    </>
+  )
+}
+
+function SpendingChart({ events, period, day }: ChartProps & { events: PricePoint[] }) {
+  if (events.length === 0) return <p className="muted">Aucune commande pour l’instant.</p>
+  const window = periodWindow(period, day, firstDate(events))
+  const points = runningTotal(events, window, false)
+  const spent = points.at(-1)!.value
+  return (
+    <>
+      <PriceChart points={points} window={window} label="Dépenses cumulées" fromZero />
+      <ChartStats
+        items={[
+          { label: 'Dépensé', value: formatEuro(spent) },
+          { label: 'Par semaine', value: formatEuro(spent / weeksOf(window)) },
+          { label: 'Commandes', value: formatInteger(inWindow(events, window).length) },
+        ]}
+      />
+    </>
+  )
 }
 
 /**
@@ -221,39 +326,5 @@ function Movers({ cards }: { cards: TrackedCard[] }) {
         ))}
       </div>
     </Panel>
-  )
-}
-
-/** Au fil des mois : les Pokémon débloqués (cumul) et ce que coûtent les commandes de chaque mois. */
-function MonthlyCharts() {
-  const collection = useCollectionStore((state) => state.collection)
-  const orders = useShoppingStore((state) => state.shopping.orders)
-  const month = monthOf(today())
-  const unlocked = useMemo(() => unlockedByMonth(collection, month), [collection, month])
-  const spent = useMemo(() => {
-    const byMonth = new Map(spendingByMonth(orders).map(({ key, spent }) => [key, spent]))
-    const first = [...byMonth.keys()].sort()[0]
-    return first
-      ? monthRange(first, month).map((key) => ({ date: `${key}-01`, value: byMonth.get(key) ?? 0 }))
-      : []
-  }, [orders, month])
-
-  return (
-    <>
-      <Panel title="Pokémon débloqués" description="Au fil des mois, depuis votre première carte.">
-        {unlocked.length >= 2 ? (
-          <PriceChart points={unlocked} label="Pokémon débloqués" format={formatInteger} />
-        ) : (
-          <p className="muted">La courbe se dessine dès votre deuxième mois de cartes obtenues.</p>
-        )}
-      </Panel>
-      <Panel title="Dépenses par mois" description="Vos commandes, au mois de leur achat.">
-        {spent.length >= 2 ? (
-          <PriceChart points={spent} label="Dépenses par mois" />
-        ) : (
-          <p className="muted">La courbe se dessine dès votre deuxième mois de commandes.</p>
-        )}
-      </Panel>
-    </>
   )
 }

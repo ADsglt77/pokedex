@@ -37,6 +37,24 @@
   gap: var(--camply-space-4) var(--camply-space-8);
 }
 
+/* L'évolution : la valeur sur toute la largeur, les Pokémon débloqués et les dépenses côte à côte
+   quand la place le permet. */
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+  gap: var(--space-block);
+}
+
+.chartWide {
+  grid-column: 1 / -1;
+}
+
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--camply-space-3);
+}
+
 .subtitle {
   color: var(--camply-text-muted);
   font-family: var(--camply-font-sans);

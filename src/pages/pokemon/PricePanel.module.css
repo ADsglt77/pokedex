@@ -9,3 +9,15 @@
   border: 0;
   background: none;
 }
+
+/* La courbe du prix : sa période au-dessus, ses chiffres dessous. */
+.history {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--camply-space-3);
+}
+
+.history > :first-child {
+  align-self: flex-start;
+}
