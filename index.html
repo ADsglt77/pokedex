@@ -6,24 +6,19 @@
     <meta name="description" content="Mon Pokédex de cartes Pokémon japonaises." />
     <meta name="theme-color" content="#141414" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Installable sur téléphone et ordinateur (manifeste, icônes ; iOS : son icône à lui). -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- L'aperçu d'un lien partagé (Discord, WhatsApp…) ; nginx rend l'adresse de l'image complète. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Mon Pokédex" />
+    <meta property="og:title" content="Mon Pokédex" />
+    <meta property="og:description" content="Un Pokédex de cartes Pokémon japonaises : une carte par Pokémon." />
+    <meta property="og:image" content="/icons/icon-512.png" />
+    <meta name="twitter:card" content="summary" />
     <title>Mon Pokédex</title>
-    <script>
-      // Le thème, posé avant le premier affichage (sans éclair de l'autre) : celui choisi dans ce
-      // navigateur, sinon (aucun choix, valeur inconnue, stockage bloqué) celui du système. La
-      // même règle que `src/store/theme.ts`.
-      {
-        let stored = null
-        try {
-          stored = localStorage.getItem('pokedex-collection.theme')
-        } catch {}
-        const system = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
-        const theme = stored === 'light' || stored === 'dark' ? stored : system
-        if (theme === 'light') {
-          document.documentElement.dataset.camplyTheme = 'light'
-          document.querySelector('meta[name="theme-color"]').content = '#faf6f3'
-        }
-      }
-    </script>
+    <!-- Le thème, avant le premier affichage : un script bloquant, mais un fichier du site. -->
+    <script src="/theme.js"></script>
   </head>
   <body>
     <div id="root"></div>

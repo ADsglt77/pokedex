@@ -50,7 +50,10 @@ export function CatalogPage() {
 const SET_ORDERS = [
   { value: 'recent', label: 'Plus récentes' },
   { value: 'useful', label: 'Plus utiles' },
+  { value: 'advanced', label: 'Plus avancées' },
 ] as const
+
+type SetOrder = (typeof SET_ORDERS)[number]['value']
 
 function CatalogContent() {
   const catalog = use(loadCatalog())
@@ -69,25 +72,34 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
   const prices = usePrices()
   const act = useCollectionAction()
   const [missingOnly, setMissingOnly] = useState(true)
-  const [setOrder, setSetOrder] = useState<'recent' | 'useful'>('recent')
+  const [setOrder, setSetOrder] = useState<SetOrder>('recent')
   const [addAs, setAddAs] = useState<AddAs>('none')
   const grid = useRef<HTMLUListElement>(null)
   const setTitle = useRef<HTMLHeadingElement>(null)
   const addAsLabel = useId()
 
-  // Les Pokémon sans carte que chaque extension peut compléter.
-  const openBySet = useMemo(() => {
+  // Les Pokémon de chaque extension, et ceux d'entre eux qui n'ont pas encore de carte (d'ici ou
+  // d'ailleurs) : ce qu'elle peut compléter, et où en est la progression de chacune.
+  const { speciesBySet, openBySet } = useMemo(() => {
+    const species = new Map<string, Set<number>>()
     const open = new Map<string, Set<number>>()
+    const add = (map: Map<string, Set<number>>, setId: string, id: number) =>
+      map.set(setId, (map.get(setId) ?? new Set<number>()).add(id))
     for (const list of catalog.bySpecies.values()) {
       for (const card of list) {
-        for (const id of card.dexIds.filter((dexId) => !entryById.get(dexId)?.card)) {
-          open.set(card.set.id, (open.get(card.set.id) ?? new Set<number>()).add(id))
+        for (const id of card.dexIds) {
+          add(species, card.set.id, id)
+          if (!entryById.get(id)?.card) add(open, card.set.id, id)
         }
       }
     }
-    return open
+    return { speciesBySet: species, openBySet: open }
   }, [catalog, entryById])
   const openCount = (setId: string) => openBySet.get(setId)?.size ?? 0
+  const speciesCount = (setId: string) => speciesBySet.get(setId)?.size ?? 0
+  /** La part des Pokémon de l'extension qui ont déjà leur carte. */
+  const progressOf = (setId: string) =>
+    speciesCount(setId) ? 1 - openCount(setId) / speciesCount(setId) : 0
   // La recherche porte sur le code et le nom (« sv2a », « 151 », ぽけもん), pas sur le décompte.
   const searchable = useMemo(
     () => new Map(catalog.sets.map(({ id, name }) => [id, searchForm(`${id} ${name}`)])),
@@ -99,12 +111,15 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
   const sets =
     setOrder === 'useful'
       ? [...catalog.sets].sort((a, b) => openCount(b.id) - openCount(a.id))
-      : catalog.sets
+      : setOrder === 'advanced'
+        ? [...catalog.sets].sort((a, b) => progressOf(b.id) - progressOf(a.id))
+        : catalog.sets
   const setOptions = sets.map((known) => {
     const option = setOption(known)
+    const total = speciesCount(known.id)
     return {
       ...option,
-      label: `${option.label} · ${formatInteger(openCount(known.id))} sans carte`,
+      label: `${option.label} · ${formatInteger(total - openCount(known.id))} sur ${formatInteger(total)}`,
     }
   })
   // Les cartes de l'extension, cherchées une fois dans tout le catalogue (pas à chaque clic).
@@ -124,8 +139,8 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
       .filter((row) => row.card.dexIds.some((id) => id !== speciesId && !entryById.get(id)?.card))
       .length
   // Les Pokémon de l'extension, et ceux d'entre eux qui ont déjà leur carte (d'ici ou d'ailleurs).
-  const setSpecies = new Set(cards.flatMap((card) => card.dexIds))
-  const covered = [...setSpecies].filter((id) => entryById.get(id)?.card).length
+  const total = speciesCount(set.id)
+  const covered = total - openCount(set.id)
 
   const choose = (card: CatalogCard, speciesId: number, rank: number) => {
     const name = getSpecies(speciesId)!.names.fr
@@ -174,9 +189,11 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
           onChange={setSetOrder}
         />
       </div>
-      {setOrder === 'useful' && (
+      {setOrder !== 'recent' && (
         <p className="hint">
-          Plus utiles : celles qui donnent leur carte au plus de vos Pokémon qui n’en ont pas.
+          {setOrder === 'useful'
+            ? 'Plus utiles : celles qui donnent leur carte au plus de vos Pokémon qui n’en ont pas.'
+            : 'Plus avancées : celles dont la plus grande part des Pokémon a déjà sa carte (à côté de chaque extension : combien l’ont, sur tous les siens).'}
         </p>
       )}
 
@@ -192,17 +209,15 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
         <div className={styles.coverage}>
           <p>
             <strong className="numeric">
-              {formatInteger(covered)} sur {formatInteger(setSpecies.size)}
+              {formatInteger(covered)} sur {formatInteger(total)}
             </strong>{' '}
             de ses Pokémon ont leur carte
-            {covered < setSpecies.size &&
-              ` : ${plural(setSpecies.size - covered, 'reste', 'restent')} à choisir`}
-            .
+            {covered < total && ` : ${plural(total - covered, 'reste', 'restent')} à choisir`}.
           </p>
           <Progress
             size="sm"
             value={covered}
-            max={Math.max(setSpecies.size, 1)}
+            max={total}
             aria-label="Pokémon de l’extension qui ont leur carte"
           />
         </div>

@@ -89,6 +89,37 @@ déconnecte le précédent, qui garde ses modifications). Personne d'autre ne pe
 
 ## Déploiement (VPS + tunnel Cloudflare)
 
+### La liste de mise en ligne
+
+- [ ] **Avant tout** : exporter sa collection depuis le site actuel (Données › Exporter).
+- [ ] Sur le VPS : Docker, `git` et le tunnel Cloudflare (`cloudflared`).
+- [ ] Le clone en SSH, avec une clé de déploiement en lecture seule (étape 1 plus bas).
+- [ ] Le fichier `.env` : l'adresse publique en https et la clé des sessions (étape 2).
+- [ ] L'ancien historique des prix : `docker volume ls | grep prices`. Si l'ancien service des prix
+      a tourné sur ce VPS, `ingest` reprend son historique tout seul au premier démarrage
+      (« Vérifié : … cartes » dans `docker compose logs ingest`) : les courbes commencent plus tôt.
+- [ ] Une installation d'avant les conteneurs sans droits d'administrateur : rendre une fois ses
+      volumes à l'utilisateur `bun`, sans quoi le serveur ne peut plus y écrire :
+      `docker compose run --rm --no-deps --user root ingest chown -R bun:bun /data /images /backups`.
+- [ ] `docker compose up -d --build`, puis le tunnel vers `http://localhost:8080` (étape 3).
+- [ ] Le compte (étape 4), puis l'import de l'export d'avant (Données › Importer) : connecté, la
+      collection part sur le serveur.
+- [ ] Les secrets GitHub du déploiement, `VPS_FINGERPRINT` compris (plus bas).
+- [ ] Les sauvegardes copiées hors du VPS chaque nuit (section Sauvegardes).
+- [ ] La surveillance : un service gratuit (UptimeRobot, Healthchecks…) qui demande
+      `https://votre-domaine/api/health` toutes les 5 minutes et vous écrit s'il ne répond plus
+      200 (voir plus bas).
+- [ ] Si vous le voulez, le Pokédex public : Données › Pokédex public.
+- [ ] Sur téléphone, « Ajouter à l'écran d'accueil » : le site s'ouvre comme une application. Il lui
+      faut le réseau pour démarrer ; la collection, elle, reste sur l'appareil.
+
+**La surveillance** : `/api/health` répond 200 quand le serveur répond et que chaque tâche
+nécessaire a réussi récemment (en deux intervalles au plus : les prix en 12 h, le catalogue et les
+sauvegardes en 2 jours, les espèces en 60 jours), 503 sinon, avec la liste des tâches en retard.
+Au tout premier démarrage, il répond 503 le temps du premier catalogue (une vingtaine de minutes).
+Sans surveillance, un trou dans l'historique des prix passerait inaperçu : Cardmarket ne le garde
+pas, un jour manqué l'est pour toujours.
+
 L'image Docker construit le site avec Bun et le sert avec nginx (`deploy/nginx.conf` renvoie
 `index.html` pour les adresses du routage côté client, `/api/` au serveur, et sert les images
 copiées). `compose.yaml` l'expose sur `127.0.0.1:8080` (variable `POKEDEX_PORT`), joignable
@@ -184,13 +215,21 @@ le VPS.
 Chaque jour, le service `ingest` copie les deux bases dans le volume `backups` :
 `app-AAAA-MM-JJ.db` (votre compte et votre collection, 30 jours gardés) et
 `data-AAAA-MM-JJ.db.gz` (catalogue, prix et leur historique, 7 jours gardés). Ce volume est sur le
-même disque que les bases : copiez-le aussi ailleurs, par exemple chaque nuit avec `rclone` ou
-`rsync` vers un autre serveur. Pour en sortir les fichiers (dans `./sauvegardes`, que git
-ignore) :
+même disque que les bases : copiez-le aussi ailleurs. Pour en sortir les fichiers (dans
+`./sauvegardes`, que git ignore ; `--user root` : les conteneurs tournent sans droits
+d'administrateur, ce dossier du VPS ne leur appartient pas) :
 
 ```sh
 mkdir -p sauvegardes
-docker compose run --rm --no-deps -v "$PWD/sauvegardes:/out" ingest sh -c 'cp /backups/* /out/'
+docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/out" ingest sh -c 'cp /backups/* /out/'
+```
+
+Chaque nuit, hors du VPS, avec `rclone` (configuré une fois, `rclone config`, vers un stockage à
+vous : Backblaze B2, Google Drive, un autre serveur…) : dans la crontab de l'utilisateur du
+déploiement (`crontab -e`), après la sauvegarde du jour (4 h 30, le dossier du clone à adapter) :
+
+```sh
+30 4 * * * cd /home/moi/pokedex && mkdir -p sauvegardes && docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/out" ingest sh -c 'cp /backups/* /out/' && rclone copy sauvegardes distant:pokedex-sauvegardes
 ```
 
 Restaurer une base : arrêter le serveur et les tâches, remettre la copie à la place de la base
@@ -199,7 +238,7 @@ puis redémarrer :
 
 ```sh
 docker compose stop server ingest
-docker compose run --rm --no-deps -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/app.db-wal /data/app.db-shm && cp /restore/app-AAAA-MM-JJ.db /data/app.db'
+docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/app.db-wal /data/app.db-shm && cp /restore/app-AAAA-MM-JJ.db /data/app.db && chown bun:bun /data/app.db'
 docker compose up -d
 ```
 

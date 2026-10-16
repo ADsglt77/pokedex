@@ -2,6 +2,7 @@ import { Badge, DescriptionList, SkeletonText, type BadgeTone } from '@camply/ui
 import { Suspense, use, useState, type ReactNode } from 'react'
 import { ExternalLink } from '@/components/ExternalLink'
 import { INGEST_JOB_NAMES, INGEST_JOBS, type IngestJob } from '@/config/jobs'
+import { isOverdue } from '@/lib/jobs'
 import { details, formatDate, formatDateTime } from '@/lib/format'
 import { settled } from '@/lib/settled'
 import type { JobStatus, ServerStatus } from '@/types'
@@ -60,7 +61,7 @@ function describeJob(
   status: JobStatus | undefined,
   now: number,
 ): { tone: BadgeTone; badge: string; text: ReactNode } {
-  const { every, optional } = INGEST_JOBS[job]
+  const { optional } = INGEST_JOBS[job]
   const success = status?.lastSuccess ?? null
   const since = success && `Dernière réussite le ${formatDateTime(success)}`
   if (!status?.lastRun) {
@@ -90,8 +91,7 @@ function describeJob(
       ),
     }
   }
-  // Deux intervalles sans réussite : le serveur ne la relance plus (service arrêté ?).
-  if (now - Date.parse(success!) > 2 * every) {
+  if (isOverdue(job, success, now)) {
     return { tone: 'warn', badge: 'En retard', text: since }
   }
   return { tone: 'success', badge: 'À jour', text: since }

@@ -2,6 +2,8 @@
  * Les données de référence, publiques, que remplissent les tâches d'ingestion (`ingest.ts`) :
  * - `GET /api/status` : la dernière réussite et le dernier passage de chaque tâche, et le jour des
  *   prix en base (la page Données le montre) ;
+ * - `GET /api/health` : pour une surveillance (UptimeRobot…), 200 si chaque tâche nécessaire a
+ *   réussi récemment (deux intervalles au plus, `isOverdue`), 503 sinon, avec les tâches en retard ;
  * - `GET /api/species`, `/api/species/details` : les espèces, et ce qu'en montre la fiche ;
  * - `GET /api/catalog` : le catalogue des cartes japonaises ;
  * - `GET /api/prices` : les prix Cardmarket du jour ; `GET /api/prices/:id` : l'historique d'une
@@ -11,6 +13,8 @@
 
 import type { Database } from 'bun:sqlite'
 import { Elysia, t } from 'elysia'
+import { INGEST_JOB_NAMES, INGEST_JOBS } from '@/config/jobs'
+import { isOverdue } from '@/lib/jobs'
 import type { JobStatus, ServerStatus } from '@/types'
 import { readSource } from './db'
 import { readHistory } from './history'
@@ -42,6 +46,22 @@ export function referenceRoutes(data: Database) {
         }
       },
       doc('Les tâches d’ingestion'),
+    )
+    .get(
+      '/health',
+      ({ set }) => {
+        set.headers['cache-control'] = 'no-store'
+        const rows = runs.all() as ({ job: string } & JobStatus)[]
+        const successes = new Map(rows.map(({ job, lastSuccess }) => [job, lastSuccess]))
+        const now = Date.now()
+        // Les images sont facultatives : le serveur copie à la demande celles affichées.
+        const late = INGEST_JOB_NAMES.filter(
+          (job) => !INGEST_JOBS[job].optional && isOverdue(job, successes.get(job) ?? null, now),
+        )
+        if (late.length > 0) set.status = 503
+        return { ok: late.length === 0, late }
+      },
+      doc('Pour une surveillance : 503 si une tâche nécessaire est en retard'),
     )
     .get('/species', snapshot('species'), doc('Les espèces : noms, types, génération'))
     .get(

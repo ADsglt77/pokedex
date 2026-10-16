@@ -22,6 +22,11 @@ COPY server server
 COPY src src
 # `production` : cookies de session sécurisés et limite de tentatives de connexion (Better Auth).
 ENV NODE_ENV=production DATA_DIR=/data IMAGES_DIR=/images BACKUP_DIR=/backups
+# Sans droits d'administrateur (l'utilisateur `bun` de l'image) : une faille du serveur ne donnerait
+# pas la main sur le conteneur. Les points de montage lui appartiennent, et un volume neuf en hérite
+# (un volume créé avant, par un conteneur administrateur : voir le README).
+RUN mkdir -p /data /images /backups && chown bun:bun /data /images /backups
+USER bun
 CMD ["bun", "server/index.ts"]
 
 # 3. Le site : nginx sert dist/ et les images copiées, et renvoie /api/ au serveur. Le tunnel
