@@ -8,13 +8,13 @@ import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
 import { PriceChart } from '@/components/PriceChart'
 import { PricedValue } from '@/components/PricedValue'
+import { UnlockedChart } from '@/components/UnlockedChart'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { usePokedex } from '@/hooks/usePokedex'
 import { cx } from '@/lib/cx'
 import {
   details,
   formatDate,
-  formatDecimal,
   formatEuro,
   formatInteger,
   formatPercent,
@@ -29,9 +29,8 @@ import {
   levelStats,
   periodWindow,
   runningTotal,
-  windowDays,
+  weeksOf,
   type ChartPeriod,
-  type ChartWindow,
 } from '@/lib/chart'
 import {
   collectionHistory,
@@ -228,34 +227,6 @@ function CollectionChart({ cards, period, day }: ChartProps & { cards: PokemonCa
     <>
       <PriceChart points={points} window={window} label="Valeur de ma collection" />
       <ChartStats items={levelStats(points)} />
-    </>
-  )
-}
-
-/** Le nombre de semaines d'une période, pour un rythme « par semaine ». */
-const weeksOf = (window: ChartWindow) => windowDays(window) / 7
-
-function UnlockedChart({ events, period, day }: ChartProps & { events: PricePoint[] }) {
-  if (events.length === 0) return <p className="muted">Aucun Pokémon débloqué pour l’instant.</p>
-  const window = periodWindow(period, day, firstDate(events))
-  const points = runningTotal(events, window, true)
-  const gained = inWindow(events, window).length
-  return (
-    <>
-      <PriceChart
-        points={points}
-        window={window}
-        label="Pokémon débloqués"
-        format={formatInteger}
-        fromZero
-      />
-      <ChartStats
-        items={[
-          { label: 'Sur la période', value: `+${formatInteger(gained)}` },
-          { label: 'Au total', value: formatInteger(points.at(-1)!.value) },
-          { label: 'Par semaine', value: formatDecimal(gained / weeksOf(window)) },
-        ]}
-      />
     </>
   )
 }

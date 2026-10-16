@@ -19,7 +19,8 @@
   margin-bottom: 0.5rem;
 }
 
-.tile:hover .art,
+/* Seulement un lien (pas une pochette du Pokédex public) se soulève au survol. */
+a.tile:hover .art,
 .tile:focus-visible .art {
   transform: translateY(-3px);
   filter: none;
@@ -28,7 +29,7 @@
 }
 
 /* Le retour du toucher (sur téléphone, pas de survol) : la carte s'enfonce un instant. */
-.tile:active .art {
+a.tile:active .art {
   transform: scale(0.97);
 }
 

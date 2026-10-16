@@ -10,7 +10,7 @@ import { PokemonPage } from '@/pages/pokemon/PokemonPage'
 /**
  * Les pages, toutes dans la coquille commune (en-tête, navigation), 404 comprise, sauf la première
  * visite (`/bienvenue`) : tant que le site n'a pas de compte, toute page y mène, et elle mène à la
- * connexion une fois le compte créé. Une erreur d'affichage remplace toute la coquille par
+ * connexion une fois le compte créé ; et le Pokédex public (`/vitrine`), pour un visiteur. Une erreur d'affichage remplace toute la coquille par
  * ErrorPage. L'accueil, le Pokédex et les fiches sont dans le premier chargement ; les autres
  * pages, plus lourdes (achats, valeur…), sont chargées à leur première ouverture. Créé une fois
  * l'existence du compte connue (`main.tsx`) : le routeur lit la page ouverte dès sa création.
@@ -23,6 +23,12 @@ export const createRouter = () =>
       loader: () => (accountExists ? redirect('/connexion') : null),
       lazy: () =>
         import('@/pages/WelcomePage').then(({ WelcomePage }) => ({ Component: WelcomePage })),
+    },
+    {
+      path: 'vitrine',
+      errorElement: <ErrorPage />,
+      lazy: () =>
+        import('@/pages/VitrinePage').then(({ VitrinePage }) => ({ Component: VitrinePage })),
     },
     {
       element: <AppShell />,

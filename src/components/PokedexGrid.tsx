@@ -11,6 +11,8 @@ const EAGER_TILES = 12
 interface PokedexGridProps {
   entries: PokedexEntry[]
   generations: GenerationProgress[]
+  /** Faux sur le Pokédex public : les pochettes ne mènent pas aux fiches. */
+  linked?: boolean
 }
 
 /**
@@ -18,7 +20,11 @@ interface PokedexGridProps {
  * nommées : neuf points de repère de plus, les titres suffisent à s'y retrouver). Mémoïsé : à
  * chaque frappe, le rendu urgent garde l'ancienne liste et passe la grille (environ 1 000 tuiles).
  */
-export const PokedexGrid = memo(function PokedexGrid({ entries, generations }: PokedexGridProps) {
+export const PokedexGrid = memo(function PokedexGrid({
+  entries,
+  generations,
+  linked,
+}: PokedexGridProps) {
   const groups = groupByGeneration(entries)
   let rank = 0
 
@@ -38,7 +44,7 @@ export const PokedexGrid = memo(function PokedexGrid({ entries, generations }: P
         <ul className={styles.grid}>
           {groupEntries.map((entry) => (
             <li key={entry.species.id}>
-              <PokedexTile entry={entry} eager={rank++ < EAGER_TILES} />
+              <PokedexTile entry={entry} eager={rank++ < EAGER_TILES} linked={linked} />
             </li>
           ))}
         </ul>

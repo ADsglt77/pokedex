@@ -212,6 +212,10 @@ const APP_STEPS = [
   -- Les invitations, retirées : un seul compte, créé à la première visite du site (\`auth.ts\`).
   DROP TABLE invitations;
   `,
+  `
+  -- Le Pokédex public (\`/vitrine\`, \`vitrine.ts\`) : 1 si le compte montre sa collection.
+  ALTER TABLE collections ADD COLUMN public INTEGER NOT NULL DEFAULT 0;
+  `,
 ]
 
 const userVersion = (db: Database) =>

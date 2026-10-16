@@ -18,6 +18,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
 import { PricedValue } from '@/components/PricedValue'
 import { ProgressRuler } from '@/components/ProgressRuler'
+import { RegionList } from '@/components/RegionList'
 import { SpentThisMonthStat, WishlistStat } from '@/components/ShoppingStats'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
@@ -172,20 +173,7 @@ function ProgressPanel() {
       <div inert={narrow} className={styles.ruler}>
         <ProgressRuler generations={generations} />
       </div>
-      {narrow && (
-        <ul className={styles.regions}>
-          {generations.map(({ generation, unlocked, total }) => (
-            <li key={generation.id}>
-              <Link to={pokedexUrl({ generation: generation.id })} className={styles.region}>
-                <span>{generation.region}</span>
-                <span className="muted numeric">
-                  {formatInteger(unlocked)} sur {formatInteger(total)}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      {narrow && <RegionList generations={generations} linked />}
     </Panel>
   )
 }

@@ -30,11 +30,16 @@ bun run format   # Prettier
 - **Catalogue** : les cartes japonaises extension par extension ; un clic donne sa carte au
   premier Pokémon qui n'en a pas.
 - **Valeur** : prix Cardmarket du jour, valeur de la collection (et gain par rapport au prix
-  payé), commandes, souhaits, coût pour compléter le Pokédex, courbes de prix au fil des jours.
+  payé), commandes, souhaits, coût pour compléter le Pokédex ; courbes jour par jour (valeur,
+  Pokémon débloqués, dépenses) sur 7 jours, 30 jours, 1 an ou tout, avec leurs chiffres.
 - **Achats** : liste d'achats (les cartes acceptées, avec priorité et prix maximum),
   assistant « prochaine commande » dans un budget (100 € par mois, 150 € au plus, réglables),
   registre des commandes (Cardmarket, Myutsu, Hikaru…) qui met à jour les statuts, suivi du
   budget par mois et par fournisseur. Export CSV et recherches à coller dans Cardmarket.
+- **Pokédex public** : une page à montrer, en lecture seule (`/vitrine`), activée depuis Données :
+  progression, régions, valeur au prix du jour, courbe et classeur. Jamais les prix payés, les
+  commandes, le budget ni la liste d'achats. Il faut être connecté : elle montre la collection du
+  compte.
 - **Thème** : sombre (gris foncé et jaune) ou clair (blanc pastel et rouge), au bouton de la
   barre ; sans choix, celui du système.
 - **Données** : les images à chercher pour les cartes qui n'en ont pas, export / import (achats

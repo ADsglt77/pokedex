@@ -13,7 +13,7 @@ import {
   type PossessionFilter,
 } from '@/lib/filters'
 import { formatInteger, pageTitle, plural } from '@/lib/format'
-import { PokedexGrid } from './PokedexGrid'
+import { PokedexGrid } from '@/components/PokedexGrid'
 import { PokedexToolbar } from './PokedexToolbar'
 
 /**

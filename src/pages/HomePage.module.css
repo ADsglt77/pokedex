@@ -71,27 +71,6 @@
   line-height: 1.25;
 }
 
-.regions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 1rem;
-}
-
-.region {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--camply-border-soft);
-  color: inherit;
-  font-size: var(--text-md);
-  text-decoration: none;
-}
-
-.region:hover {
-  color: var(--camply-accent);
-}
-
 /* À faire : une ligne par action, toute la ligne cliquable */
 
 .todos {

@@ -60,35 +60,6 @@
 }
 
 /* Le logo, une Poké Ball : aux couleurs de la marque (`styles/theme.css`), dans les deux thèmes. */
-.logo {
-  flex: none;
-  width: 1.75rem;
-  height: 1.75rem;
-}
-
-.ballWhite {
-  fill: var(--brand-white);
-}
-
-.ballRed {
-  fill: var(--brand-red);
-}
-
-.ballBand {
-  stroke: var(--brand-ink);
-  stroke-width: 2.5;
-}
-
-.ballInk {
-  fill: var(--brand-ink);
-}
-
-.ballOutline {
-  fill: none;
-  stroke: var(--brand-ink);
-  stroke-width: 2;
-}
-
 /* Barre latérale (grand écran seulement) */
 
 .sidebar {

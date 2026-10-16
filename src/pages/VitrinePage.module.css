@@ -1,0 +1,68 @@
+/* Le Pokédex public : une page seule, hors de la coquille, au rythme des autres pages. */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-block);
+  min-height: 100svh;
+  padding-block: var(--space-panel) var(--space-block);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--camply-text-strong);
+  font-family: var(--camply-font-display);
+  font-size: var(--title-sm);
+  font-weight: 700;
+}
+
+.main {
+  flex: 1;
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-block);
+}
+
+/* L'anneau de la progression, puis le titre et la phrase ; l'un sous l'autre sur téléphone. */
+.intro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--camply-space-5);
+}
+
+.title {
+  margin-bottom: var(--camply-space-2);
+  font-size: clamp(1.5rem, 1.2rem + 1.5vw, 2.25rem);
+}
+
+.ring {
+  color: var(--camply-text-strong);
+  font-family: var(--camply-font-display);
+  font-size: var(--title-sm);
+  font-weight: 700;
+}
+
+.binder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--camply-space-4);
+}
+
+/* Le titre du classeur, et le choix des Pokémon montrés à sa droite (dessous s'il manque de place). */
+.binderHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--camply-space-3);
+}
+
+.footer {
+  color: var(--camply-text-muted-2);
+  font-size: var(--text-xs);
+}

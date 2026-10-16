@@ -1,0 +1,55 @@
+/**
+ * Ce que montre le Pokédex public (`server/vitrine.ts`) : ce qu'il laisserait passer serait public.
+ * Jamais un prix payé, une page Cardmarket notée, ni ce qui dit un achat (« commandée »,
+ * « souhaitée »).
+ */
+
+import { describe, expect, test } from 'bun:test'
+import { shownCollection } from '../server/vitrine'
+import { collectionWith, ownership } from './fixtures'
+
+const card = (id: string, dexId: number, extra = {}) => ({
+  id,
+  dexIds: [dexId],
+  reference: `Carte ${id}`,
+  image: null,
+  ...extra,
+})
+
+describe('shownCollection', () => {
+  const collection = {
+    ...collectionWith({
+      a: ownership('owned', { acquiredAt: '2026-10-01T10:00:00.000Z', paidPrice: 30 }),
+      b: ownership('ordered', { paidPrice: 12 }),
+      c: ownership('wanted'),
+    }),
+    customCards: {
+      a: card('a', 25, { cardmarket: 719445, page: 'https://www.cardmarket.com/fr/Pokemon/x' }),
+      b: card('b', 1),
+      c: card('c', 4),
+      d: card('d', 7),
+    },
+  }
+  const shown = shownCollection(collection)
+
+  test('les cartes possédées, avec leur date, sans prix payé', () => {
+    expect(shown.cards).toEqual({
+      a: {
+        status: 'owned',
+        updatedAt: ownership('owned').updatedAt,
+        acquiredAt: '2026-10-01T10:00:00.000Z',
+      },
+    })
+  })
+
+  test('rien de ce qui dit un achat : commandée et souhaitée disparaissent', () => {
+    expect(Object.keys(shown.cards)).toEqual(['a'])
+    expect(JSON.stringify(shown)).not.toContain('paidPrice')
+  })
+
+  test('toutes les cartes choisies, sans leur page Cardmarket ; l’id reste, pour la valeur', () => {
+    expect(Object.keys(shown.customCards)).toEqual(['a', 'b', 'c', 'd'])
+    expect(shown.customCards.a).toEqual(card('a', 25, { cardmarket: 719445 }))
+    expect(JSON.stringify(shown)).not.toContain('cardmarket.com')
+  })
+})

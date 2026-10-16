@@ -44,6 +44,9 @@ export function periodWindow(period: ChartPeriod, to: string, first: string | nu
 /** Le nombre de jours d'une période. */
 export const windowDays = ({ from, to }: ChartWindow) => daysBetween(from, to) + 1
 
+/** Le nombre de semaines d'une période, pour un rythme « par semaine ». */
+export const weeksOf = (window: ChartWindow) => windowDays(window) / 7
+
 /** Les points d'une série tombés dans la période. */
 export const inWindow = (points: readonly PricePoint[], { from, to }: ChartWindow) =>
   points.filter((point) => point.date >= from && point.date <= to)

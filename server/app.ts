@@ -1,9 +1,9 @@
 /**
  * Le serveur de l'app (Elysia) : l'API que lit le site (`/api/…`) et les images copiées chez nous
  * (`/images/…`). Chaque domaine est un plugin : les données de référence (`reference.ts`), le
- * compte (`auth.ts`), la collection synchronisée (`collection.ts`). Les paramètres et les corps
- * des requêtes sont validés par leurs schémas (422 sinon) ; en développement, la documentation de
- * l'API est à `/api/docs`.
+ * compte (`auth.ts`), la collection synchronisée (`collection.ts`), le Pokédex public
+ * (`vitrine.ts`). Les paramètres et les corps des requêtes sont validés par leurs schémas (422
+ * sinon) ; en développement, la documentation de l'API est à `/api/docs`.
  */
 
 import { openapi } from '@elysiajs/openapi'
@@ -13,6 +13,7 @@ import { accountRoutes, type Accounts } from './auth'
 import { collectionRoutes } from './collection'
 import { serveImage } from './images'
 import { referenceRoutes } from './reference'
+import { vitrineRoutes } from './vitrine'
 import { notFound } from './snapshots'
 
 /** Bien au-delà d'une collection de 1 025 cartes et de ses commandes : 413 au-delà. */
@@ -49,7 +50,11 @@ export function createApp({ data, app, accounts }: AppContext) {
         }
       })
       .group('/api', (api) =>
-        api.use(account).use(referenceRoutes(data)).use(collectionRoutes(app, account)),
+        api
+          .use(account)
+          .use(referenceRoutes(data))
+          .use(collectionRoutes(app, account))
+          .use(vitrineRoutes(app, account)),
       )
       // Les images copiées chez nous (sur le VPS, nginx ne renvoie ici que celles qu'il n'a pas).
       .get('/images/*', ({ request }) => serveImage(data, request), { detail: { hide: true } })

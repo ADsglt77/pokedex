@@ -13,13 +13,13 @@ import {
 } from '@camply/ui/icons'
 import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { Link, Outlet, ScrollRestoration, useLocation } from 'react-router'
+import { Logo } from '@/components/Logo'
+import { SiteCredits } from '@/components/SiteCredits'
 import { shoppingUrl } from '@/lib/filters'
 import { AccountMenu } from '@/components/AccountMenu'
 import { AppSearch } from '@/components/AppSearch'
-import { ExternalLink } from '@/components/ExternalLink'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { usePokedex } from '@/hooks/usePokedex'
-import { POKECARDEX } from '@/lib/card-images'
 import { cx } from '@/lib/cx'
 import { formatDecimal, formatInteger, today } from '@/lib/format'
 import { latePendingOrders } from '@/lib/orders'
@@ -74,24 +74,6 @@ const exportAction = (
     <Link to="/donnees#exporter">Exporter</Link>
   </Button>
 )
-
-/**
- * Le logo : une Poké Ball, plate (moitié rouge, moitié blanche, bande et bouton cerclés d'encre),
- * aux couleurs de la marque dans les deux thèmes. Le même dessin sert d'icône d'onglet
- * (`public/favicon.svg`).
- */
-function Logo() {
-  return (
-    <svg viewBox="0 0 32 32" aria-hidden="true" className={styles.logo}>
-      <circle cx="16" cy="16" r="14" className={styles.ballWhite} />
-      <path d="M2 16a14 14 0 0 1 28 0Z" className={styles.ballRed} />
-      <path d="M2 16h28" className={styles.ballBand} />
-      <circle cx="16" cy="16" r="5.25" className={styles.ballInk} />
-      <circle cx="16" cy="16" r="3" className={styles.ballWhite} />
-      <circle cx="16" cy="16" r="14" className={styles.ballOutline} />
-    </svg>
-  )
-}
 
 /**
  * Passer à l'autre thème (sombre, clair) : une ligne de la barre latérale, ou l'icône seule dans
@@ -227,9 +209,7 @@ export function AppShell() {
         </main>
 
         <footer className={cx('container', styles.footer)}>
-          Espèces PokéAPI, cartes et images{' '}
-          <ExternalLink href={POKECARDEX}>Pokécardex</ExternalLink>, prix Cardmarket. Projet
-          personnel, sans lien avec Nintendo, Creatures, Game Freak ou The Pokémon Company.
+          <SiteCredits />
         </footer>
       </div>
 

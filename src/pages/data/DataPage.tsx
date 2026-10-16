@@ -5,11 +5,13 @@ import { EraseSection } from './EraseSection'
 import { ExportSection } from './ExportSection'
 import { ImportSection } from './ImportSection'
 import { ReferenceSection } from './ReferenceSection'
+import { VitrineSection } from './VitrineSection'
 import styles from './DataPage.module.css'
 
 /** Les sections de la page, dans l'ordre, pour son sommaire. */
 const SECTIONS = [
   { id: 'collection', label: 'Ma collection' },
+  { id: 'public', label: 'Pokédex public' },
   { id: 'exporter', label: 'Exporter' },
   { id: 'importer', label: 'Importer' },
   { id: 'reference', label: 'Sources' },
@@ -17,7 +19,7 @@ const SECTIONS = [
 ]
 
 /**
- * Données : la collection, la sauvegarde (export, import), les sources,
+ * Données : la collection, le Pokédex public, la sauvegarde (export, import), les sources,
  * l'effacement. Un sommaire (collé à gauche sur grand écran) mène à chaque section.
  */
 export function DataPage() {
@@ -37,6 +39,7 @@ export function DataPage() {
         </nav>
         <div className={styles.sections}>
           <CollectionSection />
+          <VitrineSection />
           <ExportSection />
           <ImportSection />
           <ReferenceSection />
