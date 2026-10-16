@@ -17,7 +17,7 @@ import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
 import type { Database } from 'bun:sqlite'
 import { Elysia } from 'elysia'
-import { journal } from './journal'
+import { journal, type JournalTone } from './journal'
 
 /** Un jour, en secondes (Better Auth compte ses durées en secondes ; `@/lib/time` en ms). */
 const DAY_IN_SECONDS = 24 * 60 * 60
@@ -38,7 +38,9 @@ export async function createAuth(db: Database) {
             const { changes } = db
               .query('DELETE FROM session WHERE userId = ? AND id != ?')
               .run(session.userId, session.id)
-            if (changes > 0) journal('compte', 'L’autre appareil connecté est déconnecté')
+            if (changes > 0) {
+              journal({ topic: 'compte', icon: '📴', message: 'L’autre appareil est déconnecté' })
+            }
           },
         },
       },
@@ -84,24 +86,18 @@ const emailOf = async (request: Request) => {
 /** Pour le journal : connexion, création du compte, déconnexion, d'après la réponse. */
 function journalAuth(path: string, request: Request, response: Response, email: string) {
   const ok = response.ok
+  const log = (icon: string, message: string, tone: JournalTone) =>
+    journal({ topic: 'compte', icon, message, tone }, request)
   if (path.endsWith('/sign-in/email')) {
-    journal(
-      'compte',
-      ok
-        ? `Connexion : ${email}`
-        : response.status === 429
-          ? `Connexion bloquée (trop de tentatives) : ${email}`
-          : `Connexion refusée : ${email}`,
-      request,
-    )
+    if (ok) log('🔓', `Connexion : ${email}`, 'ok')
+    else if (response.status === 429)
+      log('🚨', `Connexion bloquée (trop d’essais) : ${email}`, 'bad')
+    else log('⛔', `Connexion refusée : ${email}`, 'bad')
   } else if (path.endsWith('/sign-up/email')) {
-    journal(
-      'compte',
-      ok ? `Compte créé : ${email}` : `Création du compte refusée : ${email}`,
-      request,
-    )
+    if (ok) log('🎉', `Compte créé : ${email}`, 'ok')
+    else log('⛔', `Création du compte refusée : ${email}`, 'bad')
   } else if (path.endsWith('/sign-out') && ok) {
-    journal('compte', `Déconnexion : ${email}`, request)
+    log('👋', `Déconnexion : ${email}`, 'info')
   }
 }
 
@@ -126,9 +122,14 @@ export function accountRoutes({ auth, account }: Accounts) {
         // Le compte existe : plus d'inscription, refusée d'emblée (sans dire si une adresse est
         // celle du compte, ni calculer un mot de passe pour rien).
         if (path.endsWith('/sign-up/email') && account() !== null) {
+          const email = await emailOf(request)
           journal(
-            'compte',
-            `Création d’un second compte refusée : ${await emailOf(request)}`,
+            {
+              topic: 'compte',
+              icon: '🛑',
+              message: `Second compte refusé : ${email}`,
+              tone: 'bad',
+            },
             request,
           )
           return status(403, null)

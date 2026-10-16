@@ -9,6 +9,7 @@
 
 import { createApp } from './app'
 import { appOrigin, createAuth } from './auth'
+import { banner } from './journal'
 import { openApp, openData } from './db'
 
 if (!process.env.BETTER_AUTH_URL) {
@@ -20,6 +21,8 @@ const app = openApp()
 const accounts = await createAuth(app)
 const server = createApp({ data, app, accounts }).listen(Number(process.env.PORT ?? 3000))
 
-const site = appOrigin(accounts.auth)
-console.log(`API sur ${server.server?.url} (site : ${site})`)
-if (!accounts.account()) console.log(`Pas encore de compte : ouvrez ${site} pour créer le vôtre.`)
+banner({
+  api: String(server.server?.url),
+  site: appOrigin(accounts.auth),
+  account: accounts.account(),
+})

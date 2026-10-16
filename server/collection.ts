@@ -75,7 +75,12 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
       ({ user, body }) => {
         const document = readDocument(body)
         if (!document) {
-          journal('collection', 'Envoi refusé : la collection ne passe pas les contrôles')
+          journal({
+            topic: 'collection',
+            icon: '🚧',
+            message: 'Envoi refusé : la collection ne passe pas les contrôles',
+            tone: 'bad',
+          })
           return json('null', 400)
         }
         const { baseVersion } = body
@@ -111,11 +116,14 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
         // `immediate` : la version lue est encore celle du serveur au moment d'écrire.
         const result = saved.immediate()
         if ('version' in result) {
-          for (const [topic, message] of documentChanges(result.previous ?? null, document)) {
-            journal(topic, message)
-          }
+          for (const change of documentChanges(result.previous ?? null, document)) journal(change)
         } else {
-          journal('collection', 'Envoi refusé : la collection a changé ailleurs entre-temps')
+          journal({
+            topic: 'collection',
+            icon: '🔀',
+            message: 'Envoi refusé : la collection a changé ailleurs entre-temps (conflit)',
+            tone: 'warn',
+          })
         }
         return 'version' in result
           ? json(JSON.stringify({ version: result.version }), 200, {

@@ -13,7 +13,7 @@ import { accountRoutes, type Accounts } from './auth'
 import { collectionRoutes } from './collection'
 import { serveImage } from './images'
 import { referenceRoutes } from './reference'
-import { journalRoutes } from './journal'
+import { journal, journalRoutes } from './journal'
 import { vitrineRoutes } from './vitrine'
 import { notFound } from './snapshots'
 
@@ -46,7 +46,8 @@ export function createApp({ data, app, accounts }: AppContext) {
       .onError(({ code, error }) => {
         if (code === 'NOT_FOUND') return notFound()
         if (code === 'UNKNOWN' || code === 'INTERNAL_SERVER_ERROR') {
-          console.error('Erreur de l’API :', error)
+          journal({ topic: 'serveur', icon: '💥', message: 'Erreur de l’API', tone: 'bad' })
+          console.error(error)
           return new Response(null, { status: 500, headers: { 'Cache-Control': 'no-store' } })
         }
       })

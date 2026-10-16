@@ -114,7 +114,8 @@ Au tout premier démarrage, il répond 503 le temps du premier catalogue (une vi
 Sans surveillance, un trou dans l'historique des prix passerait inaperçu : Cardmarket ne le garde
 pas, un jour manqué l'est pour toujours.
 
-**Le journal** : le serveur écrit une ligne par évènement, à l'heure de Paris : connexions
+**Le journal** : le serveur écrit une ligne par évènement, à l'heure de Paris, en couleur et
+avec un emoji (une Poké Ball au démarrage ; sans couleurs avec `NO_COLOR=1`) : connexions
 (réussies ou refusées, avec l'adresse du visiteur), création du compte, cartes ajoutées, possédées
 ou retirées, commandes enregistrées, reçues ou annulées, budget, exports et imports, visites du
 Pokédex public. Pour le suivre : `docker compose logs -f server` (en développement, le terminal de
