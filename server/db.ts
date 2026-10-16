@@ -216,6 +216,10 @@ const APP_STEPS = [
   -- Le Pokédex public (\`/vitrine\`, \`vitrine.ts\`) : 1 si le compte montre sa collection.
   ALTER TABLE collections ADD COLUMN public INTEGER NOT NULL DEFAULT 0;
   `,
+  `
+  -- Le Pokédex public est toujours montré (octobre 2026) : plus de réglage.
+  ALTER TABLE collections DROP COLUMN public;
+  `,
 ]
 
 const userVersion = (db: Database) =>

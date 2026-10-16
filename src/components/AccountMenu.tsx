@@ -80,7 +80,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
 
   if (isPending) return null
   if (!session) {
-    return pathname === '/connexion' ? null : (
+    return (
       <Button
         asChild
         size="sm"
@@ -101,6 +101,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const leave = async () => {
     if (await signOut()) {
       notify('Vous êtes déconnecté : votre collection reste sur le serveur.', { tone: 'info' })
+      navigate('/vitrine', { replace: true })
     } else {
       notify('Déconnexion impossible : le serveur ne répond pas.', { tone: 'danger' })
     }

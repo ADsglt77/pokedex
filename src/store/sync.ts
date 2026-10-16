@@ -3,8 +3,8 @@
  * `server/collection.ts` ; la règle : `lib/sync.ts`). Le navigateur garde sa copie
  * (`localStorage`, comme sans compte) : l'app marche hors ligne, et envoie ses modifications au
  * retour du réseau. Elle synchronise une seconde après chaque modification, et quand la page
- * revient au premier plan ou que le réseau revient. Sans connexion, rien ne change : la collection
- * reste dans ce navigateur.
+ * revient au premier plan ou que le réseau revient. Sans connexion, l'app ne s'ouvre pas : on voit
+ * le Pokédex public (`signedIn`, `router.tsx`).
  *
  * Cet appareil note la dernière version échangée (`pokedex-collection.sync`, partagée par ses
  * onglets) : sa collection a changé quand son empreinte n'est plus celle-là. Un seul onglet
@@ -23,7 +23,7 @@ import { useShoppingStore } from '@/store/shopping'
 import { readStored } from './persist'
 
 /**
- * - `local` : pas connecté, la collection reste dans ce navigateur ;
+ * - `local` : pas (encore) de compte connecté : la session n'est pas encore connue ;
  * - `syncing`, `synced` ;
  * - `offline` : le serveur ne répond pas, la copie locale attend ;
  * - `expired` : la session a expiré, il faut se reconnecter ;
@@ -80,6 +80,29 @@ function writeBase(version: number, hash: string) {
 }
 
 const setStatus = (status: SyncStatus) => useSyncStore.setState({ status })
+
+/**
+ * Ce navigateur est-il connecté au compte ? Sinon, il ne voit que le Pokédex public (`/vitrine`) et
+ * la connexion (`router.tsx`). Lu au démarrage (`loadSession`), puis suivi à la connexion
+ * (`setSignedIn`) et à la déconnexion (`signOut`).
+ */
+export let signedIn = false
+
+export const setSignedIn = (value: boolean) => {
+  signedIn = value
+}
+
+/**
+ * La session, au démarrage. Sans réponse du serveur (hors ligne, en panne), un appareil déjà
+ * synchronisé avec le compte et pas déconnecté depuis l'est encore : l'app marche hors ligne.
+ */
+export async function loadSession() {
+  const { data, error } = await authClient
+    .getSession()
+    .catch(() => ({ data: null, error: true as const }))
+  const base = parseStored(readStored(BASE_KEY)) as { user?: unknown } | null
+  signedIn = error ? typeof base?.user === 'string' : data !== null
+}
 
 let retry: ReturnType<typeof setTimeout> | undefined
 /**
@@ -253,6 +276,7 @@ export async function signOut() {
   const { error } = await authClient.signOut().catch(() => ({ error: true }))
   if (error) return false
   user = null
+  signedIn = false
   // Une synchronisation en cours finit d'abord (elle s'arrête, sans compte) : rien ne passe après
   // l'effacement.
   await exclusive(async () => {

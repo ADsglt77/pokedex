@@ -54,7 +54,7 @@ export function createApp({ data, app, accounts }: AppContext) {
           .use(account)
           .use(referenceRoutes(data))
           .use(collectionRoutes(app, account))
-          .use(vitrineRoutes(app, account)),
+          .use(vitrineRoutes(app)),
       )
       // Les images copiées chez nous (sur le VPS, nginx ne renvoie ici que celles qu'il n'a pas).
       .get('/images/*', ({ request }) => serveImage(data, request), { detail: { hide: true } })

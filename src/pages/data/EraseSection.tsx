@@ -7,7 +7,6 @@ import { useCollectionAction } from '@/hooks/useNotify'
 import { emptyCollection } from '@/lib/collection'
 import { isEmptySummary, summarize } from '@/lib/pokedex'
 import { useCollectionStore } from '@/store/collection'
-import { useSyncStore } from '@/store/sync'
 import { DataSection } from './DataSection'
 import { SummaryLedger } from './SummaryLedger'
 
@@ -16,7 +15,6 @@ export function EraseSection() {
   const act = useCollectionAction()
   const collection = useCollectionStore((state) => state.collection)
   const [confirming, setConfirming] = useState(false)
-  const synced = useSyncStore((state) => state.status !== 'local')
   const summary = summarize(collection)
 
   return (
@@ -24,7 +22,7 @@ export function EraseSection() {
       id="effacer"
       title="Effacer ma collection"
       danger
-      description={`Supprime ${synced ? 'de votre compte, sur tous vos appareils,' : 'de ce navigateur'} vos cartes ajoutées, leurs statuts et leurs prix payés. Les commandes et le budget sont conservés : ils gardent ce que vous avez dépensé.`}
+      description="Supprime de votre compte, sur tous vos appareils, vos cartes ajoutées, leurs statuts et leurs prix payés. Les commandes et le budget sont conservés : ils gardent ce que vous avez dépensé."
     >
       <div>
         <Button
@@ -51,10 +49,7 @@ export function EraseSection() {
           )
         }
       >
-        <p>
-          Ceci sera effacé {synced ? 'de votre compte, sur tous vos appareils' : 'de ce navigateur'}{' '}
-          :
-        </p>
+        <p>Ceci sera effacé de votre compte, sur tous vos appareils :</p>
         <SummaryLedger summary={summary} />
         <p>Exportez d’abord votre collection si vous voulez pouvoir la retrouver.</p>
         <ExportCollectionButton>Exporter ma collection</ExportCollectionButton>

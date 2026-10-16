@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { accountCreated, authClient } from '@/lib/auth-client'
 import { pageTitle } from '@/lib/format'
-import { sync } from '@/store/sync'
+import { setSignedIn, sync } from '@/store/sync'
 import { AuthCard, TOO_MANY_ATTEMPTS } from '@/components/AuthCard'
 import styles from './AuthPage.module.css'
 
@@ -54,6 +54,7 @@ export function WelcomePage() {
     setBusy(false)
     if (refused) return setError(failure(refused.status))
     accountCreated()
+    setSignedIn(true)
     void sync()
     navigate('/', { replace: true })
   }

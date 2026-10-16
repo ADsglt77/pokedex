@@ -5,8 +5,6 @@ import { usePokedex } from '@/hooks/usePokedex'
 import { isEmptySummary, summarize } from '@/lib/pokedex'
 import { formatDateTime, formatDecimal, unlockedOf } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'
-import { loginPath } from '@/lib/auth-client'
-import { useSyncStore } from '@/store/sync'
 import { DataSection } from './DataSection'
 import { MissingImages } from './MissingImages'
 import { SummaryLedger } from './SummaryLedger'
@@ -18,23 +16,12 @@ export function CollectionSection() {
   const { progress } = usePokedex()
   const summary = summarize(collection)
   const updatedAt = formatDateTime(collection.updatedAt)
-  const synced = useSyncStore((state) => state.status !== 'local')
 
   return (
     <DataSection
       id="collection"
       title="Ma collection"
-      description={
-        synced ? (
-          'Synchronisée avec votre compte : la même sur tous vos appareils, et sauvegardée sur le serveur.'
-        ) : (
-          <>
-            Elle n’existe que dans ce navigateur, sur cet appareil : un export est sa seule
-            sauvegarde. <Link to={loginPath('/donnees')}>Connectez-vous</Link> pour la retrouver sur
-            tous vos appareils.
-          </>
-        )
-      }
+      description="Synchronisée avec votre compte : la même sur tous vos appareils, et sauvegardée sur le serveur."
     >
       {isEmptySummary(summary) ? (
         <EmptyState

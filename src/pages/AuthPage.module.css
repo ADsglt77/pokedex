@@ -2,3 +2,11 @@
 .form {
   margin-top: var(--camply-space-5);
 }
+
+/* Le lien vers le Pokédex public, sous le formulaire de connexion. */
+.back {
+  display: block;
+  margin-top: var(--camply-space-4);
+  font-size: var(--text-sm);
+  text-align: center;
+}

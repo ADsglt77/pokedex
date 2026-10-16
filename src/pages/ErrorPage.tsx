@@ -17,7 +17,7 @@ export function ErrorPage() {
       <title>{pageTitle('Erreur')}</title>
       <PageHeader title="Quelque chose s’est mal passé">
         L’affichage de cette page a échoué. Recharger la page règle souvent le problème ; votre
-        collection, elle, est toujours enregistrée dans ce navigateur.
+        collection, elle, ne risque rien.
       </PageHeader>
       <Stack gap={5} align="start">
         <Stack direction="horizontal" gap={3} wrap>

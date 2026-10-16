@@ -35,10 +35,9 @@ bun run format   # Prettier
   assistant « prochaine commande » dans un budget (100 € par mois, 150 € au plus, réglables),
   registre des commandes (Cardmarket, Myutsu, Hikaru…) qui met à jour les statuts, suivi du
   budget par mois et par fournisseur.
-- **Pokédex public** : une page à montrer, en lecture seule (`/vitrine`), activée depuis Données :
-  progression, régions, valeur au prix du jour, courbe et classeur. Jamais les prix payés, les
-  commandes, le budget ni la liste d'achats. Il faut être connecté : elle montre la collection du
-  compte.
+- **Pokédex public** : la page d'accueil d'un visiteur, en lecture seule (`/vitrine`, toujours
+  publique) : progression, régions, valeur au prix du jour, courbe et classeur. Jamais les prix
+  payés, les commandes ni le budget. Le reste du site demande d'être connecté.
 - **Thème** : sombre (gris foncé et jaune) ou clair (blanc pastel et rouge), au bouton de la
   barre ; sans choix, celui du système.
 - **Données** : les images à chercher pour les cartes qui n'en ont pas, export / import (achats
@@ -81,9 +80,8 @@ vôtre, le seul, avec le code de première visite que `bun run dev:server` écri
 `bun server/create-user.ts moi@exemple.fr` (demandé au clavier). La documentation de l'API
 (Elysia, OpenAPI) est à `http://localhost:5173/api/docs`, en développement seulement.
 
-Votre collection : sans connexion, elle reste dans le navigateur (`localStorage`), et l'export est
-sa seule sauvegarde. Connecté (« Se connecter », en bas de la barre latérale, ou en haut à droite sur petit écran), elle est gardée sur le
-serveur et vous suit d'un appareil à l'autre : un seul connecté à la fois (se connecter ailleurs
+Votre collection : le site ne s'ouvre que connecté (« Se connecter », en haut du Pokédex public) ;
+elle est gardée sur le serveur et vous suit d'un appareil à l'autre : un seul connecté à la fois (se connecter ailleurs
 déconnecte le précédent, qui garde ses modifications). Personne d'autre ne peut créer de compte.
 
 ## Déploiement (VPS + tunnel Cloudflare)
@@ -108,7 +106,6 @@ déconnecte le précédent, qui garde ses modifications). Personne d'autre ne pe
 - [ ] La surveillance : un service gratuit (UptimeRobot, Healthchecks…) qui demande
       `https://votre-domaine/api/health` toutes les 5 minutes et vous écrit s'il ne répond plus
       200 (voir plus bas).
-- [ ] Si vous le voulez, le Pokédex public : Données › Pokédex public.
 - [ ] Sur téléphone, « Ajouter à l'écran d'accueil » : le site s'ouvre comme une application. Il lui
       faut le réseau pour démarrer ; la collection, elle, reste sur l'appareil.
 

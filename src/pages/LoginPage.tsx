@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { authClient } from '@/lib/auth-client'
 import { pageTitle } from '@/lib/format'
-import { sync } from '@/store/sync'
+import { setSignedIn, sync } from '@/store/sync'
 import { AuthCard, TOO_MANY_ATTEMPTS } from '@/components/AuthCard'
 import styles from './AuthPage.module.css'
 
@@ -24,9 +24,9 @@ const failure = (status: number) =>
       : 'Connexion impossible pour le moment : réessayez plus tard.'
 
 /**
- * `/connexion` : se connecter pour retrouver sa collection sur tous ses appareils. Pas
- * d'inscription : le seul compte se crée à la première visite (`WelcomePage`). Ensuite, retour à la
- * page d'où l'on venait (`?retour=`).
+ * `/connexion` : se connecter pour ouvrir son Pokédex, hors de la coquille (elle ne s'ouvre que
+ * connecté). Pas d'inscription : le seul compte se crée à la première visite (`WelcomePage`).
+ * Ensuite, retour à la page d'où l'on venait (`?retour=`), l'accueil sinon.
  */
 export function LoginPage() {
   const { data: session } = authClient.useSession()
@@ -47,6 +47,7 @@ export function LoginPage() {
       .catch(() => ({ error: { status: 0 } }))
     setBusy(false)
     if (refused) return setError(failure(refused.status))
+    setSignedIn(true)
     // Après une session expirée, le même compte : la synchronisation reprend.
     void sync()
     navigate(back, { replace: true })
@@ -54,8 +55,9 @@ export function LoginPage() {
 
   return (
     <AuthCard
+      as="main"
       title="Connexion"
-      description="Pour retrouver votre collection, vos achats et votre budget sur tous vos appareils. Sans compte, le Pokédex marche aussi : la collection reste alors dans ce navigateur."
+      description="Pour ouvrir votre Pokédex : votre collection, vos achats et votre budget, les mêmes sur tous vos appareils."
     >
       <title>{pageTitle('Connexion')}</title>
       {session ? (
@@ -91,6 +93,9 @@ export function LoginPage() {
           </Stack>
         </form>
       )}
+      <Link to="/vitrine" className={styles.back}>
+        Voir le Pokédex public
+      </Link>
     </AuthCard>
   )
 }

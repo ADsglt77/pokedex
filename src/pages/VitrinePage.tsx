@@ -1,6 +1,7 @@
-import { EmptyState, RadialProgress, SegmentedControl, Stat } from '@camply/ui'
-import { EyeOff, Flag, Layers, Wallet } from '@camply/ui/icons'
+import { Button, EmptyState, RadialProgress, SegmentedControl, Stat } from '@camply/ui'
+import { CloudOff, Flag, House, Layers, LogIn, Wallet } from '@camply/ui/icons'
 import { Suspense, use, useMemo, useState } from 'react'
+import { Link } from 'react-router'
 import { ChartPeriodControl } from '@/components/ChartParts'
 import { Logo } from '@/components/Logo'
 import { Panel } from '@/components/Panel'
@@ -27,23 +28,35 @@ import {
 import { buildPokedex, unlockEvents, type PokedexEntry } from '@/lib/pokedex'
 import { tallyByStatus, trackedCards } from '@/lib/prices'
 import { usePrices } from '@/store/prices'
+import { signedIn } from '@/store/sync'
 import type { CollectionData } from '@/types'
 import styles from './VitrinePage.module.css'
 
 /**
- * `/vitrine` : le Pokédex public, en lecture seule, hors de la coquille (un visiteur n'y a ni
- * compte ni collection) : la progression, la valeur au prix du jour, la courbe des Pokémon
- * débloqués et le classeur, d'après ce que le serveur montre (`server/vitrine.ts`) ; 404 tant que
- * le compte ne le montre pas. Pas proposé aux moteurs de recherche.
+ * `/vitrine` : le Pokédex public, toujours montré, la page d'accueil d'un visiteur ; en lecture
+ * seule, hors de la coquille : la progression, la valeur au prix du jour, la courbe des Pokémon
+ * débloqués et le classeur, d'après ce que le serveur montre (`server/vitrine.ts`). En tête, « Se
+ * connecter », ou, connecté, « Mon Pokédex ». Pas proposé aux moteurs de recherche.
  */
 export function VitrinePage() {
   return (
     <div className={cx('container', styles.page)}>
       <title>{pageTitle('Pokédex public')}</title>
       <meta name="robots" content="noindex" />
-      <header className={styles.brand}>
-        <Logo />
-        Pokédex
+      <header className={styles.header}>
+        <span className={styles.brand}>
+          <Logo />
+          Pokédex
+        </span>
+        {signedIn ? (
+          <Button asChild size="sm" variant="secondary" leftIcon={<House size={16} />}>
+            <Link to="/">Mon Pokédex</Link>
+          </Button>
+        ) : (
+          <Button asChild size="sm" variant="ghost" leftIcon={<LogIn size={16} />}>
+            <Link to="/connexion">Se connecter</Link>
+          </Button>
+        )}
       </header>
       <main className={styles.main}>
         <Suspense fallback={<p className="muted">Chargement du Pokédex…</p>}>
@@ -66,9 +79,9 @@ function VitrineContent() {
         <h1 className="visually-hidden">Pokédex public</h1>
         <EmptyState
           headingLevel={2}
-          icon={<EyeOff size={22} />}
-          title="Ce Pokédex n’est pas public"
-          description="Son propriétaire ne le montre pas pour le moment."
+          icon={<CloudOff size={22} />}
+          title="Le Pokédex ne peut pas s’afficher"
+          description="Le serveur ne répond pas pour le moment : réessayez dans un instant."
         />
       </>
     )

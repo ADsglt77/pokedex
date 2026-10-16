@@ -17,16 +17,23 @@ Le seul compte, la collection synchronisée entre les appareils, le Pokédex pub
   appareil déconnecte les autres (crochet `session.create.after`) ; l'appareil déconnecté garde
   ses modifications et affiche « Reconnectez-vous ». Sessions de 60 jours dans un cookie
   (`__Secure-` en https, SameSite Lax) ; en production, 5 tentatives de connexion ou de création du compte
-  par minute et par visiteur (`cf-connecting-ip`). Sans connexion, l'app marche comme avant : la
-  collection reste dans le navigateur, le Pokédex des espèces est public. Le Pokédex public de la
-  collection (`/vitrine`, à sa demande, octobre 2026) : une adresse fixe, que le compte active ou non
-  (Données › Pokédex public ; colonne `public` de `collections`). Une page seule, hors de la
-  coquille, en lecture seule et pas indexée (`noindex`) : la progression, les régions, la valeur au
+  par minute et par visiteur (`cf-connecting-ip`). **L'app ne s'ouvre que connecté** (décision de
+  l'utilisateur, octobre 2026 : vitrine pour un visiteur, tableau de bord pour lui ; plus de
+  collection « dans ce navigateur » sans compte, ni de rappel de sauvegarde) : `signedIn`
+  (`store/sync.ts`), lu au démarrage avant le routeur (`loadSession` : la session ; sans réponse du
+  serveur, un appareil déjà synchronisé et pas déconnecté l'est encore, pour marcher hors ligne),
+  suivi à la connexion et à la déconnexion. Pas connecté, `/` mène à `/vitrine` et toute autre page
+  de la coquille à `/connexion?retour=…` (`appLoader`, `router.tsx`) ; `/connexion` est hors de la
+  coquille, comme `/bienvenue`, et mène aussi au Pokédex public. Se déconnecter ramène à la vitrine.
+  Le Pokédex public (`/vitrine`, à sa demande, octobre 2026) : une adresse fixe, **toujours
+  publique** (plus de réglage : la colonne `public` de `collections` est retirée), la page
+  d'accueil d'un visiteur ; en tête, « Se connecter », ou « Mon Pokédex » une fois connecté ;
+  Données › Pokédex public en donne l'adresse. Une page seule, hors de la coquille, en lecture seule et pas indexée (`noindex`) : la progression, les régions, la valeur au
   prix du jour, la courbe des Pokémon débloqués et le classeur (débloqués en couleur, cartes
   choisies grisées ; les pochettes ne mènent pas aux fiches, celles du visiteur). Le serveur ne
   montre que les cartes (sans leur page notée) et les possessions avec leur date
   (`shownCollection`, testé) : jamais un prix payé, une commande, le budget, la liste d'achats ni
-  le statut « commandée » ; 404 tant que le compte ne le montre pas. Il montre
+  le statut « commandée » ; une collection vide tant qu'aucun appareil n'a rien envoyé. Il montre
   la version que le serveur a reçue. Connecté, la collection et les achats
   forment un seul document par compte (une commande modifie les deux), dans `app.db`, numéroté par
   le serveur (`/api/collection` : `PUT` refusé, 409, si l'appareil part d'une version dépassée ; le
@@ -54,5 +61,4 @@ Le seul compte, la collection synchronisée entre les appareils, le Pokédex pub
   refusé. La question d'un conflit fermée (« Plus tard ») est gardée dans le store
   (`setConflictQuestion`) : le menu change de place quand l'écran tourne. `/connexion`
   (`LoginPage`) ramène à la page d'où l'on venait (`?retour=`, filtres compris ; seulement une
-  adresse du site : même origine, `/\exemple.fr` refusé). Le rappel de sauvegarde ne paraît
-  que sans connexion.
+  adresse du site : même origine, `/\exemple.fr` refusé).

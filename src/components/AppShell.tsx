@@ -11,7 +11,7 @@ import {
   Sun,
   type IconProps,
 } from '@camply/ui/icons'
-import { useEffect, useRef, useState, type ComponentType } from 'react'
+import { useEffect, useRef, type ComponentType } from 'react'
 import { Link, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { Logo } from '@/components/Logo'
 import { SiteCredits } from '@/components/SiteCredits'
@@ -23,11 +23,8 @@ import { usePokedex } from '@/hooks/usePokedex'
 import { cx } from '@/lib/cx'
 import { formatDecimal, formatInteger, today } from '@/lib/format'
 import { latePendingOrders } from '@/lib/orders'
-import { DAY } from '@/lib/time'
-import { useCollectionStore } from '@/store/collection'
-import { useLastExport, useStorageFailure } from '@/store/persist'
+import { useStorageFailure } from '@/store/persist'
 import { useShoppingStore } from '@/store/shopping'
-import { useSyncStore } from '@/store/sync'
 import { toggleTheme, useThemeStore } from '@/store/theme'
 import styles from './AppShell.module.css'
 
@@ -68,7 +65,7 @@ const isCurrent = (to: string, path: string) =>
 /** Ctrl K, ou ⌘ K sur un Mac. */
 const SEARCH_KEYS = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘ K' : 'Ctrl K'
 
-/** L'action des avertissements de l'app (stockage, sauvegarde) : la section Exporter des Données. */
+/** L'action de l'avertissement du stockage : la section Exporter des Données. */
 const exportAction = (
   <Button asChild size="sm" variant="soft">
     <Link to="/donnees#exporter">Exporter</Link>
@@ -190,15 +187,13 @@ export function AppShell() {
           </div>
         </header>
 
-        {storageFailed ? (
+        {storageFailed && (
           <div className={cx('container', styles.notice)}>
             <Banner tone="warn" action={exportAction}>
               Le navigateur n’enregistre plus vos modifications (stockage plein ou bloqué) : elles
               seront perdues en fermant la page. Exportez votre collection pour les garder.
             </Banner>
           </div>
-        ) : (
-          <BackupReminder />
         )}
 
         <main id="main" ref={main} tabIndex={-1} className={styles.main}>
@@ -280,33 +275,5 @@ function ProgressCard() {
         {formatInteger(progress.unlocked)} débloqués sur {formatInteger(progress.total)}
       </span>
     </Link>
-  )
-}
-
-/**
- * Le rappel de sauvegarde, sans compte connecté : la collection n'existe que dans ce navigateur
- * (connecté, elle est sur le serveur, sauvegardé). Il paraît quand elle a changé depuis le dernier
- * export et que celui-ci date d'un mois, ou, sans export, dès 5 cartes. Fermé, il revient au
- * prochain chargement.
- */
-function BackupReminder() {
-  const synced = useSyncStore((state) => state.status !== 'local')
-  const lastExport = useLastExport((state) => state.at)
-  const collection = useCollectionStore((state) => state.collection)
-  const [now] = useState(() => Date.now())
-  const last = lastExport ? Date.parse(lastExport) : NaN
-  const changed = collection.updatedAt !== null && !(Date.parse(collection.updatedAt) <= last)
-  const due = Number.isNaN(last)
-    ? Object.keys(collection.customCards).length >= 5
-    : now - last > 30 * DAY
-  if (synced || !changed || !due) return null
-  return (
-    <div className={cx('container', styles.notice)}>
-      <Banner tone="info" dismissible action={exportAction}>
-        {Number.isNaN(last)
-          ? 'Votre collection n’existe que dans ce navigateur : exportez-la pour en garder une copie.'
-          : 'Votre dernier export date de plus d’un mois, et votre collection a changé depuis.'}
-      </Banner>
-    </div>
   )
 }

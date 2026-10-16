@@ -16,6 +16,7 @@ import { loadAccount } from './lib/auth-client'
 import { loadSpecies } from './lib/species'
 import { createRouter } from './router'
 import { requestPersistentStorage } from './store/persist'
+import { loadSession } from './store/sync'
 
 requestPersistentStorage()
 
@@ -23,8 +24,9 @@ const root = createRoot(document.getElementById('root')!)
 
 // Point d'entrée : polices, styles camply, le thème (ses couleurs redéfinies), puis ceux de l'app.
 // Les espèces viennent du serveur avant tout affichage (toutes les pages en ont besoin), avec
-// l'existence du compte (sans lui, la première visite) ; puis notifications et routeur.
-Promise.all([loadSpecies(), loadAccount()]).then(([loaded]) =>
+// l'existence du compte (sans lui, la première visite) et la session (sans elle, le Pokédex
+// public) ; puis notifications et routeur.
+Promise.all([loadSpecies(), loadAccount(), loadSession()]).then(([loaded]) =>
   root.render(
     <StrictMode>
       {loaded ? (
