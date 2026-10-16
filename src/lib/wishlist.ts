@@ -5,14 +5,11 @@
  */
 
 import { DEFAULT_BUDGET } from '@/config/shopping'
-import { referenceCode } from '@/lib/card-code'
-import { cardmarketPage } from '@/lib/cardmarket'
-import { cardTitle, speciesOf } from '@/lib/species'
+import { speciesOf } from '@/lib/species'
 import { searchForm, searchMatcher } from '@/lib/filters'
 import { isTaken, type PokedexEntry } from '@/lib/pokedex'
 import { isToBuy } from '@/lib/collection'
 import { priceChange, priceOf } from '@/lib/prices'
-import { csvNumber, toCsv } from '@/lib/transfer'
 import type { CardStatus, GenerationId, PokemonCard, PriceFile, ShoppingData } from '@/types'
 
 export const emptyShopping = (): ShoppingData => ({
@@ -107,36 +104,4 @@ export function filterWishlist(rows: readonly WishRow[], filters: WishlistFilter
       )
     })
     .sort((a, b) => SORTS[filters.sort](a, b) || SORTS.dex(a, b))
-}
-
-const englishNames = (card: PokemonCard) => speciesOf(card).map((species) => species.names.en)
-
-/**
- * Ce qu'on tape dans la recherche de Cardmarket : le nom anglais et le numéro (« Pikachu 764 »),
- * comme dans une recherche vérifiée par l'utilisateur (« Pikachu ex 764 »).
- */
-export const searchText = (card: PokemonCard) =>
-  [...englishNames(card), referenceCode(card.reference)?.number ?? ''].join(' ').trim()
-
-/** Un CSV pour un tableur : une ligne par carte. */
-export function wishlistCsv(rows: readonly WishRow[]): string {
-  const header = [
-    'Pokémon',
-    'Nom anglais',
-    'Référence',
-    'Quantité',
-    'Prix indicatif (€)',
-    'Id produit Cardmarket',
-    'Page Cardmarket',
-  ]
-  const lines = rows.map((row) => [
-    cardTitle(row.card),
-    englishNames(row.card).join(' & '),
-    row.card.reference,
-    1,
-    csvNumber(row.price),
-    row.card.cardmarket ?? '',
-    cardmarketPage(row.card) ?? '',
-  ])
-  return toCsv([header, ...lines])
 }

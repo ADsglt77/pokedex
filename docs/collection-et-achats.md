@@ -35,7 +35,7 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     total). Corriger la date de réception corrige la date d'obtention. Une carte déjà dans une autre
     commande est signalée à la saisie (son prix payé serait remplacé). Une commande en cours depuis
     plus de 28 jours est signalée, aux Achats et à l'accueil (`latePendingOrders`) ; chaque
-    commande s'ouvre en détail (coût réel de chaque carte) ; le registre s'exporte en CSV ;
+    commande s'ouvre en détail (coût réel de chaque carte) ;
   - budget calculé depuis les commandes : une commande compte une fois, au mois de sa date d'achat,
     remboursé déduit (jamais plus que la commande), rien si annulée. Au-delà du plafond :
     confirmation, jamais de blocage ; le formulaire montre le mois avec la commande en cours de

@@ -34,7 +34,7 @@ bun run format   # Prettier
 - **Achats** : liste d'achats (la carte de chaque Pokémon, ni possédée ni commandée),
   assistant « prochaine commande » dans un budget (100 € par mois, 150 € au plus, réglables),
   registre des commandes (Cardmarket, Myutsu, Hikaru…) qui met à jour les statuts, suivi du
-  budget par mois et par fournisseur. Export CSV et recherches à coller dans Cardmarket.
+  budget par mois et par fournisseur.
 - **Pokédex public** : une page à montrer, en lecture seule (`/vitrine`), activée depuis Données :
   progression, régions, valeur au prix du jour, courbe et classeur. Jamais les prix payés, les
   commandes, le budget ni la liste d'achats. Il faut être connecté : elle montre la collection du

@@ -24,7 +24,6 @@ import type { Order } from '@/types'
 import { BudgetField } from './BudgetField'
 import { CardLine } from './CardLine'
 import { OrderForm } from './OrderForm'
-import { ExportButtons } from './ExportButtons'
 import { useWishlist } from '@/hooks/useWishlist'
 import styles from './ShoppingPage.module.css'
 
@@ -202,7 +201,7 @@ export function PlannerPanel({
         )}
 
         {plan.picked.length > 0 && (
-          <Stack direction="horizontal" gap={2} wrap>
+          <div>
             <Button
               size="sm"
               leftIcon={<Receipt size={14} />}
@@ -210,8 +209,7 @@ export function PlannerPanel({
             >
               Enregistrer comme commande…
             </Button>
-            <ExportButtons rows={plan.picked} name="prochaine-commande" />
-          </Stack>
+          </div>
         )}
         <p className={styles.note}>
           Ce plan n’est pas une commande : rien n’est acheté. Cherchez les cartes sur Cardmarket,

@@ -1,13 +1,10 @@
-/**
- * Export et import de la collection, et sa relecture depuis le stockage du navigateur ; les CSV
- * pour un tableur (liste d'achats, registre des commandes).
- */
+/** Export et import de la collection, et sa relecture depuis le stockage du navigateur. */
 
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { parseCardmarketLink } from '@/lib/cardmarket'
-import { euroInput, parseLink, today } from '@/lib/format'
-import { cardCount, linesTotal, orderSpent, refundFits, supplierLabel } from '@/lib/orders'
+import { parseLink, today } from '@/lib/format'
+import { refundFits } from '@/lib/orders'
 import type {
   BudgetSettings,
   CollectionData,
@@ -46,67 +43,6 @@ export function downloadExport(file: CollectionExportFile): string {
   const name = `pokedex-collection-${today()}.json`
   downloadFile(name, JSON.stringify(file, null, 2), 'application/json')
   return name
-}
-
-/* CSV pour un tableur : séparateur `;`, décimales à virgule */
-
-/** « 12,50 » ; vide sans montant. */
-export const csvNumber = (value: number | null | undefined) =>
-  value == null ? '' : euroInput(value)
-
-/** `2026-10-05` → « 05/10/2026 » ; vide sans date. */
-const csvDay = (day: string | undefined) => (day ? day.split('-').reverse().join('/') : '')
-
-const csvCell = (value: string | number) => {
-  const text = String(value)
-  return /[";\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text
-}
-
-/** Les lignes (la première : les titres des colonnes) → le CSV. */
-export const toCsv = (lines: readonly (readonly (string | number)[])[]) =>
-  lines.map((line) => line.map(csvCell).join(';')).join('\r\n')
-
-/** Le BOM UTF-8 : sans lui, Excel lit mal les accents d'un CSV. */
-const BOM = String.fromCharCode(0xfeff)
-
-/** Télécharge un CSV, daté du jour de l'utilisateur (`name-2026-10-13.csv`) ; rend son nom. */
-export function downloadCsv(name: string, csv: string): string {
-  const file = `${name}-${today()}.csv`
-  downloadFile(file, BOM + csv, 'text/csv;charset=utf-8')
-  return file
-}
-
-/** Le registre des commandes : une ligne par commande, dans l'ordre de `orders`. */
-export function ordersCsv(orders: readonly Order[]): string {
-  const header = [
-    'Date d’achat',
-    'Fournisseur',
-    'Référence',
-    'État',
-    'Cartes',
-    'Prix des cartes (€)',
-    'Port (€)',
-    'Autres frais (€)',
-    'Remboursé (€)',
-    'Total (€)',
-    'Reçue le',
-    'Lien',
-  ]
-  const lines = orders.map((order) => [
-    csvDay(order.date),
-    supplierLabel(order),
-    order.reference ?? '',
-    ORDER_STATE_LABELS[order.state],
-    cardCount(order.lines),
-    csvNumber(linesTotal(order.lines)),
-    csvNumber(order.shipping),
-    csvNumber(order.fees),
-    csvNumber(order.refunded),
-    csvNumber(orderSpent(order)),
-    csvDay(order.receivedAt),
-    order.link ?? '',
-  ])
-  return toCsv([header, ...lines])
 }
 
 /** Le JSON d'une valeur enregistrée ou d'un fichier ; `null` s'il est absent ou illisible. */

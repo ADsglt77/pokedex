@@ -12,7 +12,6 @@ import {
   type WishlistSort,
 } from '@/lib/wishlist'
 import type { GenerationId } from '@/types'
-import { ExportButtons } from './ExportButtons'
 import { useWishlist } from '@/hooks/useWishlist'
 import { WishCard } from './WishCard'
 import styles from './ShoppingPage.module.css'
@@ -26,7 +25,7 @@ const SORT_LABELS: Record<WishlistSort, string> = {
 
 /**
  * La liste d'achats : la carte de chaque Pokémon, ni possédée ni commandée ; chercher, filtrer,
- * trier, exporter. Ses filtres sont gardés par la page (`ShoppingPage`) : l'onglet caché est
+ * trier. Ses filtres sont gardés par la page (`ShoppingPage`) : l'onglet caché est
  * démonté.
  */
 export function WishlistPanel({
@@ -121,14 +120,9 @@ export function WishlistPanel({
         )}
       </div>
 
-      <div className={styles.listHead}>
-        <p className="muted" aria-live="polite">
-          {plural(shown.length, 'carte à acheter', 'cartes à acheter')}
-        </p>
-        <Stack direction="horizontal" gap={2} wrap>
-          <ExportButtons rows={shown} name="liste-achats" />
-        </Stack>
-      </div>
+      <p className="muted" aria-live="polite">
+        {plural(shown.length, 'carte à acheter', 'cartes à acheter')}
+      </p>
 
       {shown.length === 0 ? (
         <EmptyState

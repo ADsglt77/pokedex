@@ -1,12 +1,12 @@
 import { Badge, Button, EmptyState, IconButton, Stack, Table } from '@camply/ui'
-import { Download, Eye, PackageCheck, Pencil, Plus, Receipt, Trash2 } from '@camply/ui/icons'
+import { Eye, PackageCheck, Pencil, Plus, Receipt, Trash2 } from '@camply/ui/icons'
 import { useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExternalLink } from '@/components/ExternalLink'
 import { TableCount } from '@/components/TableCount'
 import { LateOrdersAlert } from './LateOrdersAlert'
-import { useCollectionAction, useNotify } from '@/hooks/useNotify'
+import { useCollectionAction } from '@/hooks/useNotify'
 import { cx } from '@/lib/cx'
 import { formatDate, formatEuro, plural, today } from '@/lib/format'
 import {
@@ -17,7 +17,6 @@ import {
   orderSpent,
   supplierLabel,
 } from '@/lib/orders'
-import { downloadCsv, ordersCsv } from '@/lib/transfer'
 import { useShoppingStore } from '@/store/shopping'
 import type { Order } from '@/types'
 import { OrderDetail, OrderStateBadge } from './OrderDetail'
@@ -26,11 +25,10 @@ import styles from './ShoppingPage.module.css'
 
 /**
  * Le registre des commandes : en ajouter, en ouvrir une pour voir ses cartes, les corriger, les
- * marquer reçues, les supprimer, les exporter.
+ * marquer reçues, les supprimer.
  */
 export function OrdersPanel() {
   const act = useCollectionAction()
-  const notify = useNotify()
   const orders = useShoppingStore((state) => state.shopping.orders)
   const [openId, setOpenId] = useState<string | null>(null)
   const [editing, setEditing] = useState<Order | null>(null)
@@ -62,11 +60,6 @@ export function OrdersPanel() {
     newButton.current?.focus()
   }
 
-  const exportCsv = () => {
-    const file = downloadCsv('commandes', ordersCsv(orders))
-    notify(`${plural(orders.length, 'commande exportée', 'commandes exportées')} : ${file}.`)
-  }
-
   return (
     <Stack gap={5} className={styles.panel}>
       <div className={styles.listHead}>
@@ -74,23 +67,13 @@ export function OrdersPanel() {
           Une commande enregistrée met à jour le statut de ses cartes et compte dans le budget du
           mois de sa date d’achat. Ouvrez-en une pour voir ses cartes et leur prix de revient.
         </p>
-        <Stack direction="horizontal" gap={2} wrap>
-          <Button
-            variant="secondary"
-            leftIcon={<Download size={16} />}
-            disabled={orders.length === 0}
-            onClick={exportCsv}
-          >
-            Exporter en CSV
-          </Button>
-          <Button
-            ref={newButton}
-            leftIcon={<Plus size={16} />}
-            onClick={() => setEditing(newOrder(today()))}
-          >
-            Nouvelle commande
-          </Button>
-        </Stack>
+        <Button
+          ref={newButton}
+          leftIcon={<Plus size={16} />}
+          onClick={() => setEditing(newOrder(today()))}
+        >
+          Nouvelle commande
+        </Button>
       </div>
 
       {late.size > 0 && (
