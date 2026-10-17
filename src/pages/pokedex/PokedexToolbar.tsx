@@ -21,14 +21,9 @@ import {
 } from '@/config/pokedex'
 import { cx } from '@/lib/cx'
 import { shortcutBlocked } from '@/lib/focus'
-import {
-  activeFilterCount,
-  type CardFilter,
-  type PokedexFilters,
-  type PossessionFilter,
-} from '@/lib/filters'
+import type { CardFilter, PokedexFilters, PossessionFilter } from '@/lib/filters'
 import { formatInteger, plural, toOptions } from '@/lib/format'
-import type { Pokedex } from '@/lib/pokedex'
+import type { GenerationProgress } from '@/lib/pokedex'
 import type { GenerationId, PokemonTypeId } from '@/types'
 import styles from './PokedexToolbar.module.css'
 
@@ -64,7 +59,8 @@ const TYPE_OPTIONS: { value: PokemonTypeId | ''; label: string }[] = [
 interface PokedexToolbarProps {
   filters: PokedexFilters
   setFilters: (patch: Partial<PokedexFilters>) => void
-  pokedex: Pokedex
+  /** La progression de chaque génération : la réglette. */
+  generations: GenerationProgress[]
   /** Le nombre de Pokémon de chaque filtre rapide, les autres filtres appliqués. */
   counts: Record<PossessionFilter, number>
   /** Nombre de résultats, `null` quand rien ne filtre. */
@@ -80,13 +76,12 @@ interface PokedexToolbarProps {
 export function PokedexToolbar({
   filters,
   setFilters,
-  pokedex,
+  generations,
   counts,
   resultCount,
   onReset,
 }: PokedexToolbarProps) {
   const search = useRef<HTMLInputElement>(null)
-  const panelCount = activeFilterCount(filters) - Number(filters.possession !== 'all')
 
   // « / » place le curseur dans la recherche, sauf quand on tape déjà dans un champ.
   useEffect(() => {
@@ -104,7 +99,7 @@ export function PokedexToolbar({
     search.current?.focus()
   }
 
-  // Les filtres du panneau en cours, chacun retirable d'un clic.
+  // Les filtres du panneau en cours, chacun retirable d'un clic ; leur nombre, sur son bouton.
   const tags: { key: string; label: string; remove: () => void }[] = []
   const generation = filters.generation && generationById(filters.generation)
   if (generation) {
@@ -128,6 +123,7 @@ export function PokedexToolbar({
       remove: () => setFilters({ card: null }),
     })
   }
+  const panelCount = tags.length
 
   return (
     <div className={styles.toolbar} role="search">
@@ -154,7 +150,7 @@ export function PokedexToolbar({
                 <X size={14} />
               </IconButton>
             ) : (
-              <Kbd size="sm" className={styles.shortcut}>
+              <Kbd size="sm" className="shortcut">
                 /
               </Kbd>
             )
@@ -236,7 +232,7 @@ export function PokedexToolbar({
       {/* Sur grand écran, la réglette sert de filtre de génération. */}
       <div className={styles.ruler}>
         <ProgressRuler
-          generations={pokedex.generations}
+          generations={generations}
           selected={filters.generation}
           onSelect={(value) => setFilters({ generation: value })}
         />

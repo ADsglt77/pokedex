@@ -1,12 +1,14 @@
 import { Button, DropdownMenu, MenuItem, MenuLabel, MenuSeparator } from '@camply/ui'
 import { CloudAlert, CloudCheck, CloudOff, LogIn, LogOut, RefreshCw } from '@camply/ui/icons'
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { ExportCollectionButton } from '@/components/ExportCollectionButton'
 import { SyncConflictDialog } from '@/components/SyncConflictDialog'
 import { useNotify } from '@/hooks/useNotify'
 import { loginPath } from '@/lib/auth-client'
 import { cx } from '@/lib/cx'
+import { details } from '@/lib/format'
 import {
   hasUnsentChanges,
   setConflictQuestion,
@@ -18,10 +20,7 @@ import {
 import styles from './AccountMenu.module.css'
 
 /** Où en est la synchronisation : le bouton du compte, et sa phrase dans le menu. */
-const STATUS: Record<
-  Exclude<SyncStatus, 'local'>,
-  { label: string; icon: typeof CloudCheck; text: string }
-> = {
+const STATUS: Record<SyncStatus, { label: string; icon: typeof CloudCheck; text: string }> = {
   syncing: {
     label: 'Synchronisation…',
     icon: RefreshCw,
@@ -55,10 +54,11 @@ const STATUS: Record<
 }
 
 /**
- * Le compte : « Se connecter » ; connecté, l'état de la synchronisation et un menu (synchroniser,
- * se reconnecter, se déconnecter), d'après le compte que suit le store (`signIn`), et ouvre la
- * question d'un conflit : un seul dans la page. En bas de la barre latérale, de sa largeur ;
- * `compact` (barre du haut), son icône seule (le texte reste lu).
+ * Le compte connecté (la coquille ne s'ouvre que connecté) : l'état de la synchronisation et un
+ * menu, d'après le compte que suit le store (`signIn`) : une entrée selon l'état (choisir la
+ * version à garder, se reconnecter, ou synchroniser), puis se déconnecter. Ouvre la question d'un
+ * conflit : un seul dans la page. En bas de la barre latérale, de sa largeur ; `compact` (barre du
+ * haut), son icône seule (le texte reste lu).
  */
 export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const account = useSyncStore((state) => state.account)
@@ -71,25 +71,9 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const notify = useNotify()
   const dismissed = useSyncStore((state) => state.dismissed)
   const [confirmingSignOut, setConfirmingSignOut] = useState(false)
-  if (!account) {
-    return (
-      <Button
-        asChild
-        size="sm"
-        variant="ghost"
-        leftIcon={<LogIn size={16} />}
-        className={cx(!compact && styles.wide)}
-      >
-        <Link to={login}>
-          <span className={cx(compact && 'visually-hidden')}>Se connecter</span>
-        </Link>
-      </Button>
-    )
-  }
+  if (!account) return null
 
-  // Juste connecté, la synchronisation n'a pas encore commencé.
-  const shown = status === 'local' ? 'syncing' : status
-  const { label, icon: Icon, text } = STATUS[shown]
+  const { label, icon: Icon, text } = STATUS[status]
   const leave = async () => {
     if (await signOut()) {
       notify('Vous êtes déconnecté : votre collection reste sur le serveur.', { tone: 'info' })
@@ -110,24 +94,22 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
             leftIcon={<Icon size={16} />}
             className={cx(
               !compact && styles.wide,
-              shown !== 'synced' && shown !== 'syncing' && styles.alert,
+              status !== 'synced' && status !== 'syncing' && styles.alert,
             )}
           >
             <span className={cx(compact && 'visually-hidden')}>{label}</span>
           </Button>
         }
       >
-        <MenuLabel className={styles.email}>
-          {[account.name, account.email].filter(Boolean).join(' · ')}
-        </MenuLabel>
+        <MenuLabel className={styles.email}>{details(account.name, account.email)}</MenuLabel>
         <MenuLabel className={styles.text}>{text}</MenuLabel>
         <MenuSeparator />
-        {status === 'conflict' && (
-          <MenuItem onSelect={() => setConflictQuestion(true)}>
+        {/* Pendant un conflit, la synchronisation attend le choix ; expirée, la session. */}
+        {status === 'conflict' ? (
+          <MenuItem icon={<CloudAlert size={16} />} onSelect={() => setConflictQuestion(true)}>
             Choisir la version à garder
           </MenuItem>
-        )}
-        {status === 'expired' ? (
+        ) : status === 'expired' ? (
           <MenuItem icon={<LogIn size={16} />} onSelect={() => navigate(login)}>
             Se reconnecter
           </MenuItem>
@@ -161,8 +143,9 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
         <p>
           Les dernières modifications de cet appareil n’ont pas pu être envoyées au serveur : en
           vous déconnectant, elles quittent ce navigateur et seront perdues. Exportez d’abord votre
-          collection depuis la page Données pour les garder.
+          collection pour les garder.
         </p>
+        <ExportCollectionButton>Exporter ma collection</ExportCollectionButton>
       </ConfirmDialog>
     </>
   )

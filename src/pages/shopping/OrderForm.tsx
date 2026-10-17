@@ -1,23 +1,14 @@
-import {
-  Badge,
-  Button,
-  Combobox,
-  IconButton,
-  Input,
-  Modal,
-  Select,
-  Stack,
-  Textarea,
-} from '@camply/ui'
+import { Button, Combobox, IconButton, Input, Modal, Select, Stack, Textarea } from '@camply/ui'
 import { X } from '@camply/ui/icons'
 import { useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { EuroField } from '@/components/CommitInput'
+import { EuroField } from '@/components/EuroInput'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SegmentedField } from '@/components/SegmentedField'
-import { BUDGET_LEVELS, ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
+import { ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { useCollectionAction } from '@/hooks/useNotify'
-import { budgetLevel, monthOf, spentIn } from '@/lib/budget'
+import { keepFocusInList } from '@/lib/focus'
+import { monthOf, spentIn } from '@/lib/budget'
 import { cardTitle, findCard } from '@/lib/species'
 import {
   euroInput,
@@ -42,7 +33,7 @@ import { useCollectionStore } from '@/store/collection'
 import { usePrices } from '@/store/prices'
 import { useShoppingStore } from '@/store/shopping'
 import type { CollectionData, Order, OrderLine, OrderState, Supplier } from '@/types'
-import { BudgetMeter } from '@/components/BudgetMeter'
+import { BudgetLevelBadge, BudgetMeter } from '@/components/BudgetMeter'
 import { CardLine } from './CardLine'
 import { OrderTotals } from './OrderTotals'
 import styles from './ShoppingPage.module.css'
@@ -171,6 +162,8 @@ export function OrderForm({
   const [submitted, setSubmitted] = useState(false)
   const [overCeiling, setOverCeiling] = useState<{ order: Order; monthTotal: number } | null>(null)
   const fields = useRef<HTMLElement>(null)
+  const list = useRef<HTMLUListElement>(null)
+  const cardsTitle = useRef<HTMLHeadingElement>(null)
   const set = (change: Partial<Draft>) => setDraft({ ...draft, ...change })
 
   const read = readDraft(draft, base, stored, collection)
@@ -180,7 +173,6 @@ export function OrderForm({
   // Le mois de la commande avec elle, suivi pendant la saisie.
   const month = monthOf(order.date)
   const monthTotal = cents(spentIn(others, month).spent + orderSpent(order))
-  const level = budgetLevel(monthTotal, budget)
   const inLines = new Set(draft.lines.map((line) => line.cardId))
   // Les cartes du Pokédex qui ne sont pas déjà dans la commande.
   const addable = Object.values(collection.customCards)
@@ -300,15 +292,24 @@ export function OrderForm({
         )}
 
         <Stack gap={3}>
-          <h3 className={styles.formTitle}>Cartes</h3>
+          <h3 ref={cardsTitle} tabIndex={-1} className={styles.formTitle}>
+            Cartes
+          </h3>
           {draft.lines.length > 0 && (
-            <ul className={styles.lines}>
+            <ul ref={list} className={styles.lines}>
               {draft.lines.map((line, index) => {
                 const card = findCard(line.cardId, collection)
                 const duplicate = duplicateReason(order.lines[index]!, others)
                 const unreadable =
                   read.errors[`quantity-${line.cardId}`] || read.errors[`price-${line.cardId}`]
-                const remove = () => set({ lines: draft.lines.filter((_, i) => i !== index) })
+                // Le focus va à la ligne suivante, au titre « Cartes » s'il n'en reste aucune.
+                const remove = () =>
+                  keepFocusInList(
+                    list,
+                    index,
+                    () => set({ lines: draft.lines.filter((_, i) => i !== index) }),
+                    cardsTitle,
+                  )
                 if (!card) {
                   return (
                     <li key={line.cardId}>
@@ -398,15 +399,8 @@ export function OrderForm({
           <div className={styles.orderBudget}>
             <p>
               En {formatMonth(month)}, avec cette commande&nbsp;:{' '}
-              <strong>{formatEuro(monthTotal)}</strong>
-              {level && (
-                <>
-                  {' '}
-                  <Badge size="sm" tone={BUDGET_LEVELS[level].tone}>
-                    {BUDGET_LEVELS[level].label}
-                  </Badge>
-                </>
-              )}
+              <strong>{formatEuro(monthTotal)}</strong>{' '}
+              <BudgetLevelBadge spent={monthTotal} budget={budget} />
             </p>
             <BudgetMeter spent={monthTotal} budget={budget} />
           </div>

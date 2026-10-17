@@ -4,7 +4,7 @@
  * (`localStorage`, comme sans compte) : l'app marche hors ligne, et envoie ses modifications au
  * retour du réseau. Elle synchronise une seconde après chaque modification, et quand la page
  * revient au premier plan ou que le réseau revient. Sans connexion, l'app ne s'ouvre pas : on voit
- * le Pokédex public (`signedIn`, `router.tsx`).
+ * le Pokédex public (`account`, `router.tsx`).
  *
  * Cet appareil note la dernière version échangée (`pokedex-collection.sync`, partagée par ses
  * onglets) : sa collection a changé quand son empreinte n'est plus celle-là. Un seul onglet
@@ -12,26 +12,24 @@
  */
 
 import { create } from 'zustand'
-import { authClient, startupAccount, type AccountUser } from '@/lib/auth-client'
+import { authClient, type AccountUser } from '@/lib/auth-client'
 import { emptyCollection } from '@/lib/collection'
+import { emptyShopping } from '@/lib/orders'
 import { decide, documentHash, isEmptyDocument, type SyncDocument } from '@/lib/sync'
 import { parseStored, readCollection, readShopping } from '@/lib/transfer'
-import { emptyShopping } from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
 import { currentDocument, replaceDocument, sameDocument } from '@/store/document'
 import { useShoppingStore } from '@/store/shopping'
-import { readStored } from './persist'
+import { readStored, writeStored } from './persist'
 
 /**
- * - `local` : pas (encore) de compte connecté : la session n'est pas encore connue ;
  * - `syncing`, `synced` ;
  * - `offline` : le serveur ne répond pas, la copie locale attend ;
  * - `expired` : la session a expiré, il faut se reconnecter ;
  * - `conflict` : les deux versions ont changé, l'utilisateur choisit (`conflict`) ;
  * - `refused` : le serveur refuse la collection (elle ne passe pas ses contrôles).
  */
-export type SyncStatus =
-  'local' | 'syncing' | 'synced' | 'offline' | 'expired' | 'conflict' | 'refused'
+export type SyncStatus = 'syncing' | 'synced' | 'offline' | 'expired' | 'conflict' | 'refused'
 
 /** La version du serveur, telle qu'il l'envoie. */
 interface ServerDocument {
@@ -41,13 +39,18 @@ interface ServerDocument {
 }
 
 export const useSyncStore = create<{
-  /** Le compte connecté, pour le menu du compte ; `null` : personne. */
+  /**
+   * Le compte connecté ; `null` : personne, ce navigateur ne voit que le Pokédex public et la
+   * connexion (`router.tsx`). Fixé au démarrage (`startSession`), à la connexion (`signIn`) et à
+   * la déconnexion (`signOut`).
+   */
   account: AccountUser | null
+  /** Sans compte, sans objet. */
   status: SyncStatus
   conflict: ServerDocument | null
   /** Le conflit dont la question a été fermée (« Plus tard ») ; un nouveau la rouvre. */
   dismissed: ServerDocument | null
-}>(() => ({ account: null, status: 'local', conflict: null, dismissed: null }))
+}>(() => ({ account: null, status: 'syncing', conflict: null, dismissed: null }))
 
 /**
  * Ferme la question du conflit en cours (`open` à faux) ou la rouvre. Gardé ici, pas dans le menu
@@ -75,41 +78,31 @@ function readBase() {
 
 function writeBase(version: number, hash: string) {
   // L'e-mail et le pseudo aussi : hors ligne au démarrage, le menu du compte les montre encore.
+  // Sans stockage, le bandeau d'échec le dit ; la version sera redemandée.
   const { email, name } = useSyncStore.getState().account ?? {}
-  try {
-    localStorage.setItem(BASE_KEY, JSON.stringify({ user, email, name, version, hash }))
-  } catch {
-    // Sans stockage, le bandeau d'échec le dit ; la version sera redemandée.
-  }
+  writeStored(BASE_KEY, JSON.stringify({ user, email, name, version, hash }))
 }
 
 const setStatus = (status: SyncStatus) => useSyncStore.setState({ status })
 
 /**
- * Ce navigateur est-il connecté au compte ? Sinon, il ne voit que le Pokédex public (`/vitrine`) et
- * la connexion (`router.tsx`). Fixé au démarrage (`startSession`), puis à la connexion
- * (`signIn`) et à la déconnexion (`signOut`).
+ * Connecté (connexion, création du compte, démarrage) : la synchronisation commence, ou reprend
+ * (le même compte, après une session expirée).
  */
-export let signedIn = false
-
-/** Connecté (connexion, création du compte, démarrage) : la synchronisation commence. */
 export function signIn(account: AccountUser) {
-  signedIn = true
-  useSyncStore.setState({ account })
-  if (account.id === user) return
   user = account.id
-  useSyncStore.setState({ status: 'syncing', conflict: null })
+  useSyncStore.setState({ account, status: 'syncing', conflict: null })
   void sync()
 }
 
 /**
- * Au démarrage, d'après `/api/account` (`loadAccount`). Sans réponse du serveur (hors ligne, en
- * panne), un appareil déjà synchronisé avec le compte et pas déconnecté depuis l'est encore : l'app
- * marche hors ligne.
+ * Au démarrage, d'après `/api/account` (`loadAccount`) : le compte connecté, `null` personne.
+ * Sans réponse du serveur (`undefined` : hors ligne, en panne), un appareil déjà synchronisé avec
+ * le compte et pas déconnecté depuis l'est encore : l'app marche hors ligne.
  */
-export function startSession() {
-  if (startupAccount !== undefined) {
-    if (startupAccount) signIn(startupAccount)
+export function startSession(account: AccountUser | null | undefined) {
+  if (account !== undefined) {
+    if (account) signIn(account)
     return
   }
   const base = parseStored(readStored(BASE_KEY)) as Record<string, unknown> | null
@@ -286,17 +279,12 @@ export async function signOut() {
   const { error } = await authClient.signOut().catch(() => ({ error: true }))
   if (error) return false
   user = null
-  signedIn = false
   // Une synchronisation en cours finit d'abord (elle s'arrête, sans compte) : rien ne passe après
   // l'effacement.
   await exclusive(async () => {
-    try {
-      localStorage.removeItem(BASE_KEY)
-    } catch {
-      // Sans stockage, rien n'était gardé.
-    }
+    writeStored(BASE_KEY, null)
     replaceDocument({ collection: emptyCollection(), shopping: emptyShopping() })
-    useSyncStore.setState({ account: null, status: 'local', conflict: null })
+    useSyncStore.setState({ account: null, conflict: null })
   })
   return true
 }

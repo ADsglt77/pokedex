@@ -4,24 +4,21 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { DEFAULT_BUDGET } from '@/config/shopping'
-import { applyOrder } from '@/lib/orders'
+import { applyOrder, emptyShopping } from '@/lib/orders'
 import { buildExportFile, parseImport, readDocument } from '@/lib/transfer'
 import type { CollectionData, ShoppingData } from '@/types'
-import { collectionWith, line, NOW, order, ownership } from './fixtures'
+import { card, collectionWith, line, NOW, order, ownership } from './fixtures'
 
 const collection: CollectionData = {
   ...collectionWith({
     a: ownership('ordered', { paidPrice: 17 }),
     b: ownership('owned', { acquiredAt: NOW }),
   }),
-  customCards: { a: { id: 'a', dexIds: [25], reference: 'Pikachu (SV8 033)', image: null } },
+  customCards: { a: card('a', [25]) },
 }
 
 const shopping: ShoppingData = {
-  schemaVersion: 1,
-  updatedAt: null,
-  preferences: {},
+  ...emptyShopping(),
   orders: [
     order({
       lines: [line('a', 12)],
@@ -32,7 +29,6 @@ const shopping: ShoppingData = {
       supplierName: 'Une boutique',
     }),
   ],
-  budget: { ...DEFAULT_BUDGET },
 }
 
 /** L'export de `data`, retouché comme à la main (`value` mise à `path`, ou retirée), puis relu. */
@@ -123,6 +119,20 @@ describe('import', () => {
     expect(
       reimport(page, 'https://www.cardmarket.com/fr/Pokemon/Products?idProduct=1'),
     ).not.toBeNull()
+  })
+
+  test('une carte sans clé `image` est refusée : « Modifier la carte » planterait', () => {
+    expect(reimport(['collection', 'customCards', 'a', 'image'])).toBeNull()
+  })
+
+  test('un id Cardmarket nul, négatif, décimal, en texte ou trop long est refusé', () => {
+    const cardmarket = ['collection', 'customCards', 'a', 'cardmarket']
+    expect(reimport(cardmarket, 0)).toBeNull()
+    expect(reimport(cardmarket, -5)).toBeNull()
+    expect(reimport(cardmarket, 2.5)).toBeNull()
+    expect(reimport(cardmarket, '812345')).toBeNull()
+    expect(reimport(cardmarket, 1234567890123)).toBeNull()
+    expect(reimport(cardmarket, 812345)).not.toBeNull()
   })
 
   test('une carte sans Pokémon, ou rangée sous un autre id que le sien, est refusée', () => {

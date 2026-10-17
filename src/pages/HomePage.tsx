@@ -15,11 +15,10 @@ import { Link } from 'react-router'
 import { CardArt } from '@/components/CardArt'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
-import { PricedValue } from '@/components/PricedValue'
+import { CollectionValueStat } from '@/components/CollectionValueStat'
 import { ProgressRuler } from '@/components/ProgressRuler'
 import { RegionList } from '@/components/RegionList'
 import { SpentThisMonthStat, WishlistStat } from '@/components/ShoppingStats'
-import { STATUS_ICONS } from '@/components/statusIcons'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { usePokedex } from '@/hooks/usePokedex'
 import { monthOf } from '@/lib/budget'
@@ -33,9 +32,7 @@ import {
   type CardFilter,
 } from '@/lib/filters'
 import {
-  details,
   formatDate,
-  formatEuro,
   formatInteger,
   localDayOf,
   pageTitle,
@@ -43,12 +40,10 @@ import {
   today,
   unlockedOf,
 } from '@/lib/format'
-import { latePendingOrders } from '@/lib/orders'
+import { LATE_AFTER_DAYS, latePendingOrders, pendingCount } from '@/lib/orders'
 import { acquisitions, summarize, type Progress, type RecentCard } from '@/lib/pokedex'
-import { gainPercent, tallyByStatus, trackedCards } from '@/lib/prices'
 import { cardTitle } from '@/lib/species'
 import { useCollectionStore } from '@/store/collection'
-import { usePrices, usePricesMissing } from '@/store/prices'
 import { useShoppingStore } from '@/store/shopping'
 import type { PokemonCard } from '@/types'
 import styles from './HomePage.module.css'
@@ -148,7 +143,7 @@ function ProgressPanel() {
             <span className={cx(styles.ringValue, 'numeric')}>
               {formatInteger(progress.unlocked)}
             </span>
-            <span className={styles.ringTotal}>sur {formatInteger(progress.total)}</span>
+            <span className="hint">sur {formatInteger(progress.total)}</span>
           </span>
         </RadialProgress>
         <div className={styles.sentence}>
@@ -173,7 +168,7 @@ interface Todo {
   hint: string
   to: string
   icon: ComponentType<IconProps>
-  tone?: 'warn' | 'success'
+  tone?: 'warn'
 }
 
 /** Les cartes à compléter, comptées par les filtres du Pokédex (la liste y mène). */
@@ -230,7 +225,12 @@ function TodoPanel() {
     () =>
       TO_COMPLETE.map((todo) => ({
         ...todo,
-        count: filterEntries(entries, { ...DEFAULT_FILTERS, card: todo.card }).length,
+        // Une carte TAG TEAM compte une fois, pas une fois par Pokémon.
+        count: new Set(
+          filterEntries(entries, { ...DEFAULT_FILTERS, card: todo.card }).map(
+            ({ species, card }) => card?.card.id ?? species.id,
+          ),
+        ).size,
       })),
     [entries],
   )
@@ -243,8 +243,8 @@ function TodoPanel() {
             label: plural(late, 'commande en retard', 'commandes en retard'),
             hint:
               late === 1
-                ? 'En cours depuis plus de 4 semaines : réclamez-la au vendeur'
-                : 'En cours depuis plus de 4 semaines : réclamez-les aux vendeurs',
+                ? `En cours depuis plus de ${LATE_AFTER_DAYS} jours : réclamez-la au vendeur`
+                : `En cours depuis plus de ${LATE_AFTER_DAYS} jours : réclamez-les aux vendeurs`,
             to: shoppingUrl({ view: 'commandes' }),
             icon: Clock,
             tone: 'warn' as const,
@@ -299,35 +299,13 @@ function StatLink({ to, children }: { to: string; children: ReactNode }) {
 
 /** Valeur, budget du mois, liste d'achats, commandes en cours : chacun mène à sa page. */
 function Indicators() {
-  const prices = usePrices()
-  const pricesMissing = usePricesMissing()
-  const collection = useCollectionStore((state) => state.collection)
   const orders = useShoppingStore((state) => state.shopping.orders)
-  const owned = useMemo(
-    () => tallyByStatus(trackedCards(collection, prices)).owned,
-    [collection, prices],
-  )
-  const pending = orders.filter((order) => order.state === 'pending').length
   const late = latePendingOrders(orders, today()).length
 
   return (
     <div className={cx('stat-grid', styles.wide)}>
       <StatLink to="/valeur">
-        <Stat
-          label="Valeur de ma collection"
-          icon={<STATUS_ICONS.owned size={18} />}
-          value={<PricedValue>{formatEuro(owned.value)}</PricedValue>}
-          delta={prices ? gainPercent(owned.paidCardsValue, owned.paid) : undefined}
-          deltaSuffix={'\u00a0%'}
-          hint={
-            pricesMissing
-              ? 'Prix indisponibles pour le moment'
-              : details(
-                  plural(owned.count, 'carte possédée', 'cartes possédées'),
-                  owned.paid > 0 && `payées ${formatEuro(owned.paid)}`,
-                )
-          }
-        />
+        <CollectionValueStat label="Valeur de ma collection" />
       </StatLink>
       <StatLink to={shoppingUrl({ view: 'budget' })}>
         <SpentThisMonthStat />
@@ -339,7 +317,7 @@ function Indicators() {
         <Stat
           label="Commandes en cours"
           icon={<Package size={18} />}
-          value={formatInteger(pending)}
+          value={formatInteger(pendingCount(orders))}
           hint={late > 0 ? `dont ${formatInteger(late)} en retard` : 'Aucune en retard'}
         />
       </StatLink>

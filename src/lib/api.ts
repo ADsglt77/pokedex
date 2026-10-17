@@ -1,12 +1,12 @@
 /**
  * La lecture de l'API du site (`/api/…`, `server/app.ts` ; les données de référence :
  * `server/reference.ts`) : les espèces, le catalogue, les prix et leur historique, les lignes d'une
- * liste de souhaits Cardmarket. Facultative, sauf les espèces (`main.tsx`) : sans serveur, ou base
- * encore vide, l'app s'affiche sans ces données.
+ * liste de souhaits Cardmarket, l'état des tâches du serveur. Facultative, sauf les espèces
+ * (`main.tsx`) : sans serveur, ou base encore vide, l'app s'affiche sans ces données.
  */
 
 import { settled } from '@/lib/settled'
-import type { WantsLines } from '@/types'
+import type { ServerStatus, WantsLines } from '@/types'
 
 /**
  * Note dans le journal du serveur ce que le navigateur fait seul (`server/journal.ts`) : un export,
@@ -58,16 +58,29 @@ export function getJson<T>(url: string, timeout?: number): Promise<T | null> {
 }
 
 /**
+ * Une réponse demandée à chaque appel, jamais celle d'un cache (« Réessayer » la redemande aussitôt,
+ * pas une minute après comme `getJson`) : `null` si le serveur ne répond pas en 10 s, ou par une
+ * erreur.
+ */
+const fetchFresh = <T>(url: string): Promise<T | null> =>
+  fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(10_000) })
+    .then((response) => (response.ok ? (response.json() as Promise<T>) : null))
+    .catch(() => null)
+
+/**
  * Les lignes des produits Cardmarket `ids` pour « Ajouter une deck list » d'une liste de souhaits
- * (`/api/wants`), demandées à chaque appel (« Réessayer » les redemande aussitôt, pas une minute
- * après comme `getJson`) : `null` si le serveur ne répond pas en 10 s. Lue par `use()`.
+ * (`/api/wants`), demandées à chaque appel (`fetchFresh`). Lue par `use()`.
  */
 export const loadWantsLines = (ids: readonly number[]) =>
-  settled(
-    fetch(`/api/wants?ids=${ids.join()}`, { signal: AbortSignal.timeout(10_000) })
-      .then((response) => (response.ok ? (response.json() as Promise<WantsLines>) : null))
-      .catch(() => null),
-  )
+  settled(fetchFresh<WantsLines>(`/api/wants?ids=${ids.join()}`))
+
+/**
+ * L'état des tâches du serveur (`/api/status`), demandé à chaque appel (`fetchFresh`) ; `null` s'il
+ * ne répond pas, ou s'il n'est pas de la même version que le site (pas encore redémarré après une
+ * mise à jour). Lu par `use()`.
+ */
+export const loadStatus = () =>
+  settled(fetchFresh<ServerStatus>('/api/status').then((status) => (status?.jobs ? status : null)))
 
 /**
  * Ce que l'app tire d'une réponse de l'API (le catalogue lu, les détails par espèce…), calculé

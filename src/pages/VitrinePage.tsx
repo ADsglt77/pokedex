@@ -6,7 +6,6 @@ import { ChartPeriodControl } from '@/components/ChartParts'
 import { Logo } from '@/components/Logo'
 import { Panel } from '@/components/Panel'
 import { PokedexGrid } from '@/components/PokedexGrid'
-import { PricedValue } from '@/components/PricedValue'
 import { ProgressRuler } from '@/components/ProgressRuler'
 import { RegionList } from '@/components/RegionList'
 import { SiteCredits } from '@/components/SiteCredits'
@@ -18,19 +17,18 @@ import type { ChartPeriod } from '@/lib/chart'
 import { cx } from '@/lib/cx'
 import {
   formatDate,
-  formatDecimal,
   formatEuro,
   formatInteger,
-  ofName,
+  formatShare,
   pageTitle,
+  pokedexTitle,
   today,
   unlockedOf,
 } from '@/lib/format'
 import { buildPokedex, unlockEvents, type PokedexEntry } from '@/lib/pokedex'
 import { tallyByStatus, trackedCards } from '@/lib/prices'
-import { usePrices } from '@/store/prices'
-import { signedIn } from '@/store/sync'
-import type { CollectionData } from '@/types'
+import { useSyncStore } from '@/store/sync'
+import type { VitrineData } from '@/types'
 import styles from './VitrinePage.module.css'
 
 /**
@@ -40,14 +38,12 @@ import styles from './VitrinePage.module.css'
  * connecter », ou, connecté, « Mon Pokédex ». Pas proposé aux moteurs de recherche.
  */
 export function VitrinePage() {
+  const signedIn = useSyncStore((state) => state.account !== null)
   return (
     <div className={cx('container', styles.page)}>
       <meta name="robots" content="noindex" />
       <header className={styles.header}>
-        <span className={styles.brand}>
-          <Logo />
-          Pokédex
-        </span>
+        <Logo>Pokédex</Logo>
         {signedIn ? (
           <Button asChild size="sm" variant="secondary" leftIcon={<House size={16} />}>
             <Link to="/">Mon Pokédex</Link>
@@ -71,7 +67,7 @@ export function VitrinePage() {
 }
 
 function VitrineContent() {
-  const shown = use(getJson<{ owner: string | null; collection: CollectionData }>('/api/vitrine'))
+  const shown = use(getJson<VitrineData>('/api/vitrine'))
   if (!shown) {
     // camply n'offre pas de titre `h1` à `EmptyState` : celui de la page, pour les lecteurs d'écran.
     return (
@@ -87,7 +83,7 @@ function VitrineContent() {
       </>
     )
   }
-  return <Vitrine owner={shown.owner} collection={shown.collection} />
+  return <Vitrine {...shown} />
 }
 
 type Shown = 'all' | 'unlocked' | 'chosen'
@@ -95,11 +91,13 @@ type Shown = 'all' | 'unlocked' | 'chosen'
 /** Une carte choisie, pas encore obtenue : l'objectif. */
 const isChosen = (entry: PokedexEntry) => entry.card !== null && !entry.unlocked
 
-/** `owner` : le pseudo du compte, pour « Le Pokédex de … » ; `null` sans pseudo. */
-function Vitrine({ owner, collection }: { owner: string | null; collection: CollectionData }) {
-  const heading = owner ? `Le Pokédex ${ofName(owner)}` : 'Un Pokédex de cartes japonaises'
+/**
+ * `owner` : le pseudo du compte, pour « Le Pokédex de … » ; `prices` : ceux de ses cartes
+ * possédées, envoyés avec elles (sans prix, la valeur est « — »).
+ */
+function Vitrine({ owner, collection, prices }: VitrineData) {
+  const heading = owner ? pokedexTitle(owner) : 'Un Pokédex de cartes japonaises'
   const { entries, progress, generations } = useMemo(() => buildPokedex(collection), [collection])
-  const prices = usePrices()
   const owned = useMemo(
     () => tallyByStatus(trackedCards(collection, prices)).owned,
     [collection, prices],
@@ -126,10 +124,7 @@ function Vitrine({ owner, collection }: { owner: string | null; collection: Coll
           label="Pokémon débloqués"
           aria-valuetext={unlockedOf(progress)}
         >
-          <span className={cx(styles.ring, 'numeric')}>
-            {formatDecimal(progress.percent)}
-            {' '}%
-          </span>
+          <span className={cx(styles.ring, 'numeric')}>{formatShare(progress.percent)}</span>
         </RadialProgress>
         <div>
           <title>{heading}</title>
@@ -151,7 +146,7 @@ function Vitrine({ owner, collection }: { owner: string | null; collection: Coll
         <Stat
           label="Valeur de la collection"
           icon={<Wallet size={18} />}
-          value={<PricedValue>{formatEuro(owned.value)}</PricedValue>}
+          value={prices ? formatEuro(owned.value) : '—'}
           hint="au prix Cardmarket du jour"
         />
         <Stat
@@ -172,7 +167,7 @@ function Vitrine({ owner, collection }: { owner: string | null; collection: Coll
         {narrow ? (
           <RegionList generations={generations} />
         ) : (
-          <ProgressRuler generations={generations} />
+          <ProgressRuler generations={generations} linked={false} />
         )}
       </Panel>
 

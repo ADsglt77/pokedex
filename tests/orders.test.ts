@@ -362,6 +362,15 @@ describe('doublons et retards', () => {
     expect(duplicateReason(line('b', 50), [first])).toBeNull()
   })
 
+  test('une carte déjà possédée, ou déjà dans une commande en cours, est signalée', () => {
+    const owned = line('a', 50, { previous: ownership('owned') })
+    expect(duplicateReason(owned, [])).toBe('Déjà possédée avant cette commande')
+    const pending = order({ id: 'pending', lines: [line('a', 10)] })
+    expect(duplicateReason(line('a', 50), [pending])).toStartWith(
+      'Déjà dans la commande en cours du',
+    )
+  })
+
   test('en retard : en cours, achetée il y a plus de 28 jours', () => {
     const late = order({ id: 'late', date: '2026-09-14' })
     const orders = [

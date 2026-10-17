@@ -3,7 +3,8 @@ import { useId } from 'react'
 
 /**
  * Un `SegmentedControl` avec un libellé et une aide, comme les autres champs : camply n'en donne
- * pas (ses classes de champ sont reprises pour l'allure).
+ * pas (ses classes de champ sont reprises pour l'allure ; classes internes de camply, pas une
+ * API : à revérifier après une mise à jour).
  */
 export function SegmentedField<T extends string>({
   label,

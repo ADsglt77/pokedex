@@ -1,4 +1,8 @@
-/** Les filtres de la page Pokédex : leur place dans l'adresse, et la recherche par nom ou numéro. */
+/**
+ * Les filtres de la page Pokédex : leur place dans l'adresse, leur application aux Pokémon, la
+ * recherche par nom ou numéro. Et les adresses de l'app : le Pokédex filtré (`pokedexUrl`), la
+ * fiche d'un Pokémon (`speciesPath`), les onglets des Achats (`shoppingUrl`).
+ */
 
 import { generationById, POKEMON_TYPES, type Generation } from '@/config/pokedex'
 import { SPECIES } from '@/lib/species'
@@ -72,7 +76,7 @@ export const speciesPath = (id: number) => `/pokemon/${id}`
 
 /** Les onglets des Achats, dans l'adresse (`?vue=`) ; la liste d'achats est celui par défaut. */
 export const SHOPPING_VIEWS = ['liste', 'prochaine-commande', 'commandes', 'budget'] as const
-export type ShoppingView = (typeof SHOPPING_VIEWS)[number]
+type ShoppingView = (typeof SHOPPING_VIEWS)[number]
 
 /** L'adresse des Achats : `shoppingUrl({ view: 'commandes' })` → `/achats?vue=commandes`. */
 export function shoppingUrl({ view }: { view?: ShoppingView } = {}) {
@@ -82,7 +86,7 @@ export function shoppingUrl({ view }: { view?: ShoppingView } = {}) {
   return search ? `/achats?${search}` : '/achats'
 }
 
-/** Les filtres actifs, recherche exclue (le compteur du bouton « Filtres »). */
+/** Le nombre de filtres actifs, recherche exclue : le Pokédex filtre-t-il ? */
 export const activeFilterCount = (filters: PokedexFilters) =>
   Number(filters.generation !== null) +
   Number(filters.possession !== 'all') +

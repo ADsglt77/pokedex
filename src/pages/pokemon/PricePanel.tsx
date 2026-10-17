@@ -46,11 +46,9 @@ export function PricePanel({ card, paid }: { card: PokemonCard; paid: number | n
               price.avg30 && `moyenne 30 jours ${formatEuro(price.avg30)}`,
             )}
           />
-          {card.cardmarket !== undefined && (
-            <Suspense fallback={<Skeleton height="7rem" />}>
-              <PriceHistory card={card} cardmarket={card.cardmarket} avg30={price.avg30} />
-            </Suspense>
-          )}
+          <Suspense fallback={<Skeleton height="7rem" />}>
+            <PriceHistory card={card} avg30={price.avg30} />
+          </Suspense>
         </>
       ) : prices || missing ? (
         <p className="muted">
@@ -73,17 +71,9 @@ export function PricePanel({ card, paid }: { card: PokemonCard; paid: number | n
  * choisie, et ses chiffres ; en repère, la moyenne de ses ventes sur 30 jours que donne le guide
  * des prix du jour (une vraie donnée de Cardmarket, quand l'historique relevé est encore court).
  */
-function PriceHistory({
-  card,
-  cardmarket,
-  avg30,
-}: {
-  card: PokemonCard
-  cardmarket: number
-  avg30: number | null
-}) {
+function PriceHistory({ card, avg30 }: { card: PokemonCard; avg30: number | null }) {
   const [period, setPeriod] = useState<ChartPeriod>('month')
-  const history = use(loadPriceHistory(cardmarket))
+  const history = use(loadPriceHistory(card.cardmarket!))
   const series = cardHistory(history)
   const window = periodWindow(period, today(), series[0]?.date ?? null)
   const points = inWindow(series, window)

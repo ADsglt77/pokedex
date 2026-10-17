@@ -19,10 +19,15 @@
   font: inherit;
   text-align: left;
   text-decoration: none;
+}
+
+/* Un lien ou un filtre ; sur le Pokédex public, une simple image. */
+.segment:is(a, button) {
   cursor: pointer;
 }
 
-/* La barre est un `Progress` de camply : on ne retouche que sa piste. */
+/* La barre est un `Progress` de camply : on ne retouche que sa piste. Classe interne de camply
+   (pas une API) : à revérifier après une mise à jour. */
 .segment :global(.camply-progress__track) {
   height: 6px;
   transition:
@@ -30,7 +35,7 @@
     background var(--duration-fast);
 }
 
-.segment:hover :global(.camply-progress__track) {
+.segment:is(a, button):hover :global(.camply-progress__track) {
   background: var(--camply-fill-4);
 }
 

@@ -47,6 +47,10 @@ export const speciesOf = (card: PokemonCard): PokemonSpecies[] =>
 export const speciesNames = (ids: readonly number[]) =>
   formatList(ids.map((id) => getSpecies(id)!.names.fr))
 
+/** Les autres Pokémon d'une carte TAG TEAM que celui de la page (`speciesId`) : « Zekrom ». */
+export const otherSpeciesNames = (dexIds: readonly number[], speciesId: number) =>
+  speciesNames(dexIds.filter((id) => id !== speciesId))
+
 /** « Pikachu & Zekrom » ; la référence pour une carte sans Pokémon connu. */
 export const cardTitle = (card: PokemonCard) =>
   speciesOf(card)

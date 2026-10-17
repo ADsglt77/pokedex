@@ -14,16 +14,6 @@
   gap: 1rem;
 }
 
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.625rem;
-  color: var(--camply-text-strong);
-  font-family: var(--camply-font-display);
-  font-size: var(--title-sm);
-  font-weight: 700;
-}
-
 .main {
   flex: 1;
 }

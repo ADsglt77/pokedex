@@ -3,27 +3,23 @@
  * Le choix de ce navigateur est gardé (`pokedex-collection.theme`, une simple préférence, pas
  * synchronisée entre appareils, mais suivie par les autres onglets) ; sans choix (ou une valeur
  * inconnue, ou le stockage bloqué), l'app suit le système. Il est posé sur `<html>` avant le
- * premier affichage par le script d'`index.html`, qui suit la même règle.
+ * premier affichage par `public/theme.js`, qui suit la même règle ; ensuite, à chaque changement,
+ * avec la couleur de la barre du navigateur (mobile) : le fond du thème.
  */
 
 import { create } from 'zustand'
+import { readStored } from './persist'
 
 type Theme = 'dark' | 'light'
 
 const KEY = 'pokedex-collection.theme'
-/** La couleur de la barre du navigateur (mobile) : le fond de chaque thème. */
-const BAR_COLOR: Record<Theme, string> = { dark: '#141414', light: '#faf6f3' }
 
 const prefersLight = matchMedia('(prefers-color-scheme: light)')
 
 /** Le thème choisi dans ce navigateur ; `null` sans choix, valeur inconnue ou stockage bloqué. */
 function storedTheme(): Theme | null {
-  try {
-    const value = localStorage.getItem(KEY)
-    return value === 'light' || value === 'dark' ? value : null
-  } catch {
-    return null
-  }
+  const value = readStored(KEY)
+  return value === 'light' || value === 'dark' ? value : null
 }
 
 const systemTheme = (): Theme => (prefersLight.matches ? 'light' : 'dark')
@@ -31,7 +27,9 @@ const systemTheme = (): Theme => (prefersLight.matches ? 'light' : 'dark')
 function apply(theme: Theme) {
   if (theme === 'light') document.documentElement.dataset.camplyTheme = 'light'
   else delete document.documentElement.dataset.camplyTheme
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', BAR_COLOR[theme])
+  // La barre du navigateur (mobile) prend le fond du thème, `--camply-bg` (`styles/theme.css`).
+  const background = getComputedStyle(document.documentElement).getPropertyValue('--camply-bg')
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', background.trim())
 }
 
 export const useThemeStore = create<{ theme: Theme }>(() => ({

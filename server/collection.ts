@@ -4,10 +4,11 @@
  * - `GET` : `{ version, collection, shopping }` (`version` 0 et rien d'autre tant qu'aucun appareil
  *   n'a rien envoyé) ; 304 si l'appareil a déjà cette version (`If-None-Match`).
  * - `PUT` `{ baseVersion, collection, shopping }` : enregistré seulement si `baseVersion` est la
- *   version du serveur ; sinon 409 et la version du serveur, que l'appareil n'écrase jamais sans le
- *   demander. Le document est contrôlé aux règles d'un fichier importé (`readDocument`).
- * Sans session : 401 (macro `auth`, `auth.ts`). Jamais gardé en cache (`no-store`), ni par le
- * navigateur ni par Cloudflare.
+ *   version du serveur, et rend `{ version }` ; sinon 409 : l'appareil relit la version du serveur,
+ *   qu'il n'écrase jamais sans le demander. Le document est contrôlé aux règles d'un fichier
+ *   importé (`readDocument`).
+ * Sans session : 401 ; jamais gardé en cache (`no-store`), ni par le navigateur ni par Cloudflare
+ * (macro `auth`, `auth.ts`).
  */
 
 import type { Database } from 'bun:sqlite'
@@ -25,10 +26,7 @@ interface Row {
 }
 
 const json = (text: string, status = 200, headers: Record<string, string> = {}) =>
-  new Response(text, {
-    status,
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...headers },
-  })
+  new Response(text, { status, headers: { 'Content-Type': 'application/json', ...headers } })
 
 /** Le document tel que le lit l'appareil, sans le relire : il est enregistré en JSON. */
 const documentText = (row: Row | null) =>
@@ -61,10 +59,7 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
         const row = read.get(user.id) as Row | null
         const etag = `"v${row?.version ?? 0}"`
         if (matchesEtag(request, etag)) {
-          return new Response(null, {
-            status: 304,
-            headers: { ETag: etag, 'Cache-Control': 'no-store' },
-          })
+          return new Response(null, { status: 304, headers: { ETag: etag } })
         }
         return json(documentText(row), 200, { ETag: etag })
       },
@@ -88,13 +83,12 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
         const now = new Date()
         const saved = app.transaction(() => {
           const row = read.get(user.id) as Row | null
-          if ((row?.version ?? 0) !== baseVersion) return { conflict: row }
-          const previous =
-            row &&
-            readDocument({
-              collection: JSON.parse(row.collection),
-              shopping: JSON.parse(row.shopping),
-            })
+          if ((row?.version ?? 0) !== baseVersion) return null
+          // Enregistré après ses contrôles : relu tel quel.
+          const previous = row && {
+            collection: JSON.parse(row.collection),
+            shopping: JSON.parse(row.shopping),
+          }
           const version = baseVersion + 1
           const values = [JSON.stringify(document.collection), JSON.stringify(document.shopping)]
           if (row) {
@@ -115,21 +109,17 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
         })
         // `immediate` : la version lue est encore celle du serveur au moment d'écrire.
         const result = saved.immediate()
-        if ('version' in result) {
-          for (const change of documentChanges(result.previous ?? null, document)) journal(change)
-        } else {
+        if (!result) {
           journal({
             topic: 'collection',
             level: 'warn',
             message: 'Envoi refusé',
             details: { raison: 'conflit, changée ailleurs entre-temps' },
           })
+          return json('null', 409)
         }
-        return 'version' in result
-          ? json(JSON.stringify({ version: result.version }), 200, {
-              ETag: `"v${result.version}"`,
-            })
-          : json(documentText(result.conflict), 409)
+        for (const change of documentChanges(result.previous ?? null, document)) journal(change)
+        return json(JSON.stringify({ version: result.version }))
       },
       {
         auth: true,

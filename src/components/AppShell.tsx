@@ -21,7 +21,7 @@ import { AppSearch } from '@/components/AppSearch'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { usePokedex } from '@/hooks/usePokedex'
 import { cx } from '@/lib/cx'
-import { formatDecimal, formatInteger, today } from '@/lib/format'
+import { formatInteger, formatShare, today, unlockedOf } from '@/lib/format'
 import { latePendingOrders } from '@/lib/orders'
 import { useStorageFailure } from '@/store/persist'
 import { useShoppingStore } from '@/store/shopping'
@@ -99,20 +99,21 @@ function ThemeButton({ compact = false }: { compact?: boolean }) {
 function Brand() {
   return (
     <Link to="/" className={styles.brand}>
-      <Logo />
-      <span className={styles.brandName}>
-        <span className={styles.brandMine}>Mon </span>Pokédex
-      </span>
+      <Logo>
+        <span className={styles.brandName}>
+          <span className={styles.brandMine}>Mon </span>Pokédex
+        </span>
+      </Logo>
     </Link>
   )
 }
 
 /**
  * La coquille de toutes les pages. Grand écran : une barre latérale (recherche, navigation par
- * groupes, progression, données et compte). Tablette et téléphone : une barre en haut (recherche,
- * données, compte) et une barre d'onglets en bas. Partout : la recherche (Ctrl K), le lien
- * d'évitement, les avertissements de l'app, le pied de page, le focus et le défilement à chaque
- * changement de page.
+ * groupes, progression, données, thème et compte). Tablette et téléphone : une barre en haut
+ * (recherche, données, thème, compte) et une barre d'onglets en bas. Partout : la recherche
+ * (Ctrl K), le lien d'évitement, les avertissements de l'app, le pied de page, le focus et le
+ * défilement à chaque changement de page.
  */
 export function AppShell() {
   const { pathname } = useLocation()
@@ -144,7 +145,7 @@ export function AppShell() {
         <button type="button" className={styles.searchField} onClick={search}>
           <Search size={16} aria-hidden="true" />
           <span>Rechercher…</span>
-          <Kbd size="sm" className={styles.searchKeys}>
+          <Kbd size="sm" className="shortcut">
             {SEARCH_KEYS}
           </Kbd>
         </button>
@@ -265,15 +266,10 @@ function ProgressCard() {
     <Link to="/pokedex" className={styles.progressCard}>
       <span className={styles.progressHead}>
         <span>Progression</span>
-        <span className="numeric">
-          {formatDecimal(progress.percent)}
-          {' '}%
-        </span>
+        <span className="numeric">{formatShare(progress.percent)}</span>
       </span>
       <Progress size="sm" value={progress.percent} aria-hidden />
-      <span className={cx(styles.progressCount, 'numeric')}>
-        {formatInteger(progress.unlocked)} débloqués sur {formatInteger(progress.total)}
-      </span>
+      <span className={cx(styles.progressCount, 'numeric')}>{unlockedOf(progress)}</span>
     </Link>
   )
 }

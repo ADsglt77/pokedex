@@ -5,13 +5,15 @@
  *
  *   16/10 14:03:12  ✔  compte      Connexion                  email=moi@exemple.fr ip=1.2.3.4
  *
- * - `compte` : connexion (réussie, refusée, bloquée), création du compte, déconnexion (`auth.ts`) ;
+ * - `compte` : connexion (réussie, refusée, bloquée), création du compte (ou son refus),
+ *   déconnexion, mot de passe et pseudo changés, ancienne session fermée (`auth.ts`) ;
  * - `collection` et `achats` : ce qui change dans le document synchronisé, comparé à la version
  *   d'avant (`documentChanges`, `collection.ts`) : cartes ajoutées, possédées, commandes, budget… ;
  * - `données` : l'export et l'import, que le navigateur signale (`POST /api/journal`) : le serveur
  *   ne les voit pas autrement ;
- * - `vitrine` : une visite du Pokédex public ;
- * - `serveur` : une erreur imprévue de l'API ou de Better Auth.
+ * - `vitrine` : une visite du Pokédex public, un lien partagé lu par un robot d'aperçu ;
+ * - `serveur` : une erreur imprévue de l'API ou de Better Auth, une image que sa source n'a pas
+ *   donnée (`images.ts`).
  * Pas les requêtes une à une : seulement ce qui se passe.
  * Au démarrage, une Poké Ball en pixel art (`banner`). Jamais un mot de passe ; l'adresse du
  * visiteur quand le tunnel la donne (`cf-connecting-ip`). Sans couleurs avec `NO_COLOR` (la
@@ -26,12 +28,12 @@ import type { SyncDocument } from '@/lib/sync'
 import type { CollectionData, Order, ShoppingData } from '@/types'
 import type { accountRoutes } from './auth'
 
-export type JournalTopic = 'compte' | 'collection' | 'achats' | 'données' | 'vitrine' | 'serveur'
+type JournalTopic = 'compte' | 'collection' | 'achats' | 'données' | 'vitrine' | 'serveur'
 
 /** Réussi, simple information, à surveiller, refusé ou en erreur. */
 export type JournalLevel = 'ok' | 'info' | 'warn' | 'error'
 
-export interface JournalEntry {
+interface JournalEntry {
   topic: JournalTopic
   level?: JournalLevel
   /** Court : ce qui s'est passé (« Carte possédée »). */

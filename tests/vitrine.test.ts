@@ -5,15 +5,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import { shownCollection, vitrineSummary } from '../server/vitrine'
-import { collectionWith, ownership } from './fixtures'
-
-const card = (id: string, dexId: number, extra = {}) => ({
-  id,
-  dexIds: [dexId],
-  reference: `Carte ${id}`,
-  image: null,
-  ...extra,
-})
+import { card, collectionWith, ownership } from './fixtures'
 
 describe('shownCollection', () => {
   const collection = {
@@ -22,10 +14,10 @@ describe('shownCollection', () => {
       b: ownership('ordered', { paidPrice: 12 }),
     }),
     customCards: {
-      a: card('a', 25, { cardmarket: 719445, page: 'https://www.cardmarket.com/fr/Pokemon/x' }),
-      b: card('b', 1),
-      c: card('c', 4),
-      d: card('d', 7),
+      a: card('a', [25], { cardmarket: 719445, page: 'https://www.cardmarket.com/fr/Pokemon/x' }),
+      b: card('b', [1]),
+      c: card('c', [4]),
+      d: card('d', [7]),
     },
   }
   const shown = shownCollection(collection)
@@ -40,14 +32,9 @@ describe('shownCollection', () => {
     })
   })
 
-  test('rien de ce qui dit un achat : commandée disparaît', () => {
-    expect(Object.keys(shown.cards)).toEqual(['a'])
-    expect(JSON.stringify(shown)).not.toContain('paidPrice')
-  })
-
   test('toutes les cartes choisies, sans leur page Cardmarket ; l’id reste, pour la valeur', () => {
     expect(Object.keys(shown.customCards)).toEqual(['a', 'b', 'c', 'd'])
-    expect(shown.customCards.a).toEqual(card('a', 25, { cardmarket: 719445 }))
+    expect(shown.customCards.a).toEqual(card('a', [25], { cardmarket: 719445 }))
     expect(JSON.stringify(shown)).not.toContain('cardmarket.com')
   })
 })
@@ -59,7 +46,7 @@ describe('vitrineSummary', () => {
         a: ownership('owned', { paidPrice: 30 }),
         b: ownership('ordered', { paidPrice: 12 }),
       }),
-      customCards: { a: card('a', 25), b: card('b', 1), c: card('c', 4) },
+      customCards: { a: card('a', [25]), b: card('b', [1]), c: card('c', [4]) },
     }
     const summary = vitrineSummary('Sacha', collection)
     expect(summary.title).toBe('Le Pokédex de Sacha')

@@ -2,7 +2,7 @@
 
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
-import { parseCardmarketLink } from '@/lib/cardmarket'
+import { parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
 import { parseLink, today } from '@/lib/format'
 import { refundFits } from '@/lib/orders'
 import type {
@@ -27,21 +27,17 @@ export function buildExportFile(
   }
 }
 
-/** Fait télécharger un fichier au navigateur. */
-function downloadFile(name: string, content: string, type: string) {
-  const url = URL.createObjectURL(new Blob([content], { type }))
+/** Télécharge le fichier d'export, daté du jour de l'utilisateur ; rend son nom. */
+export function downloadExport(file: CollectionExportFile): string {
+  const name = `pokedex-collection-${today()}.json`
+  const json = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(json)
   // Firefox ne télécharge que par un lien présent dans la page, et lit le fichier après le clic.
   const link = Object.assign(document.createElement('a'), { href: url, download: name })
   document.body.append(link)
   link.click()
   link.remove()
   setTimeout(() => URL.revokeObjectURL(url), 30_000)
-}
-
-/** Télécharge le fichier d'export, daté du jour de l'utilisateur ; rend son nom. */
-export function downloadExport(file: CollectionExportFile): string {
-  const name = `pokedex-collection-${today()}.json`
-  downloadFile(name, JSON.stringify(file, null, 2), 'application/json')
   return name
 }
 
@@ -141,9 +137,10 @@ const isCard = (card: Record<string, unknown>, key: string) =>
   card.dexIds.length > 0 &&
   card.dexIds.every((id) => Number.isInteger(id) && id >= 1 && id <= TOTAL_SPECIES) &&
   isText(card.reference) &&
-  (card.image == null ||
+  (card.image === null ||
     (isRecord(card.image) && isText(card.image.small) && isText(card.image.large))) &&
-  isOptional(card.cardmarket, Number.isInteger) &&
+  // Comme à la saisie : un id 0, négatif ou trop long ferait un lien et une requête de prix vains.
+  isOptional(card.cardmarket, (id) => readCardmarketId(String(id)) === id) &&
   isOptional(card.page, (page) => isText(page) && parseCardmarketLink(page as string) !== null)
 
 const isLine = (line: Record<string, unknown>) =>

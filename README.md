@@ -12,7 +12,7 @@ bun install
 bun dev          # serveur de dev Vite
 bun run build    # type-check + build
 bun lint         # ESLint
-bun test         # tests : achats, prix, import, liste de souhaits Cardmarket, synchronisation, historique des prix
+bun test         # tests de ce qui coûterait de l'argent (la liste : CLAUDE.md, Principes)
 bun run format   # Prettier
 ```
 
@@ -45,9 +45,10 @@ bun run format   # Prettier
   payés, les commandes ni le budget. Le reste du site demande d'être connecté.
 - **Thème** : sombre (gris foncé et jaune) ou clair (blanc pastel et rouge), au bouton de la
   barre ; sans choix, celui du système.
-- **Données** : les images à chercher pour les cartes qui n'en ont pas, export / import (achats
-  compris), effacement, et l'état des données du serveur (dernière lecture de chaque source, jour
-  des prix, tâche en échec ou en retard).
+- **Données** : la collection et les images à chercher pour les cartes qui n'en ont pas, le compte
+  (pseudo, mot de passe), l'adresse du Pokédex public, export / import (achats compris),
+  effacement, et l'état des données du serveur (dernière lecture de chaque source, jour des prix,
+  tâche en échec ou en retard).
 
 Toutes les données passent par le serveur de l'app (`server/`, Elysia et une base SQLite) : le
 navigateur ne parle qu'à lui. Des tâches d'ingestion lisent les sources et remplissent la base :
@@ -120,7 +121,8 @@ déconnecte le précédent, qui garde ses modifications). Personne d'autre ne pe
 **La surveillance** : `/api/health` répond 200 quand le serveur répond et que chaque tâche
 nécessaire a réussi récemment (en deux intervalles au plus : les prix en 12 h, le catalogue et les
 sauvegardes en 2 jours, les espèces en 60 jours), 503 sinon, avec la liste des tâches en retard.
-Au tout premier démarrage, il répond 503 le temps du premier catalogue (une vingtaine de minutes).
+Au tout premier démarrage, il répond 503 le temps des premières tâches (le catalogue prend une
+vingtaine de minutes ; la sauvegarde suit les prix, sans attendre la copie des images).
 Sans surveillance, un trou dans l'historique des prix passerait inaperçu : Cardmarket ne le garde
 pas, un jour manqué l'est pour toujours.
 
@@ -129,37 +131,29 @@ de niveau en couleur (✔ réussi, • info, ▲ à surveiller, ✖ refusé), le
 ses détails en `clé=valeur` ; au démarrage, une Poké Ball en pixel art avec les adresses et le
 compte (pas les requêtes une à une : seulement ce qui se passe). Sans couleurs
 avec `NO_COLOR=1`. Il note les connexions
-(réussies ou refusées, avec l'adresse du visiteur), création du compte, cartes ajoutées, possédées
-ou retirées, commandes enregistrées, reçues ou annulées, budget, exports et imports, visites du
-Pokédex public. Pour le suivre : `docker compose logs -f server` (en développement, le terminal de
+(réussies ou refusées, avec l'adresse du visiteur), création du compte, pseudo et mot de passe
+changés, cartes ajoutées, possédées ou retirées, commandes enregistrées, reçues ou annulées, budget,
+exports et imports, visites du Pokédex public, et les erreurs du serveur (avec leur cause). Pour le
+suivre : `docker compose logs -f server` (en développement, le terminal de
 `bun run dev:server`).
 
-L'image Docker construit le site avec Bun et le sert avec nginx (`deploy/nginx.conf` renvoie
-`index.html` pour les adresses du routage côté client, `/api/` au serveur, et sert les images
-copiées). `compose.yaml` l'expose sur `127.0.0.1:8080` (variable `POKEDEX_PORT`), joignable
-seulement par le tunnel. À côté :
-- le service `server` : l'API, et la copie à la demande d'une image qui manque encore ;
-- le service `ingest` : il refait le catalogue des cartes chaque jour (le premier passage, série
-  par série, prend une vingtaine de minutes ; la page Catalogue dit en attendant qu'il n'est pas
-  disponible), regarde toutes les 6 h si Cardmarket a publié un nouveau guide des prix (il ne le
-  télécharge que si sa date a changé) et en garde l'historique
-  dans une base SQLite (volume Docker `db`), puis copie chaque jour les images manquantes (volume
-  `images` ; le premier passage, environ 1,5 Go, prend une heure ou plus, et le serveur copie en
-  attendant celles qui s'affichent), et sauvegarde les deux bases chaque jour (volume `backups`).
-  À son premier démarrage, il reprend de lui-même l'historique de l'ancien service `prices` (des
-  fichiers, dans le volume `prices`), vérifié avant d'être gardé. L'ancien service est retiré :
-  le déploiement l'arrête (`--remove-orphans`). Pour lancer une tâche à la main (par exemple
-  relire tout le catalogue), arrêtez d'abord ce service, qui la relancerait en même temps s'il
-  redémarrait pendant ce temps :
-  ```sh
-  docker compose stop ingest
-  docker compose run --rm ingest bun server/ingest.ts catalog --refresh
-  docker compose start ingest
-  ```
+Les services (`pokedex` : le site, nginx, sur `127.0.0.1:8080`, joignable seulement par le
+tunnel ; `server` : l'API ; `ingest` : les tâches d'ingestion et les sauvegardes) et leurs
+volumes : `docs/deploiement.md`. Pour lancer une tâche à la main (par exemple relire tout le
+catalogue), arrêtez d'abord le service `ingest`, qui la relancerait en même temps s'il redémarrait
+pendant ce temps :
 
-Ne jamais lancer `docker compose down -v`, qui effacerait ces volumes. Une fois sûr que
-l'historique est repris (`docker compose logs ingest` : « Vérifié : … cartes »), l'ancien volume
-peut partir, dans cet ordre (Docker refuse de supprimer un volume qu'un conteneur utilise encore) :
+```sh
+docker compose stop ingest
+docker compose run --rm ingest bun server/ingest.ts catalog --refresh
+docker compose start ingest
+```
+
+Ne jamais lancer `docker compose down -v`, qui effacerait les volumes (`db` : le compte, la
+collection et l'historique des prix ; `backups` ; `images`). À son premier démarrage, `ingest`
+reprend l'historique de l'ancien service `prices` (des fichiers, dans le volume `prices`), vérifié
+avant d'être gardé. Une fois sûr que l'historique est repris (`docker compose logs ingest` :
+« Vérifié : … cartes »), l'ancien volume peut partir, dans cet ordre (Docker refuse de supprimer un volume qu'un conteneur utilise encore) :
 retirer de `compose.yaml` le volume `prices` (sa ligne et `LEGACY_PRICES` dans `ingest`, sa
 déclaration en bas), redéployer (`docker compose up -d`), puis `docker volume rm pokedex_prices`
 (le nom exact : `docker volume ls`).
@@ -235,7 +229,9 @@ docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/out" ingest 
 
 Chaque nuit, hors du VPS, avec `rclone` (configuré une fois, `rclone config`, vers un stockage à
 vous : Backblaze B2, Google Drive, un autre serveur…) : dans la crontab de l'utilisateur du
-déploiement (`crontab -e`), après la sauvegarde du jour (4 h 30, le dossier du clone à adapter) :
+déploiement (`crontab -e`), ici à 4 h 30, le dossier du clone à adapter. La sauvegarde n'a pas
+d'heure fixe (une par jour, à son rythme) : chaque copie emporte celles du volume, la plus récente
+datant de moins d'un jour :
 
 ```sh
 30 4 * * * cd /home/moi/pokedex && mkdir -p sauvegardes && docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/out" ingest sh -c 'cp /backups/* /out/' && rclone copy sauvegardes distant:pokedex-sauvegardes

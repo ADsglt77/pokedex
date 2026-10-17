@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { speciesPath } from '@/lib/filters'
 import { CardArt } from '@/components/CardArt'
+import { cx } from '@/lib/cx'
 import { cardTitle } from '@/lib/species'
 import type { PokemonCard } from '@/types'
 import styles from './ShoppingPage.module.css'
@@ -25,7 +26,7 @@ export function CardLine({
         <>
           <CardArt card={card} speciesId={card.dexIds[0]!} alt="" className={styles.lineArt} />
           <div className={styles.lineText}>
-            <Link to={speciesPath(card.dexIds[0]!)} className={styles.lineTitle}>
+            <Link to={speciesPath(card.dexIds[0]!)} className={cx('quiet-link', styles.lineTitle)}>
               {cardTitle(card)}
             </Link>
             <span className="muted">

@@ -97,13 +97,6 @@
   color: var(--camply-text);
 }
 
-/* Écran tactile seul, sans souris ni pavé : probablement pas de clavier, le raccourci est inutile. */
-@media not (any-pointer: fine) {
-  .shortcut {
-    display: none;
-  }
-}
-
 /* Sans barre latérale, la réglette laisse place au panneau de filtres. */
 @media (max-width: 63.99rem) {
   .ruler {

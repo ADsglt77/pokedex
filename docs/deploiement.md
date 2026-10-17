@@ -22,14 +22,17 @@ transmet l'arrêt) :
   et copie à la demande dans le volume `images` ; ses secrets (`BETTER_AUTH_URL`, l'adresse
   publique en https, `BETTER_AUTH_SECRET` et `ACCOUNT_EMAIL`, la seule adresse qui crée le compte)
   viennent du `.env` du clone (ignoré par git) : sans
-  eux, docker compose refuse de démarrer. Le compte : à la première visite (pseudo, e-mail, mot de passe), avec
-  l'adresse `ACCOUNT_EMAIL` ; le premier créé est le seul. Son journal (`server/journal.ts` :
+  eux, docker compose refuse de démarrer (le compte et `ACCOUNT_EMAIL` :
+  `docs/compte-et-synchronisation.md`). Son journal (`server/journal.ts` :
   connexions, cartes, commandes, exports…) : `docker compose logs -f server` ;
-- `ingest` : `server/ingest.ts --loop`, les tâches à leur rythme (espèces chaque mois, catalogue
-  chaque jour, puis prix toutes les 6 h, puis images et sauvegardes chaque jour ; après un échec : 10 min, puis 20, 40…
-  jusqu'à 6 h ; une tâche déjà en cours dans un autre processus, lancée à la main, n'est pas
-  doublée ; au démarrage, un passage resté « en cours » est noté interrompu), dans les volumes
-  `db`, `images` et `backups`. À chaque démarrage, il refait les
+- `ingest` : `server/ingest.ts --loop`, les tâches à leur rythme, dans les volumes `db`, `images`
+  et `backups`. Dans l'ordre d'`INGEST_JOBS` (`config/jobs.ts`) : espèces chaque mois, catalogue
+  chaque jour (son premier passage prend une vingtaine de minutes), puis prix toutes les 6 h, puis
+  sauvegardes chaque jour, et enfin images chaque jour : leur premier passage, environ 1,5 Go,
+  prend une heure ou plus (la sauvegarde ne l'attend pas, et le serveur copie en attendant les
+  images affichées). Après un échec : 10 min, puis 20, 40… jusqu'à 6 h ; une tâche déjà en cours
+  dans un autre processus, lancée à la main, n'est pas doublée ; au démarrage, un passage resté
+  « en cours » est noté interrompu. À chaque démarrage, il refait les
   réponses calculées de l'API (leur forme a pu changer avec le code) : le catalogue et les prix
   d'après leurs tables, les espèces en repassant leur tâche (depuis le cache disque de PokéAPI,
   sans requête s'il a moins d'un mois) ; au premier, il reprend
@@ -44,7 +47,8 @@ prix, votre collection) et `backups` sont irremplaçables, `images` porte 1,5 Go
 va bien. `.github/workflows/deploy.yml` : lancé à la main tant que le domaine n'est pas prêt (le
 push sur `main` à remettre, voir son en-tête), SSH sur le VPS (action épinglée sur un commit,
 empreinte d'hôte `VPS_FINGERPRINT`, exigée : sans elle, le déploiement s'arrête), `git pull --ff-only`, `docker compose build --pull` puis
-`up -d --remove-orphans`. Marche à suivre complète, et la liste de mise en ligne : README.
+`up -d --remove-orphans` (qui arrête aussi l'ancien service des prix). Marche à suivre complète,
+la liste de mise en ligne et une tâche lancée à la main : README.
 
 Le serveur et les tâches tournent sans droits d'administrateur (`USER bun`, `Dockerfile` : les
 points de montage lui appartiennent ; un volume créé avant, par un conteneur administrateur, se

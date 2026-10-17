@@ -134,14 +134,15 @@ export function CompletionTable({
           ),
         },
         {
-          key: 'toUnlock',
-          header: 'À débloquer',
+          // Les cartes commandées n'y sont pas : elles comptent dans les commandes.
+          key: 'toBuy',
+          header: 'À acheter',
           align: 'right',
           cell: ({ cost }) => (
             <TableCount
               count={cost.priced + cost.unpriced + cost.noCard}
-              one="à débloquer"
-              many="à débloquer"
+              one="à acheter"
+              many="à acheter"
             />
           ),
         },

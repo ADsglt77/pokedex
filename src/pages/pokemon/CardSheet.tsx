@@ -5,7 +5,7 @@ import { Panel } from '@/components/Panel'
 import { loadCatalog } from '@/lib/card-catalog'
 import { details, statusCaption } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
-import { speciesNames } from '@/lib/species'
+import { otherSpeciesNames } from '@/lib/species'
 import type { PokemonSpecies } from '@/types'
 import { CardActions } from './CardActions'
 import { CardForm } from './CardForm'
@@ -35,8 +35,7 @@ export function CardSheet({
         description={details(
           statusCaption(view.status, view.acquiredAt),
           // Une carte TAG TEAM : la même, achetée une fois, pour ses autres Pokémon.
-          card.dexIds.length > 1 &&
-            `aussi celle de ${speciesNames(card.dexIds.filter((id) => id !== species.id))}`,
+          card.dexIds.length > 1 && `aussi celle de ${otherSpeciesNames(card.dexIds, species.id)}`,
         )}
         titleRef={titleRef}
       >

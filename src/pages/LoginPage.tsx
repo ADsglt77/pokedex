@@ -2,10 +2,10 @@ import { Alert, Button, Input, Stack } from '@camply/ui'
 import { LogIn } from '@camply/ui/icons'
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
-import { authClient } from '@/lib/auth-client'
+import { authClient, TOO_MANY_ATTEMPTS } from '@/lib/auth-client'
 import { pageTitle } from '@/lib/format'
-import { signIn, sync } from '@/store/sync'
-import { AuthCard, TOO_MANY_ATTEMPTS } from '@/components/AuthCard'
+import { signIn } from '@/store/sync'
+import { AuthCard } from '@/components/AuthCard'
 import styles from './AuthPage.module.css'
 
 /**
@@ -47,14 +47,11 @@ export function LoginPage() {
     setBusy(false)
     if (refused || !data) return setError(failure(refused?.status ?? 0))
     signIn(data.user)
-    // Après une session expirée, le même compte : la synchronisation reprend.
-    void sync()
     navigate(back, { replace: true })
   }
 
   return (
     <AuthCard
-      as="main"
       title="Connexion"
       description="Pour ouvrir votre Pokédex : votre collection, vos achats et votre budget, les mêmes sur tous vos appareils."
     >

@@ -10,9 +10,9 @@ const MARGIN = 3
 
 /**
  * Une courbe dans le temps, sans bibliothèque : ligne, aire, extrêmes et dates. L'axe couvre la
- * période (`window`), même si les points n'en couvrent qu'une partie (une carte suivie depuis peu) ;
- * sans période, du premier au dernier point. Le résumé lu par les lecteurs d'écran donne le début,
- * la fin et les extrêmes. `format` : des euros, sinon autre chose (un nombre de Pokémon).
+ * période (`window`), même si les points n'en couvrent qu'une partie (une carte suivie depuis
+ * peu). Le résumé lu par les lecteurs d'écran donne le début, la fin et les extrêmes. `format` :
+ * des euros, sinon autre chose (un nombre de Pokémon).
  * `fromZero` : l'axe part de zéro (un total, qui ne se lit qu'à partir de rien) ; sinon du plus
  * bas de la série (un prix, dont on suit les écarts). `reference` : une valeur repère, tracée en
  * pointillés et nommée dessous (la moyenne Cardmarket sur 30 jours d'une carte).
@@ -27,7 +27,7 @@ export function PriceChart({
 }: {
   points: PricePoint[]
   label: string
-  window?: ChartWindow
+  window: ChartWindow
   format?: (value: number) => string
   fromZero?: boolean
   reference?: { value: number; label: string }
@@ -44,8 +44,7 @@ export function PriceChart({
     )
   }
 
-  const from = window?.from ?? first.date
-  const to = window?.to ?? last.date
+  const { from, to } = window
   const values = points.map((point) => point.value)
   const low = Math.min(...values)
   const high = Math.max(...values)

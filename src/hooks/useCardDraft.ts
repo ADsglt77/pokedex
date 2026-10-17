@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { findCardImage, type CatalogCard } from '@/lib/card-catalog'
-import { isPokecardexImage, isTcgplayerImage } from '@/lib/card-images'
+import { imageSource } from '@/lib/card-images'
 import { referenceCode } from '@/lib/card-code'
 import { isCardmarketImage, parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
 import { newCardId } from '@/lib/collection'
@@ -9,11 +9,10 @@ import { loadPriceHistory } from '@/store/prices'
 import type { CardImage, PokemonCard } from '@/types'
 
 /**
- * L'image enregistrée vient de Pokécardex (ou de TCGplayer, d'une ancienne version) : elle suit la
- * référence, ce n'est pas une adresse collée.
+ * L'image enregistrée vient d'une source connue (Pokécardex, ou TCGplayer d'une ancienne version) :
+ * elle suit la référence, ce n'est pas une adresse collée.
  */
-const isFoundImage = (card: PokemonCard) =>
-  card.image !== null && (isPokecardexImage(card.image) || isTcgplayerImage(card.image))
+const isFoundImage = (card: PokemonCard) => card.image !== null && imageSource(card.image) !== null
 
 /**
  * La saisie d'une carte : l'adresse de son image (vide : celle retrouvée d'après la référence),

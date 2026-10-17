@@ -6,7 +6,7 @@ import { HomePage } from '@/pages/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PokedexPage } from '@/pages/pokedex/PokedexPage'
 import { PokemonPage } from '@/pages/pokemon/PokemonPage'
-import { signedIn } from '@/store/sync'
+import { useSyncStore } from '@/store/sync'
 
 /** Sans compte, la première visite. */
 const firstVisit = () => (accountExists ? null : redirect('/bienvenue'))
@@ -17,7 +17,7 @@ const firstVisit = () => (accountExists ? null : redirect('/bienvenue'))
  */
 function appLoader({ request }: LoaderFunctionArgs) {
   if (!accountExists) return redirect('/bienvenue')
-  if (signedIn) return null
+  if (useSyncStore.getState().account) return null
   const { pathname, search } = new URL(request.url)
   return redirect(pathname === '/' ? '/vitrine' : loginPath(pathname + search))
 }
@@ -26,66 +26,74 @@ function appLoader({ request }: LoaderFunctionArgs) {
  * Les pages de l'app, dans la coquille commune (en-tête, navigation), 404 comprise : connecté
  * seulement (`appLoader`). Hors d'elle : la première visite (`/bienvenue`, tant que le site n'a pas
  * de compte, toute page y mène ; ensuite, elle mène à la connexion), la connexion (`/connexion`) et
- * le Pokédex public (`/vitrine`), la page d'accueil d'un visiteur. Une erreur d'affichage remplace
- * toute la coquille par ErrorPage. L'accueil, le Pokédex et les fiches sont dans le premier chargement ; les autres
- * pages, plus lourdes (achats, valeur…), sont chargées à leur première ouverture. Créé une fois
- * l'existence du compte connue (`main.tsx`) : le routeur lit la page ouverte dès sa création.
+ * le Pokédex public (`/vitrine`), la page d'accueil d'un visiteur. Toutes sous une route parente
+ * sans chemin, qui porte une seule fois la page d'erreur (une erreur d'affichage remplace toute la
+ * page, coquille comprise, par ErrorPage) et l'attente du premier chargement. L'accueil, le
+ * Pokédex et les fiches sont dans le premier chargement ; les autres pages, plus lourdes (achats,
+ * valeur…), sont chargées à leur première ouverture. Créé une fois l'existence du compte connue
+ * (`main.tsx`) : le routeur lit la page ouverte dès sa création.
  */
 export const createRouter = () =>
   createBrowserRouter([
     {
-      path: 'bienvenue',
       errorElement: <ErrorPage />,
-      loader: () => (accountExists ? redirect('/connexion') : null),
-      lazy: () =>
-        import('@/pages/WelcomePage').then(({ WelcomePage }) => ({ Component: WelcomePage })),
-    },
-    {
-      path: 'connexion',
-      errorElement: <ErrorPage />,
-      loader: firstVisit,
-      lazy: () => import('@/pages/LoginPage').then(({ LoginPage }) => ({ Component: LoginPage })),
-    },
-    {
-      path: 'vitrine',
-      errorElement: <ErrorPage />,
-      loader: firstVisit,
-      lazy: () =>
-        import('@/pages/VitrinePage').then(({ VitrinePage }) => ({ Component: VitrinePage })),
-    },
-    {
-      element: <AppShell />,
-      errorElement: <ErrorPage />,
-      loader: appLoader,
       // Ouverte directement sur une page chargée à la demande : rien, le temps de la charger.
       HydrateFallback: () => null,
       children: [
-        { index: true, element: <HomePage /> },
-        { path: 'pokedex', element: <PokedexPage /> },
-        { path: 'pokemon/:id', element: <PokemonPage /> },
         {
-          path: 'valeur',
+          path: 'bienvenue',
+          loader: () => (accountExists ? redirect('/connexion') : null),
           lazy: () =>
-            import('@/pages/value/ValuePage').then(({ ValuePage }) => ({ Component: ValuePage })),
+            import('@/pages/WelcomePage').then(({ WelcomePage }) => ({ Component: WelcomePage })),
         },
         {
-          path: 'achats',
+          path: 'connexion',
+          loader: firstVisit,
           lazy: () =>
-            import('@/pages/shopping/ShoppingPage').then(({ ShoppingPage }) => ({
-              Component: ShoppingPage,
-            })),
+            import('@/pages/LoginPage').then(({ LoginPage }) => ({ Component: LoginPage })),
         },
         {
-          path: 'donnees',
+          path: 'vitrine',
+          loader: firstVisit,
           lazy: () =>
-            import('@/pages/data/DataPage').then(({ DataPage }) => ({ Component: DataPage })),
+            import('@/pages/VitrinePage').then(({ VitrinePage }) => ({ Component: VitrinePage })),
         },
         {
-          path: 'catalogue',
-          lazy: () =>
-            import('@/pages/CatalogPage').then(({ CatalogPage }) => ({ Component: CatalogPage })),
+          element: <AppShell />,
+          loader: appLoader,
+          children: [
+            { index: true, element: <HomePage /> },
+            { path: 'pokedex', element: <PokedexPage /> },
+            { path: 'pokemon/:id', element: <PokemonPage /> },
+            {
+              path: 'valeur',
+              lazy: () =>
+                import('@/pages/value/ValuePage').then(({ ValuePage }) => ({
+                  Component: ValuePage,
+                })),
+            },
+            {
+              path: 'achats',
+              lazy: () =>
+                import('@/pages/shopping/ShoppingPage').then(({ ShoppingPage }) => ({
+                  Component: ShoppingPage,
+                })),
+            },
+            {
+              path: 'donnees',
+              lazy: () =>
+                import('@/pages/data/DataPage').then(({ DataPage }) => ({ Component: DataPage })),
+            },
+            {
+              path: 'catalogue',
+              lazy: () =>
+                import('@/pages/CatalogPage').then(({ CatalogPage }) => ({
+                  Component: CatalogPage,
+                })),
+            },
+            { path: '*', element: <NotFoundPage /> },
+          ],
         },
-        { path: '*', element: <NotFoundPage /> },
       ],
     },
   ])

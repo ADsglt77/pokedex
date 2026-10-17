@@ -11,14 +11,16 @@
   max-width: 50rem;
 }
 
-/* Grand écran : deux colonnes plutôt qu'une bande étroite et du vide. La collection à gauche,
-   l'export et l'import à droite ; les sources et l'effacement sur toute la largeur. */
+/* Grand écran : deux colonnes plutôt qu'une bande étroite et du vide, dans l'ordre du sommaire. La
+   collection à gauche, le compte et le Pokédex public à droite ; l'export et l'import côte à côte ;
+   les sources et l'effacement sur toute la largeur. */
 @container page (min-width: 84rem) {
   .sections {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
-      'collection exporter'
-      'collection importer'
+      'collection compte'
+      'collection public'
+      'exporter importer'
       'reference reference'
       'effacer effacer';
     align-items: start;
@@ -27,6 +29,14 @@
 
   .sections > [id='collection'] {
     grid-area: collection;
+  }
+
+  .sections > [id='compte'] {
+    grid-area: compte;
+  }
+
+  .sections > [id='public'] {
+    grid-area: public;
   }
 
   .sections > [id='exporter'] {
@@ -53,7 +63,6 @@
   margin: 0 calc(-1 * var(--gutter));
   padding: 0 var(--gutter);
   overflow-x: auto;
-  list-style: none;
   scrollbar-width: none;
 }
 
@@ -123,21 +132,9 @@
   color: var(--camply-danger);
 }
 
-/* Le registre : une ligne par type de donnée, le compte à droite. */
+/* Le registre (`.amounts`) : une ligne par type de donnée, le compte à droite. */
 .ledger {
-  width: 100%;
   max-width: 30rem;
-}
-
-.ledger dd {
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-/* Le libellé prend la place, le compte se range à droite : pas de libellé coupé sur mobile.
-   Même spécificité que la grille de camply, déclarée après elle. */
-.ledger:global(.camply-descriptionlist__row) :global(.camply-descriptionlist__row) {
-  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 /* La progression du Pokédex, en tête de « Ma collection ». */

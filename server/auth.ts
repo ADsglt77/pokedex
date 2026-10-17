@@ -9,7 +9,8 @@
  * - Une seule session : se connecter sur un appareil déconnecte les autres. La collection n'est
  *   donc modifiée que d'un appareil à la fois.
  * Sessions de 60 jours, renouvelées chaque jour d'usage, dans un cookie (`__Secure-`, SameSite
- * Lax, en https).
+ * Lax, en https) : le cookie renouvelé repart avec la réponse de `/api/account` et des routes du
+ * compte (`sessionOf`).
  *
  * `BETTER_AUTH_URL` : l'adresse publique du site (en développement, celle de Vite :
  * http://localhost:5173), jamais devinée de la requête ; `BETTER_AUTH_SECRET` : la clé qui signe
@@ -19,7 +20,7 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
 import type { Database } from 'bun:sqlite'
-import { Elysia } from 'elysia'
+import { Elysia, type Context } from 'elysia'
 import { journal, type JournalLevel } from './journal'
 
 /** Un jour, en secondes (Better Auth compte ses durées en secondes ; `@/lib/time` en ms). */
@@ -33,11 +34,14 @@ export async function createAuth(db: Database) {
     secret: process.env.BETTER_AUTH_SECRET,
     emailAndPassword: { enabled: true },
     // Ses messages dans le journal de l'app, ses erreurs seulement : une connexion refusée y est
-    // déjà (« Invalid password » en plus serait du bruit).
+    // déjà (« Invalid password » en plus serait du bruit). Leur cause (l'erreur, sa pile) suit,
+    // telle quelle.
     logger: {
       level: 'error',
-      log: (_level, message) =>
-        journal({ topic: 'serveur', level: 'error', message: `Better Auth : ${message}` }),
+      log: (_level, message, ...args) => {
+        journal({ topic: 'serveur', level: 'error', message: `Better Auth : ${message}` })
+        if (args.length > 0) console.error(...args)
+      },
     },
     session: { expiresIn: 60 * DAY_IN_SECONDS, updateAge: DAY_IN_SECONDS },
     databaseHooks: {
@@ -145,6 +149,19 @@ export const appOrigin = (auth: Accounts['auth']) => new URL(auth.options.baseUR
  */
 export function accountRoutes({ auth, account }: Accounts) {
   const origin = appOrigin(auth)
+  /**
+   * La session d'une requête. Renouvelée (une fois par jour d'usage), son nouveau cookie part avec
+   * la réponse : sans lui, le navigateur garderait l'ancien, et il faudrait se reconnecter au bout
+   * de 60 jours.
+   */
+  const sessionOf = async (request: Request, set: Context['set']) => {
+    const { headers, response } = await auth.api.getSession({
+      headers: request.headers,
+      returnHeaders: true,
+    })
+    set.headers['set-cookie'] = headers.getSetCookie()
+    return response
+  }
   return new Elysia({ name: 'account' })
     .all(
       '/auth/*',
@@ -194,7 +211,7 @@ export function accountRoutes({ auth, account }: Accounts) {
       async ({ request, set }) => {
         set.headers['cache-control'] = 'no-store'
         const exists = account() !== null
-        const session = exists ? await auth.api.getSession({ headers: request.headers }) : null
+        const session = exists ? await sessionOf(request, set) : null
         const user = session && {
           id: session.user.id,
           email: session.user.email,
@@ -216,7 +233,7 @@ export function accountRoutes({ auth, account }: Accounts) {
           ) {
             return status(403, null)
           }
-          const session = await auth.api.getSession({ headers: request.headers })
+          const session = await sessionOf(request, set)
           return session ? { user: session.user } : status(401, null)
         },
       },

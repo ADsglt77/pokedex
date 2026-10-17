@@ -1,7 +1,7 @@
 /** Le budget : chaque commande compte une fois, au mois de son achat. */
 
 import { describe, expect, test } from 'bun:test'
-import { costPerSpecies, spendingByMonth, spentIn } from '@/lib/budget'
+import { budgetLevel, costPerSpecies, spendingByMonth, spentIn } from '@/lib/budget'
 import { line, order } from './fixtures'
 
 const orders = [
@@ -43,5 +43,13 @@ describe('budget du mois', () => {
   test('coût moyen par Pokémon : les commandes annulées n’en ajoutent pas', () => {
     const speciesOf = (cardId: string) => ({ a: [1], b: [1], c: [3], d: [4] })[cardId] ?? []
     expect(costPerSpecies(orders, speciesOf)).toEqual({ species: 2, average: 38.5 })
+  })
+
+  test('au-delà du budget, puis du plafond ; le budget tout juste atteint n’alerte pas', () => {
+    const budget = { monthly: 100, ceiling: 150, shippingReserve: 5 }
+    expect(budgetLevel(100, budget)).toBeNull()
+    expect(budgetLevel(100.01, budget)).toBe('monthly')
+    expect(budgetLevel(150, budget)).toBe('monthly')
+    expect(budgetLevel(150.01, budget)).toBe('ceiling')
   })
 })

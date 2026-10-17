@@ -2,8 +2,8 @@ import { Button, EmptyState, Progress } from '@camply/ui'
 import { Inbox } from '@camply/ui/icons'
 import { Link } from 'react-router'
 import { usePokedex } from '@/hooks/usePokedex'
-import { isEmptySummary, summarize } from '@/lib/pokedex'
-import { formatDateTime, formatDecimal, unlockedOf } from '@/lib/format'
+import { summarize } from '@/lib/pokedex'
+import { formatDateTime, formatShare, unlockedOf } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'
 import { DataSection } from './DataSection'
 import { MissingImages } from './MissingImages'
@@ -23,7 +23,7 @@ export function CollectionSection() {
       title="Ma collection"
       description="Synchronisée avec votre compte : la même sur tous vos appareils, et sauvegardée sur le serveur."
     >
-      {isEmptySummary(summary) ? (
+      {summary.cards === 0 ? (
         <EmptyState
           align="start"
           icon={<Inbox size={22} />}
@@ -45,8 +45,7 @@ export function CollectionSection() {
           <div className={styles.progress}>
             <p>
               <strong className="numeric">{unlockedOf(progress, 'Pokémon')}</strong>, soit{' '}
-              {formatDecimal(progress.percent)}
-              {' '}% du Pokédex.
+              {formatShare(progress.percent)} du Pokédex.
             </p>
             <Progress
               size="sm"

@@ -1,9 +1,8 @@
 import { Button, Input, Stack } from '@camply/ui'
 import { useState, type FormEvent } from 'react'
-import { TOO_MANY_ATTEMPTS } from '@/components/AuthCard'
 import { useNotify } from '@/hooks/useNotify'
-import { authClient } from '@/lib/auth-client'
-import { ofName } from '@/lib/format'
+import { authClient, TOO_MANY_ATTEMPTS } from '@/lib/auth-client'
+import { pokedexTitle } from '@/lib/format'
 import { renameAccount, useSyncStore } from '@/store/sync'
 import { DataSection } from './DataSection'
 
@@ -46,7 +45,7 @@ function NameForm({ current }: { current: string }) {
     setBusy(false)
     if (error) return notify('Pseudo inchangé : réessayez plus tard.', { tone: 'danger' })
     renameAccount(next)
-    notify(`Pseudo changé : « Le Pokédex ${ofName(next)} ».`)
+    notify(`Pseudo changé : « ${pokedexTitle(next)} ».`)
   }
 
   return (

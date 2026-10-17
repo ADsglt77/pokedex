@@ -22,16 +22,10 @@
   transform: none;
 }
 
+/* Le lien de la marque (`Logo`, qui a son style) vers l'accueil. */
 .brand {
   display: inline-flex;
   flex: none;
-  align-items: center;
-  gap: 0.625rem;
-  color: var(--camply-text-strong);
-  font-family: var(--camply-font-display);
-  font-size: var(--title-sm);
-  font-weight: 700;
-  white-space: nowrap;
   text-decoration: none;
 }
 
@@ -59,7 +53,6 @@
   }
 }
 
-/* Le logo, une Poké Ball : aux couleurs de la marque (`styles/theme.css`), dans les deux thèmes. */
 /* Barre latérale (grand écran seulement) */
 
 .sidebar {
@@ -91,14 +84,6 @@
 
 .searchField > span {
   flex: 1;
-}
-
-/* Écran tactile seul, sans souris ni pavé : probablement pas de clavier, le raccourci (Ctrl K)
-   est inutile. */
-@media not (any-pointer: fine) {
-  .searchKeys {
-    display: none;
-  }
 }
 
 .sideNav {
@@ -241,7 +226,7 @@
   gap: 0.25rem;
 }
 
-/* Un avertissement de l'app (export, stockage) : aligné sur les pages, sous la barre. */
+/* L'avertissement de l'app (le stockage refusé) : aligné sur les pages, sous la barre. */
 .notice {
   margin-top: var(--camply-space-4);
 }
@@ -318,7 +303,8 @@
   }
 
   /* Les notifications au-dessus de la barre d'onglets, pas dessus : un toucher visant un onglet
-     ne tombe pas sur « Annuler ». */
+     ne tombe pas sur « Annuler ». Classe interne de camply (pas une API) : à revérifier après une
+     mise à jour. */
   :global(.camply-toast__viewport[data-position='bottom-left']) {
     bottom: calc(var(--tabbar-height) + 0.75rem + env(safe-area-inset-bottom));
   }

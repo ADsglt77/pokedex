@@ -6,15 +6,11 @@
   min-width: 0;
 }
 
-/* Une fiche assez large : la carte et ses statuts à gauche, son prix et son achat à droite,
-   plutôt qu'une longue colonne à moitié vide. La largeur est celle du corps de la fiche (`.body`). */
+/* Une fiche assez large : la carte et ses statuts à gauche, son prix à droite, plutôt qu'une
+   longue colonne à moitié vide. La largeur est celle du corps de la fiche (`.body`). */
 @container (min-width: 38rem) {
   .sheet {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
-  }
-
-  .sheet > :first-child {
-    grid-row: span 2;
   }
 }

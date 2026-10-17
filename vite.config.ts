@@ -9,9 +9,11 @@ const API = 'http://localhost:3000'
 
 /**
  * Le service worker (`public/sw.js`) reçoit la liste des fichiers du site construit, qu'il garde
- * pour démarrer hors ligne : la page, les scripts, styles et polices, et ce que la page demande de
- * `public/` au démarrage. Elle change à chaque construction : le navigateur installe alors la
- * nouvelle version du service worker.
+ * pour démarrer hors ligne : la page, les scripts, styles et polices (`.woff2` seulement : les
+ * `.woff` ne servent qu'aux navigateurs sans `.woff2`), et ce que la page demande de `public/` au
+ * démarrage. `/index.html` est écrit à la main : ce plugin passe avant celui de Vite qui l'ajoute
+ * au site. La liste change à chaque construction : le navigateur installe alors la nouvelle
+ * version du service worker.
  */
 function precache(): Plugin {
   let files: string[] = []
@@ -24,13 +26,14 @@ function precache(): Plugin {
     },
     generateBundle: (_options, bundle) => {
       files = Object.keys(bundle)
-        .filter((file) => !file.endsWith('.map'))
+        .filter((file) => !/\.(map|woff)$/.test(file))
         .map((file) => `/${file}`)
     },
     closeBundle: () => {
       const path = join(outDir, 'sw.js')
       const list = [
         ...files,
+        '/index.html',
         '/theme.js',
         '/favicon.svg',
         '/manifest.webmanifest',

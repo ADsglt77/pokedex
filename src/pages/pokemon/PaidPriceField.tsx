@@ -1,4 +1,4 @@
-import { EuroInput } from '@/components/CommitInput'
+import { EuroInput } from '@/components/EuroInput'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { formatEuro } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'

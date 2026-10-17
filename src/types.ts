@@ -232,6 +232,16 @@ export interface PriceFile {
   cards: Record<string, CardPriceRow>
 }
 
+/** Le Pokédex public (`/api/vitrine`, `server/vitrine.ts`). */
+export interface VitrineData {
+  /** Le pseudo du compte ; `null` sans pseudo. */
+  owner: string | null
+  /** La collection, réduite à ce qui se montre (`shownCollection`). */
+  collection: CollectionData
+  /** Les prix du jour de ses seules cartes possédées ; `null` sans guide des prix. */
+  prices: PriceFile | null
+}
+
 /**
  * `/api/wants?ids=…` : pour chaque id Cardmarket demandé (`idProduct`), sa ligne pour « Ajouter
  * une deck list » d'une liste de souhaits Cardmarket (`wantsLine`), ou `null` quand elle ne

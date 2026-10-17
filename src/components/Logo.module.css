@@ -1,3 +1,16 @@
+/* La marque : le logo et le nom, en titre, sur une ligne. */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--camply-text-strong);
+  font-family: var(--camply-font-display);
+  font-size: var(--title-sm);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Le logo, une Poké Ball : aux couleurs de la marque (`styles/theme.css`), dans les deux thèmes. */
 .logo {
   flex: none;
   width: 1.75rem;

@@ -5,9 +5,9 @@
  * pour une liste de souhaits, `/api/wants`). Le prix du jour remplace celui de la veille
  * (`cardmarket_prices`) et s'ajoute à l'historique de la carte (`cardmarket_history`) ; relancée le
  * même jour, la tâche remplace le prix du jour. Le guide et la liste ne sont retéléchargés que si
- * le guide a changé depuis le dernier passage (`sources`) ; la liste l'est aussi, une fois, tant
- * qu'aucun produit n'a son extension (une base d'avant ces colonnes). En fin de tâche, la réponse
- * de `/api/prices` est recalculée (`snapshots`).
+ * le guide a changé depuis le dernier passage (`sources`). En fin de tâche, la réponse de
+ * `/api/prices` est recalculée (`snapshots`) ; le Pokédex public lit les prix de ses seules cartes
+ * (`readPrices`).
  */
 
 import type { Database } from 'bun:sqlite'
@@ -38,9 +38,6 @@ interface ProductList {
   products: { idProduct: number; name: string; idExpansion: number; idMetacard: number }[]
 }
 
-const downloadProducts = () =>
-  download(PRODUCTS_URL).then((response) => response.json() as Promise<ProductList>)
-
 /**
  * Enregistre la liste des produits : le nom, l'extension et la métacarte de chacun. Un produit
  * qu'elle ne donne plus garde son nom (son historique le montre) mais perd son extension : il ne
@@ -68,26 +65,33 @@ function saveProducts(db: Database, { products }: ProductList) {
 const amount = (value: number | null) => (value ? Math.round(value * 100) / 100 : null)
 
 /**
- * Enregistre la réponse de `/api/prices` (les prix Cardmarket du jour), d'après la base. Rien tant
- * que le guide n'a jamais été lu : l'API répond 404, comme pour le catalogue.
+ * Les prix Cardmarket du jour d'après la base, dans la forme de `/api/prices` : de toutes les
+ * cartes, ou des seules cartes `ids` (le Pokédex public, `vitrine.ts`). `null` tant que le guide
+ * n'a jamais été lu.
  */
-export function savePrices(db: Database) {
+export function readPrices(db: Database, ids?: readonly number[]): PriceFile | null {
   const cardmarket = readSource(db, 'cardmarket')
-  if (!cardmarket) {
-    db.query("DELETE FROM snapshots WHERE name = 'prices'").run()
-    return
-  }
-  const rows = db.query('SELECT id, price, low, avg30 FROM cardmarket_prices').all() as {
-    id: number
-    price: number
-    low: number | null
-    avg30: number | null
-  }[]
-  const response: PriceFile = {
+  if (!cardmarket) return null
+  const select = 'SELECT id, price, low, avg30 FROM cardmarket_prices'
+  const rows = (
+    ids
+      ? db.query(`${select} WHERE id IN (SELECT value FROM json_each(?))`).all(JSON.stringify(ids))
+      : db.query(select).all()
+  ) as { id: number; price: number; low: number | null; avg30: number | null }[]
+  return {
     date: cardmarket.date,
     cards: Object.fromEntries(rows.map(({ id, price, low, avg30 }) => [id, [price, low, avg30]])),
   }
-  saveSnapshot(db, 'prices', response)
+}
+
+/**
+ * Enregistre la réponse de `/api/prices`, d'après la base. Rien tant que le guide n'a jamais été
+ * lu : l'API répond 404, comme pour le catalogue.
+ */
+export function savePrices(db: Database) {
+  const prices = readPrices(db)
+  if (prices) saveSnapshot(db, 'prices', prices)
+  else db.query("DELETE FROM snapshots WHERE name = 'prices'").run()
 }
 
 export async function prices(db: Database) {
@@ -95,20 +99,13 @@ export async function prices(db: Database) {
   const stamp = head.headers.get('last-modified') ?? ''
   if (stamp && stamp === readSource(db, 'cardmarket')?.stamp) {
     console.log('Cardmarket : guide des prix inchangé depuis le dernier passage.')
-    // Les extensions des produits, que la base ne gardait pas avant octobre 2026 : la liste est
-    // relue une fois sans attendre un nouveau guide (aucun prix n'est touché).
-    if (!db.query('SELECT 1 FROM cardmarket_products WHERE expansion IS NOT NULL').get()) {
-      const products = await downloadProducts()
-      db.transaction(() => saveProducts(db, products))()
-      console.log(`Cardmarket : liste des produits relue, ${products.products.length} produits.`)
-    }
     // La réponse refaite quand même, d'après la base : sa forme a pu changer avec le code.
     return savePrices(db)
   }
 
   const [guide, products] = await Promise.all([
     download(PRICE_GUIDE_URL).then((response) => response.json() as Promise<PriceGuide>),
-    downloadProducts(),
+    download(PRODUCTS_URL).then((response) => response.json() as Promise<ProductList>),
   ])
   const date = guide.createdAt.slice(0, 10)
   const [year, day] = yearDay(date)

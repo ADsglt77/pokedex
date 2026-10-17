@@ -13,13 +13,20 @@ interface ProgressRulerProps {
   selected?: GenerationId | null
   /** Chaque segment filtre le Pokédex sur sa génération ; sans `onSelect`, il y mène. */
   onSelect?: (generation: GenerationId | null) => void
+  /** Faux (le Pokédex public, que voit un visiteur) : sans `onSelect`, ce n'est qu'une image. */
+  linked?: boolean
 }
 
 /**
  * La réglette : une barre par génération, large comme sa part du Pokédex, remplie de ce qui
  * est débloqué. Les libellés disparaissent quand la place manque.
  */
-export function ProgressRuler({ generations, selected = null, onSelect }: ProgressRulerProps) {
+export function ProgressRuler({
+  generations,
+  selected = null,
+  onSelect,
+  linked = true,
+}: ProgressRulerProps) {
   return (
     <div className={styles.ruler}>
       {generations.map((row) => {
@@ -57,10 +64,14 @@ export function ProgressRuler({ generations, selected = null, onSelect }: Progre
               >
                 {content}
               </button>
-            ) : (
+            ) : linked ? (
               <Link {...props} to={pokedexUrl({ generation: generation.id })}>
                 {content}
               </Link>
+            ) : (
+              <span {...props} role="img" aria-label={tip}>
+                {content}
+              </span>
             )}
           </Tooltip>
         )

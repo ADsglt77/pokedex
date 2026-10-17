@@ -78,7 +78,7 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   sans certitude. La collection garde les adresses d'origine (son format ne change pas), mais le
   navigateur ne charge que la copie du serveur (condition de Pokécardex) : `localSrc` en donne le
   chemin (`/images/cards/pokecardex/SV2A/6-md.webp`), pour le `src` de `CardArt` et pour
-  `findCardImage`. La tâche `images` (chaque jour, après les prix ; deux téléchargements à la
+  `findCardImage`. La tâche `images` (chaque jour, la dernière, après les prix et les sauvegardes ; deux téléchargements à la
   fois, seulement ce qui manque ; le premier passage, environ 1,5 Go, prend une heure ou plus) copie
   les sprites et illustrations des 1 025 Pokémon et, pour chaque carte du catalogue, son scan en
   deux tailles, et note s'il existe (`cards.image`) : le catalogue le dit d'avance. Une carte sans
@@ -88,8 +88,8 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   Une image absente du volume (référence saisie hors du
   catalogue, image pas encore copiée) est copiée à la demande par le serveur (`serveImage` :
   seulement les chemins connus, `upstreamUrl` : chez Pokécardex, une série du catalogue et un
-  numéro d'image jusqu'au plus grand des siens ; un Pokémon de 1 à 1 025 ; jamais plus chez TCGplayer ; une absence retenue une semaine ; nginx limite à
-  10 copies par seconde). Les images de TCGplayer qu'une ancienne version a enregistrées
+  numéro d'image jusqu'au plus grand des siens ; un Pokémon de 1 à 1 025 ; jamais plus chez TCGplayer ; une absence retenue une semaine ; une source en panne :
+  502, et « Image non copiée » au journal ; nginx limite à 10 copies par seconde). Les images de TCGplayer qu'une ancienne version a enregistrées
   s'affichent encore si le volume en a la copie (jamais plus copiées, citées « TCGplayer ») ;
   Données › « Chercher les images » les remplace par celles de Pokécardex, comme il cherche celles
   des cartes sans image. `findCardImage` (`lib/card-catalog.ts`) : l'image du catalogue pour

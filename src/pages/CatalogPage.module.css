@@ -38,12 +38,3 @@
   color: var(--camply-text-muted);
   font-size: var(--text-md);
 }
-
-/* Petit téléphone : « Ajouter comme » passe sous son libellé, et ses trois choix se serrent pour
-   tenir dans le panneau (320 px). Classe interne de camply (pas une API) : à revérifier après une
-   mise à jour. */
-@media (max-width: 23.99rem) {
-  .addAs :global(.camply-segmentedcontrol__segment) {
-    padding-inline: 0.5rem;
-  }
-}

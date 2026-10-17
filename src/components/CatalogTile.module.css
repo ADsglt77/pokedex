@@ -54,6 +54,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* L'ébauche du prix, tant que les prix arrivent (`PricedValue`) : pas plus large que la tuile. */
+.price > * {
+  max-width: 100%;
+}
+
 /* Ce que fait le clic (« Choisir pour Bulbizarre »), qui s'éclaire au survol. */
 .extra {
   margin-top: 0.25rem;

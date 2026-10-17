@@ -5,7 +5,7 @@
  */
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
-import { formatEuro } from '@/lib/format'
+import { details, formatEuro, formatInteger, plural } from '@/lib/format'
 import { cardsWithStatus, isTaken, type PokedexEntry } from '@/lib/pokedex'
 import { addDays, daysBetween } from '@/lib/time'
 import type {
@@ -96,6 +96,17 @@ export function tallyByStatus(cards: readonly TrackedCard[]): Record<CardStatus,
   }
   return tallies
 }
+
+/**
+ * « 3 cartes · payées 120,00 € · 1 sans prix ». `priced` : les prix sont là ; sans eux (pas encore
+ * arrivés, ou indisponibles), chaque carte compterait « sans prix ».
+ */
+export const tallyHint = (tally: Tally, priced: boolean) =>
+  details(
+    plural(tally.count, 'carte', 'cartes'),
+    tally.paid > 0 && `payées ${formatEuro(tally.paid)}`,
+    priced && tally.unpriced > 0 && `${formatInteger(tally.unpriced)} sans prix`,
+  )
 
 /** Une carte dont le prix a bougé : son prix du jour, sa moyenne sur 30 jours, l'écart. */
 interface PriceMove {

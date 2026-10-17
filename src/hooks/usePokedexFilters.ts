@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router'
-import { parseFilters, serializeFilters, type PokedexFilters } from '@/lib/filters'
+import { parseFilters, pokedexUrl, serializeFilters, type PokedexFilters } from '@/lib/filters'
 
-let lastSearch = ''
+let lastHref = '/pokedex'
 
 /** L'adresse du Pokédex tel qu'on l'a quitté : le lien retour d'une fiche garde les filtres. */
-export const pokedexHref = () => (lastSearch ? `/pokedex?${lastSearch}` : '/pokedex')
+export const pokedexHref = () => lastHref
 
 /** Les filtres vivent dans l'adresse : une vue filtrée se partage et survit au retour arrière. */
 export function usePokedexFilters() {
@@ -13,7 +13,7 @@ export function usePokedexFilters() {
   const filters = useMemo(() => parseFilters(params), [params])
 
   useEffect(() => {
-    lastSearch = serializeFilters(filters).toString()
+    lastHref = pokedexUrl(filters)
   }, [filters])
 
   const setFilters = useCallback(

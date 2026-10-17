@@ -6,17 +6,15 @@
 
 import { create } from 'zustand'
 import { updateBudget } from '@/lib/budget'
-import { applyOrder, previousOf, sortOrders } from '@/lib/orders'
+import { applyOrder, emptyShopping, previousOf, sortOrders } from '@/lib/orders'
 import { parseStored, readShopping } from '@/lib/transfer'
-import * as rules from '@/lib/wishlist'
 import { useCollectionStore } from '@/store/collection'
 import type { BudgetSettings, Order, ShoppingData } from '@/types'
 import { persist, readStored } from './persist'
 
 const SHOPPING_KEY = 'pokedex-collection.shopping'
 
-const loadShopping = (text: string | null) =>
-  readShopping(parseStored(text)) ?? rules.emptyShopping()
+const loadShopping = (text: string | null) => readShopping(parseStored(text)) ?? emptyShopping()
 
 interface ShoppingStore {
   shopping: ShoppingData

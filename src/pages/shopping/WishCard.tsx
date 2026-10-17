@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { speciesPath } from '@/lib/filters'
 import { CardArt } from '@/components/CardArt'
 import { CardmarketLink } from '@/components/CardmarketLink'
+import { PricedValue } from '@/components/PricedValue'
 import { formatDexNumber, formatPercent } from '@/lib/format'
 import { cardTitle } from '@/lib/species'
 import { priceLabel } from '@/lib/prices'
@@ -24,7 +25,9 @@ export function WishCard({ row }: { row: WishRow }) {
       <div className={styles.wishBody}>
         <header className={styles.wishHead}>
           <h2 className={styles.wishTitle}>
-            <Link to={speciesPath(speciesId)}>{cardTitle(card)}</Link>
+            <Link to={speciesPath(speciesId)} className="quiet-link">
+              {cardTitle(card)}
+            </Link>
           </h2>
           <span className="muted numeric">{formatDexNumber(speciesId)}</span>
         </header>
@@ -33,7 +36,9 @@ export function WishCard({ row }: { row: WishRow }) {
         <dl className={styles.wishPrices}>
           <div>
             <dt>Marché</dt>
-            <dd>{priceLabel(price)}</dd>
+            <dd>
+              <PricedValue text>{priceLabel(price)}</PricedValue>
+            </dd>
           </div>
           <div>
             <dt>Sur 30 jours</dt>

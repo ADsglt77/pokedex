@@ -13,6 +13,7 @@ import { dirname, join } from 'node:path'
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { WEEK } from '@/lib/time'
 import { DATA_DIR } from './db'
+import { journal } from './journal'
 import { politeFetch } from './lib/net'
 import { notFound } from './snapshots'
 
@@ -125,7 +126,12 @@ export async function serveImage(data: Database, request: Request) {
     misses.set(path, Date.now())
     return notFound()
   } catch (error) {
-    console.warn(`Image ${path} :`, error instanceof Error ? error.message : error)
+    journal({
+      topic: 'serveur',
+      level: 'warn',
+      message: 'Image non copiée',
+      details: { image: path, raison: error instanceof Error ? error.message : String(error) },
+    })
     return new Response(null, { status: 502 })
   }
 }

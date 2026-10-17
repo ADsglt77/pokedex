@@ -2,15 +2,8 @@
 
 import { describe, expect, test } from 'bun:test'
 import { removeCard } from '@/lib/collection'
-import type { CollectionData, PokemonCard } from '@/types'
-import { collectionWith, NOW, ownership } from './fixtures'
-
-const card = (id: string, dexIds: number[]): PokemonCard => ({
-  id,
-  dexIds,
-  reference: 'Pikachu & Zekrom GX (SM9 031)',
-  image: null,
-})
+import type { CollectionData } from '@/types'
+import { card, collectionWith, NOW, ownership } from './fixtures'
 
 const withCard = (dexIds: number[]): CollectionData => ({
   ...collectionWith({ a: ownership('owned', { paidPrice: 42.5 }) }),

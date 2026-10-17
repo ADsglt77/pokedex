@@ -4,27 +4,16 @@
  * en avait, carte par carte ; retirés en octobre 2026, à la demande de l'utilisateur).
  */
 
-import { DEFAULT_BUDGET } from '@/config/shopping'
 import { speciesOf } from '@/lib/species'
 import { searchForm, searchMatcher } from '@/lib/filters'
-import { isTaken, type PokedexEntry } from '@/lib/pokedex'
+import type { PokedexEntry } from '@/lib/pokedex'
 import { isToBuy } from '@/lib/collection'
 import { priceChange, priceOf } from '@/lib/prices'
-import type { CardStatus, GenerationId, PokemonCard, PriceFile, ShoppingData } from '@/types'
+import type { GenerationId, PokemonCard, PriceFile } from '@/types'
 
-export const emptyShopping = (): ShoppingData => ({
-  schemaVersion: 1,
-  updatedAt: null,
-  preferences: {},
-  orders: [],
-  budget: { ...DEFAULT_BUDGET },
-})
-
-/** Une carte de la liste d'achats, prête à afficher et à planifier. */
+/** Une carte de la liste d'achats, ni possédée ni commandée, prête à afficher et à planifier. */
 export interface WishRow {
   card: PokemonCard
-  /** Ni possédée ni commandée : `null` (le plan le vérifie quand même, `stillWanted`). */
-  status: CardStatus | null
   /** Prix indicatif (Cardmarket) ; `null` sans prix. */
   price: number | null
   /** Écart du prix avec sa moyenne sur 30 jours (−0,18 : 18 % en dessous) ; `null` sans les deux. */
@@ -42,17 +31,12 @@ export function wishlistRows(entries: readonly PokedexEntry[], prices: PriceFile
     const price = priceOf(prices, view.card)
     rows.set(view.card.id, {
       card: view.card,
-      status: view.status,
       price: price?.price ?? null,
       change30: price && priceChange(price),
     })
   }
   return [...rows.values()]
 }
-
-/** Les Pokémon déjà débloqués ou en route : une carte possédée ou commandée. */
-export const takenSpecies = (entries: readonly PokedexEntry[]): Set<number> =>
-  new Set(entries.filter(isTaken).map((entry) => entry.species.id))
 
 /** Ce que coûteraient les cartes de la liste ; `unpriced` : celles qui n'ont pas de prix. */
 export function wishlistEstimate(rows: readonly WishRow[]) {

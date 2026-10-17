@@ -20,7 +20,7 @@ const TCGPLAYER = 'https://www.tcgplayer.com/'
 export const isTcgplayerImage = (image: CardImage) => image.small.startsWith(TCGPLAYER_PRODUCTS)
 
 /** Une image de Pokécardex, et non une adresse collée. */
-export const isPokecardexImage = (image: CardImage) => image.small.startsWith(SCANS)
+const isPokecardexImage = (image: CardImage) => image.small.startsWith(SCANS)
 
 /** Les adresses d'origine dont le serveur a la copie, et le chemin de cette copie. */
 const MIRRORED: [RegExp, string][] = [

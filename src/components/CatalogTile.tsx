@@ -1,17 +1,18 @@
 import type { ReactNode, Ref } from 'react'
 import { CardArt } from '@/components/CardArt'
 import { ExternalLink } from '@/components/ExternalLink'
+import { PricedValue } from '@/components/PricedValue'
 import type { CatalogCard } from '@/lib/card-catalog'
 import { POKECARDEX } from '@/lib/card-images'
-import { formatEuro } from '@/lib/format'
+import { priceLabel } from '@/lib/prices'
 import type { CardPrice } from '@/types'
 import styles from './CatalogTile.module.css'
 
 /**
  * Une carte du catalogue à choisir : son image (Pokécardex), sa série, son numéro et son année, son
- * prix Cardmarket du jour, et ce qu'on veut dire de plus (`children` : le Pokémon, « déjà une
- * carte »…). Un bouton : `pressed` pour la carte choisie, `disabled` quand on ne peut pas
- * la prendre.
+ * prix Cardmarket du jour (une ébauche tant que les prix arrivent), et ce qu'on veut dire de plus
+ * (`children` : le Pokémon, « déjà une carte »…). Un bouton : `pressed` pour la carte choisie,
+ * `disabled` quand on ne peut pas la prendre.
  */
 export function CatalogTile({
   card,
@@ -44,7 +45,9 @@ export function CatalogTile({
         {card.key}
         {card.set.year && <span className={styles.year}> · {card.set.year}</span>}
       </span>
-      <span className={styles.price}>{price === null ? 'Sans prix' : formatEuro(price.price)}</span>
+      <span className={styles.price}>
+        <PricedValue text>{priceLabel(price?.price ?? null)}</PricedValue>
+      </span>
       {children && <span className={styles.extra}>{children}</span>}
     </button>
   )

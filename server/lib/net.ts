@@ -1,17 +1,20 @@
 /**
- * Réseau des tâches d'ingestion : un `fetch` JSON avec un cache disque (`DATA_DIR/cache` : pour
- * relancer une tâche sans solliciter les API à nouveau) et une file à concurrence limitée. Chaque
- * requête s'identifie, attend 100 ms avant de partir et échoue au bout de 2 min sans réponse
- * complète. Un 404 arrête la tâche. Une réponse en cache sert tant qu'elle a moins de `maxAge` ms ;
+ * Réseau des tâches d'ingestion : un `fetch` JSON avec un cache disque (`DATA_DIR/cache/pokeapi` :
+ * pour relancer une tâche sans solliciter PokéAPI à nouveau) et une file à concurrence limitée.
+ * Chaque requête s'identifie, attend 100 ms avant de partir et échoue au bout de 2 min sans réponse
+ * complète. Un 404 arrête la tâche. Une réponse en cache sert tant qu'elle a moins d'un mois ;
  * `--refresh` redemande tout.
  */
 
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { DAY } from '@/lib/time'
 import { DATA_DIR } from '../db'
 
-const CACHE_ROOT = join(DATA_DIR, 'cache')
+/** Les documents JSON lus (ceux de PokéAPI, la seule API lue ainsi), gardés un mois. */
+const CACHE_DIR = join(DATA_DIR, 'cache', 'pokeapi')
+const MAX_AGE = 30 * DAY
 
 /** `--refresh` : ignore le cache et redemande tout. */
 export const refresh = process.argv.includes('--refresh')
@@ -44,18 +47,15 @@ export async function download(url: string, init?: RequestInit) {
   return response
 }
 
-/**
- * Document JSON, lu dans le cache s'il y a été mis il y a moins de `maxAge` ms. `namespace` : un
- * dossier par API.
- */
-export async function fetchJson<T>(url: string, namespace: string, maxAge: number): Promise<T> {
+/** Document JSON, lu dans le cache s'il y a été mis il y a moins d'un mois. */
+export async function fetchJson<T>(url: string): Promise<T> {
   // La clé des fichiers déjà en cache : celle d'une requête GET sans corps.
   const key = createHash('sha1').update(`GET ${url}\n`).digest('hex')
-  const file = join(CACHE_ROOT, namespace, `${key}.json`)
+  const file = join(CACHE_DIR, `${key}.json`)
 
   if (!refresh) {
     try {
-      if (Date.now() - (await stat(file)).mtimeMs < maxAge) {
+      if (Date.now() - (await stat(file)).mtimeMs < MAX_AGE) {
         return JSON.parse(await readFile(file, 'utf8')) as T
       }
     } catch {

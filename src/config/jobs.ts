@@ -5,7 +5,7 @@
 
 import { DAY, HOUR } from '@/lib/time'
 
-export type IngestJob = 'species' | 'catalog' | 'prices' | 'images' | 'backups'
+export type IngestJob = 'species' | 'catalog' | 'prices' | 'backups' | 'images'
 
 export const INGEST_JOBS: Record<
   IngestJob,
@@ -23,11 +23,12 @@ export const INGEST_JOBS: Record<
   catalog: { label: 'Catalogue (Pokécardex)', every: DAY },
   // Les prix changent une fois par jour ; la tâche ne retélécharge que ce qui a changé.
   prices: { label: 'Prix (Cardmarket)', every: 6 * HOUR },
-  // Après le catalogue et les prix : son premier passage (environ 1,5 Go) est long. En attendant, le
+  // Les deux bases, copiées chaque jour (`BACKUP_DIR`) ; avant les images, pour ne pas attendre
+  // leur premier passage.
+  backups: { label: 'Sauvegardes', every: DAY },
+  // La dernière : son premier passage (environ 1,5 Go) prend une heure ou plus. En attendant, le
   // serveur copie à la demande les images affichées.
   images: { label: 'Images copiées', every: DAY, optional: true },
-  // Les deux bases, copiées chaque jour (`BACKUP_DIR`).
-  backups: { label: 'Sauvegardes', every: DAY },
 }
 
 /** Leurs noms, dans l'ordre où elles passent. */

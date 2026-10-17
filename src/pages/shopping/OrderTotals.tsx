@@ -1,4 +1,5 @@
 import { DescriptionList } from '@camply/ui'
+import { cx } from '@/lib/cx'
 import { formatEuro } from '@/lib/format'
 import { linesTotal, orderSpent } from '@/lib/orders'
 import type { Order } from '@/types'
@@ -8,7 +9,7 @@ import styles from './ShoppingPage.module.css'
 export function OrderTotals({ order }: { order: Order }) {
   return (
     <DescriptionList
-      className={styles.totals}
+      className={cx('amounts', styles.totals)}
       divided
       items={[
         { term: 'Cartes', description: formatEuro(linesTotal(order.lines)) },

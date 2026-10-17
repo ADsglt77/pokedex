@@ -1,9 +1,11 @@
 /**
  * Le serveur de l'app (Elysia) : l'API que lit le site (`/api/…`) et les images copiées chez nous
- * (`/images/…`). Chaque domaine est un plugin : les données de référence (`reference.ts`), le
- * compte (`auth.ts`), la collection synchronisée (`collection.ts`), le Pokédex public
- * (`vitrine.ts`). Les paramètres et les corps des requêtes sont validés par leurs schémas (422
- * sinon) ; en développement, la documentation de l'API est à `/api/docs`.
+ * (`/images/…`, `images.ts`). Chaque domaine est un plugin : les données de référence
+ * (`reference.ts`), le compte (`auth.ts`), la collection synchronisée (`collection.ts`), ce que le
+ * navigateur signale au journal (`journal.ts`), le Pokédex public (`vitrine.ts`). Les paramètres et
+ * les corps des requêtes sont validés par leurs schémas (422 sinon ; 413 au-delà de 5 Mo). Une
+ * adresse inconnue : 404 sans corps ; une erreur imprévue : dans le journal, et 500 sans corps. En
+ * développement, la documentation de l'API est à `/api/docs`.
  */
 
 import { openapi } from '@elysiajs/openapi'
@@ -63,7 +65,7 @@ export function createApp({ data, app, accounts }: AppContext) {
           .use(referenceRoutes(data))
           .use(collectionRoutes(app, account))
           .use(journalRoutes(account))
-          .use(vitrineRoutes(app, appOrigin(accounts.auth))),
+          .use(vitrineRoutes(app, data, appOrigin(accounts.auth))),
       )
       // Les images copiées chez nous (sur le VPS, nginx ne renvoie ici que celles qu'il n'a pas).
       .get('/images/*', ({ request }) => serveImage(data, request), { detail: { hide: true } })

@@ -34,8 +34,8 @@ const RUNS: Record<IngestJob, (db: Database) => Promise<void>> = {
   species,
   catalog,
   prices,
-  images,
   backups,
+  images,
 }
 
 async function runJob(db: Database, name: IngestJob) {

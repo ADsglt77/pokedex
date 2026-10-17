@@ -1,3 +1,9 @@
+/**
+ * Le stockage du navigateur (`localStorage`) : lire et écrire une clé, en signalant un refus
+ * (`useStorageFailure`, le bandeau de la coquille) ; un store enregistré à chaque changement et
+ * suivi entre les onglets (`persist`) ; demander à garder ces données.
+ */
+
 import { create, type StoreApi } from 'zustand'
 
 /**
@@ -17,6 +23,16 @@ export function readStored(key: string): string | null {
   }
 }
 
+/** Enregistre `text` sous `key` (`null` : l'efface) ; un refus du navigateur lève le bandeau. */
+export function writeStored(key: string, text: string | null) {
+  try {
+    if (text === null) localStorage.removeItem(key)
+    else localStorage.setItem(key, text)
+  } catch {
+    useStorageFailure.setState({ failed: true })
+  }
+}
+
 /**
  * Enregistre une partie d'un store dans le navigateur (`localStorage`, sous `key`) à chaque
  * changement, et reprend ce qu'un autre onglet y enregistre : sans quoi on écraserait sa version au
@@ -30,12 +46,7 @@ export function persist<S>(
   restore: (text: string | null) => Partial<S>,
 ) {
   store.subscribe((state, previous) => {
-    if (pick(state) === pick(previous)) return
-    try {
-      localStorage.setItem(key, JSON.stringify(pick(state)))
-    } catch {
-      useStorageFailure.setState({ failed: true })
-    }
+    if (pick(state) !== pick(previous)) writeStored(key, JSON.stringify(pick(state)))
   })
   window.addEventListener('storage', (event) => {
     if (event.key === key) store.setState(restore(event.newValue))

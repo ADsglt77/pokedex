@@ -1,13 +1,30 @@
 /**
- * Le registre des commandes : ce qu'une commande a coûté, et son report sur la collection.
+ * Le registre des commandes (vide au départ : `emptyShopping`) : ce qu'une commande a coûté, et son
+ * report sur la collection.
  * Une commande en cours passe ses cartes en « commandée », une commande reçue en « possédée » ;
  * annulée ou supprimée, chaque carte retrouve son état d'avant. Une possession n'est jamais retirée.
  */
 
-import { SUPPLIER_LABELS } from '@/config/shopping'
+import { DEFAULT_BUDGET, SUPPLIER_LABELS } from '@/config/shopping'
 import { formatDate } from '@/lib/format'
 import { daysBetween } from '@/lib/time'
-import type { CardOwnership, CollectionData, Order, OrderLine, OrderState } from '@/types'
+import type {
+  CardOwnership,
+  CollectionData,
+  Order,
+  OrderLine,
+  OrderState,
+  ShoppingData,
+} from '@/types'
+
+/** Les achats d'un nouveau venu : aucune commande, le budget par défaut. */
+export const emptyShopping = (): ShoppingData => ({
+  schemaVersion: 1,
+  updatedAt: null,
+  preferences: {},
+  orders: [],
+  budget: { ...DEFAULT_BUDGET },
+})
 
 /** « Cardmarket », ou le nom donné à un autre fournisseur. */
 export const supplierLabel = (order: Pick<Order, 'supplier' | 'supplierName'>) =>
@@ -225,6 +242,10 @@ export function duplicateReason(line: OrderLine, others: readonly Order[]): stri
     ? `Déjà reçue avec la commande du ${formatDate(received.date)} : à la réception de cette commande-ci, son prix payé sera remplacé`
     : null
 }
+
+/** Le nombre de commandes en cours. */
+export const pendingCount = (orders: readonly Order[]) =>
+  orders.filter((order) => order.state === 'pending').length
 
 /** Au-delà de ce délai depuis l'achat, en jours, une commande en cours est en retard. */
 export const LATE_AFTER_DAYS = 28

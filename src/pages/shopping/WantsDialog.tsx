@@ -4,6 +4,7 @@ import { Suspense, use, useId, useRef, useState, useTransition } from 'react'
 import { CardmarketLink } from '@/components/CardmarketLink'
 import { useNotify } from '@/hooks/useNotify'
 import { loadWantsLines } from '@/lib/api'
+import { copyText } from '@/lib/clipboard'
 import { plural } from '@/lib/format'
 import type { PokemonCard, WantsLines } from '@/types'
 import { CardLine } from './CardLine'
@@ -115,13 +116,10 @@ function WantsContent({
     )
   }
   const copy = () =>
-    // Hors https (le site ouvert par l'adresse de la machine sur le réseau local…), pas de
-    // presse-papiers.
-    navigator.clipboard
-      ? navigator.clipboard
-          .writeText(text)
-          .then(() => notify(`${plural(ready.length, 'carte copiée', 'cartes copiées')}.`), failed)
-      : failed()
+    copyText(text).then(
+      () => notify(`${plural(ready.length, 'carte copiée', 'cartes copiées')}.`),
+      failed,
+    )
 
   return (
     <Stack gap={5}>

@@ -7,19 +7,11 @@
   gap: 0.75rem 1rem;
 }
 
-/* Le fil d'Ariane : des liens discrets, la page en cours en clair. */
+/* Le fil d'Ariane : des liens discrets (`.quiet-link`, de la couleur que camply donne aux étapes),
+   la page en cours en clair. */
 .crumbs {
   margin-right: 0.5rem;
   font-size: var(--text-md);
-}
-
-.crumb {
-  color: var(--camply-text-muted);
-  text-decoration: none;
-}
-
-.crumb:hover {
-  color: var(--camply-accent);
 }
 
 .links {
@@ -51,8 +43,9 @@
   text-decoration: none;
 }
 
+/* Comme un lien discret (`.quiet-link`), mais seul le nom se souligne au survol, pas le numéro. */
 .neighbour:hover .neighbourName {
-  color: var(--camply-accent);
+  text-decoration-color: var(--link-underline-hover);
 }
 
 .number {
@@ -64,7 +57,8 @@
 .neighbourName {
   font-family: var(--camply-font-display);
   font-weight: 600;
-  transition: color var(--duration-fast);
+  text-decoration: underline 1px transparent;
+  transition: text-decoration-color var(--duration-fast);
 }
 
 .edge {

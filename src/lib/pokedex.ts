@@ -122,9 +122,6 @@ export function summarize(data: CollectionData): CollectionSummary {
   return summary
 }
 
-export const isEmptySummary = (summary: CollectionSummary) =>
-  Object.values(summary).every((count) => count === 0)
-
 export interface RecentCard {
   card: PokemonCard
   acquiredAt: string | null

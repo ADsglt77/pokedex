@@ -3,9 +3,13 @@
  * - L'app elle-même (index.html, scripts, styles, polices, icônes) : gardée à l'installation, d'après
  *   la liste que la construction écrit ici (`PRECACHE`, `vite.config.ts`) ; elle change à
  *   chaque construction, donc ce fichier aussi : le navigateur installe la nouvelle version et
- *   oublie l'ancienne. Les pages : le réseau d'abord, l'app gardée sans lui.
+ *   oublie l'ancienne. Les pages : le réseau d'abord, l'app gardée (`/index.html`) sans lui. Les
+ *   fichiers de `public/` (thème, manifeste, icônes), dont le nom ne change pas : le réseau
+ *   d'abord, eux aussi.
  * - Les données de référence (espèces, catalogue, prix) : le réseau d'abord, la dernière réponse
  *   sans lui.
+ * - « Le réseau d'abord » : sans réponse en 4 s (un réseau faible), la version gardée s'il y en a
+ *   une ; sinon le réseau, aussi lent soit-il.
  * - Les images : gardées dès leur premier affichage (elles ne changent pas), 3 000 au plus.
  * Jamais le compte ni la collection (`/api/account`, `/api/collection`, `/api/auth`…) : sans
  * réseau, la collection vient du stockage du navigateur, et elle part au retour du réseau.
@@ -60,22 +64,33 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') event.respondWith(page(request))
   else if (url.pathname.startsWith('/assets/')) event.respondWith(kept(APP, request))
   else if (REFERENCE.some((path) => url.pathname.startsWith(path))) {
-    event.respondWith(fresh(request))
+    event.respondWith(fresh(DATA, event))
   } else if (url.pathname.startsWith('/images/')) event.respondWith(image(request))
+  else if (PRECACHE.includes(url.pathname)) event.respondWith(fresh(APP, event))
 })
 
-/** Une page de l'app : la dernière version du réseau (gardée), sinon celle gardée. */
-async function page(request) {
+/**
+ * Le réseau d'abord (`response`, sa réponse attendue) ; sans lui, la copie gardée (`cached`).
+ * Sans réponse en 4 s (un réseau faible), la copie gardée s'il y en a une ; sinon on attend le
+ * réseau, aussi lent soit-il. Seulement l'attente des en-têtes : un long téléchargement (les prix)
+ * va à son terme.
+ */
+async function networkFirst(response, cached) {
   try {
-    const response = await fetch(request)
-    if (response.ok) {
-      const cache = await caches.open(APP)
-      await cache.put('/index.html', response.clone())
-    }
-    return response
+    const early = await Promise.race([
+      response,
+      new Promise((resolve) => setTimeout(resolve, 4000)),
+    ])
+    if (early) return early
   } catch {
-    return (await caches.match('/index.html')) ?? Response.error()
+    return (await cached()) ?? Response.error()
   }
+  return (await cached()) ?? response.catch(() => Response.error())
+}
+
+/** Une page de l'app : le réseau, sinon l'app gardée à l'installation. */
+function page(request) {
+  return networkFirst(fetch(request), () => caches.match('/index.html'))
 }
 
 /** Gardé une fois pour toutes (un fichier au nom unique ne change pas). */
@@ -87,15 +102,25 @@ async function kept(name, request) {
   return response
 }
 
-/** Le réseau d'abord ; sans lui, la dernière réponse gardée. */
-async function fresh(request) {
-  try {
-    const response = await fetch(request)
-    if (response.ok) await (await caches.open(DATA)).put(request, response.clone())
-    return response
-  } catch {
-    return (await caches.match(request)) ?? Response.error()
-  }
+/**
+ * Le réseau d'abord ; sans lui, la dernière réponse gardée. Celle du réseau est gardée dans le
+ * cache `name` dès qu'elle arrive, même après la copie servie (`waitUntil` : le service worker
+ * l'attend).
+ */
+function fresh(name, event) {
+  const { request } = event
+  const response = fetch(request)
+  event.waitUntil(
+    response
+      .then(async (fetched) => {
+        if (!fetched.ok) return
+        // Copiée avant que la page ne lise la réponse.
+        const copy = fetched.clone()
+        await (await caches.open(name)).put(request, copy)
+      })
+      .catch(() => {}),
+  )
+  return networkFirst(response, () => caches.match(request))
 }
 
 let added = 0

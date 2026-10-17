@@ -5,7 +5,8 @@
  * le jour même ce qu'il valait la veille.
  */
 
-import { formatEuro, formatPercent } from '@/lib/format'
+import { formatEuro, formatEuroChange, formatPercent } from '@/lib/format'
+import { cents } from '@/lib/orders'
 import type { PricePoint } from '@/lib/prices'
 import { addDays, daysBetween } from '@/lib/time'
 
@@ -42,7 +43,7 @@ export function periodWindow(period: ChartPeriod, to: string, first: string | nu
 }
 
 /** Le nombre de jours d'une période. */
-export const windowDays = ({ from, to }: ChartWindow) => daysBetween(from, to) + 1
+const windowDays = ({ from, to }: ChartWindow) => daysBetween(from, to) + 1
 
 /** Le nombre de semaines d'une période, pour un rythme « par semaine ». */
 export const weeksOf = (window: ChartWindow) => windowDays(window) / 7
@@ -50,8 +51,6 @@ export const weeksOf = (window: ChartWindow) => windowDays(window) / 7
 /** Les points d'une série tombés dans la période. */
 export const inWindow = (points: readonly PricePoint[], { from, to }: ChartWindow) =>
   points.filter((point) => point.date >= from && point.date <= to)
-
-const cents = (value: number) => Math.round(value * 100) / 100 + 0
 
 /**
  * Un cumul, un point par jour de la période : la somme des montants (`events` : un jour, un
@@ -85,49 +84,29 @@ export const firstDate = (events: readonly PricePoint[]) =>
     null,
   )
 
-/**
- * Les chiffres d'une série sur sa période : le premier et le dernier point, l'écart entre eux
- * (`changePercent` : `null` si elle partait de 0), le plus bas, le plus haut, la moyenne ; `null`
- * sans aucun point.
- */
-export function seriesStats(points: readonly PricePoint[]) {
-  const first = points[0]
-  const last = points.at(-1)
-  if (!first || !last) return null
-  const values = points.map((point) => point.value)
-  return {
-    first: first.value,
-    last: last.value,
-    change: cents(last.value - first.value),
-    changePercent: first.value ? (last.value - first.value) / first.value : null,
-    min: Math.min(...values),
-    max: Math.max(...values),
-    average: cents(values.reduce((sum, value) => sum + value, 0) / values.length),
-  }
-}
-
 /** Un chiffre sous une courbe : « Plus haut », « 160,00 € ». */
 export interface ChartStat {
   label: string
   value: string
 }
 
-/** L'écart, signé : « +12,50 € (+8 %) », « −3 € » ; le pourcentage, s'il y en a un. */
-const signed = (value: number, format: (value: number) => string) =>
-  value > 0 ? `+${format(value)}` : format(value)
-
 /**
  * Les chiffres d'un prix (ou d'une valeur) sur sa période : son écart du premier au dernier jour,
- * son plus haut, son plus bas, sa moyenne.
+ * signé (« +12,50 € (+8 %) » ; sans pourcentage si elle partait de 0), son plus haut, son plus
+ * bas, sa moyenne ; aucun sans point.
  */
-export function levelStats(points: readonly PricePoint[], format = formatEuro): ChartStat[] {
-  const stats = seriesStats(points)
-  if (!stats) return []
-  const percent = stats.changePercent === null ? '' : ` (${formatPercent(stats.changePercent)})`
+export function levelStats(points: readonly PricePoint[]): ChartStat[] {
+  const first = points[0]
+  const last = points.at(-1)
+  if (!first || !last) return []
+  const values = points.map((point) => point.value)
+  const change = last.value - first.value
+  const percent = first.value ? ` (${formatPercent(change / first.value)})` : ''
+  const average = values.reduce((sum, value) => sum + value, 0) / values.length
   return [
-    { label: 'Évolution', value: `${signed(stats.change, format)}${percent}` },
-    { label: 'Plus haut', value: format(stats.max) },
-    { label: 'Plus bas', value: format(stats.min) },
-    { label: 'Moyenne', value: format(stats.average) },
+    { label: 'Évolution', value: `${formatEuroChange(cents(change))}${percent}` },
+    { label: 'Plus haut', value: formatEuro(Math.max(...values)) },
+    { label: 'Plus bas', value: formatEuro(Math.min(...values)) },
+    { label: 'Moyenne', value: formatEuro(cents(average)) },
   ]
 }

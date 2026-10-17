@@ -1,4 +1,4 @@
-import { Progress } from '@camply/ui'
+import { Badge, Progress } from '@camply/ui'
 import { BUDGET_LEVELS } from '@/config/shopping'
 import { budgetLevel } from '@/lib/budget'
 import { formatEuro } from '@/lib/format'
@@ -24,5 +24,17 @@ export function BudgetMeter({ spent, budget }: { spent: number; budget: BudgetSe
         aria-label="Part du plafond du mois dépensée"
       />
     </span>
+  )
+}
+
+/** Le badge d'un mois au-delà de son budget ou de son plafond ; rien dans le budget. */
+export function BudgetLevelBadge({ spent, budget }: { spent: number; budget: BudgetSettings }) {
+  const level = budgetLevel(spent, budget)
+  return (
+    level && (
+      <Badge size="sm" tone={BUDGET_LEVELS[level].tone}>
+        {BUDGET_LEVELS[level].label}
+      </Badge>
+    )
   )
 }

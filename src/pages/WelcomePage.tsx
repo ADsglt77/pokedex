@@ -2,10 +2,10 @@ import { Alert, Button, Input, Stack } from '@camply/ui'
 import { UserPlus } from '@camply/ui/icons'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { accountCreated, authClient } from '@/lib/auth-client'
+import { accountCreated, authClient, TOO_MANY_ATTEMPTS } from '@/lib/auth-client'
 import { pageTitle } from '@/lib/format'
 import { signIn } from '@/store/sync'
-import { AuthCard, TOO_MANY_ATTEMPTS } from '@/components/AuthCard'
+import { AuthCard } from '@/components/AuthCard'
 import styles from './AuthPage.module.css'
 
 /** Le message d'un refus, d'après la réponse du serveur. */
@@ -47,7 +47,6 @@ export function WelcomePage() {
 
   return (
     <AuthCard
-      as="main"
       title="Bienvenue"
       description="Ce Pokédex n’a pas encore de compte : créez le vôtre. Ce sera le seul : une fois créé, plus personne ne pourra en créer. Il garde votre collection, vos achats et votre budget sur le serveur, pour les retrouver sur vos appareils (un seul connecté à la fois)."
     >

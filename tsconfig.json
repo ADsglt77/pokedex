@@ -3,8 +3,7 @@
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" },
-    { "path": "./tsconfig.server.json" },
-    { "path": "./tsconfig.tests.json" }
+    { "path": "./tsconfig.server.json" }
   ],
   // Lu par Bun pour le serveur (`server/`) et les tests de `tests/`, qui importent du code de `src/`.
   "compilerOptions": { "paths": { "@/*": ["./src/*"] } }

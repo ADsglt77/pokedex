@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { SHOPPING_VIEWS } from '@/lib/filters'
 import { pageTitle } from '@/lib/format'
+import { pendingCount } from '@/lib/orders'
 import { DEFAULT_WISHLIST_FILTERS, type WishlistFilters } from '@/lib/wishlist'
 import { useShoppingStore } from '@/store/shopping'
 import { BudgetOverview } from './BudgetOverview'
@@ -23,18 +24,9 @@ import styles from './ShoppingPage.module.css'
 export function ShoppingPage() {
   const [params, setParams] = useSearchParams()
   const view = SHOPPING_VIEWS.find((known) => known === params.get('vue')) ?? 'liste'
-  // Un paramètre de l'adresse changé, les autres gardés.
-  const setParam = (name: string, value: string | null) =>
-    setParams(
-      (current) => {
-        const address = new URLSearchParams(current)
-        if (value === null) address.delete(name)
-        else address.set(name, value)
-        return address
-      },
-      { replace: true, preventScrollReset: true },
-    )
-  const openView = (next: string) => setParam('vue', next === 'liste' ? null : next)
+  // `vue` est le seul paramètre de l'adresse ; la liste, l'onglet par défaut, n'en a pas.
+  const openView = (next: string) =>
+    setParams(next === 'liste' ? {} : { vue: next }, { replace: true, preventScrollReset: true })
   const { rows } = useWishlist()
   const [filters, setFilters] = useState<WishlistFilters>(DEFAULT_WISHLIST_FILTERS)
   const [planner, setPlanner] = useState<PlannerSettings>({})
@@ -56,9 +48,7 @@ export function ShoppingPage() {
     if (!list || !tab) return
     list.scrollLeft = tab.offsetLeft - (list.clientWidth - tab.offsetWidth) / 2
   }, [view])
-  const pending = useShoppingStore(
-    (state) => state.shopping.orders.filter((order) => order.state === 'pending').length,
-  )
+  const pending = useShoppingStore((state) => pendingCount(state.shopping.orders))
 
   return (
     <div className="container">

@@ -12,19 +12,22 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
   une ligne par carte et par année, à partir de son premier jour avec un prix, `server/history.ts` ;
   relancée le même jour, la tâche remplace le prix du jour ; moins de la moitié des prix d'avant :
   format du guide changé, rien n'est écrit, la tâche échoue). Rien n'est retéléchargé (29 Mo) tant
-  que le guide n'a pas changé (`sources` : son `Last-Modified`), sauf la liste des produits tant
-  qu'aucun n'a son extension (une base d'avant ces colonnes : relue une fois, sans toucher aux
-  prix, sans attendre le guide suivant) ; dans les deux cas, les produits passent par le même
-  enregistrement, qui met à jour un nom, une extension ou une carte qui a changé. En fin de
-  tâche, même quand le guide n'a pas changé, la réponse de `/api/prices` (le fichier des prix :
-  jour et cartes ; 404 tant que le guide n'a jamais été lu) est calculée et gardée compressée
-  (`snapshots`, avec un ETag : 304 si le navigateur l'a déjà). L'app la charge au premier écran qui affiche un prix (l'accueil, pour sa valeur ;
-  pas le Pokédex), et l'historique d'une carte à la demande (`/api/prices/<id>`) : la courbe,
-  le nom affiché dans le formulaire pour vérifier l'id saisi (au départ du champ). Sans serveur,
-  ou base encore vide, l'app marche sans prix. Une réponse manquante (404) n'est pas redemandée ;
-  après une panne passagère (réseau, délai, réponse illisible), elle l'est la fois suivante où elle
-  sert, au plus une fois par minute (`getJson`, `lib/api.ts` : la règle vaut pour toute lecture de
-  l'API, catalogue et historiques compris). Une carte sans id Cardmarket, ou dont
+  que le guide n'a pas changé (`sources` : son `Last-Modified`) ; une base d'avant les colonnes
+  `expansion` et `metacard` les remplit au passage suivant (l'étape du schéma qui les ajoute,
+  `db.ts`, oublie ce `Last-Modified` : le guide et la liste sont relus). La liste des produits met
+  à jour un nom, une extension ou une carte qui a changé. En fin de tâche, même quand le guide n'a
+  pas changé, la réponse de `/api/prices` (le fichier des prix : jour et cartes, `readPrices` ;
+  404 tant que le guide n'a jamais été lu) est calculée et gardée compressée (`snapshots`, avec un
+  ETag : 304 si le navigateur l'a déjà). L'app la charge au premier écran qui affiche un prix
+  (l'accueil, pour sa valeur ; pas le Pokédex), et l'historique d'une carte à la demande
+  (`/api/prices/<id>`) : la courbe, le nom affiché dans le formulaire pour vérifier l'id saisi (au
+  départ du champ). Le Pokédex public ne la charge pas : `/api/vitrine` donne les prix de ses
+  seules cartes possédées (`readPrices` avec leurs ids, `docs/compte-et-synchronisation.md`). Sans
+  serveur, ou base encore vide, l'app marche sans prix. Une réponse manquante (404) n'est pas
+  redemandée ; après une panne passagère (réseau, délai, réponse illisible), elle l'est la fois
+  suivante où elle sert, au plus une fois par minute (`getJson`, `lib/api.ts` : la règle vaut pour
+  toute lecture de l'API, catalogue et historiques compris, sauf l'état des tâches et les lignes de
+  la liste de souhaits, demandés à chaque fois : `fetchFresh`). Une carte sans id Cardmarket, ou dont
   l'id n'a pas de prix ce jour, n'a pas de prix (aucun n'est inventé ; Pokécardex donne l'id de presque toutes).
   L'ancien historique (les fichiers du volume `prices`,
   un par carte) est repris au premier démarrage d'`ingest` (`legacy-prices.ts`), vérifié avant
@@ -33,7 +36,9 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
   règles, pures : `wantsLine` et sa version `wantsVersion`, de `lib/cardmarket.ts`, testées dans
   `tests/wants.test.ts`, une mauvaise version achèterait une autre carte ; le serveur ne fait qu'en
   réunir les données en SQL : le nom du produit, les numéros imprimés de son groupe, les noms de
-  séries de son extension et, pour chacun, le nombre d'extensions qui le portent) : pour chaque id
+  séries de son extension et, pour chacun, le nombre d'extensions qui le portent ; deux choix de ce
+  SQL ne sont pas testés : un seul numéro par produit, sinon aucun, `sameCard`, et les noms de
+  séries comparés sans les espaces des bords, `TRIM`) : pour chaque id
   Cardmarket demandé, sa ligne pour « Ajouter une deck
   list » de la liste de souhaits de Cardmarket (`WantsLines`), ou `null` quand aucune ne
   désignerait sûrement cette carte-là. L'app n'envoie rien à Cardmarket : l'utilisateur copie les
@@ -85,12 +90,13 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
     par le schéma de la route (422 sinon) ; une clé par id demandé. Calculée à chaque demande (pas
     un `snapshot`), sur la base des données de référence, requêtes préparées une fois ; chaque id
     une fois (répété, il n'est pas recalculé) et les noms de chaque extension lus une fois par
-    demande : 2 000 ids coûtent au plus quelques dizaines de millisecondes, la route n'ayant ni
-    session ni limite de rythme. `Cache-Control: no-cache`. Sans réponse du serveur, l'app propose
-    de réessayer.
+    demande : un plan coûte environ 15 ms, 2 000 ids 0,15 à 0,2 s au pire (mesuré, octobre 2026),
+    la route n'ayant ni session ni limite de rythme. `Cache-Control: no-cache`. L'app la demande à
+    chaque ouverture de la fenêtre (`loadWantsLines`, par `fetchFresh` : sans cache, 10 s au plus) ;
+    sans réponse du serveur, elle propose de réessayer.
 - État des données (page Données › Sources des données, `ReferenceSection`) : où en est chaque
   tâche d'ingestion, d'après son journal (`/api/status` : dernière réussite, dernier passage, et le
-  jour des prix en base), demandé à chaque ouverture de la page. À jour ; en retard (deux
+  jour des prix en base), demandé à chaque ouverture de la page (`loadStatus`, `lib/api.ts`). À jour ; en retard (deux
   intervalles sans réussite, `INGEST_JOBS` de `config/jobs.ts`, que suit aussi `ingest.ts`) ; en
   échec (le dernier passage) ; à lancer (jamais passée : la commande est donnée), sauf les images,
   facultatives (le serveur copie à la demande celles affichées). Sans réponse : « l'état des

@@ -1,19 +1,14 @@
-import { Badge, type Column, Stack, Stat, Table } from '@camply/ui'
+import { type Column, Stack, Stat, Table } from '@camply/ui'
 import { Calculator, Receipt, Truck, Wallet } from '@camply/ui/icons'
-import { BUDGET_LEVELS } from '@/config/shopping'
-import {
-  budgetLevel,
-  costPerSpecies,
-  spendingByMonth,
-  spendingBySupplier,
-  spentOn,
-} from '@/lib/budget'
+import { costPerSpecies, spendingByMonth, spendingBySupplier, spentOn } from '@/lib/budget'
+import { pendingCount } from '@/lib/orders'
 import { findCard } from '@/lib/species'
 import { details, formatEuro, formatInteger, formatMonth, plural } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
 import { Panel } from '@/components/Panel'
 import { TableCount } from '@/components/TableCount'
+import { BudgetLevelBadge } from '@/components/BudgetMeter'
 import { cx } from '@/lib/cx'
 import { BudgetField } from './BudgetField'
 import styles from './ShoppingPage.module.css'
@@ -84,7 +79,7 @@ export function BudgetPanel() {
           value={formatInteger(orders.length)}
           // Les annulées comptées à part : « Dépensé en tout » ne compte pas les annulées.
           hint={details(
-            `dont ${formatInteger(orders.filter((order) => order.state === 'pending').length)} en cours`,
+            `dont ${formatInteger(pendingCount(orders))} en cours`,
             cancelled > 0 && plural(cancelled, 'annulée', 'annulées'),
           )}
         />
@@ -109,7 +104,7 @@ export function BudgetPanel() {
               align: 'right',
               cell: (row) => (
                 <>
-                  <span className="stack-label">port </span>
+                  <span className="stack-label">port et frais </span>
                   {formatEuro(row.shipping)}
                 </>
               ),
@@ -118,19 +113,12 @@ export function BudgetPanel() {
               key: 'spent',
               header: 'Dépensé',
               align: 'right',
-              cell: (row) => {
-                const level = budgetLevel(row.spent, budget)
-                return (
-                  <span className={styles.stacked}>
-                    {formatEuro(row.spent)}
-                    {level && (
-                      <Badge size="sm" tone={BUDGET_LEVELS[level].tone}>
-                        {BUDGET_LEVELS[level].label}
-                      </Badge>
-                    )}
-                  </span>
-                )
-              },
+              cell: (row) => (
+                <span className={styles.stacked}>
+                  {formatEuro(row.spent)}
+                  <BudgetLevelBadge spent={row.spent} budget={budget} />
+                </span>
+              ),
             },
           ]}
         />

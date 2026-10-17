@@ -1,10 +1,12 @@
 /**
  * Le Pokédex public (`/vitrine` sur le site), toujours montré : la page d'accueil d'un visiteur.
- * - `GET /api/vitrine`, sans session : `{ owner, collection }`, le pseudo du compte et sa
- *   collection, réduite à ce qui se montre : ses cartes (référence, image, id Cardmarket pour la
- *   valeur au prix du jour ; pas leur page) et, pour celles possédées, la date d'obtention (pas le
- *   prix payé). Rien des achats : ni commandes, ni budget, ni statut « commandée ». Une collection
- *   vide tant qu'aucun appareil n'a rien envoyé.
+ * - `GET /api/vitrine`, sans session : `{ owner, collection, prices }` (`VitrineData`), le pseudo
+ *   du compte et sa collection, réduite à ce qui se montre : ses cartes (référence, image, id
+ *   Cardmarket pour la valeur au prix du jour ; pas leur page) et, pour celles possédées, la date
+ *   d'obtention (pas le prix payé). Rien des achats : ni commandes, ni budget, ni statut
+ *   « commandée ». Une collection vide tant qu'aucun appareil n'a rien envoyé. Avec elle, les prix
+ *   du jour de ses seules cartes possédées, dans la forme de `/api/prices` (`null` sans guide des
+ *   prix) : la page n'en montre que la valeur, sans charger ceux de toutes les cartes.
  * - `GET /api/vitrine/apercu` : la page que lisent les robots d'aperçu (Discord, WhatsApp…) quand
  *   on partage le lien : « Le Pokédex de … » et sa progression (ils ne lancent pas le JavaScript
  *   de l'app). nginx les y envoie (`deploy/nginx.conf`).
@@ -14,9 +16,10 @@ import type { Database } from 'bun:sqlite'
 import { Elysia } from 'elysia'
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { emptyCollection } from '@/lib/collection'
-import { formatDecimal, formatInteger, ofName, plural } from '@/lib/format'
-import { progressPercent } from '@/lib/pokedex'
-import type { CardOwnership, CollectionData, PokemonCard } from '@/types'
+import { formatShare, pokedexTitle, unlockedOf } from '@/lib/format'
+import { progressPercent, unlockEvents } from '@/lib/pokedex'
+import type { CardOwnership, CollectionData, PokemonCard, VitrineData } from '@/types'
+import { readPrices } from './jobs/prices'
 import { journal } from './journal'
 
 /** La collection telle que la voit un visiteur (testé : jamais un prix payé ni un achat). */
@@ -36,15 +39,11 @@ export function shownCollection(collection: CollectionData): CollectionData {
 
 /** Le titre et la phrase de l'aperçu d'un lien partagé : le pseudo, la progression (testé). */
 export function vitrineSummary(owner: string | null, collection: CollectionData) {
-  const unlocked = new Set<number>()
-  for (const [id, card] of Object.entries(collection.customCards)) {
-    if (collection.cards[id]?.status === 'owned')
-      card.dexIds.forEach((dexId) => unlocked.add(dexId))
-  }
-  const percent = formatDecimal(progressPercent(unlocked.size, TOTAL_SPECIES))
+  const unlocked = unlockEvents(collection).length
+  const share = formatShare(progressPercent(unlocked, TOTAL_SPECIES))
   return {
-    title: owner ? `Le Pokédex ${ofName(owner)}` : 'Un Pokédex de cartes japonaises',
-    description: `${plural(unlocked.size, 'Pokémon débloqué', 'Pokémon débloqués')} sur ${formatInteger(TOTAL_SPECIES)} (${percent} %) : une carte Pokémon japonaise par Pokémon.`,
+    title: owner ? pokedexTitle(owner) : 'Un Pokédex de cartes japonaises',
+    description: `${unlockedOf({ unlocked, total: TOTAL_SPECIES }, 'Pokémon')} (${share}) : une carte Pokémon japonaise par Pokémon.`,
   }
 }
 
@@ -55,8 +54,11 @@ const escape = (text: string) =>
 const PREVIEW_BOTS =
   /discordbot|whatsapp|facebookexternalhit|twitterbot|slackbot|telegrambot|linkedinbot|skypeuripreview|redditbot|embedly/i
 
-/** `origin` : l'adresse publique du site (`BETTER_AUTH_URL`), pour les liens de l'aperçu. */
-export function vitrineRoutes(app: Database, origin: string) {
+/**
+ * `app` : le compte et sa collection ; `data` : les prix ; `origin` : l'adresse publique du site
+ * (`BETTER_AUTH_URL`), pour les liens de l'aperçu.
+ */
+export function vitrineRoutes(app: Database, data: Database, origin: string) {
   // Un seul compte : son pseudo et sa collection.
   const readShown = app.query('SELECT collection FROM collections LIMIT 1')
   const readOwner = app.query('SELECT name FROM "user" LIMIT 1')
@@ -69,11 +71,14 @@ export function vitrineRoutes(app: Database, origin: string) {
   return new Elysia({ name: 'vitrine' })
     .get(
       '/vitrine',
-      ({ request }) => {
+      ({ request, set }): VitrineData => {
+        set.headers['cache-control'] = 'no-cache'
         journal({ topic: 'vitrine', message: 'Pokédex public consulté' }, request)
-        return new Response(JSON.stringify({ owner: owner(), collection: shown() }), {
-          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
-        })
+        const collection = shown()
+        const owned = Object.values(collection.customCards).flatMap(({ id, cardmarket }) =>
+          cardmarket && collection.cards[id] ? [cardmarket] : [],
+        )
+        return { owner: owner(), collection, prices: readPrices(data, owned) }
       },
       { detail: { summary: 'Le Pokédex public' } },
     )

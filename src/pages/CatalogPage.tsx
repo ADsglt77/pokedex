@@ -237,7 +237,6 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
             </span>
             <SegmentedControl
               aria-labelledby={addAsLabel}
-              className={styles.addAs}
               size="sm"
               options={toOptions(ADD_AS_LABELS)}
               value={addAs}
@@ -263,9 +262,7 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
                   price={price}
                   speciesId={speciesId}
                   disabled={open === null}
-                  onPick={() =>
-                    open !== null && choose(card, receivers, rankAfter(index, receivers))
-                  }
+                  onPick={() => choose(card, receivers, rankAfter(index, receivers))}
                 >
                   {open === null
                     ? `${speciesNames(card.dexIds)} ${card.dexIds.length > 1 ? 'ont déjà leur carte' : 'a déjà sa carte'}`

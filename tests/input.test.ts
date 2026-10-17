@@ -1,8 +1,8 @@
 /**
  * Ce que l'utilisateur saisit et qui compte en argent : les montants (lignes de commande, port,
- * frais, remboursé, budget, prix maximum, prix payé) et l'id Cardmarket d'une carte (d'où son
- * prix). Un montant mal lu fausserait le budget sans rien dire. Et le lien vers Cardmarket : ses
- * offres en japonais, Near Mint au moins (une autre langue, ce serait une autre carte achetée).
+ * frais, remboursé, budget, prix payé) et l'id Cardmarket d'une carte (d'où son prix). Un montant
+ * mal lu fausserait le budget sans rien dire. Et le lien vers Cardmarket : ses offres en japonais,
+ * Near Mint au moins (une autre langue, ce serait une autre carte achetée).
  */
 
 import { describe, expect, test } from 'bun:test'

@@ -31,8 +31,8 @@ const root = createRoot(document.getElementById('root')!)
 // Les espèces viennent du serveur avant tout affichage (toutes les pages en ont besoin), avec
 // l'existence du compte (sans lui, la première visite) et qui est connecté (personne : le Pokédex
 // public), en une requête ; puis notifications et routeur.
-Promise.all([loadSpecies(), loadAccount()]).then(([loaded]) => {
-  startSession()
+Promise.all([loadSpecies(), loadAccount()]).then(([loaded, account]) => {
+  startSession(account)
   root.render(
     <StrictMode>
       {loaded ? (

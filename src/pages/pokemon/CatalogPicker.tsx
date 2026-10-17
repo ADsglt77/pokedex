@@ -5,7 +5,7 @@ import { CatalogCredit, CatalogGrid, CatalogTile } from '@/components/CatalogTil
 import { loadCatalog, setOption, type CatalogCard } from '@/lib/card-catalog'
 import { plural } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
-import { speciesNames } from '@/lib/species'
+import { otherSpeciesNames } from '@/lib/species'
 import { usePrices } from '@/store/prices'
 import type { PokemonSpecies } from '@/types'
 
@@ -117,8 +117,7 @@ export function CatalogPicker({
               pressed={selected === card.key}
               onPick={() => onPick(card)}
             >
-              {card.dexIds.length > 1 &&
-                `avec ${speciesNames(card.dexIds.filter((id) => id !== species.id))}`}
+              {card.dexIds.length > 1 && `avec ${otherSpeciesNames(card.dexIds, species.id)}`}
             </CatalogTile>
           </li>
         ))}

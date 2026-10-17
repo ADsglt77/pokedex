@@ -28,7 +28,7 @@ export function SpeciesAbout({
   showArtwork: boolean
 }) {
   return (
-    <Panel title="Dans le Pokédex" className={styles.about}>
+    <Panel title="Dans le Pokédex">
       {/* Sans carte, l'illustration officielle — clairement présentée comme telle. */}
       {showArtwork && (
         <figure className={styles.artwork}>

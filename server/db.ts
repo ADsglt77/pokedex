@@ -175,6 +175,9 @@ const DATA_STEPS = [
   ALTER TABLE cardmarket_products ADD COLUMN expansion INTEGER;
   ALTER TABLE cardmarket_products ADD COLUMN metacard INTEGER;
   CREATE INDEX cardmarket_products_by_card ON cardmarket_products (expansion, metacard);
+  -- Pour les remplir : le prochain passage de la tâche \`prices\` relit le guide et la liste des
+  -- produits, même si le guide n'a pas changé.
+  UPDATE sources SET stamp = '' WHERE name = 'cardmarket';
 
   -- Les cartes du catalogue d'un produit Cardmarket : le nom de son extension (\`/api/wants\`).
   CREATE INDEX cards_by_cardmarket ON cards (cardmarket);

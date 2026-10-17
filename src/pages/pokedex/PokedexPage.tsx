@@ -61,7 +61,7 @@ export function PokedexPage() {
       <PokedexToolbar
         filters={filters}
         setFilters={setFilters}
-        pokedex={pokedex}
+        generations={pokedex.generations}
         counts={counts}
         resultCount={filtering ? visible.length : null}
         onReset={resetFilters}

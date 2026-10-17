@@ -21,14 +21,18 @@ const SECTIONS = [
 ]
 
 /**
- * Données : la collection, le compte (pseudo, mot de passe), le Pokédex public, la sauvegarde (export, import), les sources,
- * l'effacement. Un sommaire (collé à gauche sur grand écran) mène à chaque section.
+ * Données : la collection, le compte (pseudo, mot de passe), le Pokédex public, la sauvegarde
+ * (export, import), les sources, l'effacement. Un sommaire (collé à gauche sur grand écran) mène à
+ * chaque section.
  */
 export function DataPage() {
   return (
     <div className="container">
       <title>{pageTitle('Données')}</title>
-      <PageHeader title="Données">Sauvegarder, transférer ou effacer votre collection.</PageHeader>
+      <PageHeader title="Données">
+        Votre collection, votre compte, votre Pokédex public et les sources des données ;
+        sauvegarder, transférer ou effacer votre collection.
+      </PageHeader>
       <div className={styles.layout}>
         <nav className={styles.toc} aria-label="Sur cette page">
           <ul>

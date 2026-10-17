@@ -7,13 +7,11 @@
 
 import type { Database } from 'bun:sqlite'
 import { GENERATIONS, SPECIES_IDS, TOTAL_SPECIES } from '@/config/pokedex'
-import { DAY } from '@/lib/time'
 import type { PokemonSpecies, PokemonSpeciesDetails, PokemonTypeId } from '@/types'
 import { fetchJson, mapPool } from '../lib/net'
 import { saveSnapshot } from '../snapshots'
 
 const API = 'https://pokeapi.co/api/v2'
-const MONTH = 30 * DAY
 
 interface Localized {
   language: { name: string }
@@ -98,8 +96,8 @@ export async function species(db: Database) {
   console.log(`Lecture des ${TOTAL_SPECIES} espèces sur PokéAPI…`)
   const rows = await mapPool(SPECIES_IDS, 8, async (id) => {
     const [raw, pokemon] = await Promise.all([
-      fetchJson<RawSpecies>(`${API}/pokemon-species/${id}`, 'pokeapi', MONTH),
-      fetchJson<RawPokemon>(`${API}/pokemon/${id}`, 'pokeapi', MONTH),
+      fetchJson<RawSpecies>(`${API}/pokemon-species/${id}`),
+      fetchJson<RawPokemon>(`${API}/pokemon/${id}`),
     ])
     return normalize(raw, pokemon)
   })

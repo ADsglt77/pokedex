@@ -15,8 +15,13 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   `--text-md` ; `--title-sm`, `--title-md` ; les titres de page ont leur taille fluide), rythme
   (`--space-block` entre les blocs d'une page, `--space-panel` dans un panneau), mise en page
   (`--sidebar-width`, `--tabbar-height`), mouvement (`--ease-out`, `--duration-fast`) : une valeur
-  hors d'eux doit avoir une raison. Une page : `PageHeader` (titre, phrase, actions à droite),
-  puis ses blocs en `Panel` (une `Card` de camply : titre `h2`, phrase, actions, contenu ; `flush`
+  hors d'eux doit avoir une raison. Ses classes partagées, entre autres : `.quiet-link` (un lien
+  discret, titre d'une carte ou fil d'Ariane : la couleur de son texte, souligné au survol
+  seulement, de jaune en sombre, de rouge en clair), `.shortcut` (un raccourci clavier, `Kbd`,
+  masqué sur écran tactile seul), `.amounts` (une liste « libellé : montant », `DescriptionList` :
+  le libellé prend la place, le montant à droite en chiffres alignés ; le décompte d'une collection
+  sur la page Données, `SummaryLedger`, les totaux d'une commande). Une page : `PageHeader`
+  (titre, phrase, actions à droite), puis ses blocs en `Panel` (une `Card` de camply : titre `h2`, phrase, actions, contenu ; `flush`
   pour un tableau bord à bord ; pas une région nommée : trop de points de repère) ; statistiques par
   deux, par quatre quand la page a 50rem (`.stat-grid`, plus compactes sur téléphone). Occuper
   l'écran : une page va jusqu'à 120rem (`--page-max`, toute la largeur jusqu'au très grand écran,
@@ -33,11 +38,12 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   en pied de la barre latérale. Partout, la recherche
   (`AppSearch`, Ctrl/⌘ K, la palette de camply) : les pages, quelques actions (exporter, importer) et les 1 025 Pokémon (noms français, anglais, japonais, numéro ; groupe
   « Espèces » : la palette cherche aussi dans le nom du groupe, « Pokémon » ferait tout trouver à
-  « poké »). Un
-  avertissement de l'app (export, stockage) s'aligne sur le conteneur des pages. L'accueil est un
+  « poké »). L'avertissement
+  de l'app (le stockage refusé, `.notice`) s'aligne sur le conteneur des pages. L'accueil est un
   tableau de bord (dès qu'il y a une carte ou une commande) : progression (anneau, réglette des
   régions), « À faire » (commandes en retard,
-  cartes à compléter, chacune vers sa liste filtrée : `shoppingUrl`, `pokedexUrl`), indicateurs
+  cartes à compléter, une TAG TEAM comptée une fois, chacune vers sa liste filtrée : `shoppingUrl`,
+  `pokedexUrl`), indicateurs
   (valeur, dépensé ce mois-ci, liste d'achats, commandes), dernières cartes obtenues (« Vos cartes
   choisies » tant qu'aucune n'est obtenue : une rangée, de trois cartes sur téléphone à dix sur un
   très grand écran) ; une collection vide y trouve trois étapes pour commencer. La progression et
@@ -49,21 +55,18 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   la rangée d'onglets qui défile ; page étroite, les badges des onglets se resserrent. Le
   catalogue : l'extension, puis un panneau (ses Pokémon qui ont déjà leur carte, réglages de
   l'ajout). Données : un sommaire (collé à gauche sur grand écran) et un panneau par section, deux
-  colonnes sur très grand écran, l'effacement sur fond teinté de rouge. La fiche d'un Pokémon :
+  colonnes sur très grand écran dans l'ordre du sommaire (la collection à gauche, le compte et le
+  Pokédex public à droite ; l'export et l'import côte à côte ; les sources et l'effacement sur
+  toute la largeur), l'effacement sur fond teinté de rouge. Valeur : ses panneaux l'un sous
+  l'autre. La fiche d'un Pokémon :
   fil d'Ariane (Pokédex › région › nom), puis la carte, collée à l'écran (sa largeur suit la
-  page : `cqi`), et ses panneaux (statut et prix payé, prix Cardmarket, achat, « Dans le
-  Pokédex ») : sur deux colonnes dès que la fiche a la place, « Dans le Pokédex » à part sur grand
-  écran ;
+  page : `cqi`), et ses panneaux (statut et prix payé, prix Cardmarket, « Dans le Pokédex ») : sur
+  deux colonnes dès que la fiche a la place (la carte et ses statuts à gauche, son prix à droite),
+  « Dans le Pokédex » à part sur grand écran ;
   seul effet appuyé de l'app, la carte en grand suit la souris et la lumière y glisse
-  (`CardStage` : variables CSS, sans rendu React ; ni au toucher ni en mouvement réduit). Les
-  site s'installe sur téléphone et ordinateur (`public/manifest.webmanifest`, icônes de `public/icons`
-  et `public/apple-touch-icon.png`, dessinées d'après `favicon.svg`) et démarre hors ligne : le
-  service worker (`public/sw.js`, en production seulement, `main.tsx`) garde l'app (la liste de ses
-  fichiers, écrite à chaque construction par le plugin `precache` de `vite.config.ts` : un nouveau
-  service worker à chaque version), les données de référence (espèces, catalogue, prix : le
-  réseau d'abord) et les images affichées (3 000 au plus) ; jamais le compte ni la collection, qui
-  viennent du stockage du navigateur. Un lien partagé a son aperçu (`og:` dans `index.html`,
-  l'icône pour image ; celui du Pokédex public, son titre et sa progression). Les
+  (`CardStage` : variables CSS, sans rendu React ; ni au toucher ni en mouvement réduit). Un lien
+  partagé a son aperçu (`og:` dans `index.html`, l'icône pour image ; celui du Pokédex public, son
+  titre et sa progression). Les
   courbes (`PriceChart`, `lib/chart.ts`) vont jour par jour, sur la période choisie (7 jours,
   30 jours, 1 an, tout ; 7 jours au moins, l'axe la couvre en entier) : Valeur › Évolution (valeur
   de la collection, Pokémon débloqués, dépenses cumulées depuis le début de la période) et le prix
@@ -74,13 +77,30 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   un point par jour où la tâche `prices` passe. En repère sur la courbe d'une carte, la moyenne de
   ses ventes sur 30 jours que donne ce guide (`reference`, en pointillés). Les
   nombres formatés gardent une espace insécable visible (`spaced`, `lib/format.ts` : l'espace fine
-  de `Intl` manque à certaines polices).
+  de `Intl` manque à certaines polices ; une part : `formatShare`, « 12,5 % »).
+- Installation et hors ligne : le site s'installe sur téléphone et ordinateur
+  (`public/manifest.webmanifest`, icônes de `public/icons` et `public/apple-touch-icon.png`,
+  dessinées d'après `favicon.svg`) et démarre hors ligne. Le service worker (`public/sw.js`, en
+  production seulement, `main.tsx`) garde à son installation l'app : `/index.html`, ses scripts,
+  styles et polices (`.woff2` seulement : les `.woff` ne servent qu'aux navigateurs qui n'ont pas
+  `.woff2`) et ce que la page demande de `public/` au démarrage (thème, manifeste, icône). La liste
+  est écrite à chaque construction par le plugin `precache` de `vite.config.ts` (`/index.html` à la
+  main : ce plugin passe avant celui de Vite qui l'ajoute) : un nouveau service worker à chaque
+  version. Une page : le réseau, sinon l'app gardée (aucune autre réponse ne prend sa place). Les
+  fichiers de `public/`, dont le nom ne change pas, et les données de référence (espèces,
+  catalogue, prix) : le réseau d'abord, la dernière réponse gardée sans lui. « Le réseau d'abord »
+  attend les en-têtes 4 s au plus (un réseau faible) quand une version est gardée, aussi longtemps
+  qu'il faut sinon, et jamais la fin d'un long téléchargement (les prix) ; la réponse du réseau est
+  gardée dès qu'elle arrive, même si la version gardée a déjà été servie. Les images affichées : gardées dès leur premier affichage, 3 000 au plus. Jamais le compte
+  ni la collection, qui viennent du stockage du navigateur.
 - Performance (mesurer en production, `bun run build` puis `bun run preview` : `bun dev` est 3 à 4
   fois plus lent) : le Pokédex affiche 1 025 pochettes. Seules celles à l'écran sont dessinées
   (`content-visibility`, de même pour la liste d'achats et le catalogue), les marques de
   possession sont des icônes CSS (masques, pas de SVG : plus de 1 000 sinon), et rien de ce qui
   défile n'a de `backdrop-filter` (flou recalculé à chaque image). Les pages autres que l'accueil,
-  le Pokédex et les fiches sont chargées à leur première ouverture (`lazy`, `router.tsx`). Une
+  le Pokédex et les fiches sont chargées à leur première ouverture (`lazy`, `router.tsx` : une
+  route parente sans chemin porte une seule fois la page d'erreur et l'attente, vide, d'une page
+  ouverte directement). Une
   donnée chargée à la demande et lue par `use()` passe par `settled` : sans lui, React retient
   l'affichage environ 300 ms à chaque ouverture (fenêtre d'ajout, catalogue). La fiche d'un
   Pokémon sans carte prépare le catalogue pendant que le navigateur est libre.

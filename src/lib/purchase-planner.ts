@@ -2,8 +2,7 @@
  * Préparer la prochaine commande : quelles cartes de la liste d'achats prendre avec un budget.
  * Un plan indicatif : les prix sont ceux du marché (Cardmarket), pas des offres de vendeurs.
  *
- * 1. Candidates : les cartes ni possédées ni commandées, d'un Pokémon pas encore débloqué ni
- *    commandé.
+ * 1. Candidates : les cartes de la liste d'achats, ni possédées ni commandées (`wishlistRows`).
  * 2. Mises à part : celles retirées à la main, et celles sans prix (aucun prix n'est inventé).
  * 3. Ordre : les cartes ajoutées à la main, puis le prix le plus bas.
  * 4. Dans cet ordre, une carte est prise si aucun de ses Pokémon n'est déjà dans le plan et si
@@ -11,14 +10,11 @@
  *    du budget, ou si son Pokémon est déjà dans le plan.
  */
 
-import { stillWanted } from '@/lib/collection'
 import { cents } from '@/lib/orders'
-import type { CardStatus } from '@/types'
 
 /** Ce que le plan lit d'une carte de la liste d'achats (`WishRow` en a davantage). */
 export interface PlannableCard {
   card: { id: string; dexIds: number[] }
-  status: CardStatus | null
   price: number | null
 }
 
@@ -49,8 +45,6 @@ interface Plan<T> {
 
 export function planPurchase<T extends PlannableCard>(
   cards: readonly T[],
-  /** Pokémon déjà débloqués ou commandés. */
-  taken: ReadonlySet<number>,
   options: PlanOptions,
 ): Plan<T> {
   const plan: Plan<T> = {
@@ -65,7 +59,7 @@ export function planPurchase<T extends PlannableCard>(
   }
 
   const priced: (T & { price: number })[] = []
-  for (const row of cards.filter((row) => stillWanted(row, taken))) {
+  for (const row of cards) {
     if (options.skipped.has(row.card.id)) plan.skipped.push(row)
     else if (row.price === null) plan.unpriced.push(row)
     else priced.push(row as T & { price: number })

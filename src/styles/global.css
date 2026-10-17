@@ -108,6 +108,13 @@ a:hover {
   text-decoration-color: var(--link-underline-hover);
 }
 
+/* Un lien discret (titre d'une carte, fil d'Ariane) : la couleur de son texte, souligné seulement
+   au survol (`a:hover`). */
+.quiet-link {
+  color: inherit;
+  text-decoration-color: transparent;
+}
+
 /* Pas d'attente au toucher sur ce qui se clique ; pas de voile gris non plus (les tuiles et les
    boutons ont leur propre retour). */
 a,
@@ -117,7 +124,7 @@ button {
 }
 
 /* Arrivée au bout d'une fenêtre (catalogue d'un Pokémon…), le défilement n'emporte pas la page
-   derrière elle. */
+   derrière elle. Classe interne de camply (pas une API) : à revérifier après une mise à jour. */
 .camply-modal__panel {
   overscroll-behavior: contain;
 }
@@ -213,6 +220,14 @@ img {
   color: var(--camply-text-muted);
 }
 
+/* Un raccourci clavier (`Kbd`) : masqué sur écran tactile seul, sans souris ni pavé (probablement
+   pas de clavier). */
+@media not (any-pointer: fine) {
+  .shortcut {
+    display: none;
+  }
+}
+
 /* Un texte d'aide sous un réglage : discret et petit. */
 .hint {
   color: var(--camply-text-muted);
@@ -221,6 +236,23 @@ img {
 
 .numeric {
   font-variant-numeric: tabular-nums;
+}
+
+/* Une liste « libellé : montant » (`DescriptionList` de camply) : le libellé prend la place, le
+   montant se range à droite en chiffres alignés ; pas de libellé coupé en deux lignes. Même
+   spécificité que la grille de camply, déclarée après elle. Classe interne de camply (pas une
+   API) : à revérifier après une mise à jour. */
+.amounts {
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.amounts.camply-descriptionlist__row .camply-descriptionlist__row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.amounts dd {
+  text-align: right;
 }
 
 /* Un tableau de données (`Table` de camply) : toute la largeur, chiffres alignés. Positionné : un

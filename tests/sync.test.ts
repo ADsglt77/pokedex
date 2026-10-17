@@ -5,10 +5,15 @@
 
 import { describe, expect, test } from 'bun:test'
 import { emptyCollection } from '@/lib/collection'
+import { emptyShopping } from '@/lib/orders'
 import { decide, documentHash, isEmptyDocument } from '@/lib/sync'
-import { emptyShopping } from '@/lib/wishlist'
+import { collectionWith, ownership } from './fixtures'
 
 const local = (hash: string, empty = false) => ({ hash, empty })
+
+/** Le document d'un nouveau venu, et le même avec une carte possédée. */
+const empty = { collection: emptyCollection(), shopping: emptyShopping() }
+const withCard = { ...empty, collection: collectionWith({ x: ownership('owned') }) }
 
 describe('decide', () => {
   test('serveur vide : le premier appareil envoie la sienne, sauf vide', () => {
@@ -84,20 +89,19 @@ describe('decide', () => {
 
 describe('documentHash', () => {
   test('même contenu, même empreinte ; une carte de plus, une autre', async () => {
-    const empty = { collection: emptyCollection(), shopping: emptyShopping() }
     const copy = JSON.parse(JSON.stringify(empty))
-    const owned = { status: 'owned', updatedAt: '2026-10-14', acquiredAt: '2026-10-14' } as const
-    const changed = { ...empty, collection: { ...empty.collection, cards: { x: owned } } }
     expect(await documentHash(copy)).toBe(await documentHash(empty))
-    expect(await documentHash(changed)).not.toBe(await documentHash(empty))
-    expect(isEmptyDocument(empty)).toBe(true)
-    expect(isEmptyDocument(changed)).toBe(false)
+    expect(await documentHash(withCard)).not.toBe(await documentHash(empty))
   })
 })
 
 describe('isEmptyDocument', () => {
+  test('vide : aucune carte, le budget par défaut ; une carte est à garder', () => {
+    expect(isEmptyDocument(empty)).toBe(true)
+    expect(isEmptyDocument(withCard)).toBe(false)
+  })
+
   test('un budget réglé est à garder : le document n’est pas vide', () => {
-    const empty = { collection: emptyCollection(), shopping: emptyShopping() }
     const budget = { ...empty.shopping.budget, monthly: 60 }
     const tuned = { ...empty, shopping: { ...empty.shopping, budget } }
     expect(isEmptyDocument(tuned)).toBe(false)

@@ -12,7 +12,8 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   commande (`readShopping` : annulée, la carte revient sans statut). La page Valeur montre à sa
   place ce que les commandes ont coûté en tout (« Dépensé en tout »).
 - Achats (`/achats`), clé `pokedex-collection.shopping` (`ShoppingData`, à part : la collection
-  garde son format) :
+  garde son format ; ceux d'un nouveau venu, aucune commande et le budget par défaut :
+  `emptyShopping`, `lib/orders.ts`) :
   - la liste d'achats n'est pas enregistrée : c'est la carte de chaque Pokémon ni possédée ni
     commandée (`wishlistRows`, une TAG TEAM une fois), toutes voulues autant (décision de
     l'utilisateur, octobre 2026 : choisir la carte suffit ; plus de « À acheter » carte par carte, ni
@@ -20,21 +21,22 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     (stockage, import, serveur : `readShopping`) et toujours écrite vide, pour qu'une ancienne
     version (un onglet resté ouvert) relise les achats sans les croire abîmés. Le lien vers
     Cardmarket est `cardmarketPage` : la page notée, sinon l'id. La prochaine commande
-    (`purchase-planner`) y prend les moins chères d'abord, une par Pokémon, dans le budget, port
-    réservé ; on peut en retirer ou en ajouter à la main ;
+    (`planPurchase`, `purchase-planner`) ne lit qu'elle : elle y prend les moins chères d'abord,
+    une par Pokémon, dans le budget, port réservé ; on peut en retirer ou en ajouter à la main.
+    Après « Enregistrer comme commande », l'assistant repart de ses réglages par défaut (le budget :
+    le reste du mois, cette commande comprise) ;
   - « Copier pour Cardmarket » (`shopping/WantsDialog`, à côté d'« Enregistrer comme commande… »,
     affiché comme lui dès que la prochaine commande a une carte) en fait des lignes pour la liste de
     souhaits de Cardmarket, que l'utilisateur colle lui-même : l'app n'envoie rien à Cardmarket
     (format, version et extension : `/api/wants`, `docs/prix.md`). La fenêtre « Ajouter à ma liste
-    Cardmarket » attend les lignes (« Réessayer » si le serveur ne répond pas ; le bouton disparu,
-    le focus va à « Copier », ou, sans aucune ligne, au titre des cartes à ajouter depuis leur
-    page : `autoFocus` ne vaut pas pour un titre, un `ref` le lui donne), puis donne les
+    Cardmarket » attend les lignes (« Réessayer » si le serveur ne répond pas), puis donne les
     étapes : sur Cardmarket, ouvrir sa liste de souhaits, « Ajouter une deck list », coller,
     « Ajouter » ; « Modification en masse » : japonais, Near Mint (une ligne ne peut pas les
     porter) ; vérifier le numéro de chaque carte (« Salamèche (sv2a 168) »), puis lancer le
     « Shopping Wizard », qui choisit les vendeurs les moins chers. Les lignes sont dans un champ en
-    lecture seule ; « Copier » (`navigator.clipboard`) dit « N cartes copiées », ou, si le
-    navigateur refuse (hors https aussi), sélectionne les lignes et dit de les copier avec Ctrl+C.
+    lecture seule ; « Copier » (`copyText`, `lib/clipboard.ts`, comme l'adresse du Pokédex public)
+    dit « N cartes copiées », ou, si le navigateur refuse (hors https aussi), sélectionne les lignes
+    et dit de les copier avec Ctrl+C.
     Chaque carte du plan a un prix, donc un id Cardmarket. Une carte sans ligne sûre (version ou
     extension incertaine) est listée à part, avec son lien « Voir sur Cardmarket »
     (`CardmarketLink`) : l'ajouter depuis sa page (« Ajouter à mes souhaits », déjà en japonais,
@@ -63,13 +65,16 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     en place). Un import demande toujours confirmation ; un fichier abîmé (enregistrement ou bloc
     d'achats illisible : image, montant en texte, état de commande, date ou jour qui
     n'existe pas, remboursé plus grand que la commande, commande sans id ou en double, carte d'un
-    Pokémon hors du Pokédex, texte qui n'en est pas un, lien…) est refusé (`lib/transfer.ts`). « Effacer ma
+    Pokémon hors du Pokédex ou sans clé `image` (« Modifier la carte » planterait), id Cardmarket
+    que la saisie refuserait (0, négatif, plus de 9 chiffres…), texte qui n'en est pas un, lien…)
+    est refusé (`lib/transfer.ts`), comme par le serveur à la synchronisation. « Effacer ma
     collection » efface les cartes, leurs statuts et leurs prix payés ; les commandes et le budget
     restent.
 - Deux onglets ouverts restent d'accord : chacun reprend ce que l'autre enregistre (évènement
   `storage`, `store/persist.ts`, pour les deux clés), sans quoi il l'écraserait ; connectés, ils
   partagent aussi la dernière version échangée avec le serveur. Si le navigateur
-  refuse de lire ou d'écrire (stockage plein ou bloqué), l'app continue en mémoire et un bandeau
-  (`useStorageFailure`, `AppShell`) invite à exporter.
+  refuse de lire ou d'écrire (stockage plein ou bloqué ; toute lecture passe par `readStored`,
+  toute écriture par `writeStored`, sauf le choix du thème), l'app continue en mémoire et un
+  bandeau (`useStorageFailure`, `AppShell`) invite à exporter.
 - « Annuler » (`useCollectionAction`) rétablit collection et achats d'avant, et refuse si quelque
   chose a changé depuis : une modification ultérieure n'est jamais effacée.

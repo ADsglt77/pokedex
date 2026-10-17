@@ -8,6 +8,9 @@ import { createAuthClient } from 'better-auth/react'
 
 export const authClient = createAuthClient()
 
+/** Trop de tentatives (5 par minute, `server/auth.ts`) : la réponse 429 du serveur. */
+export const TOO_MANY_ATTEMPTS = 'Trop de tentatives : réessayez dans une minute.'
+
 /** La page de connexion, qui ramène ensuite à `back` (une page du site, filtres compris). */
 export const loginPath = (back: string) => `/connexion?retour=${encodeURIComponent(back)}`
 
@@ -26,13 +29,11 @@ export interface AccountUser {
 export let accountExists = true
 
 /**
- * Le compte connecté sur ce navigateur au démarrage : `null` personne, `undefined` sans réponse du
- * serveur (hors ligne : `startSession` reprend alors celui de la dernière synchronisation).
+ * Une seule requête au démarrage : le compte existe-t-il, et qui est connecté. Rend le compte
+ * connecté sur ce navigateur : `null` personne, `undefined` sans réponse du serveur (hors ligne :
+ * `startSession` reprend alors celui de la dernière synchronisation).
  */
-export let startupAccount: AccountUser | null | undefined
-
-/** Une seule requête au démarrage : le compte existe-t-il, et qui est connecté. */
-export async function loadAccount() {
+export async function loadAccount(): Promise<AccountUser | null | undefined> {
   try {
     const response = await fetch('/api/account', {
       cache: 'no-store',
@@ -41,7 +42,7 @@ export async function loadAccount() {
     if (!response.ok) return
     const body = (await response.json()) as { exists: boolean; user: AccountUser | null }
     accountExists = body.exists
-    startupAccount = body.user
+    return body.user
   } catch {
     // Serveur arrêté ou bloqué : l'app s'affiche comme si le compte existait.
   }

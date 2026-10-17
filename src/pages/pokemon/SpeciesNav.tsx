@@ -48,14 +48,14 @@ export function SpeciesNav({ species, previous, next, nextWithoutCard }: Species
           items={[
             {
               label: (
-                <Link to={pokedexHref()} className={styles.crumb}>
+                <Link to={pokedexHref()} className="quiet-link">
                   Pokédex
                 </Link>
               ),
             },
             {
               label: (
-                <Link to={pokedexUrl({ generation: species.generation })} className={styles.crumb}>
+                <Link to={pokedexUrl({ generation: species.generation })} className="quiet-link">
                   {generationById(species.generation)!.region}
                 </Link>
               ),

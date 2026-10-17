@@ -1,4 +1,7 @@
-/** Les achats : budget par défaut, fournisseurs et états d'une commande. */
+/**
+ * Les achats : le statut d'une carte ajoutée (« Ajouter comme »), le budget par défaut et ses
+ * niveaux, les fournisseurs et les états d'une commande.
+ */
 
 import type { AddAs, BudgetSettings, OrderState, Supplier } from '@/types'
 

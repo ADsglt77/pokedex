@@ -15,7 +15,6 @@ import { useId, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { spentThisMonth } from '@/lib/budget'
 import { keepFocusInList } from '@/lib/focus'
 import { formatEuro, plural, today } from '@/lib/format'
-import { priceLabel } from '@/lib/prices'
 import { cents, newOrder } from '@/lib/orders'
 import { planPurchase } from '@/lib/purchase-planner'
 import type { WishRow } from '@/lib/wishlist'
@@ -68,7 +67,7 @@ export function PlannerPanel({
   onSettingsChange: (settings: PlannerSettings) => void
   onOrderSaved: () => void
 }) {
-  const { rows, taken } = useWishlist()
+  const { rows } = useWishlist()
   const { orders, budget } = useShoppingStore((state) => state.shopping)
   const spent = spentThisMonth(orders)
   const {
@@ -86,7 +85,7 @@ export function PlannerPanel({
   const heading = useRef<HTMLHeadingElement>(null)
   const pickedList = useRef<HTMLUListElement>(null)
 
-  const plan = planPurchase(rows, taken, {
+  const plan = planPurchase(rows, {
     budget: amount,
     shippingReserve: budget.shippingReserve,
     forced,
@@ -263,22 +262,24 @@ export function PlannerPanel({
             action={{ label: 'Remettre', run: (row) => skip(row, false) }}
           />
           <AccordionItem value="how" title="Comment le plan est construit" headingLevel={3}>
-            <ol className={styles.steps}>
-              <li>
-                Les cartes de vos Pokémon, ni possédées ni commandées, d’un Pokémon que vous n’avez
-                pas.
-              </li>
-              <li>Les cartes sans prix sont mises de côté.</li>
-              <li>Dans l’ordre : vos ajouts à la main, puis le prix le plus bas.</li>
-              <li>
-                Une carte est prise si son Pokémon n’est pas déjà dans le plan et si elle tient dans
-                le budget, port réservé.
-              </li>
-            </ol>
-            <p className="muted">
-              Un calcul simple et indicatif : les prix du marché ne sont pas ceux des annonces, et
-              plusieurs vendeurs veulent dire plusieurs frais de port.
-            </p>
+            <Stack gap={3}>
+              <ol className={styles.steps}>
+                <li>
+                  Les cartes de vos Pokémon, ni possédées ni commandées, d’un Pokémon que vous
+                  n’avez pas.
+                </li>
+                <li>Les cartes sans prix sont mises de côté.</li>
+                <li>Dans l’ordre : vos ajouts à la main, puis le prix le plus bas.</li>
+                <li>
+                  Une carte est prise si son Pokémon n’est pas déjà dans le plan et si elle tient
+                  dans le budget, port réservé.
+                </li>
+              </ol>
+              <p className="muted">
+                Un calcul simple et indicatif : les prix du marché ne sont pas ceux des annonces, et
+                plusieurs vendeurs veulent dire plusieurs frais de port.
+              </p>
+            </Stack>
           </AccordionItem>
         </Accordion>
       </Stack>
@@ -294,7 +295,8 @@ export function PlannerPanel({
           order={draft}
           onClose={() => setDraft(null)}
           onSaved={() => {
-            change({ forced: NONE, skipped: NONE })
+            // Les réglages par défaut : le budget revient au reste du mois, commande comprise.
+            onSettingsChange({})
             onOrderSaved()
           }}
         />
@@ -318,7 +320,7 @@ const planOrder = (rows: readonly WishRow[], shipping: number) =>
 
 function PlanLine({ row, children }: { row: WishRow; children?: ReactNode }) {
   return (
-    <CardLine card={row.card} detail={row.price === null ? 'sans prix' : priceLabel(row.price)}>
+    <CardLine card={row.card} detail={row.price === null ? 'sans prix' : formatEuro(row.price)}>
       {children}
     </CardLine>
   )

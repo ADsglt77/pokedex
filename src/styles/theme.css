@@ -26,7 +26,10 @@
   --chart-line: var(--camply-accent);
   --chart-fill: var(--camply-accent-soft);
 
-  /* Sombre : gris foncé, sans teinte. */
+  /* Sombre : gris foncé, sans teinte. Le fond est aussi la couleur de la barre du navigateur
+     (mobile), lue ici par `store/theme.ts`. Ses copies figées, à changer avec lui : `index.html`
+     (`theme-color`) et le manifeste (`public/manifest.webmanifest`) ; celle du clair dans
+     `public/theme.js`. */
   --camply-bg: #141414;
   --camply-surface: #1b1b1c;
   --camply-surface-2: #232325;
@@ -105,10 +108,10 @@
      courbes à l'encre. */
   --link: var(--camply-text-strong);
   --link-underline: color-mix(in srgb, var(--camply-accent) 55%, transparent);
-  --link-underline-hover: var(--camply-accent);
   --chart-line: #4a3f3b;
   --chart-fill: rgba(74, 63, 59, 0.08);
 
+  /* Aussi la barre du navigateur : copié dans `public/theme.js` (voir le sombre). */
   --camply-bg: #faf6f3;
   --camply-surface: #ffffff;
   --camply-surface-2: #f4eeea;

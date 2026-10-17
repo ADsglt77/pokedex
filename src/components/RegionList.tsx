@@ -5,9 +5,9 @@ import type { GenerationProgress } from '@/lib/pokedex'
 import styles from './RegionList.module.css'
 
 /**
- * Les régions et leurs Pokémon débloqués, en liste : sur téléphone, à la place de la réglette (qui
- * n'y est qu'une image). `linked` : chacune mène au Pokédex de sa génération (pas sur le Pokédex
- * public, celui du visiteur).
+ * Les régions et leurs Pokémon débloqués, en liste, sur téléphone, où la réglette n'est qu'une
+ * image : sous elle sur l'accueil, à sa place sur le Pokédex public. `linked` : chacune mène au
+ * Pokédex de sa génération (pas sur le Pokédex public, celui du visiteur).
  */
 export function RegionList({
   generations,

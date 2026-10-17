@@ -51,11 +51,6 @@
   font-weight: 700;
 }
 
-.ringTotal {
-  color: var(--camply-text-muted);
-  font-size: var(--text-sm);
-}
-
 .sentence {
   display: grid;
   gap: 0.125rem;
@@ -107,11 +102,6 @@
 .warn {
   background: var(--camply-warn-soft);
   color: var(--camply-warn);
-}
-
-.success {
-  background: var(--camply-success-soft);
-  color: var(--camply-success);
 }
 
 .todoText {

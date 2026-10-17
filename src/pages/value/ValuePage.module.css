@@ -1,20 +1,8 @@
-/* Les chiffres en tête, puis un panneau par sujet : les courbes mensuelles côte à côte sur grand
-   écran, le reste sur toute la largeur. */
+/* Les chiffres en tête, puis un panneau par sujet, l'un sous l'autre. */
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-block);
-}
-
-@container page (min-width: 48rem) {
-  .grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-  }
-}
-
-.wide {
-  grid-column: 1 / -1;
 }
 
 .card {
@@ -128,7 +116,7 @@
   }
 }
 
-/* Téléphone : chaque génération en fiche : son nom et le coût, puis ses Pokémon à débloquer, sans
+/* Téléphone : chaque génération en fiche : son nom et le coût, puis ses Pokémon à acheter, sans
    carte et sans prix. */
 @container table (max-width: 36rem) {
   .completion tbody tr {

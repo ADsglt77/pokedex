@@ -22,6 +22,9 @@ export const formatList = (items: readonly string[]) => listFormat.format(items)
 
 export const formatDecimal = (value: number) => spaced(decimalFormat.format(value))
 
+/** « 12,5 % » : une part, au dixième. */
+export const formatShare = (percent: number) => `${formatDecimal(percent)}\u00a0%`
+
 /** Le jour (YYYY-MM-DD) d'une date, dans le fuseau de l'utilisateur. */
 const localDay = (date: Date) =>
   [date.getFullYear(), date.getMonth() + 1, date.getDate()]
@@ -116,9 +119,11 @@ export const euroInput = (value: number) => value.toFixed(2).replace('.', ',')
 export const details = (...parts: (string | 0 | false | null | undefined)[]) =>
   parts.filter(Boolean).join(' · ')
 
-/** « Le Pokédex » + « de Sacha », « d’Adrien » : l’élision devant une voyelle ou un h. */
-export const ofName = (name: string) =>
-  /^[aeiouyàâäéèêëîïôöùûüh]/i.test(name) ? `d’${name}` : `de ${name}`
+/** « Le Pokédex de Sacha », « Le Pokédex d’Adrien » : l’élision devant une voyelle ou un h. */
+export function pokedexTitle(owner: string): string {
+  const elided = /^[aeiouyàâäéèêëîïôöùûüh]/i.test(owner)
+  return `Le Pokédex ${elided ? 'd’' : 'de '}${owner}`
+}
 
 /** « 1 carte », « 3 cartes » ; « Pokémon » reste invariable. */
 export function plural(count: number, singular: string, pluralForm: string): string {
@@ -154,14 +159,3 @@ export const toOptions = <T extends string>(labels: Record<T, string>) =>
 
 /** Titre de l'onglet : « Pikachu – Mon Pokédex ». */
 export const pageTitle = (name?: string) => (name ? `${name} – Mon Pokédex` : 'Mon Pokédex')
-
-/** Les mois de `first` à `last` compris (`YYYY-MM`) : « 2026-11 », « 2026-12 », « 2027-01 »… */
-export function monthRange(first: string, last: string): string[] {
-  const months: string[] = []
-  for (let month = first; month <= last;) {
-    months.push(month)
-    const [year, index] = month.split('-').map(Number) as [number, number]
-    month = index === 12 ? `${year + 1}-01` : `${year}-${String(index + 1).padStart(2, '0')}`
-  }
-  return months
-}

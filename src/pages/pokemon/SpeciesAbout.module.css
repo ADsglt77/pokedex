@@ -1,7 +1,3 @@
-.about {
-  min-width: 0;
-}
-
 .artwork {
   display: flex;
   flex-direction: column;

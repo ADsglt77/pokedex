@@ -4,6 +4,7 @@ import { Suspense, use, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { speciesPath } from '@/lib/filters'
 import { ChartPeriodControl, ChartStats } from '@/components/ChartParts'
+import { CollectionValueStat } from '@/components/CollectionValueStat'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
 import { PriceChart } from '@/components/PriceChart'
@@ -36,12 +37,11 @@ import {
   collectionHistory,
   completionByGeneration,
   completionCost,
-  gainPercent,
   priceMovers,
   tallyByStatus,
+  tallyHint,
   trackedCards,
   type PricePoint,
-  type Tally,
   type TrackedCard,
 } from '@/lib/prices'
 import { unlockEvents } from '@/lib/pokedex'
@@ -51,15 +51,6 @@ import { loadPriceHistories, usePrices, usePricesMissing } from '@/store/prices'
 import type { PokemonCard } from '@/types'
 import { CardsTable, CompletionTable } from './ValueTables'
 import styles from './ValuePage.module.css'
-
-/** « 3 cartes · payées 120,00 € · 1 sans prix » */
-const tallyHint = (tally: Tally, withPaid: boolean, priced: boolean) =>
-  details(
-    plural(tally.count, 'carte', 'cartes'),
-    withPaid && tally.paid > 0 && `payées ${formatEuro(tally.paid)}`,
-    // Sans les prix (pas encore là, ou indisponibles), chaque carte compterait « sans prix ».
-    priced && tally.unpriced > 0 && `${formatInteger(tally.unpriced)} sans prix`,
-  )
 
 /**
  * Valeur : ce que vaut la collection au prix Cardmarket du jour, ce qu'elle a coûté, ce que
@@ -91,32 +82,19 @@ export function ValuePage() {
 
       <div className={styles.grid}>
         {pricesMissing && (
-          <Alert
-            className={styles.wide}
-            tone="info"
-            title="Les prix ne sont pas disponibles pour le moment."
-          >
+          <Alert tone="info" title="Les prix ne sont pas disponibles pour le moment.">
             Ils sont relus chaque jour par le serveur. Les prix payés que vous avez notés restent
             visibles ci-dessous.
           </Alert>
         )}
 
-        <div className={cx('stat-grid', styles.wide)}>
-          <Stat
-            label="Ma collection"
-            icon={<STATUS_ICONS.owned size={18} />}
-            value={money(tallies.owned.value)}
-            delta={
-              prices ? gainPercent(tallies.owned.paidCardsValue, tallies.owned.paid) : undefined
-            }
-            deltaSuffix={'\u00a0%'}
-            hint={tallyHint(tallies.owned, true, priced)}
-          />
+        <div className="stat-grid">
+          <CollectionValueStat label="Ma collection" />
           <Stat
             label="Commandées"
             icon={<STATUS_ICONS.ordered size={18} />}
             value={money(tallies.ordered.value)}
-            hint={tallyHint(tallies.ordered, true, priced)}
+            hint={tallyHint(tallies.ordered, priced)}
           />
           <Stat
             label="Dépensé en tout"
@@ -146,7 +124,6 @@ export function ValuePage() {
         <Movers cards={cards} />
 
         <Panel
-          className={styles.wide}
           flush
           title="Mes cartes"
           description="Ce qu’elles ont coûté et ce qu’elles valent, la plus chère d’abord."
@@ -155,12 +132,11 @@ export function ValuePage() {
         </Panel>
 
         <Panel
-          className={styles.wide}
           flush
           title="Pour compléter, par génération"
           description="Pour chaque Pokémon à débloquer, le prix de sa carte ; ceux sans carte, ou dont la carte n’a pas de prix, sont comptés à part. Ceux dont la carte est déjà commandée n’y sont pas : ils comptent dans les commandes."
         >
-          <CompletionTable rows={completion} priced={prices !== null} />
+          <CompletionTable rows={completion} priced={priced} />
         </Panel>
       </div>
     </div>
@@ -181,7 +157,6 @@ function Evolution({ owned }: { owned: PokemonCard[] }) {
 
   return (
     <Panel
-      className={styles.wide}
       title="Évolution"
       description="Jour par jour, sur la période choisie."
       actions={<ChartPeriodControl value={period} onChange={setPeriod} />}
@@ -269,7 +244,6 @@ function Movers({ cards }: { cards: TrackedCard[] }) {
   ]
   return (
     <Panel
-      className={styles.wide}
       title="Ce qui bouge"
       description="Vos cartes possédées dont le prix du jour s’écarte le plus de leur moyenne Cardmarket sur 30 jours (au moins 5 % et 0,50 €)."
     >

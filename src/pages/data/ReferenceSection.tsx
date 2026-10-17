@@ -2,24 +2,13 @@ import { Badge, DescriptionList, SkeletonText, type BadgeTone } from '@camply/ui
 import { Suspense, use, useState, type ReactNode } from 'react'
 import { ExternalLink } from '@/components/ExternalLink'
 import { INGEST_JOB_NAMES, INGEST_JOBS, type IngestJob } from '@/config/jobs'
+import { loadStatus } from '@/lib/api'
+import { POKECARDEX } from '@/lib/card-images'
 import { isOverdue } from '@/lib/jobs'
 import { details, formatDate, formatDateTime } from '@/lib/format'
-import { settled } from '@/lib/settled'
 import type { JobStatus, ServerStatus } from '@/types'
 import { DataSection } from './DataSection'
 import styles from './DataPage.module.css'
-
-/**
- * L'état des tâches du serveur, demandé à chaque ouverture de la page ; `null` s'il ne répond pas,
- * ou s'il n'est pas de la même version que le site (pas encore redémarré après une mise à jour).
- */
-const loadStatus = () =>
-  settled(
-    fetch('/api/status', { cache: 'no-store', signal: AbortSignal.timeout(10_000) })
-      .then((response) => (response.ok ? (response.json() as Promise<ServerStatus>) : null))
-      .then((status) => (status?.jobs ? status : null))
-      .catch(() => null),
-  )
 
 /** D'où viennent les données, et où en est le serveur qui les relit. */
 export function ReferenceSection() {
@@ -35,12 +24,11 @@ export function ReferenceSection() {
         Les espèces viennent de <ExternalLink href="https://pokeapi.co/">PokéAPI</ExternalLink>,
         gardées par le serveur. Le catalogue des cartes japonaises de chaque Pokémon (toutes les
         extensions depuis 1996, decks et promos compris : numéro, nom, id Cardmarket), refait chaque
-        jour par le serveur, vient de{' '}
-        <ExternalLink href="https://www.pokecardex.com/">Pokécardex</ExternalLink>, avec son aimable
-        autorisation, comme les images des cartes, copiées sur notre serveur. Vous y choisissez vos
-        cartes, ou les saisissez : l’image est alors retrouvée d’après la référence (le code de
-        l’extension et le numéro), ou c’est celle de l’adresse que vous collez. Leur prix vient de
-        leur id Cardmarket : celui du guide quotidien de{' '}
+        jour par le serveur, vient de <ExternalLink href={POKECARDEX}>Pokécardex</ExternalLink>,
+        avec son aimable autorisation, comme les images des cartes, copiées sur notre serveur. Vous
+        y choisissez vos cartes, ou les saisissez : l’image est alors retrouvée d’après la référence
+        (le code de l’extension et le numéro), ou c’est celle de l’adresse que vous collez. Leur
+        prix vient de leur id Cardmarket : celui du guide quotidien de{' '}
         <ExternalLink href="https://www.cardmarket.com/">Cardmarket</ExternalLink>, relu chaque jour
         par le serveur, qui en garde l’historique carte par carte.
       </p>
