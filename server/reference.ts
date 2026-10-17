@@ -7,18 +7,25 @@
  * - `GET /api/species`, `/api/species/details` : les espèces, et ce qu'en montre la fiche ;
  * - `GET /api/catalog` : le catalogue des cartes japonaises ;
  * - `GET /api/prices` : les prix Cardmarket du jour ; `GET /api/prices/:id` : l'historique d'une
- *   carte Cardmarket, par son id produit.
+ *   carte Cardmarket, par son id produit ;
+ * - `GET /api/wants?ids=719621,719654` : la ligne de chaque carte Cardmarket demandée pour la liste
+ *   de souhaits Cardmarket (`wantsLine`), `null` sans ligne sûre ; calculée à chaque demande, chaque
+ *   id et chaque extension une fois.
  * Les grosses réponses sont servies telles que calculées en fin de tâche (`snapshots.ts`).
  */
 
 import type { Database } from 'bun:sqlite'
 import { Elysia, t } from 'elysia'
 import { INGEST_JOB_NAMES, INGEST_JOBS } from '@/config/jobs'
+import { wantsLine, type ExpansionName } from '@/lib/cardmarket'
 import { isOverdue } from '@/lib/jobs'
-import type { JobStatus, ServerStatus } from '@/types'
+import type { JobStatus, ServerStatus, WantsLines } from '@/types'
 import { readSource } from './db'
 import { readHistory } from './history'
 import { notFound, serveSnapshot } from './snapshots'
+
+/** Des ids Cardmarket séparés par des virgules : 2 000 au plus, de 1 à 9 chiffres chacun. */
+const WANTS_IDS = '^[1-9]\\d{0,8}(,[1-9]\\d{0,8}){0,1999}$'
 
 export function referenceRoutes(data: Database) {
   const runs = data.query(
@@ -26,6 +33,54 @@ export function referenceRoutes(data: Database) {
             MAX(finished_at) AS lastRun
      FROM runs GROUP BY job`,
   )
+  // Ce que demande `wantsLine` : le produit (sans extension, absent de la liste des produits de
+  // Cardmarket : pas de ligne) ; le numéro imprimé de chaque produit de la même carte dans son
+  // extension, lui compris, d'après le catalogue (`null` : absent du catalogue, ou plusieurs
+  // numéros) ; les noms des séries du catalogue de son extension, chacun avec le nombre
+  // d'extensions dont des cartes du catalogue portent ce nom (calculé une fois par nom : `GROUP BY`).
+  const product = data.query(
+    `SELECT name, expansion, metacard FROM cardmarket_products
+     WHERE id = ? AND expansion IS NOT NULL`,
+  )
+  const sameCard = data.query(
+    `SELECT products.id,
+            CASE WHEN COUNT(DISTINCT cards.number) = 1 THEN MIN(cards.number) END AS number
+     FROM cardmarket_products AS products LEFT JOIN cards ON cards.cardmarket = products.id
+     WHERE products.expansion = ? AND products.metacard = ?
+     GROUP BY products.id`,
+  )
+  const expansionNames = data.query(
+    `SELECT sets.name,
+            (SELECT COUNT(DISTINCT others.expansion) FROM cards AS shared
+             JOIN cardmarket_products AS others ON others.id = shared.cardmarket
+             -- Les séries de ce nom d'abord, puis leurs cartes (index cards_by_set).
+             WHERE shared.set_id IN (SELECT id FROM sets AS same
+                                     WHERE TRIM(same.name) = TRIM(sets.name))) AS expansions
+     FROM cardmarket_products AS products
+     JOIN cards ON cards.cardmarket = products.id
+     JOIN sets ON sets.id = cards.set_id
+     WHERE products.expansion = ?
+     GROUP BY sets.name`,
+  )
+  /**
+   * La ligne d'un produit Cardmarket pour la liste de souhaits ; `null` sans ligne sûre. `known` :
+   * les noms de chaque extension déjà lus pour cette demande (la même extension revient souvent).
+   */
+  function wantsLineOf(id: number, known: Map<number, ExpansionName[]>) {
+    const row = product.get(id) as { name: string; expansion: number; metacard: number } | null
+    if (!row) return null
+    const group = sameCard.all(row.expansion, row.metacard) as {
+      id: number
+      number: string | null
+    }[]
+    const names = known.get(row.expansion) ?? (expansionNames.all(row.expansion) as ExpansionName[])
+    known.set(row.expansion, names)
+    return wantsLine(
+      { name: row.name, number: group.find((other) => other.id === id)!.number },
+      group.map(({ number }) => number),
+      names,
+    )
+  }
   /** Une réponse calculée en fin de tâche. */
   const snapshot =
     (name: string) =>
@@ -83,6 +138,23 @@ export function referenceRoutes(data: Database) {
       {
         params: t.Object({ id: t.Integer({ minimum: 1, maximum: 999_999_999 }) }),
         ...doc('L’historique des prix d’une carte Cardmarket'),
+      },
+    )
+    .get(
+      '/wants',
+      ({ query, set }): WantsLines => {
+        // Sans cache : les produits et le catalogue changent avec les tâches.
+        set.headers['cache-control'] = 'no-cache'
+        // Chaque id une fois, chaque extension lue une fois : une demande coûte au plus un passage
+        // sur les produits demandés, même répétés.
+        const known = new Map<number, ExpansionName[]>()
+        return Object.fromEntries(
+          [...new Set(query.ids.split(','))].map((id) => [id, wantsLineOf(Number(id), known)]),
+        )
+      },
+      {
+        query: t.Object({ ids: t.String({ pattern: WANTS_IDS }) }),
+        ...doc('Les lignes de cartes Cardmarket pour une liste de souhaits Cardmarket'),
       },
     )
 }

@@ -12,7 +12,7 @@ bun install
 bun dev          # serveur de dev Vite
 bun run build    # type-check + build
 bun lint         # ESLint
-bun test         # tests : achats, prix, import, synchronisation, historique des prix
+bun test         # tests : achats, prix, import, liste de souhaits Cardmarket, synchronisation, historique des prix
 bun run format   # Prettier
 ```
 
@@ -33,8 +33,13 @@ bun run format   # Prettier
   Pokémon débloqués, dépenses) sur 7 jours, 30 jours, 1 an ou tout, avec leurs chiffres.
 - **Achats** : liste d'achats (la carte de chaque Pokémon, ni possédée ni commandée),
   assistant « prochaine commande » dans un budget (100 € par mois, 150 € au plus, réglables),
-  registre des commandes (Cardmarket, Myutsu, Hikaru…) qui met à jour les statuts, suivi du
-  budget par mois et par fournisseur.
+  et « Copier pour Cardmarket » : ses cartes en lignes à coller dans votre liste de souhaits
+  Cardmarket (« Ajouter une deck list »), chacune dans sa version exacte, avant son Shopping
+  Wizard (langue et état se règlent ensuite par « Modification en masse » ; une carte dont la
+  version ou l'extension n'est pas sûre s'ajoute depuis sa page ; le site n'envoie rien à
+  Cardmarket) ; registre
+  des commandes (Cardmarket, Myutsu, Hikaru…) qui met à jour les statuts, suivi du budget par mois
+  et par fournisseur.
 - **Pokédex public** : la page d'accueil d'un visiteur, en lecture seule (`/vitrine`, toujours
   publique) : progression, régions, valeur au prix du jour, courbe et classeur. Jamais les prix
   payés, les commandes ni le budget. Le reste du site demande d'être connecté.
@@ -51,7 +56,8 @@ navigateur ne parle qu'à lui. Des tâches d'ingestion lisent les sources et rem
   nom, les Pokémon et l'id Cardmarket de chaque carte (`/api/catalog`). Une page par série, une
   toutes les 3 s : le premier passage prend une vingtaine de minutes ;
 - `prices`, toutes les 6 h : les prix d'après les fichiers publics de Cardmarket (le prix du jour
-  de toutes ses cartes à l'unité, et l'historique de chacune ; `/api/prices`) ;
+  de toutes ses cartes à l'unité, et l'historique de chacune ; `/api/prices`), et l'extension de
+  chaque carte, pour les lignes de la liste de souhaits (`/api/wants`) ;
 - `images`, chaque jour : les images copiées chez nous (`/images/…`) — cartes chez Pokécardex,
   qui demande qu'elles soient hébergées chez nous, avec un lien vers son site sur chaque page ;
   sprites et illustrations des Pokémon chez PokéAPI. Une image qui manque encore est copiée à la

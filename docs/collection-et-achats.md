@@ -22,6 +22,24 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     Cardmarket est `cardmarketPage` : la page notée, sinon l'id. La prochaine commande
     (`purchase-planner`) y prend les moins chères d'abord, une par Pokémon, dans le budget, port
     réservé ; on peut en retirer ou en ajouter à la main ;
+  - « Copier pour Cardmarket » (`shopping/WantsDialog`, à côté d'« Enregistrer comme commande… »,
+    affiché comme lui dès que la prochaine commande a une carte) en fait des lignes pour la liste de
+    souhaits de Cardmarket, que l'utilisateur colle lui-même : l'app n'envoie rien à Cardmarket
+    (format, version et extension : `/api/wants`, `docs/prix.md`). La fenêtre « Ajouter à ma liste
+    Cardmarket » attend les lignes (« Réessayer » si le serveur ne répond pas ; le bouton disparu,
+    le focus va à « Copier », ou, sans aucune ligne, au titre des cartes à ajouter depuis leur
+    page : `autoFocus` ne vaut pas pour un titre, un `ref` le lui donne), puis donne les
+    étapes : sur Cardmarket, ouvrir sa liste de souhaits, « Ajouter une deck list », coller,
+    « Ajouter » ; « Modification en masse » : japonais, Near Mint (une ligne ne peut pas les
+    porter) ; vérifier le numéro de chaque carte (« Salamèche (sv2a 168) »), puis lancer le
+    « Shopping Wizard », qui choisit les vendeurs les moins chers. Les lignes sont dans un champ en
+    lecture seule ; « Copier » (`navigator.clipboard`) dit « N cartes copiées », ou, si le
+    navigateur refuse (hors https aussi), sélectionne les lignes et dit de les copier avec Ctrl+C.
+    Chaque carte du plan a un prix, donc un id Cardmarket. Une carte sans ligne sûre (version ou
+    extension incertaine) est listée à part, avec son lien « Voir sur Cardmarket »
+    (`CardmarketLink`) : l'ajouter depuis sa page (« Ajouter à mes souhaits », déjà en japonais,
+    Near Mint par le lien). Un message bleu « Informations » de Cardmarket signale une carte ajoutée
+    sans sa version : la retirer de la liste et l'ajouter depuis sa page ;
   - commandes : `applyOrder` (`lib/orders.ts`) reporte chaque enregistrement sur la collection (en
     cours → commandée, reçue → possédée, annulée ou supprimée → l'état d'avant, gardé dans
     `OrderLine.previous`, `previousOf`, relu à chaque enregistrement, formulaire comme « Marquer

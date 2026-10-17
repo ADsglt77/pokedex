@@ -232,6 +232,13 @@ export interface PriceFile {
   cards: Record<string, CardPriceRow>
 }
 
+/**
+ * `/api/wants?ids=…` : pour chaque id Cardmarket demandé (`idProduct`), sa ligne pour « Ajouter
+ * une deck list » d'une liste de souhaits Cardmarket (`wantsLine`), ou `null` quand elle ne
+ * désignerait pas sûrement cette carte-là (produit inconnu, extension ambiguë…).
+ */
+export type WantsLines = Record<string, string | null>
+
 /** `/api/prices/<idProduct>` : l'historique d'une carte (Cardmarket n'en garde pas). */
 export interface CardPriceHistory {
   /** Son nom chez Cardmarket : « Leafeon V [Greening Cells | Leaf Blade] ». */

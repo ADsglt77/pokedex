@@ -1,10 +1,13 @@
 /**
  * Tâche `prices` : les prix des cartes à l'unité chez Cardmarket, regardés toutes les 6 h, d'après
  * son guide des prix public (prix du jour de chaque carte, par id produit) et sa liste des
- * produits (leurs noms). Le prix du jour remplace celui de la veille (`cardmarket_prices`) et
- * s'ajoute à l'historique de la carte (`cardmarket_history`) ; relancée le même jour, la tâche
- * remplace le prix du jour. Le guide n'est retéléchargé que s'il a changé depuis le dernier
- * passage (`sources`). En fin de tâche, la réponse de `/api/prices` est recalculée (`snapshots`).
+ * produits (leur nom, leur extension et leur métacarte : `cardmarket_products`, d'où leur ligne
+ * pour une liste de souhaits, `/api/wants`). Le prix du jour remplace celui de la veille
+ * (`cardmarket_prices`) et s'ajoute à l'historique de la carte (`cardmarket_history`) ; relancée le
+ * même jour, la tâche remplace le prix du jour. Le guide et la liste ne sont retéléchargés que si
+ * le guide a changé depuis le dernier passage (`sources`) ; la liste l'est aussi, une fois, tant
+ * qu'aucun produit n'a son extension (une base d'avant ces colonnes). En fin de tâche, la réponse
+ * de `/api/prices` est recalculée (`snapshots`).
  */
 
 import type { Database } from 'bun:sqlite'
@@ -32,7 +35,33 @@ interface PriceGuide {
 }
 
 interface ProductList {
-  products: { idProduct: number; name: string }[]
+  products: { idProduct: number; name: string; idExpansion: number; idMetacard: number }[]
+}
+
+const downloadProducts = () =>
+  download(PRODUCTS_URL).then((response) => response.json() as Promise<ProductList>)
+
+/**
+ * Enregistre la liste des produits : le nom, l'extension et la métacarte de chacun. Un produit
+ * qu'elle ne donne plus garde son nom (son historique le montre) mais perd son extension : il ne
+ * compte plus parmi les versions de sa carte (`wantsVersion`).
+ */
+function saveProducts(db: Database, { products }: ProductList) {
+  // Seules les lignes qui changent sont réécrites : la liste compte plus de 70 000 produits.
+  const write = db.query(
+    `INSERT INTO cardmarket_products (id, name, expansion, metacard) VALUES (?, ?, ?, ?)
+     ON CONFLICT (id) DO UPDATE SET
+       name = excluded.name, expansion = excluded.expansion, metacard = excluded.metacard
+     WHERE name != excluded.name OR expansion IS NOT excluded.expansion
+       OR metacard IS NOT excluded.metacard`,
+  )
+  for (const { idProduct, name, idExpansion, idMetacard } of products) {
+    write.run(idProduct, name, idExpansion, idMetacard)
+  }
+  db.query(
+    `UPDATE cardmarket_products SET expansion = NULL, metacard = NULL
+     WHERE expansion IS NOT NULL AND id NOT IN (SELECT value FROM json_each(?))`,
+  ).run(JSON.stringify(products.map(({ idProduct }) => idProduct)))
 }
 
 /** Un prix au centime ; Cardmarket note `0` ou `null` un prix inconnu. */
@@ -66,13 +95,20 @@ export async function prices(db: Database) {
   const stamp = head.headers.get('last-modified') ?? ''
   if (stamp && stamp === readSource(db, 'cardmarket')?.stamp) {
     console.log('Cardmarket : guide des prix inchangé depuis le dernier passage.')
+    // Les extensions des produits, que la base ne gardait pas avant octobre 2026 : la liste est
+    // relue une fois sans attendre un nouveau guide (aucun prix n'est touché).
+    if (!db.query('SELECT 1 FROM cardmarket_products WHERE expansion IS NOT NULL').get()) {
+      const products = await downloadProducts()
+      db.transaction(() => saveProducts(db, products))()
+      console.log(`Cardmarket : liste des produits relue, ${products.products.length} produits.`)
+    }
     // La réponse refaite quand même, d'après la base : sa forme a pu changer avec le code.
     return savePrices(db)
   }
 
   const [guide, products] = await Promise.all([
     download(PRICE_GUIDE_URL).then((response) => response.json() as Promise<PriceGuide>),
-    download(PRODUCTS_URL).then((response) => response.json() as Promise<ProductList>),
+    downloadProducts(),
   ])
   const date = guide.createdAt.slice(0, 10)
   const [year, day] = yearDay(date)
@@ -105,13 +141,9 @@ export async function prices(db: Database) {
   const writePrice = db.query(
     'INSERT INTO cardmarket_prices (id, price, low, avg30) VALUES (?, ?, ?, ?)',
   )
-  const writeName = db.query(
-    `INSERT INTO cardmarket_products (id, name) VALUES (?, ?)
-     ON CONFLICT (id) DO UPDATE SET name = excluded.name WHERE name != excluded.name`,
-  )
   let written = 0
   db.transaction(() => {
-    for (const { idProduct, name } of products.products) writeName.run(idProduct, name)
+    saveProducts(db, products)
     db.run('DELETE FROM cardmarket_prices')
     for (const [id, [price, low, avg30]] of cards) {
       writePrice.run(id, price, low, avg30)

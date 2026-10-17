@@ -10,7 +10,7 @@ import {
   Slider,
   Stack,
 } from '@camply/ui'
-import { Receipt, Sparkles } from '@camply/ui/icons'
+import { Copy, Receipt, Sparkles } from '@camply/ui/icons'
 import { useId, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { spentThisMonth } from '@/lib/budget'
 import { keepFocusInList } from '@/lib/focus'
@@ -24,6 +24,7 @@ import type { Order } from '@/types'
 import { BudgetField } from './BudgetField'
 import { CardLine } from './CardLine'
 import { OrderForm } from './OrderForm'
+import { WantsDialog } from './WantsDialog'
 import { useWishlist } from '@/hooks/useWishlist'
 import styles from './ShoppingPage.module.css'
 
@@ -55,7 +56,8 @@ export interface PlannerSettings {
 
 /**
  * L'assistant « Préparer ma prochaine commande » : un budget, des règles, un plan recalculé à
- * chaque changement. Le plan n'achète rien : on commande sur Cardmarket, puis on enregistre.
+ * chaque changement. Le plan n'achète rien : on commande sur Cardmarket (ses cartes copiées pour
+ * une liste de souhaits : `WantsDialog`), puis on enregistre.
  */
 export function PlannerPanel({
   settings,
@@ -79,6 +81,7 @@ export function PlannerPanel({
   } = settings
   const change = (next: PlannerSettings) => onSettingsChange({ ...settings, ...next })
   const [draft, setDraft] = useState<Order | null>(null)
+  const [wantsOpen, setWantsOpen] = useState(false)
   const planTitle = useId()
   const heading = useRef<HTMLHeadingElement>(null)
   const pickedList = useRef<HTMLUListElement>(null)
@@ -201,7 +204,15 @@ export function PlannerPanel({
         )}
 
         {plan.picked.length > 0 && (
-          <div>
+          <Stack direction="horizontal" gap={2} wrap>
+            <Button
+              size="sm"
+              variant="secondary"
+              leftIcon={<Copy size={14} />}
+              onClick={() => setWantsOpen(true)}
+            >
+              Copier pour Cardmarket
+            </Button>
             <Button
               size="sm"
               leftIcon={<Receipt size={14} />}
@@ -209,11 +220,12 @@ export function PlannerPanel({
             >
               Enregistrer comme commande…
             </Button>
-          </div>
+          </Stack>
         )}
         <p className={styles.note}>
-          Ce plan n’est pas une commande : rien n’est acheté. Cherchez les cartes sur Cardmarket,
-          commandez, puis enregistrez la commande avec les prix réellement payés.
+          Ce plan n’est pas une commande : rien n’est acheté. Copiez les cartes pour votre liste de
+          souhaits Cardmarket (ou cherchez-les), commandez, puis enregistrez la commande avec les
+          prix réellement payés.
         </p>
 
         <Accordion multiple>
@@ -271,6 +283,12 @@ export function PlannerPanel({
         </Accordion>
       </Stack>
 
+      {wantsOpen && (
+        <WantsDialog
+          cards={plan.picked.map((row) => row.card)}
+          onClose={() => setWantsOpen(false)}
+        />
+      )}
       {draft && (
         <OrderForm
           order={draft}

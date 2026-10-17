@@ -167,6 +167,18 @@ const DATA_STEPS = [
   DROP TABLE species;
   DELETE FROM sources WHERE name = 'catalog';
   `,
+  `
+  -- L'extension et la « métacarte » (la même carte, d'une extension à l'autre) de chaque produit
+  -- Cardmarket, d'après sa liste des produits : les produits d'une même métacarte dans une même
+  -- extension en sont les versions (V.1, V.2…), qu'écrit sa ligne pour une liste de souhaits
+  -- (\`/api/wants\`). Nulles pour un produit que la liste ne donne pas (ou plus).
+  ALTER TABLE cardmarket_products ADD COLUMN expansion INTEGER;
+  ALTER TABLE cardmarket_products ADD COLUMN metacard INTEGER;
+  CREATE INDEX cardmarket_products_by_card ON cardmarket_products (expansion, metacard);
+
+  -- Les cartes du catalogue d'un produit Cardmarket : le nom de son extension (\`/api/wants\`).
+  CREATE INDEX cards_by_cardmarket ON cards (cardmarket);
+  `,
 ]
 
 /**
