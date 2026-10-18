@@ -1,6 +1,5 @@
 import { Card } from '@camply/ui'
 import { memo } from 'react'
-import { Link } from 'react-router'
 import { speciesPath } from '@/lib/filters'
 import { CardArt } from '@/components/CardArt'
 import { CardmarketLink } from '@/components/CardmarketLink'
@@ -14,6 +13,8 @@ import styles from './WishCard.module.css'
 /**
  * Une carte de la liste d'achats : ce qu'elle est, ce qu'elle coûte, où la trouver. Mémoïsée : les
  * lignes de `useWishlist` restent les mêmes d'un filtre à l'autre, seules les nouvelles se rendent.
+ * Ses liens vers la fiche sont de simples liens, que la liste fait suivre par le routeur
+ * (`useFollowLinks`).
  */
 export const WishCard = memo(function WishCard({ row }: { row: WishRow }) {
   const { card, price, change30 } = row
@@ -22,16 +23,16 @@ export const WishCard = memo(function WishCard({ row }: { row: WishRow }) {
   return (
     <Card as="article" padding="sm" className={styles.wish}>
       {/* La vignette double le lien du titre : cachée au clavier et aux lecteurs d'écran. */}
-      <Link to={speciesPath(speciesId)} className={styles.wishArt} tabIndex={-1} aria-hidden="true">
+      <a href={speciesPath(speciesId)} className={styles.wishArt} tabIndex={-1} aria-hidden="true">
         <CardArt card={card} speciesId={speciesId} alt="" />
-      </Link>
+      </a>
 
       <div className={styles.wishBody}>
         <header className={styles.wishHead}>
           <h2 className={styles.wishTitle}>
-            <Link to={speciesPath(speciesId)} className="quiet-link">
+            <a href={speciesPath(speciesId)} className="quiet-link">
               {cardTitle(card)}
-            </Link>
+            </a>
           </h2>
           <span className="muted numeric">{formatDexNumber(speciesId)}</span>
         </header>

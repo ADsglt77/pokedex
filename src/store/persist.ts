@@ -35,7 +35,8 @@ export function writeStored(key: string, text: string | null) {
 
 /**
  * Enregistre une partie d'un store dans le navigateur (`localStorage`, sous `key`) à chaque
- * changement, et reprend ce qu'un autre onglet y enregistre : sans quoi on écraserait sa version au
+ * changement, une fois pour les changements d'une même action (ajouter une carte possédée en fait
+ * deux), et reprend ce qu'un autre onglet y enregistre : sans quoi on écraserait sa version au
  * prochain changement. La réécriture qui suit une reprise ne relance rien : `localStorage` ne
  * signale pas une valeur identique.
  */
@@ -45,8 +46,15 @@ export function persist<S>(
   pick: (state: S) => unknown,
   restore: (text: string | null) => Partial<S>,
 ) {
+  let pending = false
   store.subscribe((state, previous) => {
-    if (pick(state) !== pick(previous)) writeStored(key, JSON.stringify(pick(state)))
+    if (pick(state) === pick(previous) || pending) return
+    pending = true
+    // Avant la fin de la tâche : la page ne peut pas se fermer entre-temps.
+    queueMicrotask(() => {
+      pending = false
+      writeStored(key, JSON.stringify(pick(store.getState())))
+    })
   })
   window.addEventListener('storage', (event) => {
     if (event.key === key) store.setState(restore(event.newValue))

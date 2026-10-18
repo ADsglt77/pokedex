@@ -127,16 +127,42 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   images affichées : gardées dès leur premier affichage, 3 000 au plus. Jamais le
   compte ni la collection, qui viennent du stockage du navigateur.
 - Performance (mesurer en production, `bun run build` puis `bun run preview` : `bun dev` est 3 à 4
-  fois plus lent) : le Pokédex affiche 1 025 pochettes. Seules celles à l'écran sont dessinées
-  (`content-visibility`, de même pour la liste d'achats et les cartes du catalogue), les marques de
-  possession sont des icônes CSS (masques, pas de SVG : plus de 1 000 sinon), et rien de ce qui
-  défile n'a de `backdrop-filter` (flou recalculé à chaque image). Les pochettes sont de simples
-  liens (`<a>`, pas un `Link` de react-router, qui lit l'adresse : les 1 025 se redessineraient à
-  chaque frappe de la recherche, environ 20 ms) ; `PokedexPage` lit le clic une fois pour toute la
-  grille et fait suivre un clic ordinaire (Entrée comprise) par le routeur, pas un clic avec Ctrl,
-  ⌘, Maj ou Alt. Les animations ne se rejouent pas à chaque visite (les pages se remontent) : la
-  marque de possession seulement quand le statut change sous les yeux, les cartes de l'accueil
-  seulement quand une nouvelle arrive. Les pages autres que l'accueil,
+  fois plus lent ; mesuré en octobre 2026 sur une collection de 1 025 cartes, avant → après) : le
+  Pokédex affiche 1 025 pochettes. Seules celles à l'écran sont dessinées (`content-visibility`, de
+  même pour la liste d'achats et les cartes du catalogue), et une génération hors de l'écran ne
+  compte pas dans la mise en page (`content-visibility` sur la section, sa hauteur estimée d'après
+  son nombre de pochettes, `--tiles`, puis retenue : 30 à 75 ms de mise en page par filtre ou
+  frappe → 11 à 16). Un filtre masque les pochettes (`hidden`) au lieu de les démonter : la grille
+  les garde toutes, dans l'ordre choisi. La coquille garde le classeur en vie, caché, pendant la
+  visite des autres pages (`<Activity>` de React, `AppShell` ; ses filtres restent ceux de sa
+  dernière adresse, `usePokedexFilters`) : le retour depuis une fiche le montre aussitôt, à la même
+  position (330 à 410 ms → une quarantaine), sans refaire ses pochettes. Son premier affichage
+  dessine un écran de pochettes, puis les autres en arrière-plan (`useDeferredValue` avec une
+  valeur de départ : 111 ms → 42 avant la première image ; pas en arrivant par l'historique, qui
+  retrouve le défilement). Les marques de possession sont des icônes CSS (masques, pas de SVG :
+  plus de 1 000 sinon), et rien de ce qui défile n'a de `backdrop-filter` (flou recalculé à chaque
+  image). Les pochettes, comme les cartes de la liste d'achats, sont de simples liens (`<a>`, pas
+  un `Link` de react-router, qui lit l'adresse : des centaines se redessineraient à chaque frappe
+  d'une recherche gardée dans l'adresse) ; la liste lit le clic une fois pour toutes
+  (`useFollowLinks`) et fait suivre un clic ordinaire (Entrée comprise) par le routeur, pas un clic
+  avec Ctrl, ⌘, Maj ou Alt, ni un lien vers un autre site. La coquille ne se redessine qu'en
+  changeant de page (`Shell`, mémoïsée sur le chemin ; le menu du compte lit l'adresse au clic) :
+  une frappe dans la recherche du Pokédex coûte 10 à 20 ms au lieu de 80 à 140. La recherche
+  Ctrl K n'est montée qu'à sa première ouverture (ses plus de 1 000 commandes coûtaient une
+  soixantaine de millisecondes au démarrage), puis mémoïsée ; la palette de camply rendant toutes
+  ses commandes, ses lignes ont un `content-visibility` (classe interne, `global.css`). `buildPokedex`
+  reprend les entrées inchangées du Pokédex d'avant (la même carte au même statut) : après une
+  annulation, une synchronisation ou un autre onglet, seules les pochettes changées se redessinent.
+  Le tableau des cartes de Valeur (trié par lui, le tri du tableau contrôlé) et la liste d'achats
+  sont dessinés au fur et à mesure (`useGrowingList` : Valeur 151 ms → 60 à l'ouverture, Achats 254
+  → 53). Un montant au prix du jour (`PricedValue`, des centaines par page) lit la réponse des prix
+  de la collection une fois par état (`store/prices.ts`). Le plan de la prochaine commande suit le
+  curseur du budget en différé (`useDeferredValue`) ; la liste des cartes à ajouter à une commande
+  est triée une fois. Le stockage du navigateur est écrit une fois par action (`persist`), et
+  l'empreinte du document synchronisé calculée une fois par document (`documentHash`). La carte
+  d'une fiche ne suit la souris qu'une fois par image (`CardStage`). Les animations ne se rejouent
+  pas à chaque visite (les pages se remontent) : la marque de possession seulement quand le statut
+  change sous les yeux, les cartes de l'accueil seulement quand une nouvelle arrive. Les pages autres que l'accueil,
   le Pokédex, les fiches, la page introuvable et la page d'erreur sont chargées à leur première
   ouverture (`lazy`, `router.tsx` : une
   route parente sans chemin porte une seule fois la page d'erreur et l'attente, vide, d'une page

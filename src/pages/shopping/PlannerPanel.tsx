@@ -11,7 +11,15 @@ import {
   Stack,
 } from '@camply/ui'
 import { Copy, Receipt, Sparkles } from '@camply/ui/icons'
-import { useId, useRef, useState, type ReactNode, type RefObject } from 'react'
+import {
+  useDeferredValue,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react'
 import { spentThisMonth } from '@/lib/budget'
 import { keepFocusInList } from '@/lib/focus'
 import { formatEuro, plural, today } from '@/lib/format'
@@ -89,12 +97,19 @@ export function PlannerPanel({
   const heading = useRef<HTMLHeadingElement>(null)
   const pickedList = useRef<HTMLUListElement>(null)
 
-  const plan = planPurchase(rows, {
-    budget: amount,
-    shippingReserve: budget.shippingReserve,
-    forced,
-    skipped,
-  })
+  // Le curseur suit la souris ; le plan suit dès que le navigateur a le temps (des centaines de
+  // cartes à reclasser à chaque pas).
+  const planned = useDeferredValue(amount)
+  const plan = useMemo(
+    () =>
+      planPurchase(rows, {
+        budget: planned,
+        shippingReserve: budget.shippingReserve,
+        forced,
+        skipped,
+      }),
+    [rows, planned, budget.shippingReserve, forced, skipped],
+  )
   const monthTotal = cents(spent + plan.total)
 
   const skip = (row: WishRow, on: boolean) =>
@@ -147,11 +162,11 @@ export function PlannerPanel({
           </h2>
           <p className={styles.planTotal}>
             <span className="numeric">{formatEuro(plan.total)}</span>
-            <span className="muted"> sur {formatEuro(amount)}</span>
+            <span className="muted"> sur {formatEuro(planned)}</span>
           </p>
           <Progress
             value={plan.total}
-            max={amount}
+            max={planned}
             tone={plan.overBudget ? 'danger' : 'info'}
             size="sm"
             aria-label="Part du budget utilisée"
@@ -159,7 +174,7 @@ export function PlannerPanel({
           <p className="muted">
             Cartes {formatEuro(plan.cardsTotal)}
             {plan.picked.length > 0 && ` · port réservé ${formatEuro(budget.shippingReserve)}`}
-            {` · reste ${formatEuro(Math.max(0, amount - plan.total))}`}
+            {` · reste ${formatEuro(Math.max(0, planned - plan.total))}`}
           </p>
           {plan.picked.length > 0 && (
             <Stack direction="horizontal" gap={2} wrap className={styles.planActions}>
@@ -182,7 +197,7 @@ export function PlannerPanel({
 
         {plan.overBudget && (
           <Alert tone="warn" title="Les cartes ajoutées à la main dépassent le budget.">
-            Le plan coûte {formatEuro(plan.total)} pour un budget de {formatEuro(amount)}.
+            Le plan coûte {formatEuro(plan.total)} pour un budget de {formatEuro(planned)}.
           </Alert>
         )}
         {plan.total > 0 && monthTotal > budget.ceiling && (

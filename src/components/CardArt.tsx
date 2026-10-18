@@ -69,7 +69,13 @@ export function CardArt({
           {...(alt ? { role: 'img', 'aria-label': alt } : { 'aria-hidden': true })}
         >
           {speciesId !== undefined && (
-            <img src={spriteUrl(speciesId)} alt="" loading="lazy" className={styles.sprite} />
+            <img
+              src={spriteUrl(speciesId)}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className={styles.sprite}
+            />
           )}
           {card && (
             <>

@@ -28,11 +28,27 @@ interface SyncVersion {
  */
 type SyncStep = 'noop' | 'push' | 'adopt' | 'conflict'
 
-/** L'empreinte d'un document (SHA-256 de son JSON) : deux documents égaux ont la même. */
-export async function documentHash(document: SyncDocument): Promise<string> {
-  const text = JSON.stringify({ collection: document.collection, shopping: document.shopping })
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+const hashes = new WeakMap<object, WeakMap<object, Promise<string>>>()
+
+/**
+ * L'empreinte d'un document (SHA-256 de son JSON) : deux documents égaux ont la même. Calculée une
+ * fois par document (la collection et les achats, objets jamais modifiés) : chaque retour sur la
+ * page relance une synchronisation, qui la demande.
+ */
+export function documentHash(document: SyncDocument): Promise<string> {
+  let byShopping = hashes.get(document.collection)
+  if (!byShopping) hashes.set(document.collection, (byShopping = new WeakMap()))
+  let hash = byShopping.get(document.shopping)
+  if (!hash) {
+    const text = JSON.stringify({ collection: document.collection, shopping: document.shopping })
+    hash = crypto.subtle
+      .digest('SHA-256', new TextEncoder().encode(text))
+      .then((digest) =>
+        [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join(''),
+      )
+    byShopping.set(document.shopping, hash)
+  }
+  return hash
 }
 
 /**

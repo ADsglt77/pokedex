@@ -13,7 +13,7 @@ import {
   Sparkles,
   Wallet,
 } from '@camply/ui/icons'
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import { useExportCollection } from '@/hooks/useExportCollection'
 import { pokedexUrl, searchForm, shoppingUrl, speciesPath } from '@/lib/filters'
@@ -46,8 +46,15 @@ const PLACES = [
  * La recherche de toute l'app (Ctrl K, ou le bouton de la barre) : un Pokémon par son nom (fr, en,
  * ja, sans accent) ou son numéro, une page, une action. La palette de camply cherche dans le libellé
  * et les mots-clés : les noms repliés (`searchForm`) y sont pour « evoli » comme « Évoli ».
+ * Mémoïsée : elle ne se redessine qu'en s'ouvrant ou en se fermant (`onClose` stable).
  */
-export function AppSearch({ open, onClose }: { open: boolean; onClose: () => void }) {
+export const AppSearch = memo(function AppSearch({
+  open,
+  onClose,
+}: {
+  open: boolean
+  onClose: () => void
+}) {
   const navigate = useNavigate()
   const exportCollection = useExportCollection()
 
@@ -92,4 +99,4 @@ export function AppSearch({ open, onClose }: { open: boolean; onClose: () => voi
       aria-label="Rechercher dans le Pokédex"
     />
   )
-}
+})

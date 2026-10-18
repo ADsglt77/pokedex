@@ -37,12 +37,21 @@ const NO_CARDS: PriceFile = { date: '', cards: {} }
 const followed = new WeakSet<Promise<PriceFile | null>>()
 
 /**
+ * Les listes déjà demandées, et les ids connus à ce moment : la même liste n'est revue que quand
+ * une réponse est arrivée depuis (des centaines de montants la demandent à chaque rendu).
+ */
+const requested = new WeakMap<readonly number[], ReadonlySet<number>>()
+
+/**
  * Demande les prix des cartes `ids` qui ne sont pas encore connus, sous le chemin `list` (le service
  * worker garde une copie par chemin : celle de la collection n'est pas remplacée par celle d'une
  * extension). Redemandés après une panne passagère (`getJson`, une minute après au plus tôt).
  */
 function requestPrices(list: 'collection' | 'selection', ids: readonly number[]) {
-  const { known } = usePriceStore.getState()
+  const { known, failed } = usePriceStore.getState()
+  // Une panne : redemandée (`getJson` attend une minute) à chaque rendu, comme avant.
+  if (requested.get(ids) === known && (!failed.size || !ids.some((id) => failed.has(id)))) return
+  requested.set(ids, known)
   const wanted = [...new Set(ids)].filter((id) => !known.has(id)).sort((a, b) => a - b)
   if (!wanted.length) return
   const response = getJson<PriceFile>(`/api/prices/${list}?ids=${wanted.join()}`)
@@ -74,6 +83,26 @@ function collectionIds(collection: CollectionData) {
   return ids
 }
 
+/** Ces cartes ont-elles leur réponse, et l'une d'elles a-t-elle échoué : une fois par état et par liste. */
+const checked = new WeakMap<
+  PriceState,
+  WeakMap<readonly number[], { ready: boolean; missing: boolean }>
+>()
+
+function check(state: PriceState, wanted: readonly number[]) {
+  let byList = checked.get(state)
+  if (!byList) checked.set(state, (byList = new WeakMap()))
+  let result = byList.get(wanted)
+  if (!result) {
+    result = {
+      ready: wanted.every((id) => state.known.has(id)),
+      missing: wanted.some((id) => state.failed.has(id)),
+    }
+    byList.set(wanted, result)
+  }
+  return result
+}
+
 /** Les cartes dont on veut les prix : `ids`, sinon celles de la collection. */
 function useWanted(ids?: readonly number[]) {
   const collection = useCollectionStore((state) => state.collection)
@@ -89,9 +118,7 @@ function useWanted(ids?: readonly number[]) {
 export function usePrices(ids?: readonly number[]) {
   const { list, wanted } = useWanted(ids)
   requestPrices(list, wanted)
-  return usePriceStore((state) =>
-    wanted.every((id) => state.known.has(id)) ? (state.prices ?? NO_CARDS) : null,
-  )
+  return usePriceStore((state) => (check(state, wanted).ready ? (state.prices ?? NO_CARDS) : null))
 }
 
 /**
@@ -101,7 +128,7 @@ export function usePrices(ids?: readonly number[]) {
 export function usePricesMissing(ids?: readonly number[]) {
   const { list, wanted } = useWanted(ids)
   requestPrices(list, wanted)
-  return usePriceStore((state) => wanted.some((id) => state.failed.has(id)))
+  return usePriceStore((state) => check(state, wanted).missing)
 }
 
 /**

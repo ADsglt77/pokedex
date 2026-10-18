@@ -3,6 +3,8 @@ import { ListChecks, Search, SearchX, SlidersHorizontal } from '@camply/ui/icons
 import { useDeferredValue, useMemo } from 'react'
 import { Link } from 'react-router'
 import { GENERATION_OPTIONS } from '@/config/pokedex'
+import { useFollowLinks } from '@/hooks/useFollowLinks'
+import { useGrowingList } from '@/hooks/useGrowingList'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import {
   DEFAULT_WISHLIST_FILTERS,
@@ -30,6 +32,9 @@ const SORT_LABELS: Record<WishlistSort, string> = {
  * trier. Ses filtres sont dans l'adresse, lus et changés par la page (`ShoppingPage`) : ils
  * survivent à l'ouverture d'une fiche et au retour.
  */
+/** Les cartes dessinées d'un coup : plus qu'un grand écran n'en montre. */
+const CARDS_STEP = 40
+
 export function WishlistPanel({
   filters,
   onFiltersChange: set,
@@ -38,9 +43,12 @@ export function WishlistPanel({
   onFiltersChange: (change: Partial<WishlistFilters>) => void
 }) {
   const { rows } = useWishlist()
+  const followLinks = useFollowLinks()
   // La liste suit la saisie dès que le navigateur a le temps : la frappe reste fluide.
   const shownFilters = useDeferredValue(filters)
   const shown = useMemo(() => filterWishlist(rows, shownFilters), [rows, shownFilters])
+  // Jusqu'à un millier de cartes : dessinées au fur et à mesure du défilement.
+  const { limit, sentinel, more } = useGrowingList(shown.length, CARDS_STEP)
   // Sur téléphone, les listes passent dans un panneau « Filtres » : la liste commence plus haut.
   const compact = useMediaQuery('(max-width: 40rem)')
 
@@ -138,13 +146,17 @@ export function WishlistPanel({
           }
         />
       ) : (
-        <ul className={styles.wishGrid}>
-          {shown.map((row) => (
-            <li key={row.card.id}>
-              <WishCard row={row} />
-            </li>
-          ))}
-        </ul>
+        // Le clic de ses liens se lit ici, une fois pour toute la liste.
+        <div className={styles.growing}>
+          <ul className={styles.wishGrid} onClick={followLinks}>
+            {shown.slice(0, limit).map((row) => (
+              <li key={row.card.id}>
+                <WishCard row={row} />
+              </li>
+            ))}
+          </ul>
+          {more && <span ref={sentinel} className="growing-sentinel" aria-hidden="true" />}
+        </div>
       )}
     </Stack>
   )

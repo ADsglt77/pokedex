@@ -1,8 +1,9 @@
 import { Button, EmptyState } from '@camply/ui'
 import { Layers, SearchX } from '@camply/ui/icons'
-import { useDeferredValue, useMemo, type MouseEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useDeferredValue, useMemo, useState } from 'react'
+import { Link, useNavigationType } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
+import { useFollowLinks } from '@/hooks/useFollowLinks'
 import { usePokedex } from '@/hooks/usePokedex'
 import { usePokedexFilters } from '@/hooks/usePokedexFilters'
 import {
@@ -15,6 +16,9 @@ import {
 import { formatInteger, pageTitle, plural } from '@/lib/format'
 import { PokedexGrid } from '@/components/PokedexGrid'
 import { PokedexToolbar } from './PokedexToolbar'
+
+/** Les pochettes du premier affichage : plus qu'un grand écran n'en montre. */
+const FIRST_TILES = 60
 
 /**
  * Le classeur : les 1 025 Pokémon, filtrés par la barre d'outils (filtres dans l'adresse). Chaque
@@ -29,6 +33,20 @@ export function PokedexPage() {
     () => filterEntries(pokedex.entries, shownFilters),
     [pokedex.entries, shownFilters],
   )
+  // Toutes les pochettes, dans l'ordre choisi ; les filtres masquent les autres (`PokedexGrid`).
+  const ordered = useMemo(
+    () => (shownFilters.descending ? [...pokedex.entries].reverse() : pokedex.entries),
+    [pokedex.entries, shownFilters.descending],
+  )
+  const shown = useMemo(() => new Set(visible.map((entry) => entry.species.id)), [visible])
+  // Au premier affichage, les pochettes d'un écran d'abord, toutes les autres juste après, en
+  // arrière-plan : la page paraît sans attendre les 1 025 (la coquille la garde ensuite en vie). Pas
+  // en revenant en arrière : le défilement retrouvé a besoin de toute la hauteur.
+  const navigationType = useNavigationType()
+  const [firstEntries] = useState(() =>
+    navigationType === 'POP' ? ordered : ordered.slice(0, FIRST_TILES),
+  )
+  const gridEntries = useDeferredValue(ordered, firstEntries)
   const counts = useMemo(
     () =>
       Object.fromEntries(
@@ -41,29 +59,8 @@ export function PokedexPage() {
   )
   const filtering = filters.search.trim() !== '' || activeFilterCount(filters) > 0
   const resetFilters = () => setFilters(DEFAULT_FILTERS)
-  const navigate = useNavigate()
-
-  // Les pochettes sont de simples liens (`PokedexTile`) : un clic ordinaire sur l'une d'elles
-  // (Entrée au clavier en est un) passe par le routeur, sans recharger la page ; avec Ctrl, ⌘, Maj
-  // ou Alt, le navigateur fait comme pour tout lien (nouvel onglet…).
-  const followTile = (event: MouseEvent) => {
-    const link = (event.target as Element).closest('a')
-    if (
-      !link ||
-      event.defaultPrevented ||
-      event.button !== 0 ||
-      event.ctrlKey ||
-      event.metaKey ||
-      event.shiftKey ||
-      event.altKey ||
-      link.target ||
-      link.hasAttribute('download')
-    ) {
-      return
-    }
-    event.preventDefault()
-    navigate(link.getAttribute('href')!)
-  }
+  // Les pochettes sont de simples liens (`PokedexTile`), suivis par le routeur.
+  const followTile = useFollowLinks()
 
   return (
     <div className="container">
@@ -90,12 +87,11 @@ export function PokedexPage() {
         onReset={resetFilters}
       />
 
-      {visible.length > 0 ? (
-        // Le clic se lit ici, une fois pour toute la grille (pas un gestionnaire par pochette).
-        <div onClick={followTile}>
-          <PokedexGrid entries={visible} generations={pokedex.generations} />
-        </div>
-      ) : (
+      {/* Le clic se lit ici, une fois pour toute la grille (pas un gestionnaire par pochette). */}
+      <div onClick={followTile} hidden={visible.length === 0}>
+        <PokedexGrid entries={gridEntries} shown={shown} generations={pokedex.generations} />
+      </div>
+      {visible.length === 0 && (
         <EmptyState
           headingLevel={2}
           icon={<SearchX size={22} />}

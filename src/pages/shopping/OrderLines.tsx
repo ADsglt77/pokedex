@@ -1,6 +1,6 @@
 import { Combobox, IconButton, Input, Stack } from '@camply/ui'
 import { X } from '@camply/ui/icons'
-import { useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { EuroField } from '@/components/EuroInput'
 import { keepFocusInList } from '@/lib/focus'
 import { euroInput, formatEuro } from '@/lib/format'
@@ -13,6 +13,9 @@ import type { Order } from '@/types'
 import { CardLine } from './CardLine'
 import page from './ShoppingPage.module.css'
 import styles from './OrderLines.module.css'
+
+/** Les cartes rangées comme on les lit (« Évoli » avec les E). */
+const collator = new Intl.Collator('fr')
 
 /** Une ligne telle que saisie : la quantité et le prix en texte, lus à l'enregistrement. */
 export interface DraftLine {
@@ -50,12 +53,15 @@ export function OrderLines({
   const list = useRef<HTMLUListElement>(null)
   const cardsTitle = useRef<HTMLHeadingElement>(null)
   const costs = unitCosts(order)
-  const inLines = new Set(lines.map((line) => line.cardId))
-  // Les cartes du Pokédex qui ne sont pas déjà dans la commande.
-  const addable = Object.values(collection.customCards)
-    .filter((card) => !inLines.has(card.id))
-    .map((card) => ({ value: card.id, label: `${cardTitle(card)} · ${card.reference}` }))
-    .sort((a, b) => a.label.localeCompare(b.label, 'fr'))
+  // Les cartes du Pokédex qui ne sont pas déjà dans la commande, triées une fois par collection et
+  // par liste (pas à chaque frappe dans un montant).
+  const addable = useMemo(() => {
+    const inLines = new Set(lines.map((line) => line.cardId))
+    return Object.values(collection.customCards)
+      .filter((card) => !inLines.has(card.id))
+      .map((card) => ({ value: card.id, label: `${cardTitle(card)} · ${card.reference}` }))
+      .sort((a, b) => collator.compare(a.label, b.label))
+  }, [collection, lines])
 
   const addLine = (cardId: string) => {
     const card = findCard(cardId, collection)!

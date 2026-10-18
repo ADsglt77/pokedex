@@ -11,8 +11,17 @@ import {
   Sun,
   type IconProps,
 } from '@camply/ui/icons'
-import { useEffect, useRef, type ComponentType } from 'react'
-import { Link, Outlet, ScrollRestoration, useLocation } from 'react-router'
+import {
+  Activity,
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from 'react'
+import { Link, matchPath, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { Logo } from '@/components/Logo'
 import { SiteDisclaimer } from '@/components/SiteDisclaimer'
 import { shoppingUrl } from '@/lib/filters'
@@ -113,10 +122,15 @@ function Brand() {
  * groupes, progression, données, thème et compte). Tablette et téléphone : une barre en haut
  * (recherche, données, thème, compte) et une barre d'onglets en bas. Partout : la recherche
  * (Ctrl K), le lien d'évitement, les avertissements de l'app, le pied de page, le focus et le
- * défilement à chaque changement de page.
+ * défilement à chaque changement de page. Ne se redessine qu'en changeant de page : pas à chaque
+ * frappe d'une recherche gardée dans l'adresse (`Shell`, mémoïsée sur le chemin).
  */
-export function AppShell() {
+export function AppShell({ pokedex }: { pokedex: ReactNode }) {
   const { pathname } = useLocation()
+  return <Shell pathname={pathname} pokedex={pokedex} />
+}
+
+const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pokedex: ReactNode }) {
   const storageFailed = useStorageFailure((state) => state.failed)
   const main = useRef<HTMLElement>(null)
   const shownPath = useRef(pathname)
@@ -133,6 +147,18 @@ export function AppShell() {
   }, [pathname])
 
   const search = () => setSearching(true)
+  // Une fonction stable : la palette (mémoïsée, plus de 1 000 commandes) ne se redessine pas à
+  // chaque changement de page. Montée à sa première ouverture seulement : ses commandes coûtaient
+  // une soixantaine de millisecondes au premier affichage de l'app.
+  const closeSearch = useCallback(() => setSearching(false), [setSearching])
+  const [searchUsed, setSearchUsed] = useState(searching)
+  if (searching && !searchUsed) setSearchUsed(true)
+  // Le classeur, une fois ouvert, reste en vie, caché, pendant la visite des autres pages : y
+  // revenir (d'une fiche, le plus souvent) le montre aussitôt, à la même position, sans refaire ses
+  // 1 025 pochettes (200 à 400 ms sinon). Caché, il ne fait que suivre la collection, sans presser.
+  const onPokedex = matchPath('/pokedex', pathname) !== null
+  const [keepPokedex, setKeepPokedex] = useState(onPokedex)
+  if (onPokedex && !keepPokedex) setKeepPokedex(true)
 
   return (
     <div className={styles.shell}>
@@ -198,10 +224,17 @@ export function AppShell() {
         )}
 
         <main id="main" ref={main} tabIndex={-1} className={styles.main}>
+          {keepPokedex && (
+            <Activity mode={onPokedex ? 'visible' : 'hidden'}>
+              <div className={styles.page}>{pokedex}</div>
+            </Activity>
+          )}
           {/* Une clé par adresse : chaque page (et chaque fiche) repart d'un état neuf. */}
-          <div key={pathname} className={styles.page}>
-            <Outlet />
-          </div>
+          {!onPokedex && (
+            <div key={pathname} className={styles.page}>
+              <Outlet />
+            </div>
+          )}
         </main>
 
         <footer className={cx('container', styles.footer)}>
@@ -224,7 +257,7 @@ export function AppShell() {
         ))}
       </nav>
 
-      <AppSearch open={searching} onClose={() => setSearching(false)} />
+      {searchUsed && <AppSearch open={searching} onClose={closeSearch} />}
 
       <ScrollRestoration
         // Revenir au Pokédex avec les mêmes filtres, même par un lien, retrouve la position.
@@ -234,7 +267,7 @@ export function AppShell() {
       />
     </div>
   )
-}
+})
 
 /**
  * Les commandes en retard, sur le lien des achats (barre latérale et barre d'onglets) : rien

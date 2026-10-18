@@ -6,7 +6,9 @@ import type { CollectionData } from '@/types'
 let cache: { collection: CollectionData; pokedex: Pokedex } | null = null
 
 function getPokedex(collection: CollectionData): Pokedex {
-  if (cache?.collection !== collection) cache = { collection, pokedex: buildPokedex(collection) }
+  if (cache?.collection !== collection) {
+    cache = { collection, pokedex: buildPokedex(collection, cache?.pokedex) }
+  }
   return cache.pokedex
 }
 

@@ -1,5 +1,18 @@
-.group + .group {
-  margin-top: 3rem;
+/* Une génération. Hors de l'écran, elle ne compte pas dans la mise en page : avec plus de 1 000
+   pochettes, chaque filtre ou frappe coûtait 30 à 75 ms de mise en page, 20 ainsi. Sa hauteur est
+   estimée d'après son nombre de pochettes montrées (`--tiles`), puis retenue une fois montrée.
+   Ce qu'elle dessine s'arrête à son bord : une marge intérieure, rendue par une marge négative,
+   laisse la place au contour du focus et au soulèvement des pochettes du bord. */
+.group {
+  content-visibility: auto;
+  margin: -0.5rem;
+  padding: 0.5rem;
+  contain-intrinsic-block-size: auto calc(var(--tiles) * 3rem + 5rem);
+}
+
+/* Entre deux générations montrées (une génération sans Pokémon montré est masquée) : 3rem. */
+.group:not([hidden]) ~ .group {
+  margin-top: 2.5rem;
 }
 
 /* La région et sa génération à gauche, ce qui en est débloqué à droite, sur un filet. */
@@ -34,6 +47,10 @@
 }
 
 @media (max-width: 40rem) {
+  .group {
+    contain-intrinsic-block-size: auto calc(var(--tiles) * 4.3rem + 4rem);
+  }
+
   .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.75rem 0.5rem;

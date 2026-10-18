@@ -73,18 +73,34 @@ function describeCard(card: PokemonCard, collection: CollectionData): CardView {
   }
 }
 
+/** La même carte, au même statut (une carte relue du stockage ou du serveur est un autre objet). */
+const sameView = (a: CardView | null, b: CardView | null) =>
+  a === b ||
+  (a !== null &&
+    b !== null &&
+    a.status === b.status &&
+    a.acquiredAt === b.acquiredAt &&
+    a.paidPrice === b.paidPrice &&
+    (a.card === b.card || JSON.stringify(a.card) === JSON.stringify(b.card)))
+
 /** Un Pokémon obtenu ou en route : sa carte est possédée ou commandée. */
 export const isTaken = (entry: PokedexEntry) => entry.card !== null && !isToBuy(entry.card)
 
-export function buildPokedex(collection: CollectionData): Pokedex {
+/**
+ * Le Pokédex d'une collection. `previous` : celui d'avant ; une entrée inchangée (la même carte au
+ * même statut) en est reprise telle quelle, et les pochettes mémoïsées ne se redessinent pas.
+ */
+export function buildPokedex(collection: CollectionData, previous?: Pokedex): Pokedex {
   // Une carte par Pokémon : la première ajoutée, si une ancienne version en a gardé plusieurs.
   const cardBySpecies = new Map<number, PokemonCard>()
   for (const card of Object.values(collection.customCards)) {
     for (const id of card.dexIds) if (!cardBySpecies.has(id)) cardBySpecies.set(id, card)
   }
-  const entries = SPECIES.map((species): PokedexEntry => {
+  const entries = SPECIES.map((species, index): PokedexEntry => {
     const card = cardBySpecies.get(species.id)
     const view = card ? describeCard(card, collection) : null
+    const before = previous?.entries[index]
+    if (before?.species === species && sameView(before.card, view)) return before
     return { species, card: view, unlocked: view?.status === 'owned' }
   })
   return {

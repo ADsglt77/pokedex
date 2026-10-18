@@ -1,7 +1,7 @@
 import { Button, DropdownMenu, MenuItem, MenuLabel, MenuSeparator } from '@camply/ui'
 import { CloudAlert, CloudCheck, CloudOff, LogIn, LogOut, RefreshCw } from '@camply/ui/icons'
 import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExportCollectionButton } from '@/components/ExportCollectionButton'
 import { SyncConflictDialog } from '@/components/SyncConflictDialog'
@@ -65,9 +65,6 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const status = useSyncStore((state) => state.status)
   const conflict = useSyncStore((state) => state.conflict)
   const navigate = useNavigate()
-  const { pathname, search } = useLocation()
-  // Après la connexion, retour à la page ouverte, filtres compris.
-  const login = loginPath(pathname + search)
   const notify = useNotify()
   const dismissed = useSyncStore((state) => state.dismissed)
   const [confirmingSignOut, setConfirmingSignOut] = useState(false)
@@ -114,7 +111,10 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
             Choisir la version à garder
           </MenuItem>
         ) : status === 'expired' ? (
-          <MenuItem icon={<LogIn size={16} />} onSelect={() => navigate(login)}>
+          <MenuItem
+            icon={<LogIn size={16} />}
+            onSelect={() => navigate(loginPath(location.pathname + location.search))}
+          >
             Se reconnecter
           </MenuItem>
         ) : (

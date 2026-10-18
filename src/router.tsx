@@ -65,11 +65,13 @@ export const createRouter = () =>
             import('@/pages/VitrinePage').then(({ VitrinePage }) => ({ Component: VitrinePage })),
         },
         {
-          element: <AppShell />,
+          // Le classeur, rendu par la coquille, qui le garde en vie d'une page à l'autre.
+          element: <AppShell pokedex={<PokedexPage />} />,
           loader: appLoader,
           children: [
             { index: true, element: <HomePage /> },
-            { path: 'pokedex', element: <PokedexPage /> },
+            // Rendu par la coquille (`pokedex`), pas ici.
+            { path: 'pokedex', element: null },
             { path: 'pokemon/:id', element: <PokemonPage /> },
             {
               path: 'valeur',

@@ -1,5 +1,7 @@
-import { Table } from '@camply/ui'
+import { Table, type SortState } from '@camply/ui'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
+import { useGrowingList } from '@/hooks/useGrowingList'
 import { cardTitle } from '@/lib/species'
 import { TableCount } from '@/components/TableCount'
 import { cx } from '@/lib/cx'
@@ -26,85 +28,127 @@ interface CardRow {
   gain: number | null
 }
 
-/** Les cartes suivies : ce qu'elles ont coûté et ce qu'elles valent, la plus chère d'abord. */
+/** Ce qui range les cartes, par colonne triable. */
+const SORT_VALUES: Record<string, (row: CardRow) => string | number> = {
+  name: (row) => row.name,
+  status: (row) => STATUS_ORDER[row.status],
+  paid: (row) => row.paid ?? -1,
+  value: (row) => row.value ?? -1,
+  gain: (row) => row.gain ?? Number.NEGATIVE_INFINITY,
+}
+
+const collator = new Intl.Collator('fr', { numeric: true })
+
+/** Les cartes dans l'ordre choisi : les textes comme on les lit, les nombres par leur valeur. */
+function sortCards(rows: CardRow[], sort: SortState | null) {
+  if (!sort) return rows
+  const value = SORT_VALUES[sort.key]!
+  const sign = sort.dir === 'asc' ? 1 : -1
+  return [...rows].sort((a, b) => {
+    const [x, y] = [value(a), value(b)]
+    return sign * (typeof x === 'string' ? collator.compare(x, y as string) : x - (y as number))
+  })
+}
+
+/** Les lignes dessinées d'un coup : plus qu'un grand écran n'en montre. */
+const ROWS_STEP = 60
+
+/**
+ * Les cartes suivies : ce qu'elles ont coûté et ce qu'elles valent, la plus chère d'abord. Jusqu'à
+ * un millier de lignes : triées ici (le tri du tableau, contrôlé), dessinées au fur et à mesure du
+ * défilement (`useGrowingList`) : la page s'ouvre vite.
+ */
 export function CardsTable({ cards }: { cards: TrackedCard[] }) {
-  const rows: CardRow[] = cards.map(({ card, status, paid, value }) => ({
-    id: card.id,
-    name: cardTitle(card),
-    speciesId: card.dexIds[0]!,
-    reference: card.reference,
-    status,
-    paid,
-    value,
-    gain: paid !== null && value !== null ? value - paid : null,
-  }))
+  const [sort, setSort] = useState<SortState | null>({ key: 'value', dir: 'desc' })
+  const rows = useMemo(
+    () =>
+      sortCards(
+        cards.map(({ card, status, paid, value }) => ({
+          id: card.id,
+          name: cardTitle(card),
+          speciesId: card.dexIds[0]!,
+          reference: card.reference,
+          status,
+          paid,
+          value,
+          gain: paid !== null && value !== null ? value - paid : null,
+        })),
+        sort,
+      ),
+    [cards, sort],
+  )
+  const { limit, sentinel, more } = useGrowingList(rows.length, ROWS_STEP)
 
   return (
-    <Table
-      bordered={false}
-      className={cx('data-table stack-table', styles.cardsTable)}
-      data={rows}
-      rowKey={(row) => row.id}
-      defaultSort={{ key: 'value', dir: 'desc' }}
-      emptyState="Aucune carte suivie : marquez une carte comme possédée ou commandée."
-      columns={[
-        {
-          key: 'name',
-          header: 'Carte',
-          sortValue: (row) => row.name,
-          cell: (row) => (
-            <span className={styles.card}>
-              <Link to={speciesPath(row.speciesId)}>{row.name}</Link>
-              <span className="muted">{row.reference}</span>
-            </span>
-          ),
-        },
-        {
-          key: 'status',
-          header: 'Statut',
-          sortValue: (row) => STATUS_ORDER[row.status],
-          cell: (row) => statusLabel(row.status),
-        },
-        {
-          key: 'paid',
-          header: 'Payé',
-          align: 'right',
-          sortValue: (row) => row.paid ?? -1,
-          // Sur téléphone, « payé » n'est dit que s'il est connu.
-          cell: (row) =>
-            row.paid === null ? (
-              <span className="stack-hidden">—</span>
-            ) : (
-              <>
-                <span className="stack-label">payé </span>
-                {formatEuro(row.paid)}
-              </>
-            ),
-        },
-        {
-          key: 'value',
-          header: 'Valeur',
-          align: 'right',
-          sortValue: (row) => row.value ?? -1,
-          cell: (row) => money(row.value),
-        },
-        {
-          key: 'gain',
-          header: 'Écart',
-          align: 'right',
-          sortValue: (row) => row.gain ?? Number.NEGATIVE_INFINITY,
-          cell: (row) =>
-            row.gain === null ? (
-              <span className="stack-hidden">—</span>
-            ) : (
-              <span className={cx(row.gain > 0 && styles.up, row.gain < 0 && styles.down)}>
-                <span className="stack-label">écart </span>
-                {formatEuroChange(row.gain)}
+    <div className={styles.growing}>
+      <Table
+        bordered={false}
+        className={cx('data-table stack-table', styles.cardsTable)}
+        data={rows.slice(0, limit)}
+        rowKey={(row) => row.id}
+        sort={sort}
+        onSortChange={setSort}
+        emptyState="Aucune carte suivie : marquez une carte comme possédée ou commandée."
+        columns={[
+          {
+            key: 'name',
+            header: 'Carte',
+            sortValue: SORT_VALUES.name,
+            cell: (row) => (
+              <span className={styles.card}>
+                <Link to={speciesPath(row.speciesId)}>{row.name}</Link>
+                <span className="muted">{row.reference}</span>
               </span>
             ),
-        },
-      ]}
-    />
+          },
+          {
+            key: 'status',
+            header: 'Statut',
+            sortValue: SORT_VALUES.status,
+            cell: (row) => statusLabel(row.status),
+          },
+          {
+            key: 'paid',
+            header: 'Payé',
+            align: 'right',
+            sortValue: SORT_VALUES.paid,
+            // Sur téléphone, « payé » n'est dit que s'il est connu.
+            cell: (row) =>
+              row.paid === null ? (
+                <span className="stack-hidden">—</span>
+              ) : (
+                <>
+                  <span className="stack-label">payé </span>
+                  {formatEuro(row.paid)}
+                </>
+              ),
+          },
+          {
+            key: 'value',
+            header: 'Valeur',
+            align: 'right',
+            sortValue: SORT_VALUES.value,
+            cell: (row) => money(row.value),
+          },
+          {
+            key: 'gain',
+            header: 'Écart',
+            align: 'right',
+            sortValue: SORT_VALUES.gain,
+            cell: (row) =>
+              row.gain === null ? (
+                <span className="stack-hidden">—</span>
+              ) : (
+                <span className={cx(row.gain > 0 && styles.up, row.gain < 0 && styles.down)}>
+                  <span className="stack-label">écart </span>
+                  {formatEuroChange(row.gain)}
+                </span>
+              ),
+          },
+        ]}
+      />
+      {more && <span ref={sentinel} className="growing-sentinel" aria-hidden="true" />}
+    </div>
   )
 }
 
