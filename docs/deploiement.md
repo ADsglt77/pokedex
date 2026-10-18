@@ -7,10 +7,11 @@ construit `dist/`), `server` (Bun lance `server/` tel quel, avec `src/` et `tsco
 l'alias `@/` ; `NODE_ENV=production`) et `web` (nginx sert `dist/`). `deploy/nginx.conf` : une
 route inconnue reçoit `index.html`, le routage étant côté client ; `/api/` va au service `server`
 (son adresse redemandée au DNS de Docker, `resolver` : un serveur redémarré change d'adresse) ;
-`/images/` vient du volume `images` (gardé un mois), une image qui y manque va au serveur, qui la
-copie (10 par seconde au plus) ; un fichier manquant de `/assets/` répond 404 ; `/assets/` en
-cache un an ; compression gzip niveau 6, réponses de l'API comprises (`gzip_proxied` ; les prix du
-jour arrivent déjà compressés) ; version de nginx masquée (`server_tokens off`) et en-têtes de
+`/images/` vient du volume `images` (gardé un an par les navigateurs, `immutable`), une image qui y manque va au serveur, qui la
+copie (60 d’un coup, puis 10 par seconde, sans attente, `nodelay` ; le serveur en télécharge 4 à la fois) ; un fichier manquant de `/assets/` répond 404 ; `/assets/` en
+cache un an ; compression gzip niveau 6, réponses de l'API comprises (`gzip_proxied` ; les réponses
+précalculées arrivent déjà compressées, en Brotli si le navigateur l’accepte), des tampons d’1 Mo
+pour les réponses de l’API (`proxy_buffers`) ; version de nginx masquée (`server_tokens off`) et en-têtes de
 sécurité sur chaque réponse (`deploy/security-headers.conf` : `nosniff`, `Referrer-Policy`,
 `X-Frame-Options`, `Permissions-Policy`, la politique de sécurité du contenu : scripts, requêtes et
 polices du site seulement, plus les polices que Vite intègre en `data:`, images aussi en https

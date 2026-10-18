@@ -159,7 +159,10 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   seulement les chemins plausibles, `plausible` : chez Pokécardex, une série du catalogue et un
   numéro d'image jusqu'au plus grand des siens, le logo d'une série du catalogue, un type de
   `CARD_TYPES`, une rareté connue ; un Pokémon de 1 à 1 025 ; jamais plus chez TCGplayer ; une absence retenue une semaine ; une source en panne :
-  502, et « Image non copiée » au journal ; nginx limite à 10 copies par seconde). Les images de TCGplayer qu'une ancienne version a enregistrées
+  502, et « Image non copiée » au journal ; nginx laisse passer jusqu'à 60 copies d'un coup puis
+  10 par seconde, sans faire attendre, `nodelay`, et le serveur en télécharge 4 à la fois, sans la
+  pause de la tâche, 15 s au plus). Une image copiée est gardée un an par le navigateur, sans
+  redemande (`immutable` : `mirror` ne réécrit jamais un fichier qui existe). Les images de TCGplayer qu'une ancienne version a enregistrées
   s'affichent encore si le volume en a la copie (jamais plus copiées) ;
   Données › « Chercher les images » les remplace par celles de Pokécardex, comme il cherche celles
   des cartes sans image. `findCardImage` (`lib/card-catalog.ts`) : l'image du catalogue pour

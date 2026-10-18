@@ -16,7 +16,7 @@ import { TOTAL_SPECIES } from '@/config/pokedex'
 import { WEEK } from '@/lib/time'
 import { DATA_DIR } from './db'
 import { journal } from './journal'
-import { politeFetch } from './lib/net'
+import { politeFetch, quickFetch } from './lib/net'
 import { notFound } from './snapshots'
 
 const IMAGES_DIR = process.env.IMAGES_DIR ?? join(DATA_DIR, 'images')
@@ -70,12 +70,14 @@ const imageFile = (path: string) => join(IMAGES_DIR, path.slice('/images/'.lengt
  * Copie chez nous l'image d'un chemin local : `true` si elle y est (déjà, ou maintenant), `false`
  * si la source ne l'a pas (404). Une autre erreur (panne, réponse qui n'est pas une image) est
  * levée : réessayer plus tard. Écrite d'un coup : nginx ne sert jamais une image à moitié écrite.
+ * `quick` : une page l'attend (copie à la demande), sans la pause de la tâche `images`, 15 s au
+ * plus.
  */
-export async function mirror(path: string): Promise<boolean> {
+export async function mirror(path: string, { quick = false } = {}): Promise<boolean> {
   const file = imageFile(path)
   if (await Bun.file(file).exists()) return true
   const url = upstreamUrl(path)!
-  const response = await politeFetch(url)
+  const response = quick ? await quickFetch(url) : await politeFetch(url)
   if (response.status === 404) return false
   if (!response.ok) throw new Error(`HTTP ${response.status} pour ${url}`)
   if (!response.headers.get('content-type')?.startsWith('image/')) {
@@ -89,12 +91,34 @@ export async function mirror(path: string): Promise<boolean> {
   return true
 }
 
-/** Gardées un mois par les navigateurs (et Cloudflare) : une image ne change pas. */
-const IMAGE_HEADERS = { 'Cache-Control': 'public, max-age=2592000' }
+/**
+ * Gardées un an par les navigateurs (et Cloudflare), sans redemande : une image copiée ne change
+ * jamais (`mirror` ne réécrit pas un fichier qui existe).
+ */
+const IMAGE_HEADERS = { 'Cache-Control': 'public, max-age=31536000, immutable' }
 /** Les images que la source n'a pas, et quand on l'a appris : pas redemandées avant une semaine. */
 const misses = new Map<string, number>()
 /** Les copies en cours : deux demandes de la même image ne la téléchargent qu'une fois. */
 const copies = new Map<string, Promise<boolean>>()
+
+/**
+ * Les copies à la demande menées en même temps, au plus : nginx les laisse toutes passer d'un coup
+ * (`nodelay`), le serveur n'en télécharge que 4 à la fois ; les autres attendent leur tour.
+ */
+const MAX_COPIES = 4
+let copying = 0
+const queued: (() => void)[] = []
+
+async function inTurn<T>(task: () => Promise<T>) {
+  if (copying >= MAX_COPIES) await new Promise<void>((resolve) => queued.push(resolve))
+  copying++
+  try {
+    return await task()
+  } finally {
+    copying--
+    queued.shift()?.()
+  }
+}
 
 /**
  * Un chemin plausible : chez Pokécardex, une série du catalogue et un numéro d'image jusqu'au plus
@@ -136,7 +160,7 @@ export async function serveImage(data: Database, request: Request) {
 
   let copy = copies.get(path)
   if (!copy) {
-    copy = mirror(path).finally(() => copies.delete(path))
+    copy = inTurn(() => mirror(path, { quick: true })).finally(() => copies.delete(path))
     copies.set(path, copy)
   }
   try {
