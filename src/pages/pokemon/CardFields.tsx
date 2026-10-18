@@ -95,9 +95,9 @@ export function CardFields({
 }
 
 /**
- * L'aperçu : l'adresse collée, sinon l'image retrouvée d'après la référence, sinon celle gardée
- * (comme à l'enregistrement) ; sans image, ou si l'adresse ne mène pas à une image, la carte de
- * substitution. `searching` : pendant la recherche.
+ * L'aperçu, en grand (le scan haute définition) : l'adresse collée, sinon l'image retrouvée
+ * d'après la référence, sinon celle gardée (comme à l'enregistrement) ; sans image, ou si l'adresse
+ * ne mène pas à une image, la carte de substitution. `searching` : pendant la recherche.
  */
 function Preview({
   draft,
@@ -116,6 +116,7 @@ function Preview({
         card={{ image, reference: draft.reference }}
         speciesId={speciesId}
         alt="Aperçu de la carte"
+        large
       />
     </figure>
   )

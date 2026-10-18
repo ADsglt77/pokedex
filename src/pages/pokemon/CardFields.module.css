@@ -1,14 +1,18 @@
-/* Les champs, et l'aperçu de la carte à côté (dessous sur un téléphone). */
+/* Les champs, et l'aperçu de la carte à côté (dessous sur un téléphone) : un tiers de la place,
+   de 10rem (fenêtre de correction, étroite) à 22rem (fenêtre pleine page de l'ajout, où les champs
+   gardent une largeur lisible). */
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 10rem;
+  grid-template-columns: minmax(0, 1fr) clamp(10rem, 32%, 22rem);
   gap: 1.5rem;
   align-items: start;
-  /* Dans la fenêtre pleine page de l'ajout, des champs à une largeur lisible. */
-  max-width: 52rem;
+  max-width: 72rem;
 }
 
+/* L'aperçu reste à l'écran quand les champs défilent. */
 .preview {
+  position: sticky;
+  top: 0;
   display: grid;
   gap: 0.5rem;
   width: 100%;
@@ -30,6 +34,7 @@
   }
 
   .preview {
-    max-width: 10rem;
+    position: static;
+    max-width: 12rem;
   }
 }
