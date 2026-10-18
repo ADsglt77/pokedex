@@ -145,8 +145,8 @@ function FoundImage({ reference, kept }: { reference: string; kept: boolean }) {
 
 /** Ce que Cardmarket dit de l'id saisi : le nom de la carte et son prix, pour s'assurer du bon. */
 function CardmarketCheck({ cardmarket }: { cardmarket: number }) {
-  const prices = usePrices()
-  const missing = usePricesMissing()
+  const prices = usePrices([cardmarket])
+  const missing = usePricesMissing([cardmarket])
   const history = use(loadPriceHistory(cardmarket))
   const price = priceOf(prices, { cardmarket })
   // Sans les prix du jour (serveur sans prix, ou qui ne répond pas), rien ne dit si l'id est faux.

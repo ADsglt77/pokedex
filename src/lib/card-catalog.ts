@@ -1,17 +1,18 @@
 /**
  * Le catalogue des cartes japonaises, que la tâche `catalog` construit d'après Pokécardex :
- * - `/api/catalog` : pour chaque Pokémon, ses cartes, des plus récentes aux plus anciennes, avec
- *   leur rareté et leur type, et les séries (nom, date de sortie, logo) ; chargé par la fenêtre
- *   d'ajout, et préparé d'avance par la fiche d'un Pokémon sans carte (quand le navigateur est
- *   libre). Il donne aussi l'image exacte d'une carte chez Pokécardex (`findCardImage`) ;
+ * - `/api/catalog/species/<n°>` : les cartes d'un Pokémon, des plus récentes aux plus anciennes,
+ *   avec leur rareté, leur type et leurs séries (nom, date de sortie, logo) ; chargées par la
+ *   fenêtre d'ajout, et préparées d'avance par la fiche d'un Pokémon sans carte (quand le
+ *   navigateur est libre) ;
  * - `/api/catalog/sets` et `/api/catalog/sets/<code>` : les séries, puis toutes les cartes d'une
- *   série, dresseurs et énergies compris, avec tout ce qu'on en sait (la page Catalogue).
+ *   série, dresseurs et énergies compris, avec tout ce qu'on en sait (la page Catalogue) ; elles
+ *   donnent aussi l'image exacte d'une carte chez Pokécardex (`findCardImage`).
  * Aucun tri ni détection : l'utilisateur choisit, l'app ne propose rien seule.
  */
 
 import { CARD_TYPES } from '@/config/catalog'
 import { derived } from '@/lib/api'
-import { codeKey, referenceCode } from '@/lib/card-code'
+import { codeKey, numberKey, referenceCode, setKey } from '@/lib/card-code'
 import { cardImage, localSrc, pokecardexImage } from '@/lib/card-images'
 import { settled } from '@/lib/settled'
 import { getSpecies } from '@/lib/species'
@@ -57,15 +58,6 @@ export interface CatalogCard {
   type: number | null
 }
 
-/** Tout le catalogue, lu une fois : les séries et les cartes par Pokémon. */
-export interface Catalog {
-  /** Les séries, des plus récentes aux plus anciennes. */
-  sets: CatalogSet[]
-  bySpecies: Map<number, CatalogCard[]>
-  /** Clé : `codeKey` (« SV2A 166 »). */
-  byCode: Map<string, CatalogCard>
-}
-
 /** Les raretés d'une réponse, par numéro. */
 const readRarities = (rarities: CatalogFile['rarities']) =>
   new Map(
@@ -101,7 +93,8 @@ function toCard<S extends CatalogSet>(
   }
 }
 
-function readCatalog(file: CatalogFile): Catalog {
+/** Les cartes d'un Pokémon, d'après sa réponse (`/api/catalog/species/<n°>`). */
+function readSpeciesCards(file: CatalogFile, speciesId: number): CatalogCard[] {
   const sets = new Map(
     Object.entries(file.sets).map(([id, [name, released, logo]]) => [
       id,
@@ -109,42 +102,35 @@ function readCatalog(file: CatalogFile): Catalog {
     ]),
   )
   const rarities = readRarities(file.rarities)
-  const bySpecies = new Map<number, CatalogCard[]>()
-  const byCode = new Map<string, CatalogCard>()
-  // Une carte TAG TEAM est la même pour chacun de ses Pokémon.
-  const cards = new Map<string, CatalogCard>()
-  for (const [speciesId, rows] of Object.entries(file.cards)) {
-    const id = Number(speciesId)
-    bySpecies.set(
-      id,
-      rows!.map(([set, number, cardmarket, name, image, rarity, type, dexIds = [id]]) => {
-        const key = `${set} ${number}`
-        let card = cards.get(key)
-        if (!card) {
-          card = toCard(
-            sets.get(set)!,
-            { number, name, dexIds, cardmarket, image },
-            rarities.get(rarity) ?? null,
-            type,
-          )
-          cards.set(key, card)
-          byCode.set(codeKey({ set, number }), card)
-        }
-        return card
-      }),
-    )
-  }
-  return { sets: [...sets.values()], bySpecies, byCode }
+  return (file.cards[speciesId] ?? []).map(
+    ([set, number, cardmarket, name, image, rarity, type, dexIds = [speciesId]]) =>
+      toCard(
+        sets.get(set)!,
+        { number, name, dexIds, cardmarket, image },
+        rarities.get(rarity) ?? null,
+        type,
+      ),
+  )
 }
 
+const speciesLoaders = new Map<number, () => Promise<CatalogCard[] | null>>()
+
 /**
- * Le catalogue ; `null` s'il n'est pas disponible (serveur arrêté, base encore vide : redemandé une
- * minute après au plus tôt, `getJson`). Toujours la même promesse, lue par `use()`.
+ * Les cartes japonaises d'un Pokémon, des plus récentes aux plus anciennes ; `null` si le catalogue
+ * n'est pas disponible (serveur arrêté, base encore vide : redemandé une minute après au plus tôt,
+ * `getJson`). Toujours la même promesse pour un Pokémon, lue par `use()`.
  */
-export const loadCatalog = derived<CatalogFile, Catalog | null>(
-  '/api/catalog',
-  (file) => file && readCatalog(file),
-)
+export function loadSpeciesCards(speciesId: number) {
+  let load = speciesLoaders.get(speciesId)
+  if (!load) {
+    load = derived<CatalogFile, CatalogCard[] | null>(
+      `/api/catalog/species/${speciesId}`,
+      (file) => file && readSpeciesCards(file, speciesId),
+    )
+    speciesLoaders.set(speciesId, load)
+  }
+  return load()
+}
 
 /** Une série de la page Catalogue (`/api/catalog/sets`) : ce que disent sa tuile et son en-tête. */
 export interface SetSummary extends CatalogSet {
@@ -248,10 +234,16 @@ export const setOption = ({ id, name, year }: CatalogSet) => ({
   label: `${id} · ${name}${year ? ` (${year})` : ''}`,
 })
 
-/** La carte du catalogue d'une référence (« Herbizarre (OR1 2) ») ; `null` si aucune. */
-function catalogCard(catalog: Catalog, reference: string): CatalogCard | null {
+/**
+ * La carte du catalogue d'une référence (« Herbizarre (OR1 2) »), lue dans sa série ; `null` si le
+ * catalogue ne l'a pas (ou n'est pas disponible).
+ */
+async function catalogCard(reference: string): Promise<SetCard | null> {
   const code = referenceCode(reference)
-  return (code && catalog.byCode.get(codeKey(code))) ?? null
+  if (!code) return null
+  const set = (await loadSets())?.sets.find((known) => setKey(known.id) === setKey(code.set))
+  const cards = set ? await loadSetCards(set) : null
+  return cards?.find((card) => numberKey(card.number) === numberKey(code.number)) ?? null
 }
 
 /**
@@ -313,8 +305,7 @@ export function findCardImage(reference: string, { retry = false } = {}) {
   let promise = found.get(reference)
   if (!promise || (retry && missing.has(reference))) {
     promise = settled(
-      loadCatalog().then(async (catalog) => {
-        const listed = catalog && catalogCard(catalog, reference)
+      catalogCard(reference).then(async (listed) => {
         // Une carte du catalogue sans image chez Pokécardex : rien à chercher.
         const image = listed ? listed.image : cardImage(reference)
         if (image && (await loads(image))) {

@@ -21,8 +21,10 @@ import { formatShare, pokedexTitle, unlockedOf } from '@/lib/format'
 import { progressPercent, unlockEvents } from '@/lib/pokedex'
 import { HOUR } from '@/lib/time'
 import type { CardOwnership, CollectionData, PokemonCard, VitrineData } from '@/types'
+import { readSource } from './db'
 import { readPrices } from './jobs/prices'
 import { journal } from './journal'
+import { serveTagged } from './snapshots'
 
 /** La collection telle que la voit un visiteur (testé : jamais un prix payé ni un achat). */
 export function shownCollection(collection: CollectionData): CollectionData {
@@ -80,6 +82,7 @@ function journalVisit(entry: Parameters<typeof journal>[0], request: Request) {
 export function vitrineRoutes(app: Database, data: Database, origin: string) {
   // Un seul compte : son pseudo et sa collection.
   const readShown = app.query('SELECT collection FROM collections LIMIT 1')
+  const readVersion = app.query('SELECT version FROM collections LIMIT 1')
   const readOwner = app.query('SELECT name FROM "user" LIMIT 1')
   const shown = () => {
     const row = readShown.get() as { collection: string } | null
@@ -90,14 +93,23 @@ export function vitrineRoutes(app: Database, data: Database, origin: string) {
   return new Elysia({ name: 'vitrine' })
     .get(
       '/vitrine',
-      ({ request, set }): VitrineData => {
-        set.headers['cache-control'] = 'no-cache'
+      ({ request }) => {
         journalVisit({ topic: 'vitrine', message: 'Pokédex public consulté' }, request)
-        const collection = shown()
-        const owned = Object.values(collection.customCards).flatMap(({ id, cardmarket }) =>
-          cardmarket && collection.cards[id] ? [cardmarket] : [],
+        // Ce dont la réponse dépend : la collection (sa version), le pseudo, les prix du jour. Un
+        // visiteur qui revient reçoit un 304, sans que la collection soit relue.
+        const version = (readVersion.get() as { version: number } | null)?.version ?? 0
+        const prices = readSource(data, 'cardmarket')
+        return serveTagged(
+          request,
+          `${version}|${owner() ?? ''}|${prices?.stamp ?? ''}|${prices?.date ?? ''}`,
+          (): VitrineData => {
+            const collection = shown()
+            const owned = Object.values(collection.customCards).flatMap(({ id, cardmarket }) =>
+              cardmarket && collection.cards[id] ? [cardmarket] : [],
+            )
+            return { owner: owner(), collection, prices: readPrices(data, owned) }
+          },
         )
-        return { owner: owner(), collection, prices: readPrices(data, owned) }
       },
       { detail: { summary: 'Le Pokédex public' } },
     )

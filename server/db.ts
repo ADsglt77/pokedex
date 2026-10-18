@@ -219,6 +219,17 @@ const DATA_STEPS = [
   -- Pour les remplir : le prochain passage de la tâche \`catalog\` relit toutes les séries.
   UPDATE sets SET read_at = '1970-01-01T00:00:00.000Z';
   `,
+  `
+  -- Les prix de toutes les cartes de Cardmarket (\`/api/prices\`, 1,6 Mo) : l'app ne demande plus
+  -- que ceux de ses cartes (\`/api/prices/collection\`, \`/api/prices/selection\`).
+  DELETE FROM snapshots WHERE name = 'prices';
+  -- Chaque réponse aussi compressée en Brotli, servie au navigateur qui l'accepte (nulle : pas
+  -- encore recompressée, la tâche la refait à son prochain passage).
+  ALTER TABLE snapshots ADD COLUMN brotli BLOB;
+  -- Le catalogue entier (\`/api/catalog\`, 930 Ko) : la fenêtre d'ajout ne lit plus que les cartes
+  -- de son Pokémon (\`/api/catalog/species/<n°>\`), l'image d'une référence que sa série.
+  DELETE FROM snapshots WHERE name = 'catalog';
+  `,
 ]
 
 /**

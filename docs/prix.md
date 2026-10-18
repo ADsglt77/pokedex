@@ -15,15 +15,27 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
   que le guide n'a pas changé (`sources` : son `Last-Modified`) ; une base d'avant les colonnes
   `expansion` et `metacard` les remplit au passage suivant (l'étape du schéma qui les ajoute,
   `db.ts`, oublie ce `Last-Modified` : le guide et la liste sont relus). La liste des produits met
-  à jour un nom, une extension ou une carte qui a changé. En fin de tâche, même quand le guide n'a
-  pas changé, la réponse de `/api/prices` (le fichier des prix : jour et cartes, `readPrices` ;
-  404 tant que le guide n'a jamais été lu) est calculée et gardée compressée (`snapshots`, avec un
-  ETag : 304 si le navigateur l'a déjà). L'app la charge au premier écran qui affiche un prix
-  (l'accueil, pour sa valeur ; pas le Pokédex), et l'historique d'une carte à la demande
+  à jour un nom, une extension ou une carte qui a changé. Plus de fichier de tous les prix
+  (`/api/prices`, 1,6 Mo pour 63 763 cartes, dont 41 % seulement au catalogue japonais : retiré en
+  octobre 2026, l'étape du schéma efface sa réponse) : l'app demande les prix des seules cartes
+  qu'elle affiche (`GET /api/prices/collection?ids=…` pour celles de la collection,
+  `GET /api/prices/selection?ids=…` pour les autres : une extension du catalogue, les cartes d'un
+  Pokémon, un id saisi ; la même réponse, `readPrices` : jour et cartes, une carte sans prix ce
+  jour absente ; deux chemins car le service worker garde une copie par chemin ; ids validés comme
+  ceux de `/api/histories`, 1 025 au plus ; 404 tant que le guide n'a jamais été lu ; testé :
+  jamais le prix d'une carte non demandée). Pour l'accueil, ≈ 24 Ko au lieu de 1,6 Mo. Ces
+  réponses, l'historique d'une carte et ceux de la collection ont un ETag tiré du passage de la
+  tâche (`pricesTag`, `server/reference.ts` : son `Last-Modified` et le jour, que la tâche note
+  dans la même transaction que les prix et l'historique, et ce qui est demandé ; `serveTagged`,
+  `server/snapshots.ts`) : 304 sans rien lire tant que les prix n'ont pas changé. Côté navigateur
+  (`store/prices.ts`), les réponses s'ajoutent : `usePrices()` rend les prix de la collection,
+  `usePrices(ids)` ceux d'autres cartes, `null` tant que la réponse de ces cartes n'est pas
+  arrivée ; une carte dont le prix est connu n'est pas redemandée (une carte ajoutée : une demande
+  pour elle seule). L'historique d'une carte se charge à la demande
   (`/api/prices/<id>`, 404 sans historique) : la courbe de sa fiche, le nom affiché dans le
   formulaire pour vérifier l'id saisi (au départ du champ) ; ceux de la collection, en une fois
-  (`/api/histories`, plus bas). Le Pokédex public ne la charge pas : `/api/vitrine` donne les prix
-  de ses seules cartes possédées (`readPrices` avec leurs ids, `docs/compte-et-synchronisation.md`).
+  (`/api/histories`, plus bas). `/api/vitrine` donne les prix des seules cartes possédées du
+  Pokédex public (`readPrices` avec leurs ids, `docs/compte-et-synchronisation.md`).
   Sans serveur, ou base encore vide, l'app marche sans prix. Une réponse manquante (404) n'est pas
   redemandée ; après une panne passagère (réseau, délai, réponse illisible), elle l'est la fois
   suivante où elle sert, au plus une fois par minute (`getJson`, `lib/api.ts` : la règle vaut pour
@@ -42,7 +54,8 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
   d'aujourd'hui, l'adresse d'une collection complète fait ≈ 7 Ko, sous les 8 Ko de la ligne de
   requête que nginx accepte par défaut) ; chaque id lu une fois, requête préparée une fois
   (`historyReader`, `server/history.ts`, la même pour `/api/prices/<id>`) ;
-  `Cache-Control: no-cache`. L'app y met chaque id une fois (`loadPriceHistories`,
+  `Cache-Control: no-cache` avec un ETag (plus haut) : une visite suivante de Valeur reçoit un 304
+  tant que les prix n'ont pas changé. L'app y met chaque id une fois (`loadPriceHistories`,
   `store/prices.ts`) et relit la réponse dans l'ordre de ses cartes (`historiesOf`,
   `lib/prices.ts`, testé) : la même carte Cardmarket possédée pour deux Pokémon compte deux fois,
   comme dans la valeur du jour (une TAG TEAM, une seule carte, une fois) ; une carte sans id ou

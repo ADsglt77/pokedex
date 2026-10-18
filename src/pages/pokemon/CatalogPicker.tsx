@@ -1,10 +1,10 @@
 import { SegmentedControl, Select, Stack, Switch } from '@camply/ui'
-import { use } from 'react'
+import { use, useMemo } from 'react'
 import { Link } from 'react-router'
 import { CardFilters } from '@/components/CardFilters'
 import { CatalogGrid, CatalogTile } from '@/components/CatalogTile'
 import {
-  loadCatalog,
+  loadSpeciesCards,
   NO_FILTER,
   passesFilter,
   setOption,
@@ -12,9 +12,9 @@ import {
   type CatalogCard,
 } from '@/lib/card-catalog'
 import { plural } from '@/lib/format'
-import { priceOf } from '@/lib/prices'
+import { priceOf, priceText } from '@/lib/prices'
 import { otherSpeciesNames } from '@/lib/species'
-import { usePrices } from '@/store/prices'
+import { usePrices, usePricesMissing } from '@/store/prices'
 import type { PokemonSpecies } from '@/types'
 
 const ORDERS = [
@@ -52,12 +52,14 @@ export function CatalogPicker({
   view: PickerView
   onView: (view: PickerView) => void
 }) {
-  const catalog = use(loadCatalog())
-  const prices = usePrices()
+  const listed = use(loadSpeciesCards(species.id))
+  const ids = useMemo(() => (listed ?? []).flatMap((card) => card.cardmarket ?? []), [listed])
+  const prices = usePrices(ids)
+  const missing = usePricesMissing(ids)
   const { order, set, pricedOnly, filter } = view
   const change = (next: Partial<PickerView>) => onView({ ...view, ...next })
 
-  if (!catalog) {
+  if (!listed) {
     return (
       <p className="muted">
         Le catalogue n’est pas disponible pour le moment : réessayez dans quelques minutes, ou
@@ -65,7 +67,7 @@ export function CatalogPicker({
       </p>
     )
   }
-  const cards = catalog.bySpecies.get(species.id) ?? []
+  const cards = listed
   if (cards.length === 0) {
     return (
       <p className="muted">
@@ -125,12 +127,12 @@ export function CatalogPicker({
         )}
       </p>
       <CatalogGrid key={set} wide>
-        {shown.map(({ card, price }) => (
+        {shown.map(({ card }) => (
           <li key={card.key}>
             <CatalogTile
               card={card}
               heading={card.key}
-              price={price}
+              price={priceText(prices, missing, card)}
               speciesId={species.id}
               pressed={selected === card.key}
               onPick={() => onPick(card)}

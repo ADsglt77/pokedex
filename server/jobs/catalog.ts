@@ -13,9 +13,9 @@
  * série, une toutes les 3 s : le premier passage prend une vingtaine de minutes. Une page en échec
  * n'empêche pas les autres ; la tâche échoue ensuite, pour être relancée. Une page soudain vide (le
  * site a changé) ne retire rien. Au début et en fin de tâche, les réponses du catalogue sont
- * recalculées (`snapshots`) : `/api/catalog` (les cartes Pokémon, par Pokémon : la fenêtre d'ajout),
- * `/api/catalog/sets` (les séries) et `/api/catalog/sets/<code>` (toutes les cartes d'une série : la
- * page Catalogue).
+ * recalculées (`snapshots`) : `/api/catalog/species/<n°>` (les cartes d'un Pokémon : la fenêtre
+ * d'ajout), `/api/catalog/sets` (les séries) et `/api/catalog/sets/<code>` (toutes les cartes d'une
+ * série : la page Catalogue, l'image d'une référence).
  */
 
 import type { Database } from 'bun:sqlite'
@@ -93,6 +93,9 @@ interface RarityRecord {
 /** Le préfixe des réponses de chaque série : `catalog/sets/SV2A`. */
 const SET_SNAPSHOT = 'catalog/sets/'
 
+/** Le préfixe des réponses de chaque Pokémon : `catalog/species/25`. */
+const SPECIES_SNAPSHOT = 'catalog/species/'
+
 /**
  * Enregistre les réponses du catalogue, d'après les tables ; rien tant qu'aucune carte n'a été lue :
  * un catalogue vide passerait pour disponible (l'API répond 404 en attendant).
@@ -130,8 +133,13 @@ export function saveCatalog(db: Database) {
     if (list) list.push(card)
     else bySet.set(card.set, [card])
   }
+  const catalog = catalogResponse(sets, cards, rarities)
   db.transaction(() => {
-    saveSnapshot(db, 'catalog', catalogResponse(sets, cards, rarities))
+    // Chaque Pokémon, même sans carte : la fenêtre d'ajout dit alors qu'il n'en a pas (404 :
+    // catalogue pas disponible).
+    for (let dexId = 1; dexId <= TOTAL_SPECIES; dexId++) {
+      saveSnapshot(db, `${SPECIES_SNAPSHOT}${dexId}`, speciesResponse(catalog, dexId))
+    }
     saveSnapshot(db, 'catalog/sets', setsResponse(sets, bySet))
     for (const set of sets) {
       saveSnapshot(db, `${SET_SNAPSHOT}${set.id}`, setResponse(bySet.get(set.id)!, rarities))
@@ -160,7 +168,7 @@ const raritiesOf = (cards: CardRecord[], rarities: Map<number, RarityRecord>) =>
  */
 const imageOf = (card: CardRecord) => (card.image === 'none' ? 0 : card.sort)
 
-/** `/api/catalog` : les cartes Pokémon, par Pokémon (la fenêtre d'ajout d'une carte). */
+/** Les cartes Pokémon de toutes les séries, par Pokémon, avec leurs séries et leurs raretés. */
 function catalogResponse(
   sets: SetRecord[],
   cards: CardRecord[],
@@ -201,6 +209,23 @@ function catalogResponse(
     ),
     cards: bySpecies,
     rarities: raritiesOf(pokemon, rarities),
+  }
+}
+
+/**
+ * `/api/catalog/species/<n°>` : les cartes d'un Pokémon (la fenêtre d'ajout d'une carte), dans la
+ * forme du catalogue entier réduit à lui, avec les seules séries et raretés de ses cartes.
+ */
+function speciesResponse(catalog: CatalogFile, dexId: number): CatalogFile {
+  const rows = catalog.cards[dexId] ?? []
+  const sets = new Set(rows.map((row) => row[0]))
+  const rarities = new Set(rows.map((row) => String(row[5])))
+  return {
+    sets: Object.fromEntries(Object.entries(catalog.sets).filter(([id]) => sets.has(id))),
+    cards: rows.length ? { [dexId]: rows } : {},
+    rarities: Object.fromEntries(
+      Object.entries(catalog.rarities).filter(([id]) => rarities.has(id)),
+    ),
   }
 }
 

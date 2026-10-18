@@ -184,8 +184,8 @@ export interface SpeciesDetailsFile {
 export type CatalogRow = [string, string, number, string, number, number, number, number[]?]
 
 /**
- * `/api/catalog` : les cartes Pokémon japonaises de Pokécardex, par Pokémon (tâche `catalog`,
- * `server/jobs/catalog.ts`) : la fenêtre d'ajout d'une carte.
+ * `/api/catalog/species/<n°>` : les cartes Pokémon japonaises d'un Pokémon chez Pokécardex, avec
+ * leurs séries et leurs raretés (tâche `catalog`, `server/jobs/catalog.ts`) : la fenêtre d'ajout.
  */
 export interface CatalogFile {
   /**

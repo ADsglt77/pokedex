@@ -78,8 +78,8 @@ export function ValuePage() {
       <title>{pageTitle('Valeur')}</title>
       <PageHeader title="Valeur">
         Prix du marché Cardmarket
-        {prices && ` du ${formatDate(prices.date)}`}, en euros. Une estimation : l’état de la carte
-        et le vendeur font varier le prix réel.
+        {prices?.date && ` du ${formatDate(prices.date)}`}, en euros. Une estimation : l’état de la
+        carte et le vendeur font varier le prix réel.
       </PageHeader>
 
       <div className={styles.grid}>

@@ -1,50 +1,107 @@
 /**
- * Les prix Cardmarket : l'API du site
- * (`/api/prices`), que la tâche d'ingestion `prices` met à jour (`server/jobs/prices.ts`), et leur
- * historique (`/api/prices/<id>` pour une carte, `/api/histories` pour la collection).
- * Facultatifs : sans eux (serveur arrêté, base encore vide), `null`, et l'app s'affiche sans prix.
+ * Les prix Cardmarket : ceux du jour, demandés pour les seules cartes affichées (l'API du site,
+ * `/api/prices/collection` pour celles de la collection, `/api/prices/selection` pour les autres :
+ * une extension du catalogue, les cartes d'un Pokémon, un id saisi), que la tâche d'ingestion
+ * `prices` met à jour (`server/jobs/prices.ts`), et leur historique (`/api/prices/<id>` pour une
+ * carte, `/api/histories` pour la collection). Les réponses s'ajoutent : une carte dont le prix est
+ * connu n'est plus redemandée. Facultatifs : sans eux (serveur arrêté, base encore vide), `null`,
+ * et l'app s'affiche sans prix.
  */
 
 import { create } from 'zustand'
 import { forget, getJson } from '@/lib/api'
 import { historiesOf } from '@/lib/prices'
 import { settled } from '@/lib/settled'
-import type { CardPriceHistory, PriceFile, PriceHistories } from '@/types'
+import { useCollectionStore } from '@/store/collection'
+import type { CardPriceHistory, CollectionData, PriceFile, PriceHistories } from '@/types'
 
-const usePriceStore = create<{ prices: PriceFile | null; loaded: boolean }>(() => ({
+interface PriceState {
+  /** Les prix reçus, toutes demandes confondues ; `null` avant la première réponse. */
+  prices: PriceFile | null
+  /** Les ids dont une réponse est arrivée, avec ou sans prix ce jour. */
+  known: ReadonlySet<number>
+  /** Les ids dont la demande a échoué (serveur arrêté, prix jamais lus) : redemandés plus tard. */
+  failed: ReadonlySet<number>
+}
+
+const usePriceStore = create<PriceState>(() => ({
   prices: null,
-  loaded: false,
+  known: new Set(),
+  failed: new Set(),
 }))
 
-let requested: Promise<PriceFile | null> | null = null
+/** Sans carte à chiffrer (une collection vide) : des prix, sans aucune carte. */
+const NO_CARDS: PriceFile = { date: '', cards: {} }
+
+/** Les réponses déjà suivies : une même réponse de `getJson` n'est lue qu'une fois. */
+const followed = new WeakSet<Promise<PriceFile | null>>()
 
 /**
- * Demande les prix du jour au premier écran qui en affiche (ceux de Cardmarket couvrent toutes ses
- * cartes : l'accueil en affiche, avec la valeur de la collection ; le Pokédex s'en passe), et de
- * nouveau après une panne passagère.
+ * Demande les prix des cartes `ids` qui ne sont pas encore connus, sous le chemin `list` (le service
+ * worker garde une copie par chemin : celle de la collection n'est pas remplacée par celle d'une
+ * extension). Redemandés après une panne passagère (`getJson`, une minute après au plus tôt).
  */
-function requestPrices() {
-  const response = getJson<PriceFile>('/api/prices')
-  if (response === requested) return
-  requested = response
-  response.then((prices) => {
-    // La réponse d'une demande refaite depuis ne compte plus.
-    if (requested !== response) return
-    // Une réponse d'une autre forme (un serveur pas encore à jour) compte comme pas de prix.
-    usePriceStore.setState({ prices: prices?.cards ? prices : null, loaded: true })
-  })
+function requestPrices(list: 'collection' | 'selection', ids: readonly number[]) {
+  const { known } = usePriceStore.getState()
+  const wanted = [...new Set(ids)].filter((id) => !known.has(id)).sort((a, b) => a - b)
+  if (!wanted.length) return
+  const response = getJson<PriceFile>(`/api/prices/${list}?ids=${wanted.join()}`)
+  if (followed.has(response)) return
+  followed.add(response)
+  response.then((file) =>
+    usePriceStore.setState((state) =>
+      // Une réponse d'une autre forme (un serveur pas encore à jour) compte comme pas de prix.
+      file?.cards
+        ? {
+            prices: { date: file.date, cards: { ...state.prices?.cards, ...file.cards } },
+            known: new Set([...state.known, ...wanted]),
+            failed: new Set([...state.failed].filter((id) => !wanted.includes(id))),
+          }
+        : { failed: new Set([...state.failed, ...wanted]) },
+    ),
+  )
 }
 
-/** Les prix du jour ; `null` tant qu'ils ne sont pas arrivés, ou sans prix. */
-export function usePrices() {
-  requestPrices()
-  return usePriceStore((state) => state.prices)
+const idsOfCollection = new WeakMap<CollectionData, number[]>()
+
+/** Les ids Cardmarket des cartes de la collection, calculés une fois par collection. */
+function collectionIds(collection: CollectionData) {
+  let ids = idsOfCollection.get(collection)
+  if (!ids) {
+    ids = Object.values(collection.customCards).flatMap((card) => card.cardmarket ?? [])
+    idsOfCollection.set(collection, ids)
+  }
+  return ids
 }
 
-/** Les prix ont été demandés, et ils manquent : on peut le dire (pas en chargement). */
-export function usePricesMissing() {
-  requestPrices()
-  return usePriceStore((state) => state.loaded && !state.prices)
+/** Les cartes dont on veut les prix : `ids`, sinon celles de la collection. */
+function useWanted(ids?: readonly number[]) {
+  const collection = useCollectionStore((state) => state.collection)
+  if (ids) return { list: 'selection' as const, wanted: ids }
+  return { list: 'collection' as const, wanted: collectionIds(collection) }
+}
+
+/**
+ * Les prix du jour des cartes `ids` (sans `ids` : celles de la collection), demandés s'ils ne sont
+ * pas encore connus ; `null` tant que leur réponse n'est pas arrivée, ou sans prix. Les prix rendus
+ * peuvent aussi en contenir d'autres : `priceOf` lit celui de chaque carte, par son id.
+ */
+export function usePrices(ids?: readonly number[]) {
+  const { list, wanted } = useWanted(ids)
+  requestPrices(list, wanted)
+  return usePriceStore((state) =>
+    wanted.every((id) => state.known.has(id)) ? (state.prices ?? NO_CARDS) : null,
+  )
+}
+
+/**
+ * Les prix de ces cartes (sans `ids` : celles de la collection) ont été demandés, et ils manquent :
+ * on peut le dire (pas en chargement).
+ */
+export function usePricesMissing(ids?: readonly number[]) {
+  const { list, wanted } = useWanted(ids)
+  requestPrices(list, wanted)
+  return usePriceStore((state) => wanted.some((id) => state.failed.has(id)))
 }
 
 /**

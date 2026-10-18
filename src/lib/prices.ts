@@ -41,6 +41,13 @@ export const priceLabel = (price: number | null) =>
   price === null ? 'Sans prix' : formatEuro(price)
 
 /**
+ * Le prix du jour d'une carte, écrit pour une tuile du catalogue : « 12,40 € », « Sans prix » ;
+ * « — » quand les prix manquent (`missing`) ; `null` tant qu'ils arrivent.
+ */
+export const priceText = (prices: PriceFile | null, missing: boolean, card: Priced) =>
+  prices ? priceLabel(marketPrice(prices, card)) : missing ? '—' : null
+
+/**
  * L'écart du prix du jour à la moyenne sur 30 jours : 0,12 pour +12 %, −0,2 pour −20 % ; `null`
  * sans moyenne.
  */

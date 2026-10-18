@@ -33,8 +33,9 @@ export function PricePanel({
   // L'historique est demandé tout de suite, avec les prix du jour (plus d'un Mo) et pas après eux :
   // la même promesse, que la courbe lira (`use`).
   if (card.cardmarket !== undefined) void loadPriceHistory(card.cardmarket)
-  const prices = usePrices()
-  const missing = usePricesMissing()
+  const ids = card.cardmarket === undefined ? [] : [card.cardmarket]
+  const prices = usePrices(ids)
+  const missing = usePricesMissing(ids)
   const price = priceOf(prices, card)
 
   return (

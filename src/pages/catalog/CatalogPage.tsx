@@ -1,6 +1,6 @@
 import { Button, Card, EmptyState, Input, Skeleton, Stack } from '@camply/ui'
 import { CloudOff, Funnel, Search } from '@camply/ui/icons'
-import { Suspense, use, useDeferredValue, useMemo, useState } from 'react'
+import { Suspense, use, useCallback, useDeferredValue, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { CardFilters } from '@/components/CardFilters'
 import { CatalogGrid, CatalogGridSkeleton, CatalogTile } from '@/components/CatalogTile'
@@ -12,14 +12,15 @@ import {
   NO_FILTER,
   passesFilter,
   type CardFilter,
+  type CatalogCard,
   type CatalogSets,
   type SetCard,
   type SetSummary,
 } from '@/lib/card-catalog'
 import { searchForm } from '@/lib/filters'
 import { details, formatDate, formatInteger, formatList, pageTitle, plural } from '@/lib/format'
-import { priceOf } from '@/lib/prices'
-import { usePrices } from '@/store/prices'
+import { priceText } from '@/lib/prices'
+import { usePrices, usePricesMissing } from '@/store/prices'
 import { CardDetails } from './CardDetails'
 import { SetLogo } from './SetLogo'
 import { SetPicker } from './SetPicker'
@@ -149,12 +150,20 @@ function composition(cards: SetCard[]) {
   )
 }
 
+/** Les ids Cardmarket de ces cartes : les prix à demander. */
+const cardmarketIds = (cards: readonly CatalogCard[]) =>
+  cards.flatMap((card) => card.cardmarket ?? [])
+
 function CardBrowser({ cards }: { cards: SetCard[] }) {
-  const prices = usePrices()
+  const ids = useMemo(() => cardmarketIds(cards), [cards])
+  const prices = usePrices(ids)
+  const missing = usePricesMissing(ids)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<CardFilter>(NO_FILTER)
-  // La carte dont la fiche est ouverte, par son rang dans la grille ; `null` : aucune.
-  const [open, setOpen] = useState<number | null>(null)
+  // La carte dont la fiche est ouverte (sa clé) ; `null` : aucune.
+  const [open, setOpen] = useState<string | null>(null)
+  // Une fonction stable : les tuiles, mémoïsées, ne se redessinent pas à l'ouverture d'une fiche.
+  const openCard = useCallback((card: SetCard) => setOpen(card.key), [])
   // La grille suit la frappe sans la ralentir : jusqu'à des centaines de cartes à refaire.
   const search = searchForm(useDeferredValue(query))
 
@@ -172,9 +181,13 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
       ),
     [cards],
   )
-  const found = search ? cards.filter((card) => searchable.get(card.key)!.includes(search)) : cards
-  const shown = found.filter((card) => passesFilter(card, filter))
+  const found = useMemo(
+    () => (search ? cards.filter((card) => searchable.get(card.key)!.includes(search)) : cards),
+    [cards, searchable, search],
+  )
+  const shown = useMemo(() => found.filter((card) => passesFilter(card, filter)), [found, filter])
   const isFiltered = shown.length < cards.length
+  const index = open === null ? -1 : shown.findIndex((card) => card.key === open)
   const clear = () => {
     setQuery('')
     setFilter(NO_FILTER)
@@ -211,14 +224,14 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
         />
       ) : (
         <CatalogGrid>
-          {shown.map((card, index) => (
+          {shown.map((card) => (
             <li key={card.key}>
               <CatalogTile
                 card={card}
                 heading={card.number}
-                price={priceOf(prices, card)}
+                price={priceText(prices, missing, card)}
                 speciesId={card.dexIds[0]}
-                onPick={() => setOpen(index)}
+                onPick={openCard}
               >
                 {card.name}
               </CatalogTile>
@@ -226,8 +239,13 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
           ))}
         </CatalogGrid>
       )}
-      {open !== null && shown[open] && (
-        <CardDetails cards={shown} index={open} onIndex={setOpen} onClose={() => setOpen(null)} />
+      {index >= 0 && (
+        <CardDetails
+          cards={shown}
+          index={index}
+          onIndex={(to) => setOpen(shown[to]!.key)}
+          onClose={() => setOpen(null)}
+        />
       )}
     </Stack>
   )

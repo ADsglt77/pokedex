@@ -1,14 +1,13 @@
 import { Skeleton } from '@camply/ui'
-import { Children, type ReactNode, type Ref } from 'react'
+import { Children, memo, type ReactNode, type Ref } from 'react'
 import { CardArt } from '@/components/CardArt'
 import { RarityIcon } from '@/components/CatalogIcons'
-import { PricedValue } from '@/components/PricedValue'
 import { useGrowingList } from '@/hooks/useGrowingList'
 import type { CatalogCard } from '@/lib/card-catalog'
 import { cx } from '@/lib/cx'
-import { priceLabel } from '@/lib/prices'
-import type { CardPrice } from '@/types'
 import styles from './CatalogTile.module.css'
+
+type TileCard = Pick<CatalogCard, 'image' | 'reference' | 'rarity'>
 
 /**
  * Une carte du catalogue, serrée : son image ; sur une ligne `heading` (« SV2A 166 », ou « 166 »
@@ -16,7 +15,7 @@ import styles from './CatalogTile.module.css'
  * arrivent) ; sur la suivante, sa rareté et ce qu'on veut dire de plus (`children` : son nom, ses
  * autres Pokémon…). Un bouton : `pressed` pour la carte choisie.
  */
-export function CatalogTile({
+function Tile<C extends TileCard>({
   card,
   heading,
   price,
@@ -25,24 +24,32 @@ export function CatalogTile({
   onPick,
   children,
 }: {
-  card: Pick<CatalogCard, 'image' | 'reference' | 'rarity'>
+  card: C
   heading: string
-  price: CardPrice | null
+  /**
+   * Son prix du jour, écrit (`priceText` : « 12,40 € », « Sans prix », « — » sans prix
+   * disponibles) ; `null` tant que les prix arrivent.
+   */
+  price: string | null
   /** Son Pokémon (le sprite d'une carte sans image) ; aucun pour un dresseur, une énergie. */
   speciesId?: number
   pressed?: boolean
-  onPick: () => void
+  /** Reçoit la carte ; une fonction stable, sans quoi chaque tuile se redessine. */
+  onPick: (card: C) => void
   children?: ReactNode
 }) {
   // Pas d'`aria-label` : le texte de la tuile la nomme, `children` compris.
   return (
-    <button type="button" className={styles.choice} aria-pressed={pressed} onClick={onPick}>
+    <button
+      type="button"
+      className={styles.choice}
+      aria-pressed={pressed}
+      onClick={() => onPick(card)}
+    >
       <CardArt card={card} speciesId={speciesId} alt="" className={styles.art} />
       <span className={styles.line}>
         <span className={styles.code}>{heading}</span>
-        <span className={styles.price}>
-          <PricedValue text>{priceLabel(price?.price ?? null)}</PricedValue>
-        </span>
+        <span className={styles.price}>{price ?? <Skeleton variant="text" width="2.75rem" />}</span>
       </span>
       {(card.rarity || children) && (
         <span className={styles.line}>
@@ -53,6 +60,12 @@ export function CatalogTile({
     </button>
   )
 }
+
+/**
+ * Mémoïsée : une grille de centaines de tuiles (une frappe dans la recherche, un filtre, une fiche
+ * ouverte) ne redessine que celles dont quelque chose change.
+ */
+export const CatalogTile = memo(Tile) as typeof Tile
 
 /** Les cartes dessinées d'un coup : plus qu'un grand écran n'en montre. */
 const TILES_STEP = 60

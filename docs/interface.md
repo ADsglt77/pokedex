@@ -137,10 +137,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   Mon compte l'importent, la déconnexion le charge à la demande. Une
   donnée chargée à la demande et lue par `use()` passe par `settled` : sans lui, React retient
   l'affichage environ 300 ms à chaque ouverture (fenêtre d'ajout, catalogue). La fiche d'un
-  Pokémon sans carte prépare le catalogue pendant que le navigateur est libre. La page Catalogue
-  ne charge que la liste des séries (`/api/catalog/sets`, environ 8 Ko compressés) puis les
-  cartes de l'extension montrée (`/api/catalog/sets/<code>`), chacune une fois : pas le catalogue
-  par Pokémon (plus de 250 Ko compressés) de la fenêtre d'ajout. Les longues listes
+  Pokémon sans carte prépare ses cartes du catalogue pendant que le navigateur est libre (les
+  siennes seulement, `/api/catalog/species/<n°>` : moins de 1 Ko compressé en moyenne, 7 pour
+  Pikachu, au lieu des 275 Ko du catalogue entier d'avant). La page Catalogue ne charge que la liste
+  des séries (`/api/catalog/sets`, environ 8 Ko compressés) puis les cartes de l'extension montrée
+  (`/api/catalog/sets/<code>`), chacune une fois, et leurs seuls prix. Les longues listes
   du catalogue (les cartes d'une extension ou d'un Pokémon, jusqu'à 382 pour Pikachu ; les plus de
   400 extensions) sont dessinées au fur et à mesure (`useGrowingList` : 60 cartes ou 40
   extensions, puis autant chaque fois qu'un repère haut d'un écran, `growing-sentinel`, paraît au

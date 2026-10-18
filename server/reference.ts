@@ -5,13 +5,18 @@
  * - `GET /api/health` : pour une surveillance (UptimeRobot…), 200 si chaque tâche nécessaire a
  *   réussi récemment (deux intervalles au plus, `isOverdue`), 503 sinon, avec les tâches en retard ;
  * - `GET /api/species`, `/api/species/details` : les espèces, et ce qu'en montre la fiche ;
- * - `GET /api/catalog` : les cartes Pokémon japonaises, par Pokémon (la fenêtre d'ajout) ;
- *   `GET /api/catalog/sets` : les séries du catalogue ; `GET /api/catalog/sets/:id` : toutes les
- *   cartes d'une série, dresseurs et énergies compris (la page Catalogue) ;
- * - `GET /api/prices` : les prix Cardmarket du jour ; `GET /api/prices/:id` : l'historique d'une
- *   carte Cardmarket, par son id produit (la fiche) ;
+ * - `GET /api/catalog/species/:id` : les cartes Pokémon japonaises d'un Pokémon (la fenêtre
+ *   d'ajout) ; `GET /api/catalog/sets` : les séries du catalogue ; `GET /api/catalog/sets/:id` :
+ *   toutes les cartes d'une série, dresseurs et énergies compris (la page Catalogue) ;
+ * - `GET /api/prices/collection?ids=…` et `GET /api/prices/selection?ids=…` : les prix Cardmarket
+ *   du jour des cartes demandées, dans la forme de `readPrices` (deux chemins pour la même réponse :
+ *   le service worker garde une copie par chemin, celle de la collection n'est pas remplacée par
+ *   celle d'une extension du catalogue) ; `GET /api/prices/:id` : l'historique d'une carte
+ *   Cardmarket, par son id produit (la fiche) ;
  * - `GET /api/histories?ids=719621,719654` : l'historique de chaque carte Cardmarket demandée,
  *   `null` sans historique, en une demande (la courbe de la valeur de la collection, page Valeur) ;
+ *   ces trois-là ont un ETag tiré du passage de la tâche `prices` (`pricesTag`) : un 304 tant que
+ *   les prix n'ont pas changé ;
  * - `GET /api/wants?ids=719621,719654` : la ligne de chaque carte Cardmarket demandée pour la liste
  *   de souhaits Cardmarket (`wantsLine`), `null` sans ligne sûre ; calculée à chaque demande, chaque
  *   id et chaque extension une fois.
@@ -27,7 +32,8 @@ import { isOverdue } from '@/lib/jobs'
 import type { JobStatus, PriceHistories, ServerStatus, WantsLines } from '@/types'
 import { readSource } from './db'
 import { historyReader } from './history'
-import { notFound, serveSnapshot } from './snapshots'
+import { readPrices } from './jobs/prices'
+import { notFound, serveSnapshot, serveTagged } from './snapshots'
 
 /**
  * Des ids Cardmarket séparés par des virgules : `max` au plus, de 1 à 9 chiffres chacun, sans zéro
@@ -94,6 +100,21 @@ export function referenceRoutes(data: Database) {
       names,
     )
   }
+  /**
+   * Ce dont dépend une réponse tirée des prix (`what` : ce qui est demandé), d'où son ETag : elle ne
+   * change qu'avec eux, et la tâche `prices` note son passage (`sources`) dans la même transaction
+   * que les prix et l'historique ; `null` tant que les prix n'ont jamais été lus.
+   */
+  function pricesTag(what: string) {
+    const source = readSource(data, 'cardmarket')
+    return source && `${source.stamp}|${source.date}|${what}`
+  }
+  /** Les prix du jour des cartes `ids`, avec leur ETag. */
+  function pricesOf({ query, request }: { query: { ids: string }; request: Request }) {
+    const ids = [...new Set(query.ids.split(','))]
+    const tag = pricesTag(`prices:${ids.join()}`)
+    return tag ? serveTagged(request, tag, () => readPrices(data, ids.map(Number))) : notFound()
+  }
   /** Une réponse calculée en fin de tâche. */
   const snapshot =
     (name: string) =>
@@ -137,7 +158,14 @@ export function referenceRoutes(data: Database) {
       snapshot('species-details'),
       doc('Les détails des espèces : catégorie, description, taille…'),
     )
-    .get('/catalog', snapshot('catalog'), doc('Les cartes Pokémon japonaises, par Pokémon'))
+    .get(
+      '/catalog/species/:id',
+      ({ params, request }) => serveSnapshot(data, `catalog/species/${params.id}`, request),
+      {
+        params: t.Object({ id: t.Integer({ minimum: 1, maximum: TOTAL_SPECIES }) }),
+        ...doc('Les cartes japonaises d’un Pokémon'),
+      },
+    )
     .get('/catalog/sets', snapshot('catalog/sets'), doc('Les séries du catalogue'))
     .get(
       '/catalog/sets/:id',
@@ -148,15 +176,22 @@ export function referenceRoutes(data: Database) {
         ...doc('Toutes les cartes d’une série du catalogue'),
       },
     )
-    .get('/prices', snapshot('prices'), doc('Les prix du jour'))
+    .get('/prices/collection', pricesOf, {
+      // Une carte par Pokémon au plus.
+      query: t.Object({ ids: t.String({ pattern: idsPattern(TOTAL_SPECIES) }) }),
+      ...doc('Les prix du jour des cartes de la collection'),
+    })
+    .get('/prices/selection', pricesOf, {
+      // Une extension du catalogue, les cartes d'un Pokémon : moins d'un millier.
+      query: t.Object({ ids: t.String({ pattern: idsPattern(TOTAL_SPECIES) }) }),
+      ...doc('Les prix du jour de quelques cartes'),
+    })
     .get(
       '/prices/:id',
-      ({ params, set }) => {
-        const history = readHistory(params.id)
-        // Sans cache, comme l'historique : la carte peut avoir un prix au prochain passage.
-        if (!history) return notFound()
-        set.headers['cache-control'] = 'no-cache'
-        return history
+      ({ params, request }) => {
+        // Pas de 404 retenu : la carte peut avoir un prix au prochain passage.
+        const tag = pricesTag(`history:${params.id}`)
+        return tag ? serveTagged(request, tag, () => readHistory(params.id)) : notFound()
       },
       {
         params: t.Object({ id: t.Integer({ minimum: 1, maximum: 999_999_999 }) }),
@@ -165,10 +200,11 @@ export function referenceRoutes(data: Database) {
     )
     .get(
       '/histories',
-      ({ query, set }): PriceHistories => {
-        // Sans cache, comme l'historique d'une carte.
-        set.headers['cache-control'] = 'no-cache'
-        return eachId(query.ids, readHistory)
+      ({ query, request }) => {
+        const tag = pricesTag(`histories:${query.ids}`)
+        return tag
+          ? serveTagged(request, tag, (): PriceHistories => eachId(query.ids, readHistory))
+          : notFound()
       },
       {
         // Les historiques d'une collection : une carte par Pokémon au plus.

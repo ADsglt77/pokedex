@@ -49,9 +49,10 @@ Le seul compte, la collection synchronisée entre les appareils, le Pokédex pub
   d'accueil d'un visiteur ; en tête, « Se connecter », ou « Mon Pokédex » une fois connecté ;
   son titre : « Le Pokédex de … » (`pokedexTitle`), le pseudo du compte (`GET /api/vitrine` :
   `{ owner, collection, prices }`, `VitrineData`). `prices` : les prix du jour de ses seules cartes
-  possédées (`readPrices`, `server/jobs/prices.ts`), dans la forme de `/api/prices`, `null` sans
-  guide des prix (la valeur est alors « — ») : un visiteur ne télécharge pas les prix de toutes les
-  cartes (près de 500 Ko compressés) pour un seul total.
+  possédées (`readPrices`, `server/jobs/prices.ts`), `null` sans guide des prix (la valeur est
+  alors « — ») ; un ETag tiré de la version de la collection, du pseudo et du passage de la tâche
+  `prices` (`serveTagged`) : un visiteur qui revient reçoit un 304, sans que la collection soit
+  relue.
   Données › Pokédex public en donne l'adresse. Un lien partagé (Discord, WhatsApp…) a son aperçu :
   nginx envoie les robots d'aperçu (`map $vitrine_preview`, `deploy/nginx.conf`) à
   `/api/vitrine/apercu`, une page faite par le serveur avec le titre et la progression

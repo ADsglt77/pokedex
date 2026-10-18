@@ -25,7 +25,7 @@ import { openData } from './db'
 import { backups } from './jobs/backups'
 import { catalog, saveCatalog } from './jobs/catalog'
 import { images } from './jobs/images'
-import { prices, savePrices } from './jobs/prices'
+import { prices } from './jobs/prices'
 import { species } from './jobs/species'
 import { hasHistory, importLegacyPrices } from './legacy-prices'
 
@@ -93,7 +93,6 @@ if (arg === '--loop') {
     "UPDATE runs SET finished_at = ?, ok = 0, message = 'interrompue' WHERE finished_at IS NULL",
   ).run(new Date().toISOString())
   saveCatalog(db)
-  savePrices(db)
   // La reprise des anciens prix ratée (vérification en échec) : les autres tâches tournent, sauf
   // celle des prix, qui écrirait un historique et empêcherait de la refaire.
   let skipPrices = false

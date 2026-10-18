@@ -58,11 +58,12 @@ navigateur ne parle qu'à lui. Des tâches d'ingestion lisent les sources et rem
 - `catalog`, chaque jour : le catalogue des cartes japonaises, d'après Pokécardex : ses ≈ 450
   séries japonaises depuis 1996, decks et promos compris, toutes leurs cartes (dresseurs et
   énergies comprises) avec le numéro, les noms, les Pokémon, l'id Cardmarket, la rareté, le type,
-  l'illustrateur et les versions de chacune, et le bloc de chaque série (`/api/catalog`,
+  l'illustrateur et les versions de chacune, et le bloc de chaque série (`/api/catalog/species/…`,
   `/api/catalog/sets`). Une page par série, une toutes les 3 s : le premier passage prend une
   vingtaine de minutes ;
 - `prices`, toutes les 6 h : les prix d'après les fichiers publics de Cardmarket (le prix du jour
-  de toutes ses cartes à l'unité, et l'historique de chacune ; `/api/prices`, `/api/histories`),
+  de toutes ses cartes à l'unité, et l'historique de chacune ; l'app ne demande que ceux de ses
+  cartes, `/api/prices/collection`, `/api/histories`),
   et l'extension de chaque carte, pour les lignes de la liste de souhaits (`/api/wants`) ;
 - `images`, chaque jour : les images copiées chez nous (`/images/…`) — chez Pokécardex, les
   cartes, le logo japonais de chaque série et les icônes des types et des raretés, hébergés chez

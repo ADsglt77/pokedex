@@ -16,7 +16,6 @@ import { addDays } from '@/lib/time'
 import type { CardPriceHistory, PriceFile } from '@/types'
 import { writeSource } from './db'
 import { historyReader, splitYears } from './history'
-import { savePrices } from './jobs/prices'
 
 /** La somme de prix, en centimes : comparée exactement. */
 const cents = (prices: (number | null)[]) =>
@@ -107,7 +106,6 @@ export async function importLegacyPrices(db: Database, dir: string) {
     )
   })()
 
-  savePrices(db)
   console.log(
     `Repris : ${histories.size} historiques` +
       (latest ? `, prix Cardmarket du ${latest.date}` : ''),

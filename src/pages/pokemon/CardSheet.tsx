@@ -3,7 +3,7 @@ import { Plus } from '@camply/ui/icons'
 import { useEffect, useState, type Ref } from 'react'
 import { Panel } from '@/components/Panel'
 import { PricePanel } from '@/components/PricePanel'
-import { loadCatalog } from '@/lib/card-catalog'
+import { loadSpeciesCards } from '@/lib/card-catalog'
 import { details, statusCaption } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
 import { otherSpeciesNames } from '@/lib/species'
@@ -62,13 +62,13 @@ export function EmptySheet({
   titleRef: Ref<HTMLHeadingElement>
 }) {
   const [adding, setAdding] = useState(false)
-  // Le catalogue, préparé quand le navigateur a le temps (au plus tard 2 s après) : la fenêtre
-  // d'ajout s'ouvre sans attendre. Safari n'a pas `requestIdleCallback`.
+  // Ses cartes du catalogue, préparées quand le navigateur a le temps (au plus tard 2 s après) :
+  // la fenêtre d'ajout s'ouvre sans attendre. Safari n'a pas `requestIdleCallback`.
   useEffect(() => {
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(() => void loadCatalog(), { timeout: 2000 })
-    } else setTimeout(() => void loadCatalog(), 1000)
-  }, [])
+    const load = () => void loadSpeciesCards(species.id)
+    if ('requestIdleCallback' in window) requestIdleCallback(load, { timeout: 2000 })
+    else setTimeout(load, 1000)
+  }, [species.id])
   return (
     <Panel title="Carte à choisir" titleRef={titleRef}>
       <p className="muted">
