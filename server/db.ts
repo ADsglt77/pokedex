@@ -182,6 +182,19 @@ const DATA_STEPS = [
   -- Les cartes du catalogue d'un produit Cardmarket : le nom de son extension (\`/api/wants\`).
   CREATE INDEX cards_by_cardmarket ON cards (cardmarket);
   `,
+  `
+  -- La rareté et le type de chaque carte, numérotés par Pokécardex (les types : \`CARD_TYPES\`,
+  -- \`src/config/catalog.ts\`), et ses raretés : leur nom et leur ordre.
+  ALTER TABLE cards ADD COLUMN rarity INTEGER;
+  ALTER TABLE cards ADD COLUMN type INTEGER;
+  CREATE TABLE rarities (id INTEGER PRIMARY KEY, name TEXT NOT NULL, rank INTEGER NOT NULL);
+  -- Le logo japonais de chaque série, copié chez nous par la tâche \`images\` : \`pokecardex\` ou
+  -- \`none\`, nul tant qu'il n'a pas été cherché.
+  ALTER TABLE sets ADD COLUMN logo TEXT;
+  ALTER TABLE sets ADD COLUMN logo_checked TEXT;
+  -- Pour les remplir : le prochain passage de la tâche \`catalog\` relit toutes les séries.
+  UPDATE sets SET read_at = '1970-01-01T00:00:00.000Z';
+  `,
 ]
 
 /**

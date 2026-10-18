@@ -1,0 +1,26 @@
+/* Une icône de rareté, à la hauteur d'une ligne de texte ; les noires, éclaircies sur fond sombre. */
+.rarity {
+  flex: none;
+  width: auto;
+  height: 0.875rem;
+}
+
+.dark {
+  filter: var(--dark-icon-filter);
+}
+
+/* Une rareté sans icône : son nom, en petites capitales serrées. */
+.name {
+  flex: none;
+  color: var(--camply-text-strong);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* L'icône ronde d'un type d'énergie. */
+.type {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+}

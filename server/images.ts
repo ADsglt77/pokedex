@@ -1,7 +1,8 @@
 /**
  * Les images, copiées chez nous (`IMAGES_DIR`, le volume `images` sur le VPS ; nginx les sert à
- * `/images/…`) : les cartes chez Pokécardex (avec son accord, qui demande de les héberger chez
- * nous), les sprites et illustrations des Pokémon chez PokéAPI. Chaque chemin local correspond à une seule adresse
+ * `/images/…`) : chez Pokécardex (avec son accord, qui demande de les héberger chez nous), les
+ * cartes, le logo japonais de chaque série et les icônes des types et des raretés ; chez PokéAPI,
+ * les sprites et illustrations des Pokémon. Chaque chemin local correspond à une seule adresse
  * d'origine (`upstreamUrl`) : le navigateur garde les adresses d'origine dans la collection et ne
  * demande que leur chemin local (`localSrc`, `src/lib/card-images.ts`). Seuls ces chemins-là sont
  * copiés : le serveur n'est pas un relais ouvert.
@@ -10,6 +11,7 @@
 import type { Database } from 'bun:sqlite'
 import { mkdir, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { CARD_TYPES } from '@/config/catalog'
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { WEEK } from '@/lib/time'
 import { DATA_DIR } from './db'
@@ -20,6 +22,8 @@ import { notFound } from './snapshots'
 const IMAGES_DIR = process.env.IMAGES_DIR ?? join(DATA_DIR, 'images')
 
 const SPRITES = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon'
+/** Les images du site de Pokécardex, en WebP (`class`) : logos, icônes. */
+const ASSETS = 'https://pokecardex.b-cdn.net/assets/images'
 
 /** Les chemins locaux connus, et l'adresse d'origine de chacun. */
 const UPSTREAMS: [RegExp, (...parts: string[]) => string][] = [
@@ -27,6 +31,15 @@ const UPSTREAMS: [RegExp, (...parts: string[]) => string][] = [
     /^\/images\/cards\/pokecardex\/([A-Z0-9_-]+)\/(\d{1,4})-(md|hd)\.webp$/,
     (set, number, size) =>
       `https://pokecardex-scans.b-cdn.net/sets_jp/${set}/${number}.jpg?class=${size}`,
+  ],
+  [
+    /^\/images\/sets\/([A-Z0-9_-]+)-(md|hd)\.webp$/,
+    (set, size) => `${ASSETS}/logos_jp/${set}.png?class=${size}`,
+  ],
+  [/^\/images\/types\/(\d{1,2})\.webp$/, (type) => `${ASSETS}/types/type_${type}.png?class=md`],
+  [
+    /^\/images\/rarities\/(\d{1,3})\.webp$/,
+    (rarity) => `${ASSETS}/rarete/ids/rarete_${rarity}.png?class=md`,
   ],
   [/^\/images\/species\/(\d{1,4})\.png$/, (id) => `${SPRITES}/${id}.png`],
   [
@@ -85,9 +98,16 @@ const copies = new Map<string, Promise<boolean>>()
 
 /**
  * Un chemin plausible : chez Pokécardex, une série du catalogue et un numéro d'image jusqu'au plus
- * grand des siens ; un Pokémon du Pokédex. Des chemins inventés ne font pas solliciter les sources.
+ * grand des siens, le logo d'une série du catalogue, un type de carte, une rareté connue ; un
+ * Pokémon du Pokédex. Des chemins inventés ne font pas solliciter les sources.
  */
 function plausible(data: Database, path: string) {
+  const logo = /^\/images\/sets\/([^/]+)-/.exec(path)
+  if (logo) return data.query('SELECT 1 FROM sets WHERE id = ?').get(logo[1]!) !== null
+  const type = /^\/images\/types\/(\d+)\./.exec(path)
+  if (type) return CARD_TYPES.has(Number(type[1]))
+  const rarity = /^\/images\/rarities\/(\d+)\./.exec(path)
+  if (rarity) return data.query('SELECT 1 FROM rarities WHERE id = ?').get(rarity[1]!) !== null
   const card = /^\/images\/cards\/pokecardex\/([^/]+)\/(\d+)-/.exec(path)
   if (card) {
     const { max } = data

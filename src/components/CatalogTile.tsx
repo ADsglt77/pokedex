@@ -1,20 +1,24 @@
 import { Skeleton } from '@camply/ui'
 import type { ReactNode, Ref } from 'react'
 import { CardArt } from '@/components/CardArt'
+import { RarityIcon } from '@/components/CatalogIcons'
 import { PricedValue } from '@/components/PricedValue'
 import type { CatalogCard } from '@/lib/card-catalog'
+import { cx } from '@/lib/cx'
 import { priceLabel } from '@/lib/prices'
 import type { CardPrice } from '@/types'
 import styles from './CatalogTile.module.css'
 
 /**
- * Une carte du catalogue à choisir : son image (Pokécardex), sa série, son numéro et son année, son
- * prix Cardmarket du jour (une ébauche tant que les prix arrivent), et ce qu'on veut dire de plus
- * (`children` : le Pokémon, « déjà une carte »…). Un bouton : `pressed` pour la carte choisie,
- * `disabled` quand on ne peut pas la prendre.
+ * Une carte du catalogue à choisir, serrée : son image ; sur une ligne `heading` (« SV2A 166 », ou
+ * « 166 » dans une seule extension) et son prix Cardmarket du jour (une ébauche tant que les prix
+ * arrivent) ; sur la suivante, sa rareté et ce qu'on veut dire de plus (`children` : le Pokémon,
+ * « déjà une carte »…).
+ * Un bouton : `pressed` pour la carte choisie, `disabled` quand on ne peut pas la prendre.
  */
 export function CatalogTile({
   card,
+  heading,
   price,
   speciesId,
   pressed,
@@ -23,6 +27,7 @@ export function CatalogTile({
   children,
 }: {
   card: CatalogCard
+  heading: string
   price: CardPrice | null
   speciesId: number
   pressed?: boolean
@@ -40,28 +45,37 @@ export function CatalogTile({
       onClick={onPick}
     >
       <CardArt card={card} speciesId={speciesId} alt="" className={styles.art} />
-      <span className={styles.code}>
-        {card.key}
-        {card.set.year && <span className={styles.year}> · {card.set.year}</span>}
+      <span className={styles.line}>
+        <span className={styles.code}>{heading}</span>
+        <span className={styles.price}>
+          <PricedValue text>{priceLabel(price?.price ?? null)}</PricedValue>
+        </span>
       </span>
-      <span className={styles.price}>
-        <PricedValue text>{priceLabel(price?.price ?? null)}</PricedValue>
-      </span>
-      {children && <span className={styles.extra}>{children}</span>}
+      {(card.rarity || children) && (
+        <span className={styles.line}>
+          {card.rarity && <RarityIcon rarity={card.rarity} />}
+          {children && <span className={styles.extra}>{children}</span>}
+        </span>
+      )}
     </button>
   )
 }
 
-/** La grille des cartes du catalogue (une liste : chaque carte dans un `li`). */
+/**
+ * La grille des cartes du catalogue (une liste : chaque carte dans un `li`). `wide` : des cartes de
+ * plusieurs extensions, dont le code (« SV2A 166 ») et le prix tiennent sur une ligne.
+ */
 export function CatalogGrid({
   children,
+  wide = false,
   ref,
 }: {
   children: ReactNode
+  wide?: boolean
   ref?: Ref<HTMLUListElement>
 }) {
   return (
-    <ul ref={ref} className={styles.grid}>
+    <ul ref={ref} className={cx(styles.grid, wide && styles.wide)}>
       {children}
     </ul>
   )

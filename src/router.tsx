@@ -87,7 +87,7 @@ export const createRouter = () =>
             {
               path: 'catalogue',
               lazy: () =>
-                import('@/pages/CatalogPage').then(({ CatalogPage }) => ({
+                import('@/pages/catalog/CatalogPage').then(({ CatalogPage }) => ({
                   Component: CatalogPage,
                 })),
             },

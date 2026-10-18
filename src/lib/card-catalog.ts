@@ -1,12 +1,13 @@
 /**
  * Le catalogue des cartes Pokémon japonaises (`/api/catalog`, que la tâche `catalog` construit
- * d'après Pokécardex) : pour chaque Pokémon, ses cartes, des plus récentes aux plus anciennes, et
- * les séries (nom, date de sortie). Chargé par la fenêtre d'ajout et la page Catalogue, et préparé
+ * d'après Pokécardex) : pour chaque Pokémon, ses cartes, des plus récentes aux plus anciennes, avec
+ * leur rareté et leur type, et les séries (nom, date de sortie, logo). Chargé par la fenêtre d'ajout et la page Catalogue, et préparé
  * d'avance par la fiche d'un Pokémon sans carte (quand le navigateur est libre). Aucun tri ni
  * détection : l'utilisateur choisit, l'app ne propose rien seule. Il donne aussi l'image exacte
  * d'une carte chez Pokécardex (`findCardImage`).
  */
 
+import { CARD_TYPES } from '@/config/catalog'
 import { derived } from '@/lib/api'
 import { codeKey, referenceCode } from '@/lib/card-code'
 import { cardImage, localSrc, pokecardexImage } from '@/lib/card-images'
@@ -15,19 +16,30 @@ import { getSpecies } from '@/lib/species'
 import type { CardImage, CatalogFile } from '@/types'
 
 /** Une série du catalogue. */
-interface CatalogSet {
+export interface CatalogSet {
   /** Son code chez Pokécardex : « SV2A ». */
   id: string
   /** Son nom : « Pokémon Card 151 ». */
   name: string
   /** Son année de sortie ; `null` si Pokécardex ne la donne pas. */
   year: string | null
+  /** Son logo japonais est chez nous (`setLogo`), ou pas encore cherché ; faux si aucun. */
+  logo: boolean
+}
+
+/** Une rareté, telle que Pokécardex la nomme (« SAR », « Commune »…), et son rang. */
+export interface Rarity {
+  id: number
+  name: string
+  rank: number
 }
 
 /** Une carte du catalogue : de quoi la montrer et la reprendre dans la saisie. */
 export interface CatalogCard {
   /** « SV2A 166 » : la série et le numéro, uniques. */
   key: string
+  /** « 166 » : le numéro, sans la série. */
+  number: string
   set: CatalogSet
   /** Ses Pokémon : un seul, sauf une carte TAG TEAM. */
   dexIds: number[]
@@ -37,6 +49,10 @@ export interface CatalogCard {
   reference: string
   /** Son image chez Pokécardex ; `null` s'il ne l'a pas. */
   image: CardImage | null
+  /** Sa rareté ; `null` tant que Pokécardex ne la donne pas. */
+  rarity: Rarity | null
+  /** Son type (`CARD_TYPES`) ; `null` s'il n'en est pas un. */
+  type: number | null
 }
 
 /** Tout le catalogue, lu une fois : les séries et les cartes par Pokémon. */
@@ -50,9 +66,15 @@ export interface Catalog {
 
 function readCatalog(file: CatalogFile): Catalog {
   const sets = new Map(
-    Object.entries(file.sets).map(([id, [name, released]]) => [
+    Object.entries(file.sets).map(([id, [name, released, logo]]) => [
       id,
-      { id, name, year: released.slice(0, 4) || null },
+      { id, name, year: released.slice(0, 4) || null, logo: logo === 1 },
+    ]),
+  )
+  const rarities = new Map(
+    Object.entries(file.rarities).map(([id, [name, rank]]) => [
+      Number(id),
+      { id: Number(id), name, rank },
     ]),
   )
   const bySpecies = new Map<number, CatalogCard[]>()
@@ -63,18 +85,21 @@ function readCatalog(file: CatalogFile): Catalog {
     const id = Number(speciesId)
     bySpecies.set(
       id,
-      rows!.map(([set, number, cardmarket, name, image, dexIds = [id]]) => {
+      rows!.map(([set, number, cardmarket, name, image, rarity, type, dexIds = [id]]) => {
         const key = `${set} ${number}`
         let card = cards.get(key)
         if (!card) {
           const names = name || dexIds.map((dexId) => getSpecies(dexId)!.names.fr).join(' & ')
           card = {
             key,
+            number,
             set: sets.get(set)!,
             dexIds,
             cardmarket: cardmarket || undefined,
             reference: `${names} (${set} ${number})`,
             image: image ? pokecardexImage(set, image) : null,
+            rarity: rarities.get(rarity) ?? null,
+            type: CARD_TYPES.has(type) ? type : null,
           }
           cards.set(key, card)
           byCode.set(codeKey({ set, number }), card)
@@ -106,6 +131,19 @@ function catalogCard(catalog: Catalog, reference: string): CatalogCard | null {
   const code = referenceCode(reference)
   return (code && catalog.byCode.get(codeKey(code))) ?? null
 }
+
+/** Les raretés et les types choisis pour une grille de cartes ; aucun : tous. */
+export interface CardFilter {
+  rarities: number[]
+  types: number[]
+}
+
+export const NO_FILTER: CardFilter = { rarities: [], types: [] }
+
+/** La carte est d'une des raretés choisies et d'un des types choisis (aucun choisi : tous). */
+export const passesFilter = (card: CatalogCard, { rarities, types }: CardFilter) =>
+  (!rarities.length || (card.rarity !== null && rarities.includes(card.rarity.id))) &&
+  (!types.length || (card.type !== null && types.includes(card.type)))
 
 /** Les cartes d'une série, tous Pokémon confondus, dans l'ordre des numéros (une fois chacune). */
 export function setCards(catalog: Catalog, setId: string): CatalogCard[] {

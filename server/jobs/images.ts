@@ -3,6 +3,8 @@
  * jour, après le catalogue. Pokécardex prête les siennes à condition qu'elles soient hébergées
  * chez nous, jamais affichées depuis ses serveurs.
  * - Les 1 025 Pokémon : sprite et illustration officielle (PokéAPI).
+ * - Chaque série du catalogue : son logo japonais chez Pokécardex, en deux tailles, ou aucun (noté :
+ *   `sets.logo`, cherché de nouveau chaque semaine) ; les icônes des types et des raretés.
  * - Chaque carte du catalogue : son scan chez Pokécardex, en deux tailles (`md` pour les grilles,
  *   `hd` pour la fiche), ou aucun. Le résultat est noté (`cards.image`) : l'app sait d'avance
  *   quelle carte n'a pas d'image. Une carte sans scan est recherchée chaque semaine (Pokécardex en
@@ -16,8 +18,9 @@
  */
 
 import type { Database } from 'bun:sqlite'
+import { CARD_TYPES } from '@/config/catalog'
 import { artworkUrl, SPECIES_IDS, spriteUrl, TOTAL_SPECIES } from '@/config/pokedex'
-import { localSrc, pokecardexImage } from '@/lib/card-images'
+import { localSrc, pokecardexImage, rarityIcon, setLogo, typeIcon } from '@/lib/card-images'
 import { WEEK } from '@/lib/time'
 import { mirror } from '../images'
 import { mapPool } from '../lib/net'
@@ -51,8 +54,32 @@ export async function images(db: Database) {
     })
     console.log(`Images des ${TOTAL_SPECIES} Pokémon : vérifiées`)
 
-    // Les cartes jamais cherchées, et celles sans scan cherché il y a plus d'une semaine.
+    // Les logos jamais cherchés, et ceux absents il y a plus d'une semaine (Pokécardex en ajoute).
     const weekAgo = new Date(Date.now() - WEEK).toISOString()
+    const sets = db
+      .query(
+        `SELECT id FROM sets WHERE id IN (SELECT set_id FROM cards)
+         AND (logo IS NULL OR (logo = 'none' AND logo_checked < ?))`,
+      )
+      .all(weekAgo) as { id: string }[]
+    const writeLogo = db.query('UPDATE sets SET logo = ?, logo_checked = ? WHERE id = ?')
+    await mapPool(sets, 2, async ({ id }) => {
+      const copied = (await copy(setLogo(id, 'md'))) && (await copy(setLogo(id, 'hd')))
+      if (copied !== null)
+        writeLogo.run(copied ? 'pokecardex' : 'none', new Date().toISOString(), id)
+    })
+    const rarities = db
+      .query('SELECT id FROM rarities WHERE id IN (SELECT rarity FROM cards)')
+      .all() as { id: number }[]
+    const icons = [...CARD_TYPES.keys()]
+      .map(typeIcon)
+      .concat(rarities.map(({ id }) => rarityIcon(id)))
+    await mapPool(icons, 2, copy)
+    console.log(
+      `Logos de ${sets.length} séries cherchés, icônes des types et des raretés vérifiées`,
+    )
+
+    // Les cartes jamais cherchées, et celles sans scan cherché il y a plus d'une semaine.
     const cards = db
       .query(
         `SELECT id, set_id AS 'set', sort FROM cards

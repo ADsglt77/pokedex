@@ -61,10 +61,13 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   une ligne, les filtres rapides passent dessous (sur téléphone, ils défilent de côté). Achats :
   sur téléphone, les filtres de la liste dans un panneau « Filtres », l'onglet ouvert amené dans
   la rangée d'onglets qui défile ; page étroite, les badges des onglets se resserrent. Le
-  catalogue : l'extension, puis un panneau (ses Pokémon qui ont déjà leur carte, réglages de
-  l'ajout). Données : un sommaire (collé à gauche sur grand écran) et un panneau par section, deux
-  colonnes sur très grand écran dans l'ordre du sommaire (la collection à gauche, le compte et le
-  Pokédex public à droite ; l'export et l'import côte à côte ; les sources et l'effacement sur
+  catalogue : un panneau (le logo japonais de l'extension, son nom, ses Pokémon qui ont déjà leur
+  carte et « Changer d'extension » ; puis les réglages de l'ajout ; puis les filtres de rareté et
+  de type, chacun sur une ligne qui défile de côté sur téléphone), puis ses cartes en tuiles
+  serrées (10 colonnes sur un écran de 1440 px, 3 sur téléphone). Données : un sommaire (collé à
+  gauche sur grand écran) et un panneau par section, deux colonnes sur très grand écran dans
+  l'ordre du sommaire (la collection à gauche, le compte et le Pokédex public à droite ; l'export
+  et l'import côte à côte ; les données du serveur et l'effacement sur
   toute la largeur), l'effacement sur fond teinté de rouge. Valeur : ses panneaux l'un sous
   l'autre. La fiche d'un Pokémon :
   fil d'Ariane (Pokédex › région › nom), puis la carte, collée à l'écran (sa largeur suit la

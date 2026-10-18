@@ -3,8 +3,9 @@
  * accord, `lib/pokecardex.ts`), une fois par jour. Ses ≈ 450 séries japonaises (son plan du
  * site), de 1996 à aujourd'hui, decks et promos compris ; pour chacune, sa page : son nom, sa date
  * de sortie au Japon, et ses cartes Pokémon (numéro, nom français, Pokémon, id Cardmarket, rang de
- * son image). Les dresseurs et les énergies, sans Pokémon, n'y sont pas. Aucun tri par rareté ni
- * détection : toutes les cartes Pokémon.
+ * son image, rareté, type), et les noms des raretés. Les dresseurs et les énergies, sans Pokémon,
+ * n'y sont pas. Aucune sélection ni détection : toutes les cartes Pokémon (la rareté et le type
+ * servent aux filtres que choisit l'utilisateur).
  *
  * Les exclusivités d'autres pays d'Asie (bloc « Asia Exclusive » de son menu), rangées avec les
  * japonaises, sont écartées. Une série est relue chaque semaine, chaque jour si elle est sortie
@@ -53,15 +54,16 @@ export function saveCatalog(db: Database) {
 }
 
 function catalogResponse(db: Database): CatalogFile {
-  const sets = db.query('SELECT id, name, released FROM sets').all() as {
+  const sets = db.query('SELECT id, name, released, logo FROM sets').all() as {
     id: string
     name: string
     released: string
+    logo: 'pokecardex' | 'none' | null
   }[]
   const released = new Map(sets.map((set) => [set.id, set.released]))
   const cards = db
     .query(
-      `SELECT set_id AS 'set', number, sort, name, cardmarket, image,
+      `SELECT set_id AS 'set', number, sort, name, cardmarket, image, rarity, type,
               (SELECT json_group_array(dex_id ORDER BY rank) FROM card_species
                WHERE card = id) AS dexIds
        FROM cards`,
@@ -73,6 +75,8 @@ function catalogResponse(db: Database): CatalogFile {
     name: string
     cardmarket: number
     image: 'pokecardex' | 'none' | null
+    rarity: number | null
+    type: number | null
     dexIds: string
   }[]
 
@@ -85,7 +89,7 @@ function catalogResponse(db: Database): CatalogFile {
   )
   // Des clés numériques : l'objet les garde dans l'ordre des numéros du Pokédex.
   const bySpecies: CatalogFile['cards'] = {}
-  for (const { set, number, sort, name, cardmarket, image, dexIds: list } of cards) {
+  for (const { set, number, sort, name, cardmarket, image, rarity, type, dexIds: list } of cards) {
     const dexIds = JSON.parse(list) as number[]
     // Une image pas encore cherchée : celle de Pokécardex, qui les a presque toutes (le serveur la
     // copie à la demande ; sans elle, la carte de substitution).
@@ -95,21 +99,27 @@ function catalogResponse(db: Database): CatalogFile {
       cardmarket,
       name,
       image === 'none' ? 0 : sort,
+      rarity ?? 0,
+      type ?? 0,
     ]
     if (dexIds.length > 1) row.push(dexIds)
     for (const dexId of dexIds) (bySpecies[dexId] ??= []).push(row)
   }
 
   const withCards = new Set(cards.map((card) => card.set))
+  const rarities = db
+    .query('SELECT id, name, rank FROM rarities WHERE id IN (SELECT rarity FROM cards)')
+    .all() as { id: number; name: string; rank: number }[]
   return {
     // Des plus récentes aux plus anciennes ; sorties le même jour, dans l'ordre de leur code.
     sets: Object.fromEntries(
       sets
         .filter((set) => withCards.has(set.id))
         .sort((a, b) => b.released.localeCompare(a.released) || a.id.localeCompare(b.id))
-        .map(({ id, name, released: date }) => [id, [name, date]]),
+        .map(({ id, name, released: date, logo }) => [id, [name, date, logo === 'none' ? 0 : 1]]),
     ),
     cards: bySpecies,
+    rarities: Object.fromEntries(rarities.map(({ id, name, rank }) => [id, [name, rank]])),
   }
 }
 
@@ -146,15 +156,19 @@ export async function catalog(db: Database) {
   )
   // Une carte dont la série ou le rang changent a une autre image : à chercher de nouveau.
   const writeCard = db.query(
-    `INSERT INTO cards (id, set_id, number, sort, name, cardmarket, seen)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO cards (id, set_id, number, sort, name, cardmarket, rarity, type, seen)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT (id) DO UPDATE SET
        number = excluded.number, name = excluded.name, cardmarket = excluded.cardmarket,
-       seen = excluded.seen,
+       rarity = excluded.rarity, type = excluded.type, seen = excluded.seen,
        image = CASE WHEN set_id = excluded.set_id AND sort = excluded.sort THEN image END,
        image_checked = CASE WHEN set_id = excluded.set_id AND sort = excluded.sort
                             THEN image_checked END,
        set_id = excluded.set_id, sort = excluded.sort`,
+  )
+  const writeRarity = db.query(
+    `INSERT INTO rarities (id, name, rank) VALUES (?, ?, ?)
+     ON CONFLICT (id) DO UPDATE SET name = excluded.name, rank = excluded.rank`,
   )
   const clearSpecies = db.query('DELETE FROM card_species WHERE card = ?')
   const writeSpecies = db.query('INSERT INTO card_species (card, rank, dex_id) VALUES (?, ?, ?)')
@@ -187,6 +201,8 @@ export async function catalog(db: Database) {
         card.sort,
         name,
         card.id_cardmarket ?? 0,
+        card.id_rarete,
+        card.id_type,
         readAt,
       )
       clearSpecies.run(card.id_card)
@@ -207,13 +223,19 @@ export async function catalog(db: Database) {
   let inARow = 0
   let cards = 0
   let read = 0
-  // Les exclusivités d'autres pays d'Asie, d'après le menu de la première page lue.
+  // Les exclusivités d'autres pays d'Asie, d'après le menu de la première page lue, et les
+  // raretés, que chaque page donne toutes.
   let asian = new Set<string>()
   for (const [index, code] of due.entries()) {
     if (asian.has(code)) continue
     try {
       const page = await readSeries(code)
-      if (!asian.size) asian = asiaExclusive(page)
+      if (!asian.size) {
+        asian = asiaExclusive(page)
+        for (const rarity of page.raretes ?? []) {
+          writeRarity.run(rarity.id_rarete, rarity.nom_rarete, rarity.order_rarete)
+        }
+      }
       if (asian.has(code)) continue
       const known = (countCards.get(code) as { count: number }).count
       // Une page sans cartes : une série annoncée mais pas encore remplie, ou le site a changé (on

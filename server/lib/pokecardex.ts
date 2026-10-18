@@ -1,6 +1,6 @@
 /**
  * Pokécardex (pokecardex.com), avec son accord (octobre 2026 : lire ce qu'on veut sur son site,
- * copier ses images chez nous, le citer avec un lien). Il ne fournit ni export ni API : chaque page
+ * utiliser ses images, copiées chez nous). Il ne fournit ni export ni API : chaque page
  * porte ses données chiffrées (AES-CBC, `__INITIAL_DATA_ENCRYPTED__`), que son propre JavaScript
  * déchiffre. On fait de même, avec la clé lue dans ce JavaScript et relue quand son adresse
  * change (à chaque mise en ligne du site), jamais recopiée ici.
@@ -26,6 +26,10 @@ export interface PokecardexCard {
   /** Ses Pokémon (numéros du Pokédex) ; vide pour un dresseur ou une énergie. */
   id_pokedex_list: number[] | null
   id_cardmarket: number | null
+  /** Sa rareté (`raretes` de la page). */
+  id_rarete: number | null
+  /** Son type (`CARD_TYPES`, `src/config/catalog.ts`). */
+  id_type: number | null
 }
 
 /** Une série japonaise : sa page (`/series/jp/SV2A`). */
@@ -37,6 +41,8 @@ export interface PokecardexSeries {
     releaseDateFR: string | null
   }
   cartes: PokecardexCard[]
+  /** Toutes ses raretés (pas seulement celles de la série), dans son ordre. */
+  raretes?: { id_rarete: number; nom_rarete: string; order_rarete: number }[]
   /** Le menu des séries, par bloc (« Scarlet & Violet », « Asia Exclusive »…). */
   seriesMenu?: {
     blocksByRegion?: { JP?: { nameUS: string; series: { shortName: string }[] }[] }

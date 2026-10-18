@@ -21,6 +21,8 @@
   /* Le sprite grisé d'un Pokémon sans carte (`CardArt`) : sur fond sombre, il ressort de lui-même. */
   --empty-sprite-opacity: 0.35;
   --empty-sprite-opacity-large: 0.5;
+  /* Les icônes noires des raretés (●, « SAR » : `DARK_RARITY_ICONS`) : inversées sur fond sombre. */
+  --dark-icon-filter: invert(1);
   /* Les liens et les courbes : à l'accent en sombre (le jaune ne se lit pas comme une alerte). */
   --link: var(--camply-accent);
   --link-underline: color-mix(in srgb, var(--camply-accent) 45%, transparent);
@@ -105,6 +107,7 @@
   /* Sur le blanc, le sprite grisé s'effacerait : moins transparent. */
   --empty-sprite-opacity: 0.7;
   --empty-sprite-opacity-large: 0.8;
+  --dark-icon-filter: none;
   /* Le rouge est la marque et l'action principale, pas la couleur de tout : un lien rouge, une
      courbe rouge se liraient comme une erreur ou une perte. Liens à l'encre, soulignés de rouge ;
      courbes à l'encre. */

@@ -1,0 +1,110 @@
+/* La recherche et l'ordre en tête, puis les extensions, année par année. */
+.picker {
+  display: grid;
+  gap: var(--camply-space-4);
+}
+
+.controls {
+  display: grid;
+  gap: var(--camply-space-2);
+  justify-items: start;
+}
+
+.controls > :first-child {
+  justify-self: stretch;
+}
+
+/* Une année : dessinée seulement à l'écran (plus de 400 extensions en tout). */
+.group {
+  display: grid;
+  gap: var(--camply-space-2);
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 20rem;
+}
+
+.year {
+  margin: 0;
+  color: var(--camply-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.sets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+  gap: var(--camply-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Une extension : son logo, son nom, son code et son année, puis ce qu'ont déjà ses Pokémon. */
+.set {
+  display: grid;
+  gap: 0.25rem;
+  width: 100%;
+  height: 100%;
+  padding: var(--camply-space-2) var(--camply-space-3) var(--camply-space-3);
+  border: 1px solid var(--camply-border-soft);
+  border-radius: var(--camply-radius);
+  background: var(--camply-fill-1);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast),
+    border-color var(--duration-fast);
+}
+
+.set:hover {
+  border-color: var(--camply-border-strong);
+  background: var(--camply-surface-2);
+}
+
+.set[aria-current='true'] {
+  border-color: var(--camply-accent);
+  background: var(--camply-accent-soft);
+}
+
+.logo {
+  height: 3.5rem;
+  margin-bottom: 0.25rem;
+  font-size: var(--text-md);
+}
+
+.name {
+  color: var(--camply-text-strong);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.meta {
+  color: var(--camply-text-muted);
+  font-size: var(--text-xs);
+}
+
+/* La part de ses Pokémon qui ont leur carte : une réglette fine et son décompte. */
+.coverage {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.25rem;
+  color: var(--camply-text-muted);
+  font-size: var(--text-xs);
+}
+
+.bar {
+  flex: 1;
+  height: 0.25rem;
+  border-radius: var(--camply-radius-pill);
+  background:
+    linear-gradient(
+      to right,
+      var(--camply-accent) calc(var(--covered) * 100%),
+      transparent calc(var(--covered) * 100%)
+    ),
+    var(--camply-border-soft);
+}

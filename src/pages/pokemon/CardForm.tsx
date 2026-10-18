@@ -2,7 +2,7 @@ import { Button, Modal, Skeleton, Stack, Tab, TabList, TabPanel, Tabs } from '@c
 import { Suspense, useRef, useState } from 'react'
 import { useCardDraft } from '@/hooks/useCardDraft'
 import { useCollectionAction } from '@/hooks/useNotify'
-import type { CatalogCard } from '@/lib/card-catalog'
+import { NO_FILTER, type CatalogCard } from '@/lib/card-catalog'
 import { addCard, useCollectionStore } from '@/store/collection'
 import type { AddAs, PokemonCard, PokemonSpecies } from '@/types'
 import { CardFields } from './CardFields'
@@ -46,7 +46,12 @@ export function CardForm({
       : [species.id])
   const [addAs, setAddAs] = useState<AddAs>('none')
   // L'onglet caché est démonté : ses réglages vivent ici.
-  const [view, setView] = useState<PickerView>({ order: 'recent', set: '', pricedOnly: false })
+  const [view, setView] = useState<PickerView>({
+    order: 'recent',
+    set: '',
+    pricedOnly: false,
+    filter: NO_FILTER,
+  })
 
   const entryTab = useRef<HTMLButtonElement>(null)
 

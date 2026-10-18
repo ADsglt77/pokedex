@@ -1,8 +1,16 @@
 import { SegmentedControl, Select, Stack, Switch } from '@camply/ui'
 import { use } from 'react'
 import { Link } from 'react-router'
+import { CardFilters } from '@/components/CardFilters'
 import { CatalogGrid, CatalogTile } from '@/components/CatalogTile'
-import { loadCatalog, setOption, type CatalogCard } from '@/lib/card-catalog'
+import {
+  loadCatalog,
+  NO_FILTER,
+  passesFilter,
+  setOption,
+  type CardFilter,
+  type CatalogCard,
+} from '@/lib/card-catalog'
 import { plural } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
 import { otherSpeciesNames } from '@/lib/species'
@@ -20,11 +28,14 @@ export interface PickerView {
   /** L'extension montrée ; `''` : toutes. */
   set: string
   pricedOnly: boolean
+  /** Les raretés et les types choisis : retirés quand l'extension change. */
+  filter: CardFilter
 }
 
 /**
- * Les cartes japonaises du Pokémon, à choisir : leur image (Pokécardex), leur série, leur numéro
- * et leur année, leur prix Cardmarket du jour ; à filtrer par série ou aux cartes qui ont un prix.
+ * Les cartes japonaises du Pokémon, à choisir : leur image, leur série et leur numéro, leur rareté,
+ * leur prix Cardmarket du jour ; à filtrer par série, par rareté et par type, ou aux cartes qui ont
+ * un prix.
  * `selected` : la clé de la carte choisie (« SV2A 166 »). Une carte de plusieurs Pokémon (TAG
  * TEAM) dit avec qui.
  */
@@ -43,7 +54,7 @@ export function CatalogPicker({
 }) {
   const catalog = use(loadCatalog())
   const prices = usePrices()
-  const { order, set, pricedOnly } = view
+  const { order, set, pricedOnly, filter } = view
   const change = (next: Partial<PickerView>) => onView({ ...view, ...next })
 
   if (!catalog) {
@@ -66,14 +77,15 @@ export function CatalogPicker({
   // Les extensions de ses cartes, dans l'ordre du catalogue (des plus récentes).
   const sets = [...new Map(cards.map((card) => [card.set.id, card.set])).values()]
   const setOptions = [{ value: '', label: 'Toutes les extensions' }, ...sets.map(setOption)]
-  const priced = cards
+  const candidates = cards
     .map((card) => ({ card, price: priceOf(prices, card) }))
     .filter(({ card, price }) => (!set || card.set.id === set) && (!pricedOnly || price !== null))
+  const filtered = candidates.filter(({ card }) => passesFilter(card, filter))
   // Les plus chères d'abord, celles sans prix à la fin.
   const shown =
     order === 'price'
-      ? priced.sort((a, b) => (b.price?.price ?? -1) - (a.price?.price ?? -1))
-      : priced
+      ? filtered.sort((a, b) => (b.price?.price ?? -1) - (a.price?.price ?? -1))
+      : filtered
 
   return (
     <Stack gap={4}>
@@ -83,7 +95,7 @@ export function CatalogPicker({
           size="sm"
           options={setOptions}
           value={set}
-          onChange={(value) => change({ set: value })}
+          onChange={(value) => change({ set: value, filter: NO_FILTER })}
         />
         <SegmentedControl
           aria-label="Ordre des cartes"
@@ -98,6 +110,11 @@ export function CatalogPicker({
           onChange={(event) => change({ pricedOnly: event.target.checked })}
         />
       </Stack>
+      <CardFilters
+        cards={candidates.map(({ card }) => card)}
+        value={filter}
+        onChange={(value) => change({ filter: value })}
+      />
       <p className="muted">
         {plural(shown.length, 'carte japonaise', 'cartes japonaises')}
         {set && (
@@ -107,11 +124,12 @@ export function CatalogPicker({
           </>
         )}
       </p>
-      <CatalogGrid>
+      <CatalogGrid wide>
         {shown.map(({ card, price }) => (
           <li key={card.key}>
             <CatalogTile
               card={card}
+              heading={card.key}
               price={price}
               speciesId={species.id}
               pressed={selected === card.key}

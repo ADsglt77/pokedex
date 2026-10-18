@@ -62,3 +62,16 @@ export function cardImage(reference: string): CardImage | null {
   const code = referenceCode(reference)
   return code && pokecardexImage(setKey(code.set), numberKey(code.number))
 }
+
+/**
+ * Le logo d'une série, copié chez nous (`server/images.ts`) : son logo japonais chez Pokécardex
+ * (`logos_jp`, pas le français), en deux tailles : `md` pour la liste des séries, `hd` en tête de
+ * la page Catalogue.
+ */
+export const setLogo = (set: string, size: 'md' | 'hd') => `/images/sets/${set}-${size}.webp`
+
+/** L'icône d'un type de carte (`CARD_TYPES`), copiée chez nous. */
+export const typeIcon = (type: number) => `/images/types/${type}.webp`
+
+/** L'icône d'une rareté (« SAR », ●…), copiée chez nous. */
+export const rarityIcon = (rarity: number) => `/images/rarities/${rarity}.webp`

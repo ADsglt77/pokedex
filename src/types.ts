@@ -178,17 +178,22 @@ export interface SpeciesDetailsFile {
 
 /**
  * Une carte du catalogue : [série, numéro (sans numéro imprimé : son rang), id Cardmarket (0 :
- * aucun), nom français, numéro de son image chez Pokécardex (0 : aucune), ses Pokémon s'ils sont
- * plusieurs].
+ * aucun), nom français, numéro de son image chez Pokécardex (0 : aucune), sa rareté (0 : inconnue),
+ * son type (`CARD_TYPES` ; 0 : inconnu), ses Pokémon s'ils sont plusieurs].
  */
-export type CatalogRow = [string, string, number, string, number, number[]?]
+export type CatalogRow = [string, string, number, string, number, number, number, number[]?]
 
 /** `/api/catalog` : les cartes Pokémon japonaises de Pokécardex (tâche `catalog`, `server/jobs/catalog.ts`). */
 export interface CatalogFile {
-  /** Clé : le code de la série chez Pokécardex (« SV2A ») ; [nom, date de sortie au Japon]. */
-  sets: Record<string, [name: string, released: string]>
+  /**
+   * Clé : le code de la série chez Pokécardex (« SV2A ») ; [nom, date de sortie au Japon, 1 si son
+   * logo est chez nous ou pas encore cherché, 0 si Pokécardex n'en a pas].
+   */
+  sets: Record<string, [name: string, released: string, logo: 0 | 1]>
   /** Clé : numéro du Pokémon ; ses cartes, des plus récentes aux plus anciennes. */
   cards: Partial<Record<string, CatalogRow[]>>
+  /** Clé : le numéro d'une rareté de ces cartes ; [son nom chez Pokécardex, son rang]. */
+  rarities: Record<string, [name: string, rank: number]>
 }
 
 /* État du serveur : `/api/status`, d'après le journal des tâches d'ingestion (`server/ingest.ts`) */

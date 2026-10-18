@@ -1,0 +1,22 @@
+/* La boîte du logo : sa taille vient de la page (`className`) ; le logo y tient sans se déformer. */
+.logo {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Sans logo : le code de la série, à sa place. */
+.code {
+  color: var(--camply-text-muted);
+  font-family: var(--camply-font-display);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}

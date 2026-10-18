@@ -1,6 +1,6 @@
 import {
   Button,
-  Combobox,
+  Card,
   EmptyState,
   Progress,
   SegmentedControl,
@@ -8,39 +8,42 @@ import {
   Stack,
   Switch,
 } from '@camply/ui'
-import { CloudOff, Flag } from '@camply/ui/icons'
+import { ArrowLeftRight, CloudOff, Flag, Funnel } from '@camply/ui/icons'
 import { Suspense, use, useId, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useSearchParams } from 'react-router'
+import { CardFilters } from '@/components/CardFilters'
 import { CatalogGrid, CatalogGridSkeleton, CatalogTile } from '@/components/CatalogTile'
 import { PageHeader } from '@/components/PageHeader'
 import { ADD_AS_LABELS, ADDED_AS } from '@/config/shopping'
-import { Panel } from '@/components/Panel'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { usePokedex } from '@/hooks/usePokedex'
 import {
   loadCatalog,
+  NO_FILTER,
+  passesFilter,
   setCards,
-  setOption,
+  type CardFilter,
   type Catalog,
   type CatalogCard,
 } from '@/lib/card-catalog'
 import { cardSpecies, newCardId } from '@/lib/collection'
-import { searchForm } from '@/lib/filters'
 import { details, formatInteger, pageTitle, plural, toOptions } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
 import { speciesNames } from '@/lib/species'
 import { addCard } from '@/store/collection'
 import { usePrices } from '@/store/prices'
 import type { AddAs } from '@/types'
+import { SetLogo } from './SetLogo'
+import { SetPicker, type SetOrder } from './SetPicker'
 import styles from './CatalogPage.module.css'
 
 /**
  * Le catalogue par extension (`/catalogue?set=SV2a`) : toutes les cartes japonaises d'une
  * extension, pour donner d'un clic sa carte à chacun de vos Pokémon qui n'en a pas encore (remplir
- * la 1ʳᵉ génération depuis « 151 »…), à acheter ou possédée. Les extensions se
- * cherchent par code ou par nom, et se classent par nombre de vos Pokémon sans carte qu'elles
- * complètent. C'est vous qui choisissez : rien n'est ajouté seul.
+ * la 1ʳᵉ génération depuis « 151 »…), à acheter ou possédée. Les extensions se choisissent sur leur
+ * logo japonais (`SetPicker`) ; leurs cartes se filtrent par rareté et par type. C'est vous qui
+ * choisissez : rien n'est ajouté seul.
  */
 export function CatalogPage() {
   return (
@@ -57,32 +60,17 @@ export function CatalogPage() {
   )
 }
 
-const SET_ORDERS = [
-  { value: 'recent', label: 'Plus récentes' },
-  { value: 'useful', label: 'Plus utiles' },
-  { value: 'advanced', label: 'Plus avancées' },
-] as const
-
-type SetOrder = (typeof SET_ORDERS)[number]['value']
-
 /**
- * L'ébauche de la page tant que le catalogue arrive, à la taille de ce qui vient (l'extension et
- * l'ordre, son panneau, ses cartes) : la page ne saute pas.
+ * L'ébauche de la page tant que le catalogue arrive, à la taille de ce qui vient (l'extension, ses
+ * réglages, ses cartes) : la page ne saute pas.
  */
 function CatalogSkeleton() {
   return (
-    <Stack gap={5}>
+    <Stack gap={4}>
       <p className="visually-hidden">Chargement du catalogue…</p>
-      <div className={styles.controls}>
-        <div className={styles.search}>
-          <Skeleton width="5rem" className={styles.labelSkeleton} />
-          <Skeleton variant="rect" height="2.5rem" />
-        </div>
-        <Skeleton variant="rect" width="min(22rem, 100%)" height="2.5rem" />
-      </div>
-      <Skeleton variant="rect" height="13rem" />
-      <Skeleton width="12rem" />
-      <CatalogGridSkeleton count={12} />
+      <Skeleton variant="rect" height="15rem" />
+      <Skeleton width="8rem" />
+      <CatalogGridSkeleton count={16} />
     </Stack>
   )
 }
@@ -108,7 +96,11 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
   const act = useCollectionAction()
   const [missingOnly, setMissingOnly] = useState(true)
   const [setOrder, setSetOrder] = useState<SetOrder>('recent')
+  const [picking, setPicking] = useState(false)
   const [addAs, setAddAs] = useState<AddAs>('none')
+  // Les filtres valent pour une extension : en changer les retire (ses raretés ne sont pas les
+  // mêmes).
+  const [filtered, setFiltered] = useState({ set: '', filter: NO_FILTER })
   const grid = useRef<HTMLUListElement>(null)
   const setTitle = useRef<HTMLHeadingElement>(null)
   const addAsLabel = useId()
@@ -132,14 +124,13 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
   }, [catalog, entryById])
   const openCount = (setId: string) => openBySet.get(setId)?.size ?? 0
   const speciesCount = (setId: string) => speciesBySet.get(setId)?.size ?? 0
+  const coverage = (setId: string) => ({
+    covered: speciesCount(setId) - openCount(setId),
+    total: speciesCount(setId),
+  })
   /** La part des Pokémon de l'extension qui ont déjà leur carte. */
   const progressOf = (setId: string) =>
     speciesCount(setId) ? 1 - openCount(setId) / speciesCount(setId) : 0
-  // La recherche porte sur le code et le nom (« sv2a », « 151 », ぽけもん), pas sur le décompte.
-  const searchable = useMemo(
-    () => new Map(catalog.sets.map(({ id, name }) => [id, searchForm(`${id} ${name}`)])),
-    [catalog],
-  )
 
   // L'extension de l'adresse, sinon la plus récente.
   const set = catalog.sets.find((known) => known.id === params.get('set')) ?? catalog.sets[0]!
@@ -149,14 +140,8 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
       : setOrder === 'advanced'
         ? [...catalog.sets].sort((a, b) => progressOf(b.id) - progressOf(a.id))
         : catalog.sets
-  const setOptions = sets.map((known) => {
-    const option = setOption(known)
-    const total = speciesCount(known.id)
-    return {
-      ...option,
-      label: `${option.label} · ${formatInteger(total - openCount(known.id))} sur ${formatInteger(total)}`,
-    }
-  })
+  const filter = filtered.set === set.id ? filtered.filter : NO_FILTER
+  const setFilter = (next: CardFilter) => setFiltered({ set: set.id, filter: next })
   // Les cartes de l'extension, cherchées une fois dans tout le catalogue (pas à chaque clic).
   const cards = useMemo(() => setCards(catalog, set.id), [catalog, set.id])
   const hasCard = (id: number) => entryById.get(id)?.card != null
@@ -171,7 +156,9 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
       price: priceOf(prices, card),
     }
   })
-  const shown = missingOnly ? rows.filter((row) => row.open !== null) : rows
+  const candidates = missingOnly ? rows.filter((row) => row.open !== null) : rows
+  const shown = candidates.filter((row) => passesFilter(row.card, filter))
+  const isFiltered = shown.length < candidates.length
   // Le rang du focus après l'ajout de la carte `index` à `receivers` : les cartes d'avant qui
   // resteront à choisir (celles de ces Pokémon disparaissent ou se désactivent, même avant elle).
   const rankAfter = (index: number, receivers: readonly number[]) =>
@@ -179,8 +166,7 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
       .slice(0, index)
       .filter((row) => row.card.dexIds.some((id) => !receivers.includes(id) && !hasCard(id))).length
   // Les Pokémon de l'extension, et ceux d'entre eux qui ont déjà leur carte (d'ici ou d'ailleurs).
-  const total = speciesCount(set.id)
-  const covered = total - openCount(set.id)
+  const { covered, total } = coverage(set.id)
   // L'extension qui donnerait leur carte au plus de vos Pokémon qui n'en ont pas ; aucune s'ils
   // l'ont tous.
   const mostUseful = catalog.sets.reduce((best, known) =>
@@ -191,6 +177,10 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
     setSetOrder('useful')
     setParams({ set: mostUseful.id }, { replace: true })
     setTitle.current?.focus()
+  }
+  const pick = (setId: string) => {
+    setPicking(false)
+    setParams({ set: setId }, { replace: true })
   }
 
   const choose = (card: CatalogCard, receivers: number[], rank: number) => {
@@ -219,57 +209,45 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
   }
 
   return (
-    <Stack gap={5}>
-      <div className={styles.controls}>
-        <div className={styles.search}>
-          <Combobox
-            label="Extension"
-            placeholder="Code ou nom : SV2a, 151…"
-            options={setOptions}
-            value={set.id}
-            onChange={(id) => setParams({ set: id }, { replace: true })}
-            emptyMessage="Aucune extension ne correspond."
-            filter={(option, query) => searchable.get(option.value)!.includes(searchForm(query))}
-          />
-        </div>
-        <SegmentedControl
-          aria-label="Ordre des extensions"
-          options={[...SET_ORDERS]}
-          value={setOrder}
-          onChange={setSetOrder}
-        />
-      </div>
-      {setOrder !== 'recent' && (
-        <p className="hint">
-          {setOrder === 'useful'
-            ? 'Plus utiles : celles qui donnent leur carte au plus de vos Pokémon qui n’en ont pas.'
-            : 'Plus avancées : celles dont la plus grande part des Pokémon a déjà sa carte (à côté de chaque extension : combien l’ont, sur tous les siens).'}
-        </p>
-      )}
-
-      <Panel
-        title={set.name}
-        titleRef={setTitle}
-        description={details(
-          set.id,
-          set.year && `sortie en ${set.year}`,
-          plural(cards.length, 'carte Pokémon', 'cartes Pokémon'),
-        )}
-      >
-        <div className={styles.coverage}>
-          <p>
-            <strong className="numeric">
-              {formatInteger(covered)} sur {formatInteger(total)}
-            </strong>{' '}
-            de ses Pokémon ont leur carte
-            {covered < total && ` : ${plural(total - covered, 'reste', 'restent')} à choisir`}.
-          </p>
-          <Progress
-            size="sm"
-            value={covered}
-            max={total}
-            aria-label="Pokémon de l’extension qui ont leur carte"
-          />
+    <Stack gap={4}>
+      <Card padding="none" className={styles.set}>
+        <div className={styles.head}>
+          <SetLogo set={set} size="hd" className={styles.logo} />
+          <div className={styles.titles}>
+            <h2 ref={setTitle} tabIndex={-1} className={styles.name}>
+              {set.name}
+            </h2>
+            <p className={styles.meta}>
+              {details(
+                set.id,
+                set.year && `sortie en ${set.year}`,
+                plural(cards.length, 'carte Pokémon', 'cartes Pokémon'),
+              )}
+            </p>
+            <div className={styles.coverage}>
+              <p>
+                <strong className="numeric">
+                  {formatInteger(covered)} sur {formatInteger(total)}
+                </strong>{' '}
+                de ses Pokémon ont leur carte
+                {covered < total && ` : ${plural(total - covered, 'reste', 'restent')} à choisir`}.
+              </p>
+              <Progress
+                size="sm"
+                value={covered}
+                max={total}
+                aria-label="Pokémon de l’extension qui ont leur carte"
+              />
+            </div>
+          </div>
+          <Button
+            variant="secondary"
+            leftIcon={<ArrowLeftRight size={16} />}
+            onClick={() => setPicking(true)}
+            className={styles.change}
+          >
+            Changer d’extension
+          </Button>
         </div>
         <div className={styles.options}>
           <Switch
@@ -290,20 +268,49 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
             />
           </Stack>
         </div>
-      </Panel>
+        <div className={styles.filters}>
+          <CardFilters
+            cards={candidates.map((row) => row.card)}
+            value={filter}
+            onChange={setFilter}
+          />
+        </div>
+      </Card>
+      <SetPicker
+        open={picking}
+        onClose={() => setPicking(false)}
+        sets={sets}
+        order={setOrder}
+        onOrder={setSetOrder}
+        current={set.id}
+        coverage={coverage}
+        onPick={pick}
+      />
 
-      <p className="muted">{plural(shown.length, 'carte', 'cartes')}</p>
+      <p className="muted">
+        {plural(shown.length, 'carte', 'cartes')}
+        {isFiltered && ` sur ${formatInteger(candidates.length)}`}
+      </p>
       {shown.length === 0 ? (
-        <EmptyState
-          icon={<Flag size={22} />}
-          title="Extension terminée"
-          description="Tous ses Pokémon ont déjà leur carte, d’ici ou d’une autre extension."
-          actions={
-            openCount(mostUseful.id) > 0 && (
-              <Button onClick={showMostUseful}>Voir les plus utiles</Button>
-            )
-          }
-        />
+        isFiltered ? (
+          <EmptyState
+            icon={<Funnel size={22} />}
+            title="Aucune carte pour ces filtres"
+            description="Choisissez d’autres raretés ou d’autres types."
+            actions={<Button onClick={() => setFilter(NO_FILTER)}>Retirer les filtres</Button>}
+          />
+        ) : (
+          <EmptyState
+            icon={<Flag size={22} />}
+            title="Extension terminée"
+            description="Tous ses Pokémon ont déjà leur carte, d’ici ou d’une autre extension."
+            actions={
+              openCount(mostUseful.id) > 0 && (
+                <Button onClick={showMostUseful}>Voir les plus utiles</Button>
+              )
+            }
+          />
+        )
       ) : (
         <CatalogGrid ref={grid}>
           {shown.map(({ card, open, receivers, price }, index) => {
@@ -312,14 +319,20 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
               <li key={card.key}>
                 <CatalogTile
                   card={card}
+                  heading={card.number}
                   price={price}
                   speciesId={speciesId}
                   disabled={open === null}
                   onPick={() => choose(card, receivers, rankAfter(index, receivers))}
                 >
-                  {open === null
-                    ? `${speciesNames(card.dexIds)} ${card.dexIds.length > 1 ? 'ont déjà leur carte' : 'a déjà sa carte'}`
-                    : `Choisir pour ${speciesNames(receivers)}`}
+                  {open === null ? (
+                    `${speciesNames(card.dexIds)} ${card.dexIds.length > 1 ? 'ont déjà leur carte' : 'a déjà sa carte'}`
+                  ) : (
+                    <>
+                      <span className="visually-hidden">Choisir pour </span>
+                      {speciesNames(receivers)}
+                    </>
+                  )}
                 </CatalogTile>
               </li>
             )
