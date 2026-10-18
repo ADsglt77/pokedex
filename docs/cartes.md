@@ -57,8 +57,10 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   inconnue), type (0 : inconnu), Pokémon s'ils sont plusieurs]` ; chaque série : `[nom, sortie,
   logo]` (0 : Pokécardex n'a pas de logo) ; les raretés de ces cartes : `[nom, rang]`. La forme a
   changé (octobre 2026, rareté, type et logo) : l'étape du schéma qui ajoute ces colonnes fait
-  relire toutes les séries au passage suivant de la tâche (`read_at` remis à 1970), et la boucle
-  d'ingestion recalcule la réponse dès son démarrage (`saveCatalog`). La référence d'une carte : « Dracaufeu ex (SV2A 006) », son nom puis le code de
+  relire toutes les séries au passage suivant de la tâche (`read_at` remis à 1970), la suivante
+  retire l'ancienne réponse, que le navigateur ne sait plus lire (404, « pas disponible », plutôt
+  qu'une page en erreur), et la tâche la refait dès son démarrage d'après les tables (`saveCatalog`,
+  comme la boucle d'ingestion au sien), avant de relire les séries. La référence d'une carte : « Dracaufeu ex (SV2A 006) », son nom puis le code de
   sa série et son numéro. « Ajouter une carte »
   (`pokemon/CardForm`) s'ouvre sur l'onglet « Cartes japonaises » (`CatalogPicker` : image
   Pokécardex, code, rareté, prix du jour, tri par date ou par prix, filtres de rareté et de type

@@ -12,8 +12,8 @@
  * depuis moins de 90 jours (Pokécardex la complète) ; `--refresh` les relit toutes. Une page par
  * série, une toutes les 3 s : le premier passage prend une vingtaine de minutes. Une page en échec
  * n'empêche pas les autres ; la tâche échoue ensuite, pour être relancée. Une page soudain vide (le
- * site a changé) ne retire rien. En fin de tâche, la réponse de `/api/catalog` est recalculée
- * (`snapshots`).
+ * site a changé) ne retire rien. Au début et en fin de tâche, la réponse de `/api/catalog` est
+ * recalculée (`snapshots`).
  */
 
 import type { Database } from 'bun:sqlite'
@@ -145,6 +145,10 @@ function dueSeries(db: Database, codes: string[], now: number) {
 }
 
 export async function catalog(db: Database) {
+  // La réponse d'après les tables, tout de suite : une forme changée avec le code (ou retirée par
+  // une étape du schéma) est refaite sans attendre la lecture des séries (une vingtaine de minutes
+  // quand toutes sont à relire).
+  saveCatalog(db)
   const codes = await japaneseSeries()
   const due = dueSeries(db, codes, Date.now())
   console.log(`Pokécardex : ${codes.length} séries japonaises, ${due.length} à relire`)

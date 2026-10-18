@@ -195,6 +195,12 @@ const DATA_STEPS = [
   -- Pour les remplir : le prochain passage de la tâche \`catalog\` relit toutes les séries.
   UPDATE sets SET read_at = '1970-01-01T00:00:00.000Z';
   `,
+  `
+  -- La réponse de \`/api/catalog\` d'avant la rareté, le type et le logo : le navigateur ne sait
+  -- plus la lire. Retirée : l'API répond 404 (« pas disponible ») jusqu'à ce que la tâche
+  -- \`catalog\` la refasse, dès son démarrage (ou la boucle d'ingestion, à la sienne).
+  DELETE FROM snapshots WHERE name = 'catalog';
+  `,
 ]
 
 /**
