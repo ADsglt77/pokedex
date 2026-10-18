@@ -43,6 +43,11 @@
   inset: 0;
 }
 
+/* Sans statut, pas de marque : la place qu'elle prendrait disparaît aussi. */
+.statementMark:empty {
+  display: none;
+}
+
 .stage {
   grid-area: stage;
   align-self: start;
