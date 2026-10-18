@@ -84,7 +84,7 @@ export function CardForm({
   return (
     <Modal
       open
-      size={card ? 'md' : 'lg'}
+      size={card ? 'md' : 'full'}
       onClose={close}
       title={
         card

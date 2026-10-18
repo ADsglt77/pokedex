@@ -133,6 +133,47 @@ button {
   overscroll-behavior: contain;
 }
 
+/* Le repère d'une longue liste dessinée au fur et à mesure (`useGrowingList`) : au bas de la liste
+   (son parent est en `position: relative`), haut d'un écran, il paraît un écran avant la fin. */
+.growing-sentinel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  height: min(100%, 100vh);
+  pointer-events: none;
+}
+
+/* Une fenêtre pleine page (le choix d'une extension, d'une carte) : seul son contenu défile, son
+   titre et ses boutons restent à l'écran. Classes internes de camply (pas une API) : à revérifier
+   après une mise à jour. */
+.camply-modal__full {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.camply-modal__full > .camply-modal__content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--camply-scrollbar-thumb) transparent;
+}
+
+.camply-modal__full > .camply-modal__footer {
+  padding-top: var(--camply-space-3);
+  border-top: 1px solid var(--camply-border-soft);
+}
+
+/* Sur un téléphone, la fenêtre pleine page laisse moins de marge autour d'elle. */
+@media (max-width: 40rem) {
+  .camply-modal__backdrop:has(> .camply-modal__full) {
+    padding: var(--camply-space-2);
+  }
+}
+
 ::selection {
   background: color-mix(in srgb, var(--camply-accent) 35%, transparent);
   color: var(--camply-text-strong);

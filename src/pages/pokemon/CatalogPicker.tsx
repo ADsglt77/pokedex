@@ -124,7 +124,7 @@ export function CatalogPicker({
           </>
         )}
       </p>
-      <CatalogGrid wide>
+      <CatalogGrid key={set} wide>
         {shown.map(({ card, price }) => (
           <li key={card.key}>
             <CatalogTile

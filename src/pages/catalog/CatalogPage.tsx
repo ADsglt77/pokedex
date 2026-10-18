@@ -8,7 +8,7 @@ import {
   Stack,
   Switch,
 } from '@camply/ui'
-import { ArrowLeftRight, CloudOff, Flag, Funnel } from '@camply/ui/icons'
+import { CloudOff, Flag, Funnel } from '@camply/ui/icons'
 import { Suspense, use, useId, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useSearchParams } from 'react-router'
@@ -96,7 +96,6 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
   const act = useCollectionAction()
   const [missingOnly, setMissingOnly] = useState(true)
   const [setOrder, setSetOrder] = useState<SetOrder>('recent')
-  const [picking, setPicking] = useState(false)
   const [addAs, setAddAs] = useState<AddAs>('none')
   // Les filtres valent pour une extension : en changer les retire (ses raretés ne sont pas les
   // mêmes).
@@ -178,10 +177,6 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
     setParams({ set: mostUseful.id }, { replace: true })
     setTitle.current?.focus()
   }
-  const pick = (setId: string) => {
-    setPicking(false)
-    setParams({ set: setId }, { replace: true })
-  }
 
   const choose = (card: CatalogCard, receivers: number[], rank: number) => {
     // Ajoutée et affichée tout de suite : le focus va alors à la carte suivante, celle ajoutée
@@ -240,14 +235,15 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
               />
             </div>
           </div>
-          <Button
-            variant="secondary"
-            leftIcon={<ArrowLeftRight size={16} />}
-            onClick={() => setPicking(true)}
+          <SetPicker
             className={styles.change}
-          >
-            Changer d’extension
-          </Button>
+            sets={sets}
+            order={setOrder}
+            onOrder={setSetOrder}
+            current={set.id}
+            coverage={coverage}
+            onPick={(setId) => setParams({ set: setId }, { replace: true })}
+          />
         </div>
         <div className={styles.options}>
           <Switch
@@ -276,16 +272,6 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
           />
         </div>
       </Card>
-      <SetPicker
-        open={picking}
-        onClose={() => setPicking(false)}
-        sets={sets}
-        order={setOrder}
-        onOrder={setSetOrder}
-        current={set.id}
-        coverage={coverage}
-        onPick={pick}
-      />
 
       <p className="muted">
         {plural(shown.length, 'carte', 'cartes')}
@@ -312,7 +298,7 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
           />
         )
       ) : (
-        <CatalogGrid ref={grid}>
+        <CatalogGrid key={set.id} ref={grid}>
           {shown.map(({ card, open, receivers, price }, index) => {
             const speciesId = open ?? card.dexIds[0]!
             return (

@@ -4,6 +4,8 @@
   grid-template-columns: minmax(0, 1fr) 10rem;
   gap: 1.5rem;
   align-items: start;
+  /* Dans la fenêtre pleine page de l'ajout, des champs à une largeur lisible. */
+  max-width: 52rem;
 }
 
 .preview {

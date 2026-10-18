@@ -1,8 +1,9 @@
 import { Skeleton } from '@camply/ui'
-import type { ReactNode, Ref } from 'react'
+import { Children, type ReactNode, type Ref } from 'react'
 import { CardArt } from '@/components/CardArt'
 import { RarityIcon } from '@/components/CatalogIcons'
 import { PricedValue } from '@/components/PricedValue'
+import { useGrowingList } from '@/hooks/useGrowingList'
 import type { CatalogCard } from '@/lib/card-catalog'
 import { cx } from '@/lib/cx'
 import { priceLabel } from '@/lib/prices'
@@ -61,9 +62,15 @@ export function CatalogTile({
   )
 }
 
+/** Les cartes dessinées d'un coup : plus qu'un grand écran n'en montre. */
+const TILES_STEP = 60
+
 /**
  * La grille des cartes du catalogue (une liste : chaque carte dans un `li`). `wide` : des cartes de
- * plusieurs extensions, dont le code (« SV2A 166 ») et le prix tiennent sur une ligne.
+ * plusieurs extensions, dont le code (« SV2A 166 ») et le prix tiennent sur une ligne. Une
+ * extension, un Pokémon comptent jusqu'à des centaines de cartes : elles sont dessinées au fur et
+ * à mesure du défilement (`useGrowingList`) ; une grille montée de nouveau (`key`, une autre
+ * extension) repart des premières.
  */
 export function CatalogGrid({
   children,
@@ -74,10 +81,15 @@ export function CatalogGrid({
   wide?: boolean
   ref?: Ref<HTMLUListElement>
 }) {
+  const tiles = Children.toArray(children)
+  const { limit, sentinel, more } = useGrowingList(tiles.length, TILES_STEP)
   return (
-    <ul ref={ref} className={cx(styles.grid, wide && styles.wide)}>
-      {children}
-    </ul>
+    <div className={styles.growing}>
+      <ul ref={ref} className={cx(styles.grid, wide && styles.wide)}>
+        {tiles.slice(0, limit)}
+      </ul>
+      {more && <span ref={sentinel} className="growing-sentinel" aria-hidden="true" />}
+    </div>
   )
 }
 

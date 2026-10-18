@@ -2,9 +2,10 @@
  * Tâche `images` : copie chez nous les images que montre l'app (`server/images.ts`), une fois par
  * jour, après le catalogue. Pokécardex prête les siennes à condition qu'elles soient hébergées
  * chez nous, jamais affichées depuis ses serveurs.
+ * - D'abord, chaque série du catalogue : son logo japonais chez Pokécardex, en deux tailles, ou aucun
+ *   (noté : `sets.logo`, cherché de nouveau chaque semaine) ; les icônes des types et des raretés.
+ *   Légers (une dizaine de Mo), attendus par le choix d'une extension.
  * - Les 1 025 Pokémon : sprite et illustration officielle (PokéAPI).
- * - Chaque série du catalogue : son logo japonais chez Pokécardex, en deux tailles, ou aucun (noté :
- *   `sets.logo`, cherché de nouveau chaque semaine) ; les icônes des types et des raretés.
  * - Chaque carte du catalogue : son scan chez Pokécardex, en deux tailles (`md` pour les grilles,
  *   `hd` pour la fiche), ou aucun. Le résultat est noté (`cards.image`) : l'app sait d'avance
  *   quelle carte n'a pas d'image. Une carte sans scan est recherchée chaque semaine (Pokécardex en
@@ -48,12 +49,6 @@ export async function images(db: Database) {
   }
 
   try {
-    await mapPool(SPECIES_IDS, 2, async (id) => {
-      await copy(spriteUrl(id))
-      await copy(artworkUrl(id))
-    })
-    console.log(`Images des ${TOTAL_SPECIES} Pokémon : vérifiées`)
-
     // Les logos jamais cherchés, et ceux absents il y a plus d'une semaine (Pokécardex en ajoute).
     const weekAgo = new Date(Date.now() - WEEK).toISOString()
     const sets = db
@@ -78,6 +73,12 @@ export async function images(db: Database) {
     console.log(
       `Logos de ${sets.length} séries cherchés, icônes des types et des raretés vérifiées`,
     )
+
+    await mapPool(SPECIES_IDS, 2, async (id) => {
+      await copy(spriteUrl(id))
+      await copy(artworkUrl(id))
+    })
+    console.log(`Images des ${TOTAL_SPECIES} Pokémon : vérifiées`)
 
     // Les cartes jamais cherchées, et celles sans scan cherché il y a plus d'une semaine.
     const cards = db

@@ -116,7 +116,7 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   compte ni la collection, qui viennent du stockage du navigateur.
 - Performance (mesurer en production, `bun run build` puis `bun run preview` : `bun dev` est 3 à 4
   fois plus lent) : le Pokédex affiche 1 025 pochettes. Seules celles à l'écran sont dessinées
-  (`content-visibility`, de même pour la liste d'achats et le catalogue), les marques de
+  (`content-visibility`, de même pour la liste d'achats et les cartes du catalogue), les marques de
   possession sont des icônes CSS (masques, pas de SVG : plus de 1 000 sinon), et rien de ce qui
   défile n'a de `backdrop-filter` (flou recalculé à chaque image). Les pochettes sont de simples
   liens (`<a>`, pas un `Link` de react-router, qui lit l'adresse : les 1 025 se redessineraient à
@@ -133,4 +133,18 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   Mon compte l'importent, la déconnexion le charge à la demande. Une
   donnée chargée à la demande et lue par `use()` passe par `settled` : sans lui, React retient
   l'affichage environ 300 ms à chaque ouverture (fenêtre d'ajout, catalogue). La fiche d'un
-  Pokémon sans carte prépare le catalogue pendant que le navigateur est libre.
+  Pokémon sans carte prépare le catalogue pendant que le navigateur est libre. Les longues listes
+  du catalogue (les cartes d'une extension ou d'un Pokémon, jusqu'à 382 pour Pikachu ; les plus de
+  400 extensions) sont dessinées au fur et à mesure (`useGrowingList` : 60 cartes ou 40
+  extensions, puis autant chaque fois qu'un repère haut d'un écran, `growing-sentinel`, paraît au
+  bas de la liste) : mesuré en production (octobre 2026), la fenêtre des extensions s'ouvre en
+  40 à 80 ms au lieu de 270 à 490, et se ferme en une dizaine de millisecondes au lieu de 250 à
+  430 (démonter des centaines de tuiles coûtait autant que les dessiner). Dans une fenêtre, pas de
+  `content-visibility` sur un bloc qui contient des boutons : le piège à focus de camply mesure
+  chaque bouton à l'ouverture et à chaque Tab (`offsetWidth`), ce qui forcerait la mise en page
+  de chaque bloc caché. Le bouton « Changer d'extension » porte lui-même l'état de sa fenêtre
+  (`SetPicker`) : l'ouvrir ne redessine pas la page et ses cartes. Changer l'ordre des extensions
+  passe en arrière-plan (`startTransition`). Les deux grandes fenêtres (le choix d'une extension,
+  l'ajout d'une carte) sont pleine page (`Modal size="full"`) : seul leur contenu défile, leur
+  titre et leurs boutons restent à l'écran (`.camply-modal__full`, `global.css`), la recherche des
+  extensions reste en haut (`position: sticky`).

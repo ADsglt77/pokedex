@@ -4,22 +4,36 @@
   gap: var(--camply-space-4);
 }
 
+/* La recherche et l'ordre restent en haut quand la liste défile, sur le fond de la fenêtre, collés
+   au bord de la zone qui défile, par-dessus sa marge (18 px chez camply, `.camply-modal__content` :
+   classe interne, à revérifier après une mise à jour). */
 .controls {
+  position: sticky;
+  z-index: 1;
+  top: -18px;
   display: grid;
   gap: var(--camply-space-2);
-  justify-items: start;
+  padding-block: var(--camply-space-2);
+  background: var(--camply-surface);
 }
 
-.controls > :first-child {
-  justify-self: stretch;
+/* La recherche et l'ordre à une largeur de champ, pas celle de la fenêtre. */
+.controls > * {
+  max-width: 36rem;
 }
 
-/* Une année : dessinée seulement à l'écran (plus de 400 extensions en tout). */
+/* Les extensions, année par année ; le repère de la suite (`growing-sentinel`) à leur bas. */
+.results {
+  position: relative;
+  display: grid;
+  gap: var(--camply-space-4);
+}
+
+/* Une année. Pas de `content-visibility` : le piège à focus de la fenêtre mesure chaque bouton à
+   l'ouverture et à chaque Tab, ce qui forcerait la mise en page des années cachées une à une. */
 .group {
   display: grid;
   gap: var(--camply-space-2);
-  content-visibility: auto;
-  contain-intrinsic-block-size: auto 20rem;
 }
 
 .year {
@@ -31,7 +45,7 @@
 
 .sets {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(11rem, 40%), 1fr));
   gap: var(--camply-space-2);
   margin: 0;
   padding: 0;

@@ -77,7 +77,7 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   départ est oubliée quand l'id change (le lien suit alors le nouvel id). La page Catalogue
   (`/catalogue?set=…`, dans le menu, `pages/catalog/`) : en tête, l'extension (une série de
   Pokécardex) avec son logo japonais (`SetLogo`), sa progression, les réglages de l'ajout et les
-  filtres ; « Changer d'extension » ouvre la fenêtre des extensions (`SetPicker` : leurs logos, une
+  filtres ; « Changer d'extension » ouvre la fenêtre pleine page des extensions (`SetPicker` : leurs logos, une
   recherche par code ou par nom, les plus récentes rangées par année, les plus utiles (celles qui
   donnent leur carte au plus de Pokémon qui n'en ont pas) ou les plus avancées (la plus grande part
   de leurs Pokémon a déjà sa carte) ; chacune dit combien de ses Pokémon l'ont, sur tous les siens).
@@ -103,15 +103,16 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   chemin (`/images/cards/pokecardex/SV2A/6-md.webp`), pour le `src` de `CardArt` et pour
   `findCardImage`. La tâche `images` (chaque jour, la dernière, après les prix et les sauvegardes ; deux téléchargements à la
   fois, seulement ce qui manque ; le premier passage, environ 1,5 Go, prend une heure ou plus) copie
-  les sprites et illustrations des 1 025 Pokémon ; pour chaque série du catalogue, son logo japonais
+  d'abord, pour chaque série du catalogue, son logo japonais
   (`pokecardex.b-cdn.net/assets/images/logos_jp/<série>.png`, jamais `logos/`, le français ; en
   WebP, `?class=md` pour la fenêtre des extensions, `hd` en tête de la page :
   `/images/sets/SV2A-md.webp`, `setLogo`), noté s'il existe (`sets.logo`, cherché de nouveau chaque
   semaine) ; les icônes des types (`types/type_<n>.png` → `/images/types/<n>.webp`, `typeIcon`) et
   des raretés (`rarete/ids/rarete_<n>.png` → `/images/rarities/<n>.webp`, `rarityIcon` ; les noires,
   `DARK_RARITY_ICONS`, inversées sur le thème sombre, `--dark-icon-filter` ; une rareté sans icône,
-  « FUR », s'écrit en texte) ; et, pour chaque carte du catalogue, son scan en deux tailles, noté
-  s'il existe (`cards.image`) : le catalogue le dit d'avance. Une carte sans
+  « FUR », s'écrit en texte) : légers (une dizaine de Mo), attendus par le choix d'une extension ;
+  puis les sprites et illustrations des 1 025 Pokémon ; puis, pour chaque carte du catalogue, son
+  scan en deux tailles, noté s'il existe (`cards.image`) : le catalogue le dit d'avance. Une carte sans
   scan est recherchée chaque semaine. Une image en erreur (panne, réponse qui n'est pas une image)
   n'arrête pas les autres : rien n'est noté pour elle, elle est redemandée au passage suivant, et la
   tâche échoue à la fin (à la 20e erreur, elle s'arrête : la source est sans doute en panne).

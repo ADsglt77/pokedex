@@ -5,6 +5,11 @@
   gap: 0.75rem 0.375rem;
 }
 
+/* Le repère de la suite (`growing-sentinel`) se place au bas de la grille. */
+.growing {
+  position: relative;
+}
+
 .wide {
   grid-template-columns: repeat(auto-fill, minmax(7.25rem, 1fr));
 }
