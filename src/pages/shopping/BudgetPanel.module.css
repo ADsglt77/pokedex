@@ -1,0 +1,77 @@
+/* Le budget : ses tableaux, mois par mois et par fournisseur */
+
+/* Téléphone : chaque mois en fiche (`.stack-table`) : le mois et la dépense, puis le nombre de
+   commandes, de cartes, et le port et les frais. */
+@container table (max-width: 36rem) {
+  .months tbody tr {
+    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      'month month spent'
+      'orders cards shipping';
+  }
+
+  .months td:nth-child(1) {
+    grid-area: month;
+    color: var(--camply-text-strong);
+    font-weight: 600;
+  }
+
+  .months td:nth-child(2) {
+    grid-area: orders;
+  }
+
+  .months td:nth-child(3) {
+    grid-area: cards;
+  }
+
+  .months td:nth-child(4) {
+    grid-area: shipping;
+  }
+
+  .months td:nth-child(2),
+  .months td:nth-child(3),
+  .months td:nth-child(4) {
+    color: var(--camply-text-muted);
+    font-size: var(--text-md);
+  }
+
+  .months td:nth-child(5) {
+    grid-area: spent;
+    color: var(--camply-text-strong);
+    font-weight: 600;
+  }
+
+  .suppliers tbody tr {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'supplier supplier spent'
+      'orders cards cards';
+  }
+
+  .suppliers td:nth-child(1) {
+    grid-area: supplier;
+    color: var(--camply-text-strong);
+    font-weight: 600;
+  }
+
+  .suppliers td:nth-child(2) {
+    grid-area: orders;
+  }
+
+  .suppliers td:nth-child(3) {
+    grid-area: cards;
+    text-align: left;
+  }
+
+  .suppliers td:nth-child(2),
+  .suppliers td:nth-child(3) {
+    color: var(--camply-text-muted);
+    font-size: var(--text-md);
+  }
+
+  .suppliers td:nth-child(4) {
+    grid-area: spent;
+    color: var(--camply-text-strong);
+    font-weight: 600;
+  }
+}

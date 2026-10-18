@@ -25,7 +25,8 @@ import { CardLine } from './CardLine'
 import { OrderForm } from './OrderForm'
 import { WantsDialog } from './WantsDialog'
 import { useWishlist } from '@/hooks/useWishlist'
-import styles from './ShoppingPage.module.css'
+import page from './ShoppingPage.module.css'
+import styles from './PlannerPanel.module.css'
 
 /** Le pas du curseur de budget, en euros. */
 const BUDGET_STEP = 5
@@ -107,7 +108,7 @@ export function PlannerPanel({
     return (
       <EmptyState
         headingLevel={2}
-        className={styles.panel}
+        className={page.panel}
         icon={<Sparkles size={22} />}
         title="Rien à planifier pour l’instant"
         description="L’assistant choisit parmi les cartes de vos Pokémon pas encore obtenues : choisissez-les dans le catalogue ou sur la fiche d’un Pokémon."
@@ -172,7 +173,7 @@ export function PlannerPanel({
         )}
 
         {plan.picked.length > 0 ? (
-          <ul ref={pickedList} className={styles.lines}>
+          <ul ref={pickedList} className={page.lines}>
             {plan.picked.map((row, index) => (
               <li key={row.card.id}>
                 <PlanLine row={row}>
@@ -221,7 +222,7 @@ export function PlannerPanel({
             </Button>
           </Stack>
         )}
-        <p className={styles.note}>
+        <p className={page.note}>
           Ce plan n’est pas une commande : rien n’est acheté. Copiez les cartes pour votre liste de
           souhaits Cardmarket (ou cherchez-les), commandez, puis enregistrez la commande avec les
           prix réellement payés.
@@ -263,7 +264,7 @@ export function PlannerPanel({
           />
           <AccordionItem value="how" title="Comment le plan est construit" headingLevel={3}>
             <Stack gap={3}>
-              <ol className={styles.steps}>
+              <ol className={page.steps}>
                 <li>
                   Les cartes de vos Pokémon, ni possédées ni commandées, d’un Pokémon que vous
                   n’avez pas.
@@ -359,7 +360,7 @@ function PlanGroup({
       {rows.length === 0 ? (
         <p className="muted">{empty}</p>
       ) : (
-        <ul ref={list} className={styles.lines}>
+        <ul ref={list} className={page.lines}>
           {rows.map((row, index) => (
             <li key={row.card.id}>
               <PlanLine row={row}>

@@ -258,3 +258,9 @@ export interface CardPriceHistory {
   /** Un prix par jour depuis `from` ; `null` sans prix ce jour-là. */
   prices: (number | null)[]
 }
+
+/**
+ * `/api/histories?ids=…` : l'historique de chaque id Cardmarket demandé, en une demande (la courbe
+ * de la valeur de la collection) ; `null` sans historique.
+ */
+export type PriceHistories = Record<string, CardPriceHistory | null>

@@ -14,7 +14,8 @@ import {
 import type { GenerationId } from '@/types'
 import { useWishlist } from '@/hooks/useWishlist'
 import { WishCard } from './WishCard'
-import styles from './ShoppingPage.module.css'
+import page from './ShoppingPage.module.css'
+import styles from './WishlistPanel.module.css'
 
 const SORT_LABELS: Record<WishlistSort, string> = {
   price: 'Par prix croissant',
@@ -45,7 +46,7 @@ export function WishlistPanel({
     return (
       <EmptyState
         headingLevel={2}
-        className={styles.panel}
+        className={page.panel}
         icon={<ListChecks size={22} />}
         title="Rien à acheter pour l’instant"
         description="Choisissez la carte de vos Pokémon, dans le catalogue ou sur leur fiche : celles que vous n’avez pas encore arrivent ici."
@@ -81,7 +82,7 @@ export function WishlistPanel({
   )
 
   return (
-    <Stack gap={5} className={styles.panel}>
+    <Stack gap={5} className={page.panel}>
       <div className={styles.toolbar}>
         <Input
           className={styles.search}

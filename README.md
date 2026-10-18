@@ -11,7 +11,7 @@ cartes et images [Pokécardex](https://www.pokecardex.com/) (avec son autorisati
 bun install
 bun dev          # serveur de dev Vite
 bun run build    # type-check + build
-bun lint         # ESLint
+bun lint         # ESLint, puis knip (code mort : exports, fichiers, dépendances)
 bun test         # tests de ce qui coûterait de l'argent (la liste : CLAUDE.md, Principes)
 bun run format   # Prettier
 ```
@@ -57,8 +57,8 @@ navigateur ne parle qu'à lui. Des tâches d'ingestion lisent les sources et rem
   nom, les Pokémon et l'id Cardmarket de chaque carte (`/api/catalog`). Une page par série, une
   toutes les 3 s : le premier passage prend une vingtaine de minutes ;
 - `prices`, toutes les 6 h : les prix d'après les fichiers publics de Cardmarket (le prix du jour
-  de toutes ses cartes à l'unité, et l'historique de chacune ; `/api/prices`), et l'extension de
-  chaque carte, pour les lignes de la liste de souhaits (`/api/wants`) ;
+  de toutes ses cartes à l'unité, et l'historique de chacune ; `/api/prices`, `/api/histories`),
+  et l'extension de chaque carte, pour les lignes de la liste de souhaits (`/api/wants`) ;
 - `images`, chaque jour : les images copiées chez nous (`/images/…`) — cartes chez Pokécardex,
   qui demande qu'elles soient hébergées chez nous, avec un lien vers son site sur chaque page ;
   sprites et illustrations des Pokémon chez PokéAPI. Une image qui manque encore est copiée à la

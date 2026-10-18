@@ -8,7 +8,7 @@ import { formatDexNumber, formatPercent } from '@/lib/format'
 import { cardTitle } from '@/lib/species'
 import { priceLabel } from '@/lib/prices'
 import type { WishRow } from '@/lib/wishlist'
-import styles from './ShoppingPage.module.css'
+import styles from './WishCard.module.css'
 
 /** Une carte de la liste d'achats : ce qu'elle est, ce qu'elle coûte, où la trouver. */
 export function WishCard({ row }: { row: WishRow }) {

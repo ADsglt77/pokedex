@@ -5,7 +5,7 @@ import { CardArt } from '@/components/CardArt'
 import { cx } from '@/lib/cx'
 import { cardTitle } from '@/lib/species'
 import type { PokemonCard } from '@/types'
-import styles from './ShoppingPage.module.css'
+import styles from './CardLine.module.css'
 
 /**
  * Une carte sur une ligne : vignette, nom et référence, un détail, et des actions à droite. Une

@@ -1,0 +1,47 @@
+/* Assistant : ses réglages à côté du plan, le plan et son total */
+
+.planner {
+  display: grid;
+  grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+  gap: var(--space-block);
+  padding-top: var(--space-block);
+}
+
+/* Une Card de camply, qui reste visible pendant qu'on parcourt le plan. */
+.plannerOptions {
+  align-self: start;
+  position: sticky;
+  top: 1rem;
+}
+
+.planSummary {
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* Les titres d'un onglet : sous le titre de la page et les onglets, à la taille d'un bloc. */
+.sectionTitle {
+  font-size: var(--title-sm);
+}
+
+.planTotal {
+  font-family: var(--camply-font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.planTotal :global(.muted) {
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+@container page (max-width: 46rem) {
+  .planner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .plannerOptions {
+    position: static;
+  }
+}

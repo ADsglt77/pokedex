@@ -23,8 +23,10 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   sur la page Données, `SummaryLedger`, les totaux d'une commande). Une page : `PageHeader`
   (titre, phrase, actions à droite), puis ses blocs en `Panel` (une `Card` de camply : titre `h2`, phrase, actions, contenu ; `flush`
   pour un tableau bord à bord ; pas une région nommée : trop de points de repère) ; statistiques par
-  deux, par quatre quand la page a 50rem (`.stat-grid`, plus compactes sur téléphone). Occuper
-  l'écran : une page va jusqu'à 120rem (`--page-max`, toute la largeur jusqu'au très grand écran,
+  deux, par quatre quand la page a 50rem (`.stat-grid`, plus compactes sur téléphone). Une page
+  découpée en composants (l'accueil, `pages/home/` ; Achats) : les classes d'un seul composant dans
+  son propre module CSS, celles qu'en partagent plusieurs dans celui de la page, importé sous le
+  nom `page`. Occuper l'écran : une page va jusqu'à 120rem (`--page-max`, toute la largeur jusqu'au très grand écran,
   où elle reste centrée) et c'est un conteneur (`.container` : `container: page`) ; ses blocs se
   règlent sur la place qu'elle a vraiment (`@container page`, barre latérale déduite), pas sur la
   largeur de l'écran (à 1 024 px, la barre latérale en prend un quart). Un tableau de données
@@ -88,11 +90,16 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   main : ce plugin passe avant celui de Vite qui l'ajoute) : un nouveau service worker à chaque
   version. Une page : le réseau, sinon l'app gardée (aucune autre réponse ne prend sa place). Les
   fichiers de `public/`, dont le nom ne change pas, et les données de référence (espèces,
-  catalogue, prix) : le réseau d'abord, la dernière réponse gardée sans lui. « Le réseau d'abord »
-  attend les en-têtes 4 s au plus (un réseau faible) quand une version est gardée, aussi longtemps
-  qu'il faut sinon, et jamais la fin d'un long téléchargement (les prix) ; la réponse du réseau est
-  gardée dès qu'elle arrive, même si la version gardée a déjà été servie. Les images affichées : gardées dès leur premier affichage, 3 000 au plus. Jamais le compte
-  ni la collection, qui viennent du stockage du navigateur.
+  catalogue, prix, historiques) : le réseau d'abord, la dernière réponse gardée sans lui. Celles-ci
+  sont gardées par leur chemin, sans les paramètres : une seule copie des historiques de la
+  collection (`/api/histories?ids=…`), quels que soient les ids, au lieu d'une de plus à chaque
+  carte possédée. Une copie d'autres ids sert encore : chaque id y a sa clé, la page Valeur y prend
+  ceux de ses cartes ; une carte qui n'y est pas (ajoutée depuis) ne pèse pas sur la courbe, et la
+  page le dit sous elle (`docs/prix.md`). « Le réseau d'abord » attend les en-têtes 4 s au plus (un réseau faible) quand une
+  version est gardée, aussi longtemps qu'il faut sinon, et jamais la fin d'un long téléchargement
+  (les prix) ; la réponse du réseau est gardée dès qu'elle arrive, même si la version gardée a déjà
+  été servie. Les images affichées : gardées dès leur premier affichage, 3 000 au plus. Jamais le
+  compte ni la collection, qui viennent du stockage du navigateur.
 - Performance (mesurer en production, `bun run build` puis `bun run preview` : `bun dev` est 3 à 4
   fois plus lent) : le Pokédex affiche 1 025 pochettes. Seules celles à l'écran sont dessinées
   (`content-visibility`, de même pour la liste d'achats et le catalogue), les marques de

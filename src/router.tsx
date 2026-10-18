@@ -2,7 +2,7 @@ import { createBrowserRouter, redirect, type LoaderFunctionArgs } from 'react-ro
 import { AppShell } from '@/components/AppShell'
 import { accountExists, loginPath } from '@/lib/auth-client'
 import { ErrorPage } from '@/pages/ErrorPage'
-import { HomePage } from '@/pages/HomePage'
+import { HomePage } from '@/pages/home/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PokedexPage } from '@/pages/pokedex/PokedexPage'
 import { PokemonPage } from '@/pages/pokemon/PokemonPage'

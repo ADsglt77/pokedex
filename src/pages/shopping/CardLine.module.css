@@ -1,0 +1,39 @@
+/* Une carte sur une ligne (assistant, commande) */
+
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.875rem;
+  padding: 0.5rem 0.75rem 0.5rem 0.5rem;
+  border: 1px solid var(--camply-border-soft);
+  border-radius: var(--camply-radius);
+  background: var(--camply-surface);
+}
+
+.lineArt {
+  width: 2.75rem;
+  flex: none;
+}
+
+.lineText {
+  display: flex;
+  min-width: 10rem;
+  flex: 1;
+  flex-direction: column;
+  font-size: var(--text-md);
+}
+
+.lineTitle {
+  color: var(--camply-text-strong);
+  font-weight: 600;
+}
+
+.lineEnd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-left: auto;
+}

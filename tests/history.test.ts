@@ -1,12 +1,21 @@
 /**
  * L'historique des prix (`server/history.ts`) : irremplaçable, Cardmarket n'en garde pas. La tâche
  * `prices` y ajoute chaque jour le prix du jour (`withPrice`), la base le range par année
- * (`splitYears`), l'API le rend d'un seul tenant (`joinYears`) : aucun prix ne doit se perdre ni
- * changer de jour en route.
+ * (`splitYears`), l'API le rend d'un seul tenant (`joinYears`, `historyReader`), pour une carte
+ * comme pour toute la collection : aucun prix ne doit se perdre, changer de jour en route, ni
+ * passer d'une carte à une autre.
  */
 
+import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { joinYears, splitYears, withPrice, yearDay, type HistoryYear } from '../server/history'
+import {
+  historyReader,
+  joinYears,
+  splitYears,
+  withPrice,
+  yearDay,
+  type HistoryYear,
+} from '../server/history'
 
 describe('jour de l’année', () => {
   test('le 1er janvier est le jour 0, les années bissextiles ont un jour de plus', () => {
@@ -93,5 +102,33 @@ describe('historique rangé par année, puis relu', () => {
   test('sans aucun prix : pas d’historique', () => {
     expect(joinYears([])).toBeNull()
     expect(splitYears({ from: '2026-01-01', prices: [null, null] })).toEqual([])
+  })
+})
+
+describe('historyReader', () => {
+  // Les seules colonnes que lit l'API (le schéma complet : `server/db.ts`).
+  const db = new Database(':memory:')
+  db.run(`CREATE TABLE cardmarket_products (id INTEGER PRIMARY KEY, name TEXT NOT NULL)`)
+  db.run(`CREATE TABLE cardmarket_history (
+    id INTEGER NOT NULL, year INTEGER NOT NULL, first INTEGER NOT NULL, prices TEXT NOT NULL,
+    PRIMARY KEY (id, year))`)
+  const year = db.query('INSERT INTO cardmarket_history VALUES (?, ?, ?, ?)')
+  year.run(719621, 2026, 0, '[2,3]')
+  year.run(719621, 2025, 363, '[1]')
+  year.run(719446, 2026, 286, '[7]')
+  db.run(`INSERT INTO cardmarket_products VALUES (719621, 'Charmander [Blazing Destruction]')`)
+  const read = historyReader(db)
+
+  test('chaque carte son historique, ses années dans l’ordre, avec son nom', () => {
+    expect(read(719621)).toEqual({
+      name: 'Charmander [Blazing Destruction]',
+      from: '2025-12-30',
+      prices: [1, null, 2, 3],
+    })
+    expect(read(719446)).toEqual({ name: null, from: '2026-10-14', prices: [7] })
+  })
+
+  test('une carte sans historique : rien, jamais celui d’une autre', () => {
+    expect(read(1)).toBeNull()
   })
 })

@@ -8,7 +8,7 @@ import { copyText } from '@/lib/clipboard'
 import { plural } from '@/lib/format'
 import type { PokemonCard, WantsLines } from '@/types'
 import { CardLine } from './CardLine'
-import styles from './ShoppingPage.module.css'
+import page from './ShoppingPage.module.css'
 
 /**
  * « Copier pour Cardmarket » : les cartes de la prochaine commande en lignes pour « Ajouter une
@@ -125,7 +125,7 @@ function WantsContent({
     <Stack gap={5}>
       {ready.length > 0 && (
         <Stack gap={4}>
-          <ol className={styles.steps}>
+          <ol className={page.steps}>
             <li>Sur Cardmarket, ouvrez votre liste de souhaits, puis « Ajouter une deck list ».</li>
             <li>Collez les lignes ci-dessous, puis « Ajouter ».</li>
             <li>
@@ -163,7 +163,7 @@ function WantsContent({
             // ici dès l'affichage.
             ref={retried && ready.length === 0 ? focusOnMount : undefined}
             tabIndex={-1}
-            className={styles.formTitle}
+            className={page.formTitle}
           >
             À ajouter depuis leur page ({others.length})
           </h3>
@@ -172,7 +172,7 @@ function WantsContent({
             Cardmarket pourrait confondre) : ajoutez chacune depuis sa page Cardmarket, avec «
             Ajouter à mes souhaits ». Le lien ouvre la page déjà réglée sur japonais, Near Mint.
           </p>
-          <ul className={styles.lines}>
+          <ul className={page.lines}>
             {others.map((card) => (
               <li key={card.id}>
                 <CardLine card={card}>
@@ -185,7 +185,7 @@ function WantsContent({
       )}
 
       {ready.length > 0 && (
-        <p className={styles.note}>
+        <p className={page.note}>
           Un message bleu « Informations » de Cardmarket après « Ajouter » signale une carte ajoutée
           sans sa version : retirez-la de la liste, puis ajoutez-la depuis sa page.
         </p>

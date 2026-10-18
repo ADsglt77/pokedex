@@ -1,0 +1,47 @@
+/* Liste d'achats : la recherche, les filtres, la grille des cartes */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.toolbar > * {
+  flex: 1 1 9rem;
+}
+
+/* La recherche plus large que les listes ; tout sur une ligne quand la place le permet. */
+.toolbar > .search {
+  flex: 2 1 16rem;
+}
+
+/* Téléphone : la recherche et le bouton du panneau des filtres sur une ligne ; le champ peut rétrécir
+   sous la largeur par défaut d'un `input`. */
+.toolbar > .filtersButton {
+  flex: none;
+}
+
+@media (max-width: 40rem) {
+  .toolbar > .search {
+    flex-basis: 10rem;
+    min-width: 0;
+  }
+
+  .toolbar > .search input {
+    min-width: 0;
+  }
+}
+
+.filtersPanel {
+  width: min(20rem, 85vw);
+}
+
+.wishGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(22rem, 100%), 1fr));
+  gap: 1rem;
+}
+
+.wishGrid > li {
+  display: flex;
+}

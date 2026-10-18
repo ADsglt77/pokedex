@@ -1,0 +1,57 @@
+/* À faire : une ligne par action, toute la ligne cliquable */
+
+.todos {
+  display: grid;
+  margin-inline: calc(-1 * var(--camply-space-2));
+}
+
+.todo {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.625rem var(--camply-space-2);
+  border-radius: var(--camply-radius);
+  color: inherit;
+  text-decoration: none;
+  transition: background var(--duration-fast);
+}
+
+.todo:hover {
+  background: var(--camply-fill-2);
+}
+
+.todoIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--camply-radius);
+  background: var(--camply-fill-2);
+  color: var(--camply-text-muted);
+}
+
+.warn {
+  background: var(--camply-warn-soft);
+  color: var(--camply-warn);
+}
+
+.todoText {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.todoLabel {
+  font-weight: 600;
+}
+
+.todoChevron {
+  flex: none;
+  color: var(--camply-text-muted-2);
+  transition: transform var(--duration-fast);
+}
+
+.todo:hover .todoChevron {
+  transform: translateX(2px);
+}

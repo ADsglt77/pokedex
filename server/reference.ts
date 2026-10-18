@@ -7,7 +7,9 @@
  * - `GET /api/species`, `/api/species/details` : les espèces, et ce qu'en montre la fiche ;
  * - `GET /api/catalog` : le catalogue des cartes japonaises ;
  * - `GET /api/prices` : les prix Cardmarket du jour ; `GET /api/prices/:id` : l'historique d'une
- *   carte Cardmarket, par son id produit ;
+ *   carte Cardmarket, par son id produit (la fiche) ;
+ * - `GET /api/histories?ids=719621,719654` : l'historique de chaque carte Cardmarket demandée,
+ *   `null` sans historique, en une demande (la courbe de la valeur de la collection, page Valeur) ;
  * - `GET /api/wants?ids=719621,719654` : la ligne de chaque carte Cardmarket demandée pour la liste
  *   de souhaits Cardmarket (`wantsLine`), `null` sans ligne sûre ; calculée à chaque demande, chaque
  *   id et chaque extension une fois.
@@ -17,15 +19,23 @@
 import type { Database } from 'bun:sqlite'
 import { Elysia, t } from 'elysia'
 import { INGEST_JOB_NAMES, INGEST_JOBS } from '@/config/jobs'
+import { TOTAL_SPECIES } from '@/config/pokedex'
 import { wantsLine, type ExpansionName } from '@/lib/cardmarket'
 import { isOverdue } from '@/lib/jobs'
-import type { JobStatus, ServerStatus, WantsLines } from '@/types'
+import type { JobStatus, PriceHistories, ServerStatus, WantsLines } from '@/types'
 import { readSource } from './db'
-import { readHistory } from './history'
+import { historyReader } from './history'
 import { notFound, serveSnapshot } from './snapshots'
 
-/** Des ids Cardmarket séparés par des virgules : 2 000 au plus, de 1 à 9 chiffres chacun. */
-const WANTS_IDS = '^[1-9]\\d{0,8}(,[1-9]\\d{0,8}){0,1999}$'
+/**
+ * Des ids Cardmarket séparés par des virgules : `max` au plus, de 1 à 9 chiffres chacun, sans zéro
+ * devant (un id n'a qu'une écriture : sa clé dans la réponse).
+ */
+const idsPattern = (max: number) => `^[1-9]\\d{0,8}(,[1-9]\\d{0,8}){0,${max - 1}}$`
+
+/** La réponse de chaque id demandé, une clé par id : chacun n'est lu qu'une fois, même répété. */
+const eachId = <T>(ids: string, read: (id: number) => T) =>
+  Object.fromEntries([...new Set(ids.split(','))].map((id) => [id, read(Number(id))]))
 
 export function referenceRoutes(data: Database) {
   const runs = data.query(
@@ -33,6 +43,7 @@ export function referenceRoutes(data: Database) {
             MAX(finished_at) AS lastRun
      FROM runs GROUP BY job`,
   )
+  const readHistory = historyReader(data)
   // Ce que demande `wantsLine` : le produit (sans extension, absent de la liste des produits de
   // Cardmarket : pas de ligne) ; le numéro imprimé de chaque produit de la même carte dans son
   // extension, lui compris, d'après le catalogue (`null` : absent du catalogue, ou plusieurs
@@ -129,7 +140,7 @@ export function referenceRoutes(data: Database) {
     .get(
       '/prices/:id',
       ({ params, set }) => {
-        const history = readHistory(data, params.id)
+        const history = readHistory(params.id)
         // Sans cache, comme l'historique : la carte peut avoir un prix au prochain passage.
         if (!history) return notFound()
         set.headers['cache-control'] = 'no-cache'
@@ -141,6 +152,19 @@ export function referenceRoutes(data: Database) {
       },
     )
     .get(
+      '/histories',
+      ({ query, set }): PriceHistories => {
+        // Sans cache, comme l'historique d'une carte.
+        set.headers['cache-control'] = 'no-cache'
+        return eachId(query.ids, readHistory)
+      },
+      {
+        // Les historiques d'une collection : une carte par Pokémon au plus.
+        query: t.Object({ ids: t.String({ pattern: idsPattern(TOTAL_SPECIES) }) }),
+        ...doc('Les historiques des prix de plusieurs cartes Cardmarket'),
+      },
+    )
+    .get(
       '/wants',
       ({ query, set }): WantsLines => {
         // Sans cache : les produits et le catalogue changent avec les tâches.
@@ -148,12 +172,10 @@ export function referenceRoutes(data: Database) {
         // Chaque id une fois, chaque extension lue une fois : une demande coûte au plus un passage
         // sur les produits demandés, même répétés.
         const known = new Map<number, ExpansionName[]>()
-        return Object.fromEntries(
-          [...new Set(query.ids.split(','))].map((id) => [id, wantsLineOf(Number(id), known)]),
-        )
+        return eachId(query.ids, (id) => wantsLineOf(id, known))
       },
       {
-        query: t.Object({ ids: t.String({ pattern: WANTS_IDS }) }),
+        query: t.Object({ ids: t.String({ pattern: idsPattern(2000) }) }),
         ...doc('Les lignes de cartes Cardmarket pour une liste de souhaits Cardmarket'),
       },
     )

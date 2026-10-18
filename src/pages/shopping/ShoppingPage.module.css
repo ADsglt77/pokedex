@@ -1,4 +1,7 @@
-/* La page : ses onglets, le bloc de chacun, leurs titres */
+/* Achats : la page, et les classes que partagent plusieurs de ses composants ; celles d'un seul
+   sont dans le module de ce composant. */
+
+/* La page : ses onglets, le bloc de chacun */
 
 .tabs {
   margin-top: var(--space-block);
@@ -36,250 +39,20 @@
   padding-top: var(--space-block);
 }
 
-/* Les titres d'un onglet : sous le titre de la page et les onglets, à la taille d'un bloc. */
-.sectionTitle {
-  font-size: var(--title-sm);
-}
-
 .note {
   max-width: 62ch;
   color: var(--camply-text-muted);
   font-size: var(--text-md);
 }
 
-/* Liste d'achats */
-
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.toolbar > * {
-  flex: 1 1 9rem;
-}
-
-/* La recherche plus large que les listes ; tout sur une ligne quand la place le permet. */
-.toolbar > .search {
-  flex: 2 1 16rem;
-}
-
-/* Téléphone : la recherche et le bouton du panneau des filtres sur une ligne ; le champ peut rétrécir
-   sous la largeur par défaut d'un `input`. */
-.toolbar > .filtersButton {
-  flex: none;
-}
-
-@media (max-width: 40rem) {
-  .toolbar > .search {
-    flex-basis: 10rem;
-    min-width: 0;
-  }
-
-  .toolbar > .search input {
-    min-width: 0;
-  }
-}
-
-.filtersPanel {
-  width: min(20rem, 85vw);
-}
-
-/* La phrase à gauche, à une longueur lisible ; les boutons à droite, ou dessous s’ils manquent
-   de place. */
-.listHead {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem 1rem;
-}
-
-.listHead > p {
-  flex: 1 1 24rem;
-  max-width: 62ch;
-}
-
-.wishGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(22rem, 100%), 1fr));
-  gap: 1rem;
-}
-
-.wishGrid > li {
-  display: flex;
-}
-
-/* Une Card de camply, mise en grille. */
-.wish {
-  display: grid;
-  grid-template-columns: 7.5rem minmax(0, 1fr);
-  /* Le pied reste en bas quand la carte s’étire à la hauteur de ses voisines. */
-  grid-template-rows: 1fr auto;
-  gap: 0.75rem 1rem;
-  width: 100%;
-  /* La liste peut compter des centaines de cartes : le navigateur ne dessine que celles à l'écran. */
-  content-visibility: auto;
-  contain-intrinsic-block-size: auto 15rem;
-}
-
-.wishArt {
-  align-self: start;
-}
-
-.wishBody {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.wishHead {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.25rem 0.75rem;
-}
-
-/* Le nom de la carte (un h2 par carte de la liste) : entre le texte et `--title-sm`, pour qu'une
-   grille de cartes ne soit pas une suite de titres. */
-.wishTitle {
-  font-size: 1.0625rem;
-}
-
-.wishReference {
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-.wishPrices {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  margin: 0;
-}
-
-.wishPrices div {
-  padding: 0.375rem 0.5rem;
-  border-radius: var(--camply-radius-sm);
-  background: var(--camply-surface-2);
-}
-
-.wishPrices dt {
-  color: var(--camply-text-muted);
-  font-size: var(--text-xs);
-}
-
-.wishPrices dd {
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-
-/* L'ébauche du prix, tant que les prix arrivent (`PricedValue`) : pas plus large que sa case. */
-.wishPrices dd > * {
-  max-width: 100%;
-}
-
-/* Le pied de la carte, sous la vignette et le texte, séparé d’un filet ; pas de pied sans lien
-   Cardmarket. */
-.wishActions {
-  display: flex;
-  grid-column: 1 / -1;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--camply-border-soft);
-}
-
-.wishActions:empty {
-  display: none;
-}
-
-.wishLink {
-  font-size: var(--text-sm);
-}
-
-/* Une carte sur une ligne (assistant, commande) */
+/* Une carte sur une ligne (assistant, commande) : leur liste */
 
 .lines {
   display: grid;
   gap: 0.5rem;
 }
 
-.line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.875rem;
-  padding: 0.5rem 0.75rem 0.5rem 0.5rem;
-  border: 1px solid var(--camply-border-soft);
-  border-radius: var(--camply-radius);
-  background: var(--camply-surface);
-}
-
-.lineArt {
-  width: 2.75rem;
-  flex: none;
-}
-
-.lineText {
-  display: flex;
-  min-width: 10rem;
-  flex: 1;
-  flex-direction: column;
-  font-size: var(--text-md);
-}
-
-.lineTitle {
-  color: var(--camply-text-strong);
-  font-weight: 600;
-}
-
-.lineEnd {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-left: auto;
-}
-
-.warn {
-  color: var(--camply-warn);
-}
-
-/* Assistant */
-
-.planner {
-  display: grid;
-  grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
-  gap: var(--space-block);
-  padding-top: var(--space-block);
-}
-
-/* Une Card de camply, qui reste visible pendant qu'on parcourt le plan. */
-.plannerOptions {
-  align-self: start;
-  position: sticky;
-  top: 1rem;
-}
-
-.planSummary {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.planTotal {
-  font-family: var(--camply-font-display);
-  font-size: 2rem;
-  font-weight: 600;
-  line-height: 1.1;
-}
-
-.planTotal :global(.muted) {
-  font-size: 1rem;
-  font-weight: 400;
-}
+/* Assistant, « Copier pour Cardmarket » : les étapes */
 
 .steps {
   display: grid;
@@ -297,31 +70,10 @@
   gap: 0.125rem;
 }
 
-.badges {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-}
-
-.rowActions {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.formGrid,
 .formGrid3 {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-.formGrid3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.narrowField {
-  max-width: 16rem;
+  gap: 1rem;
 }
 
 /* Un intertitre dans une fenêtre (une commande, « Copier pour Cardmarket ») : à la taille du
@@ -330,171 +82,16 @@
   font-size: 1rem;
 }
 
-.quantity {
-  width: 4.5rem;
-}
-
-.price {
-  width: 7.5rem;
-}
-
-.totals,
-.orderBudget {
+/* Les montants d'une commande (`OrderTotals`), à droite, et le mois de la commande dessous
+   (`OrderForm`) : une même colonne, alignée. */
+.amountsColumn {
   width: 100%;
   max-width: 24rem;
   margin-left: auto;
 }
 
-/* Le mois de la commande, avec elle : sous le total. */
-.orderBudget {
-  display: grid;
-  gap: 0.5rem;
-  font-size: var(--text-md);
-}
-
-@container page (max-width: 46rem) {
-  .planner {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .plannerOptions {
-    position: static;
-  }
-}
-
 @media (max-width: 40rem) {
-  .wish {
-    grid-template-columns: 5.5rem minmax(0, 1fr);
-    gap: 0.75rem;
-  }
-
-  .formGrid,
   .formGrid3 {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  /* Sur une colonne, la case vide du formulaire de commande doublerait l'écart. */
-  .gridFiller {
-    display: none;
-  }
-}
-
-/* Téléphone : chaque commande en fiche (`.stack-table`) : la date et le total en tête, l'état et
-   « Marquer reçue », le fournisseur et le nombre de cartes, puis les actions. */
-@container table (max-width: 36rem) {
-  .orders tbody tr {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      'date total'
-      'state state'
-      'supplier cards'
-      'actions actions';
-  }
-
-  .orders td:nth-child(1) {
-    grid-area: date;
-    color: var(--camply-text-strong);
-    font-weight: 600;
-  }
-
-  .orders td:nth-child(2) {
-    grid-area: state;
-    padding-block: 0.25rem;
-  }
-
-  .orders td:nth-child(3) {
-    grid-area: supplier;
-  }
-
-  .orders td:nth-child(4) {
-    grid-area: cards;
-    color: var(--camply-text-muted);
-  }
-
-  .orders td:nth-child(5) {
-    grid-area: total;
-    color: var(--camply-text-strong);
-    font-weight: 600;
-  }
-
-  .orders td:nth-child(6) {
-    grid-area: actions;
-    margin-right: -0.375rem;
-  }
-}
-
-/* Téléphone : chaque mois en fiche (`.stack-table`) : le mois et la dépense, puis le nombre de
-   commandes, de cartes, et le port et les frais. */
-@container table (max-width: 36rem) {
-  .months tbody tr {
-    grid-template-columns: auto auto minmax(0, 1fr);
-    grid-template-areas:
-      'month month spent'
-      'orders cards shipping';
-  }
-
-  .months td:nth-child(1) {
-    grid-area: month;
-    color: var(--camply-text-strong);
-    font-weight: 600;
-  }
-
-  .months td:nth-child(2) {
-    grid-area: orders;
-  }
-
-  .months td:nth-child(3) {
-    grid-area: cards;
-  }
-
-  .months td:nth-child(4) {
-    grid-area: shipping;
-  }
-
-  .months td:nth-child(2),
-  .months td:nth-child(3),
-  .months td:nth-child(4) {
-    color: var(--camply-text-muted);
-    font-size: var(--text-md);
-  }
-
-  .months td:nth-child(5) {
-    grid-area: spent;
-    color: var(--camply-text-strong);
-    font-weight: 600;
-  }
-
-  .suppliers tbody tr {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas:
-      'supplier supplier spent'
-      'orders cards cards';
-  }
-
-  .suppliers td:nth-child(1) {
-    grid-area: supplier;
-    color: var(--camply-text-strong);
-    font-weight: 600;
-  }
-
-  .suppliers td:nth-child(2) {
-    grid-area: orders;
-  }
-
-  .suppliers td:nth-child(3) {
-    grid-area: cards;
-    text-align: left;
-  }
-
-  .suppliers td:nth-child(2),
-  .suppliers td:nth-child(3) {
-    color: var(--camply-text-muted);
-    font-size: var(--text-md);
-  }
-
-  .suppliers td:nth-child(4) {
-    grid-area: spent;
-    color: var(--camply-text-strong);
-    font-weight: 600;
   }
 }

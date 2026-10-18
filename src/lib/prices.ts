@@ -15,6 +15,7 @@ import type {
   CollectionData,
   PokemonCard,
   PriceFile,
+  PriceHistories,
 } from '@/types'
 
 /** Ce qu'il faut d'une carte pour son prix : son id Cardmarket. */
@@ -211,6 +212,16 @@ export function cardHistory(history: CardPriceHistory | null): PricePoint[] {
     value === null ? [] : [{ date: addDays(history.from, day), value }],
   )
 }
+
+/**
+ * Les historiques des cartes `ids`, dans leur ordre, d'après la réponse groupée du serveur
+ * (`/api/histories`, une clé par id) : un id qui revient (la même carte Cardmarket possédée pour
+ * deux Pokémon) compte autant de fois, comme dans la valeur du jour. Un id sans historique, ou
+ * absent de la réponse (une copie du service worker, d'avant cette carte : la page le dit,
+ * `loadPriceHistories`), ne compte pas.
+ */
+export const historiesOf = (histories: PriceHistories, ids: readonly number[]) =>
+  ids.flatMap((id) => histories[id] ?? [])
 
 /**
  * Une série sans trou : un jour sans prix prend celui de la veille ; avant le premier prix connu,

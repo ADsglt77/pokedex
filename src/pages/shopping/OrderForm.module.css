@@ -1,0 +1,29 @@
+/* Le formulaire d'une commande : ses champs, le mois de la commande avec elle */
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.narrowField {
+  max-width: 16rem;
+}
+
+/* Le mois de la commande, avec elle : sous le total, dans sa colonne (`page.amountsColumn`). */
+.orderBudget {
+  display: grid;
+  gap: 0.5rem;
+  font-size: var(--text-md);
+}
+
+@media (max-width: 40rem) {
+  .formGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Sur une colonne, la case vide du formulaire de commande doublerait l'écart. */
+  .gridFiller {
+    display: none;
+  }
+}

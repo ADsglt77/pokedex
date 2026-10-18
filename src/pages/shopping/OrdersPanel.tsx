@@ -21,7 +21,8 @@ import { useShoppingStore } from '@/store/shopping'
 import type { Order } from '@/types'
 import { OrderDetail, OrderStateBadge } from './OrderDetail'
 import { OrderForm } from './OrderForm'
-import styles from './ShoppingPage.module.css'
+import page from './ShoppingPage.module.css'
+import styles from './OrdersPanel.module.css'
 
 /**
  * Le registre des commandes : en ajouter, en ouvrir une pour voir ses cartes, les corriger, les
@@ -61,7 +62,7 @@ export function OrdersPanel() {
   }
 
   return (
-    <Stack gap={5} className={styles.panel}>
+    <Stack gap={5} className={page.panel}>
       <div className={styles.listHead}>
         <p className="muted">
           Une commande enregistrée met à jour le statut de ses cartes et compte dans le budget du
@@ -107,7 +108,7 @@ export function OrdersPanel() {
               header: 'État',
               sortValue: (order) => order.state,
               cell: (order) => (
-                <span className={styles.stacked}>
+                <span className={page.stacked}>
                   <span className={styles.badges}>
                     <OrderStateBadge state={order.state} />
                     {late.has(order.id) && (
@@ -141,7 +142,7 @@ export function OrdersPanel() {
               header: 'Fournisseur',
               sortValue: (order) => supplierLabel(order),
               cell: (order) => (
-                <span className={styles.stacked}>
+                <span className={page.stacked}>
                   {order.link ? (
                     <ExternalLink href={order.link}>{supplierLabel(order)}</ExternalLink>
                   ) : (
@@ -166,7 +167,7 @@ export function OrdersPanel() {
               align: 'right',
               sortValue: (order) => orderSpent(order),
               cell: (order) => (
-                <span className={styles.stacked}>
+                <span className={page.stacked}>
                   {formatEuro(orderSpent(order))}
                   {order.refunded > 0 && (
                     <span className="muted">remboursé {formatEuro(order.refunded)}</span>

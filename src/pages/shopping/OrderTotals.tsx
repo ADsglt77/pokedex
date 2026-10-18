@@ -3,13 +3,13 @@ import { cx } from '@/lib/cx'
 import { formatEuro } from '@/lib/format'
 import { linesTotal, orderSpent } from '@/lib/orders'
 import type { Order } from '@/types'
-import styles from './ShoppingPage.module.css'
+import page from './ShoppingPage.module.css'
 
 /** Les montants d'une commande : cartes, port et frais, remboursé, total. */
 export function OrderTotals({ order }: { order: Order }) {
   return (
     <DescriptionList
-      className={cx('amounts', styles.totals)}
+      className={cx('amounts', page.amountsColumn)}
       divided
       items={[
         { term: 'Cartes', description: formatEuro(linesTotal(order.lines)) },

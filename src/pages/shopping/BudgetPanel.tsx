@@ -11,7 +11,8 @@ import { TableCount } from '@/components/TableCount'
 import { BudgetLevelBadge } from '@/components/BudgetMeter'
 import { cx } from '@/lib/cx'
 import { BudgetField } from './BudgetField'
-import styles from './ShoppingPage.module.css'
+import page from './ShoppingPage.module.css'
+import styles from './BudgetPanel.module.css'
 
 type Row = ReturnType<typeof spendingByMonth>[number]
 
@@ -42,9 +43,9 @@ export function BudgetPanel() {
   const perSpecies = costPerSpecies(orders, (cardId) => findCard(cardId, collection)?.dexIds ?? [])
 
   return (
-    <Stack gap={6} className={styles.panel}>
+    <Stack gap={6} className={page.panel}>
       <Panel title="Réglages" description="Enregistrés en quittant le champ ; vide vaut 0.">
-        <div className={styles.formGrid3}>
+        <div className={page.formGrid3}>
           <BudgetField field="monthly" />
           <BudgetField field="ceiling" />
           <BudgetField field="shippingReserve" />
@@ -114,7 +115,7 @@ export function BudgetPanel() {
               header: 'Dépensé',
               align: 'right',
               cell: (row) => (
-                <span className={styles.stacked}>
+                <span className={page.stacked}>
                   {formatEuro(row.spent)}
                   <BudgetLevelBadge spent={row.spent} budget={budget} />
                 </span>

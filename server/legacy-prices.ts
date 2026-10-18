@@ -15,7 +15,7 @@ import { join } from 'node:path'
 import { addDays } from '@/lib/time'
 import type { CardPriceHistory, PriceFile } from '@/types'
 import { writeSource } from './db'
-import { readHistory, splitYears } from './history'
+import { historyReader, splitYears } from './history'
 import { savePrices } from './jobs/prices'
 
 /** La somme de prix, en centimes : comparée exactement. */
@@ -49,6 +49,8 @@ export async function importLegacyPrices(db: Database, dir: string) {
   const writePrice = db.query(
     'INSERT INTO cardmarket_prices (id, price, low, avg30) VALUES (?, ?, ?, ?)',
   )
+  // La lecture de l'API, pour relire l'échantillon tel qu'elle le servira.
+  const readHistory = historyReader(db)
 
   db.transaction(() => {
     for (const [id, history] of histories) {
@@ -95,7 +97,7 @@ export async function importLegacyPrices(db: Database, dir: string) {
               from: addDays(file.from, head),
               prices: file.prices.slice(head, last + 1),
             }
-      const read = readHistory(db, id)
+      const read = readHistory(id)
       if (JSON.stringify(read) !== JSON.stringify(expectedHistory)) {
         throw new Error(`Historique ${id} relu différent : ${JSON.stringify(read)}`)
       }

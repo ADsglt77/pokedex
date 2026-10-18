@@ -1,13 +1,15 @@
 /**
  * Les prix Cardmarket : l'API du site
- * (`/api/prices`), que la tâche d'ingestion `prices` met à jour (`server/jobs/prices.ts`).
+ * (`/api/prices`), que la tâche d'ingestion `prices` met à jour (`server/jobs/prices.ts`), et leur
+ * historique (`/api/prices/<id>` pour une carte, `/api/histories` pour la collection).
  * Facultatifs : sans eux (serveur arrêté, base encore vide), `null`, et l'app s'affiche sans prix.
  */
 
 import { create } from 'zustand'
-import { getJson } from '@/lib/api'
+import { forget, getJson } from '@/lib/api'
+import { historiesOf } from '@/lib/prices'
 import { settled } from '@/lib/settled'
-import type { CardPriceHistory, PriceFile } from '@/types'
+import type { CardPriceHistory, PriceFile, PriceHistories } from '@/types'
 
 const usePriceStore = create<{ prices: PriceFile | null; loaded: boolean }>(() => ({
   prices: null,
@@ -54,21 +56,47 @@ export function usePricesMissing() {
 export const loadPriceHistory = (cardmarket: number) =>
   getJson<CardPriceHistory>(`/api/prices/${cardmarket}`, 10_000)
 
-const collections = new Map<
-  string,
-  { parts: Promise<CardPriceHistory | null>[]; all: Promise<CardPriceHistory[]> }
->()
+/** Les historiques d'une collection (`loadPriceHistories`). */
+interface CollectionHistories {
+  histories: CardPriceHistory[]
+  /** Les cartes absentes de la réponse : celle gardée par le service worker, d'avant elles. */
+  missing: number
+}
 
 /**
- * Les historiques de plusieurs cartes (ceux que le serveur connaît) ; la même promesse par liste,
- * refaite si l'un d'eux est redemandé après une panne.
+ * La dernière liste demandée, seule gardée : une liste d'avant (la collection a changé depuis) ne
+ * revient pas, et sa réponse (les historiques de toute la collection) pèse plusieurs Mo.
+ */
+let last: {
+  url: string
+  key: string
+  response: Promise<PriceHistories | null>
+  histories: Promise<CollectionHistories | null>
+} | null = null
+
+/**
+ * Les historiques des cartes `cardmarkets` (au moins une), ceux que le serveur connaît, en une
+ * demande (`/api/histories`, chaque id une fois) relue dans l'ordre de la liste (`historiesOf`) ;
+ * `null` si le serveur ne répond pas. Le serveur répond pour chaque id (`null` sans historique) : un
+ * id absent vient d'une copie du service worker demandée avec d'autres ids (sans réseau, ou sans
+ * réponse en 4 s), comptée dans `missing`. La même promesse pour la même liste, lue par `use()`,
+ * refaite quand la réponse est redemandée après une panne (`getJson`).
  */
 export function loadPriceHistories(cardmarkets: readonly number[]) {
   const key = cardmarkets.join()
-  const parts = cardmarkets.map(loadPriceHistory)
-  const known = collections.get(key)
-  if (known && parts.every((part, index) => part === known.parts[index])) return known.all
-  const all = settled(Promise.all(parts).then((list) => list.filter((history) => history !== null)))
-  collections.set(key, { parts, all })
-  return all
+  const url = `/api/histories?ids=${[...new Set(cardmarkets)].join()}`
+  if (last && last.url !== url) forget(last.url)
+  const response = getJson<PriceHistories>(url)
+  if (last?.key === key && last.response === response) return last.histories
+  const histories = settled(
+    response.then(
+      (found) =>
+        found && {
+          histories: historiesOf(found, cardmarkets),
+          missing: cardmarkets.filter((id) => !(id in found)).length,
+        },
+    ),
+  )
+  last = { url, key, response, histories }
+  return histories
 }

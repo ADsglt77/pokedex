@@ -195,18 +195,32 @@ interface ChartProps {
 }
 
 function CollectionChart({ cards, period, day }: ChartProps & { cards: PokemonCard[] }) {
-  // Les cartes sans id Cardmarket n'ont pas d'historique : elles ne pèsent pas sur la courbe. La
-  // même carte Cardmarket possédée pour deux Pokémon compte deux fois, comme dans la valeur du
-  // jour ; son historique n'est demandé qu'une fois.
+  // Les cartes sans id Cardmarket n'ont pas d'historique : elles ne pèsent pas sur la courbe (sans
+  // aucune, rien à demander). La même carte Cardmarket possédée pour deux Pokémon compte deux fois,
+  // comme dans la valeur du jour ; son historique n'est demandé qu'une fois.
   const ids = cards.flatMap((card) => card.cardmarket ?? []).sort((a, b) => a - b)
-  const histories = use(loadPriceHistories(ids))
-  const series = collectionHistory(histories)
+  const loaded = ids.length > 0 ? use(loadPriceHistories(ids)) : { histories: [], missing: 0 }
+  if (!loaded) {
+    return (
+      <p className="muted">
+        L’historique des prix n’est pas disponible pour le moment : réessayez dans quelques minutes.
+      </p>
+    )
+  }
+  const series = collectionHistory(loaded.histories)
   const window = periodWindow(period, day, series[0]?.date ?? null)
   const points = inWindow(series, window)
   return (
     <>
       <PriceChart points={points} window={window} label="Valeur de ma collection" />
       <ChartStats items={levelStats(points)} />
+      {loaded.missing > 0 && (
+        <p className="hint">
+          Courbe d’une copie gardée sur cet appareil (réseau lent ou absent), sans{' '}
+          {plural(loaded.missing, 'carte ajoutée', 'cartes ajoutées')} depuis. Rechargez la page une
+          fois le réseau revenu.
+        </p>
+      )}
     </>
   )
 }

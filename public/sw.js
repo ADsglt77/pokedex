@@ -6,8 +6,12 @@
  *   oublie l'ancienne. Les pages : le réseau d'abord, l'app gardée (`/index.html`) sans lui. Les
  *   fichiers de `public/` (thème, manifeste, icônes), dont le nom ne change pas : le réseau
  *   d'abord, eux aussi.
- * - Les données de référence (espèces, catalogue, prix) : le réseau d'abord, la dernière réponse
- *   sans lui.
+ * - Les données de référence (espèces, catalogue, prix et historiques) : le réseau d'abord, la
+ *   dernière réponse sans lui, gardée par son chemin, sans les paramètres : une seule copie des
+ *   historiques de la collection (`/api/histories?ids=…`), quels que soient les ids, et non une
+ *   par collection. Une copie demandée avec d'autres ids sert encore : chaque id y a sa clé, la
+ *   page y prend ceux de ses cartes ; une carte qui n'y est pas (ajoutée depuis) ne pèse pas sur
+ *   la courbe, et la page Valeur le dit sous elle.
  * - « Le réseau d'abord » : sans réponse en 4 s (un réseau faible), la version gardée s'il y en a
  *   une ; sinon le réseau, aussi lent soit-il.
  * - Les images : gardées dès leur premier affichage (elles ne changent pas), 3 000 au plus.
@@ -29,7 +33,7 @@ const IMAGES = 'images'
 const MAX_IMAGES = 3000
 
 /** Les réponses de l'API gardées pour le hors-ligne : les données de référence, publiques. */
-const REFERENCE = ['/api/species', '/api/catalog', '/api/prices']
+const REFERENCE = ['/api/species', '/api/catalog', '/api/prices', '/api/histories']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -64,7 +68,7 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') event.respondWith(page(request))
   else if (url.pathname.startsWith('/assets/')) event.respondWith(kept(APP, request))
   else if (REFERENCE.some((path) => url.pathname.startsWith(path))) {
-    event.respondWith(fresh(DATA, event))
+    event.respondWith(fresh(DATA, event, url.pathname))
   } else if (url.pathname.startsWith('/images/')) event.respondWith(image(request))
   else if (PRECACHE.includes(url.pathname)) event.respondWith(fresh(APP, event))
 })
@@ -105,9 +109,9 @@ async function kept(name, request) {
 /**
  * Le réseau d'abord ; sans lui, la dernière réponse gardée. Celle du réseau est gardée dans le
  * cache `name` dès qu'elle arrive, même après la copie servie (`waitUntil` : le service worker
- * l'attend).
+ * l'attend), sous la clé `key` (la requête, ou son seul chemin).
  */
-function fresh(name, event) {
+function fresh(name, event, key = event.request) {
   const { request } = event
   const response = fetch(request)
   event.waitUntil(
@@ -116,11 +120,11 @@ function fresh(name, event) {
         if (!fetched.ok) return
         // Copiée avant que la page ne lise la réponse.
         const copy = fetched.clone()
-        await (await caches.open(name)).put(request, copy)
+        await (await caches.open(name)).put(key, copy)
       })
       .catch(() => {}),
   )
-  return networkFirst(response, () => caches.match(request))
+  return networkFirst(response, () => caches.match(key))
 }
 
 let added = 0

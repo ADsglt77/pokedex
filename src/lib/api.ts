@@ -29,10 +29,11 @@ interface Request {
 const requests = new Map<string, Request>()
 
 /**
- * Une réponse de l'API, toujours la même promesse pour une adresse (lue par `use()`) : `null`
- * si elle manque (404). Une panne passagère (réseau, pas de réponse en `timeout` ms, réponse
- * illisible) donne aussi `null`, mais la réponse est redemandée la prochaine fois qu'elle sert, une
- * minute après au plus tôt : pas une requête à chaque affichage tant que le serveur ne répond pas.
+ * Une réponse de l'API, toujours la même promesse pour une adresse (lue par `use()`), tant qu'elle
+ * n'est pas oubliée (`forget`) : `null` si elle manque (404). Une panne passagère (réseau, pas de
+ * réponse en `timeout` ms, réponse illisible) donne aussi `null`, mais la réponse est redemandée la
+ * prochaine fois qu'elle sert, une minute après au plus tôt : pas une requête à chaque affichage
+ * tant que le serveur ne répond pas.
  */
 export function getJson<T>(url: string, timeout?: number): Promise<T | null> {
   const known = requests.get(url)
@@ -55,6 +56,14 @@ export function getJson<T>(url: string, timeout?: number): Promise<T | null> {
   }
   requests.set(url, request)
   return request.response as Promise<T | null>
+}
+
+/**
+ * Oublie la réponse d'une adresse qui ne reviendra pas (les historiques d'une collection qui a
+ * changé depuis) : `getJson` ne la garde plus en mémoire, et la redemanderait.
+ */
+export function forget(url: string) {
+  requests.delete(url)
 }
 
 /**

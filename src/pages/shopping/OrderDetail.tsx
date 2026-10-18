@@ -11,7 +11,7 @@ import { useCollectionStore } from '@/store/collection'
 import type { Order, OrderState } from '@/types'
 import { CardLine } from './CardLine'
 import { OrderTotals } from './OrderTotals'
-import styles from './ShoppingPage.module.css'
+import page from './ShoppingPage.module.css'
 
 const STATE_TONES = { pending: 'info', received: 'success', cancelled: 'neutral' } as const
 
@@ -87,7 +87,7 @@ export function OrderDetail({
             title={`Achetée il y a plus de ${LATE_AFTER_DAYS} jours, toujours en cours`}
           />
         )}
-        <ul className={styles.lines}>
+        <ul className={page.lines}>
           {order.lines.map((line, index) => {
             const card = findCard(line.cardId, collection)
             const detail = details(
@@ -109,7 +109,7 @@ export function OrderDetail({
             <ExternalLink href={order.link}>La commande chez {supplierLabel(order)}</ExternalLink>
           </p>
         )}
-        {order.note && <p className={styles.note}>{order.note}</p>}
+        {order.note && <p className={page.note}>{order.note}</p>}
         {/* Ici plutôt qu'en pied de fenêtre : sur téléphone, trois boutons n'y tiennent pas. */}
         <div>
           <Button

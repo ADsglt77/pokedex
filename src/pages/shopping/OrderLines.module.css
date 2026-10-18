@@ -1,0 +1,13 @@
+/* Les cartes d'une commande : la quantité et le prix de chaque ligne, un doublon signalé */
+
+.quantity {
+  width: 4.5rem;
+}
+
+.price {
+  width: 7.5rem;
+}
+
+.warn {
+  color: var(--camply-warn);
+}

@@ -1,5 +1,4 @@
-import { Button, Combobox, IconButton, Input, Modal, Select, Stack, Textarea } from '@camply/ui'
-import { X } from '@camply/ui/icons'
+import { Button, Input, Modal, Select, Stack, Textarea } from '@camply/ui'
 import { useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { EuroField } from '@/components/EuroInput'
@@ -7,9 +6,8 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SegmentedField } from '@/components/SegmentedField'
 import { ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { useCollectionAction } from '@/hooks/useNotify'
-import { keepFocusInList } from '@/lib/focus'
 import { monthOf, spentIn } from '@/lib/budget'
-import { cardTitle, findCard } from '@/lib/species'
+import { cx } from '@/lib/cx'
 import {
   euroInput,
   formatEuro,
@@ -19,24 +17,15 @@ import {
   plural,
   toOptions,
 } from '@/lib/format'
-import {
-  cardCount,
-  cents,
-  duplicateReason,
-  orderSpent,
-  previousOf,
-  refundFits,
-  unitCosts,
-} from '@/lib/orders'
-import { marketPrice } from '@/lib/prices'
+import { cardCount, cents, orderSpent, previousOf, refundFits } from '@/lib/orders'
 import { useCollectionStore } from '@/store/collection'
-import { usePrices } from '@/store/prices'
 import { useShoppingStore } from '@/store/shopping'
 import type { CollectionData, Order, OrderLine, OrderState, Supplier } from '@/types'
 import { BudgetLevelBadge, BudgetMeter } from '@/components/BudgetMeter'
-import { CardLine } from './CardLine'
+import { OrderLines, type DraftLine } from './OrderLines'
 import { OrderTotals } from './OrderTotals'
-import styles from './ShoppingPage.module.css'
+import page from './ShoppingPage.module.css'
+import styles from './OrderForm.module.css'
 
 const SUPPLIER_OPTIONS = toOptions(SUPPLIER_LABELS)
 const STATE_OPTIONS = toOptions(ORDER_STATE_LABELS)
@@ -61,7 +50,7 @@ interface Draft {
   refunded: string
   link: string
   note: string
-  lines: { cardId: string; quantity: string; unitPrice: string }[]
+  lines: DraftLine[]
 }
 
 const amountText = (value: number) => (value ? euroInput(value) : '')
@@ -154,7 +143,6 @@ export function OrderForm({
   const act = useCollectionAction()
   const collection = useCollectionStore((state) => state.collection)
   const { orders, budget } = useShoppingStore((state) => state.shopping)
-  const prices = usePrices()
   const stored = orders.find((known) => known.id === base.id) ?? null
   const others = orders.filter((known) => known.id !== base.id)
   const [draft, setDraft] = useState(() => toDraft(base))
@@ -162,36 +150,14 @@ export function OrderForm({
   const [submitted, setSubmitted] = useState(false)
   const [overCeiling, setOverCeiling] = useState<{ order: Order; monthTotal: number } | null>(null)
   const fields = useRef<HTMLElement>(null)
-  const list = useRef<HTMLUListElement>(null)
-  const cardsTitle = useRef<HTMLHeadingElement>(null)
   const set = (change: Partial<Draft>) => setDraft({ ...draft, ...change })
 
   const read = readDraft(draft, base, stored, collection)
   const { order } = read
   const errors = submitted ? read.errors : {}
-  const costs = unitCosts(order)
   // Le mois de la commande avec elle, suivi pendant la saisie.
   const month = monthOf(order.date)
   const monthTotal = cents(spentIn(others, month).spent + orderSpent(order))
-  const inLines = new Set(draft.lines.map((line) => line.cardId))
-  // Les cartes du Pokédex qui ne sont pas déjà dans la commande.
-  const addable = Object.values(collection.customCards)
-    .filter((card) => !inLines.has(card.id))
-    .map((card) => ({ value: card.id, label: `${cardTitle(card)} · ${card.reference}` }))
-    .sort((a, b) => a.label.localeCompare(b.label, 'fr'))
-
-  const addLine = (cardId: string) => {
-    const card = findCard(cardId, collection)!
-    const price = marketPrice(prices, card)
-    set({
-      lines: [
-        ...draft.lines,
-        { cardId, quantity: '1', unitPrice: price === null ? '' : euroInput(price) },
-      ],
-    })
-  }
-  const setLine = (index: number, change: Partial<Draft['lines'][number]>) =>
-    set({ lines: draft.lines.map((line, i) => (i === index ? { ...line, ...change } : line)) })
 
   const save = (order: Order) => {
     const count = cardCount(order.lines)
@@ -291,98 +257,16 @@ export function OrderForm({
           />
         )}
 
-        <Stack gap={3}>
-          <h3 ref={cardsTitle} tabIndex={-1} className={styles.formTitle}>
-            Cartes
-          </h3>
-          {draft.lines.length > 0 && (
-            <ul ref={list} className={styles.lines}>
-              {draft.lines.map((line, index) => {
-                const card = findCard(line.cardId, collection)
-                const duplicate = duplicateReason(order.lines[index]!, others)
-                const unreadable =
-                  read.errors[`quantity-${line.cardId}`] || read.errors[`price-${line.cardId}`]
-                // Le focus va à la ligne suivante, au titre « Cartes » s'il n'en reste aucune.
-                const remove = () =>
-                  keepFocusInList(
-                    list,
-                    index,
-                    () => set({ lines: draft.lines.filter((_, i) => i !== index) }),
-                    cardsTitle,
-                  )
-                if (!card) {
-                  return (
-                    <li key={line.cardId}>
-                      <CardLine card={null}>
-                        <IconButton
-                          label="Retirer cette carte de la commande"
-                          size="sm"
-                          variant="ghost"
-                          onClick={remove}
-                        >
-                          <X size={15} />
-                        </IconButton>
-                      </CardLine>
-                    </li>
-                  )
-                }
-                return (
-                  <li key={line.cardId}>
-                    <CardLine
-                      card={card}
-                      detail={
-                        duplicate ? (
-                          <span className={styles.warn}>{duplicate}</span>
-                        ) : (
-                          !unreadable && `revient à ${formatEuro(costs[index] ?? 0)}`
-                        )
-                      }
-                    >
-                      <Input
-                        className={styles.quantity}
-                        size="sm"
-                        aria-label={`Quantité, ${card.reference}`}
-                        inputMode="numeric"
-                        value={line.quantity}
-                        error={errors[`quantity-${line.cardId}`]}
-                        onChange={(event) => setLine(index, { quantity: event.target.value })}
-                      />
-                      <EuroField
-                        className={styles.price}
-                        size="sm"
-                        aria-label={`Prix d’une carte, ${card.reference}`}
-                        value={line.unitPrice}
-                        error={errors[`price-${line.cardId}`]}
-                        onChange={(event) => setLine(index, { unitPrice: event.target.value })}
-                      />
-                      <IconButton
-                        label={`Retirer ${card.reference} de la commande`}
-                        size="sm"
-                        variant="ghost"
-                        onClick={remove}
-                      >
-                        <X size={15} />
-                      </IconButton>
-                    </CardLine>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-          <Combobox
-            label="Ajouter une carte"
-            hint="Une carte de votre Pokédex. Pour une autre, ajoutez-la d’abord sur la fiche de son Pokémon."
-            placeholder="Nom ou référence…"
-            emptyMessage="Aucune carte trouvée."
-            options={addable}
-            error={errors.lines}
-            // Toujours vide : la carte choisie part dans les lignes, la case repart à zéro.
-            value=""
-            onChange={addLine}
-          />
-        </Stack>
+        <OrderLines
+          lines={draft.lines}
+          order={order}
+          others={others}
+          errors={errors}
+          readErrors={read.errors}
+          onChange={(lines) => set({ lines })}
+        />
 
-        <div className={styles.formGrid3}>
+        <div className={page.formGrid3}>
           {(['shipping', 'fees', 'refunded'] as const).map((key) => (
             <EuroField
               key={key}
@@ -396,7 +280,7 @@ export function OrderForm({
 
         <OrderTotals order={order} />
         {!read.errors.date && (
-          <div className={styles.orderBudget}>
+          <div className={cx(page.amountsColumn, styles.orderBudget)}>
             <p>
               En {formatMonth(month)}, avec cette commande&nbsp;:{' '}
               <strong>{formatEuro(monthTotal)}</strong>{' '}

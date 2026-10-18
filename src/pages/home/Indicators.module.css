@@ -1,0 +1,16 @@
+/* Indicateurs : la statistique entière mène à sa page */
+
+.statLink {
+  display: grid;
+  border-radius: var(--camply-radius-lg);
+  color: inherit;
+  text-decoration: none;
+}
+
+.statLink > * {
+  transition: border-color var(--duration-fast);
+}
+
+.statLink:hover > * {
+  border-color: var(--camply-border-strong);
+}

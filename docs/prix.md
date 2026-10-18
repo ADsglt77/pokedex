@@ -20,10 +20,11 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
   404 tant que le guide n'a jamais été lu) est calculée et gardée compressée (`snapshots`, avec un
   ETag : 304 si le navigateur l'a déjà). L'app la charge au premier écran qui affiche un prix
   (l'accueil, pour sa valeur ; pas le Pokédex), et l'historique d'une carte à la demande
-  (`/api/prices/<id>`) : la courbe, le nom affiché dans le formulaire pour vérifier l'id saisi (au
-  départ du champ). Le Pokédex public ne la charge pas : `/api/vitrine` donne les prix de ses
-  seules cartes possédées (`readPrices` avec leurs ids, `docs/compte-et-synchronisation.md`). Sans
-  serveur, ou base encore vide, l'app marche sans prix. Une réponse manquante (404) n'est pas
+  (`/api/prices/<id>`, 404 sans historique) : la courbe de sa fiche, le nom affiché dans le
+  formulaire pour vérifier l'id saisi (au départ du champ) ; ceux de la collection, en une fois
+  (`/api/histories`, plus bas). Le Pokédex public ne la charge pas : `/api/vitrine` donne les prix
+  de ses seules cartes possédées (`readPrices` avec leurs ids, `docs/compte-et-synchronisation.md`).
+  Sans serveur, ou base encore vide, l'app marche sans prix. Une réponse manquante (404) n'est pas
   redemandée ; après une panne passagère (réseau, délai, réponse illisible), elle l'est la fois
   suivante où elle sert, au plus une fois par minute (`getJson`, `lib/api.ts` : la règle vaut pour
   toute lecture de l'API, catalogue et historiques compris, sauf l'état des tâches et les lignes de
@@ -32,6 +33,28 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
   L'ancien historique (les fichiers du volume `prices`,
   un par carte) est repris au premier démarrage d'`ingest` (`legacy-prices.ts`), vérifié avant
   d'être gardé : nombre de cartes, somme des prix, échantillon relu tel que l'API le sert.
+- Historiques de la collection (`GET /api/histories?ids=719621,719654`, `server/reference.ts`) :
+  la courbe de la valeur (Valeur › Évolution) demande ceux de toutes ses cartes possédées en une
+  fois, et non une demande par carte. Une clé par id demandé, son historique ou `null` ; `ids`
+  validés comme ceux de `/api/wants` (des entiers de 1 à 9 chiffres, sans zéro devant, séparés par
+  des virgules ; 422 sinon), 1 025 au plus (une carte par Pokémon : avec les ids de 6 chiffres
+  d'aujourd'hui, l'adresse d'une collection complète fait ≈ 7 Ko, sous les 8 Ko de la ligne de
+  requête que nginx accepte par défaut) ; chaque id lu une fois, requête préparée une fois
+  (`historyReader`, `server/history.ts`, la même pour `/api/prices/<id>`) ;
+  `Cache-Control: no-cache`. L'app y met chaque id une fois (`loadPriceHistories`,
+  `store/prices.ts`) et relit la réponse dans l'ordre de ses cartes (`historiesOf`,
+  `lib/prices.ts`, testé) : la même carte Cardmarket possédée pour deux Pokémon compte deux fois,
+  comme dans la valeur du jour (une TAG TEAM, une seule carte, une fois) ; une carte sans id ou
+  sans historique ne pèse pas sur la courbe. Seule la réponse de la dernière liste reste en mémoire
+  (`forget`, `lib/api.ts`) : celle d'une collection qui a changé depuis ne revient pas, et pèse
+  plusieurs Mo pour une collection presque complète. Sans réponse : « L'historique des prix n'est
+  pas disponible pour le moment ». Sans réseau, ou sans réponse en 4 s (un réseau faible), le
+  service worker sert la dernière réponse, gardée sous une seule clé quels que soient les ids
+  (`docs/interface.md`) : une carte ajoutée depuis n'y est pas. Le serveur répondant pour chaque
+  id, une clé absente le révèle : la page compte ces cartes et le dit sous la courbe (« Courbe
+  d'une copie gardée sur cet appareil (réseau lent ou absent), sans 2 cartes ajoutées depuis »),
+  jusqu'au rechargement de la page (`getJson` garde la réponse lue ; celle du réseau, si elle est
+  arrivée depuis, a remplacé la copie du service worker).
 - Liste de souhaits Cardmarket (`GET /api/wants?ids=719621,719654`, `server/reference.ts` ; ses
   règles, pures : `wantsLine` et sa version `wantsVersion`, de `lib/cardmarket.ts`, testées dans
   `tests/wants.test.ts`, une mauvaise version achèterait une autre carte ; le serveur ne fait qu'en

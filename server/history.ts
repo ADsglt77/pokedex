@@ -69,15 +69,28 @@ export function joinYears(years: HistoryYear[]): Pick<CardPriceHistory, 'from' |
   return { from, prices }
 }
 
-/** L'historique d'une carte Cardmarket ; `null` si elle n'en a pas. */
-export function readHistory(db: Database, id: number): CardPriceHistory | null {
-  const rows = db
-    .query('SELECT year, first, prices FROM cardmarket_history WHERE id = ? ORDER BY year')
-    .all(id) as { year: number; first: number; prices: string }[]
-  const joined = joinYears(rows.map((row) => ({ ...row, prices: JSON.parse(row.prices) })))
-  if (!joined) return null
-  const product = db.query('SELECT name FROM cardmarket_products WHERE id = ?').get(id) as {
-    name: string
-  } | null
-  return { name: product?.name ?? null, ...joined }
+/**
+ * La lecture de l'historique d'une carte Cardmarket, requête préparée une fois (l'API en lit
+ * jusqu'à 1 025 par demande) : `null` si elle n'en a pas.
+ */
+export function historyReader(db: Database) {
+  // Chaque année de la carte, avec son nom chez Cardmarket (vide hors de la liste des produits).
+  const years = db.query(
+    `SELECT history.year, history.first, history.prices, products.name
+     FROM cardmarket_history AS history
+     LEFT JOIN cardmarket_products AS products ON products.id = history.id
+     WHERE history.id = ? ORDER BY history.year`,
+  )
+  return (id: number): CardPriceHistory | null => {
+    const rows = years.all(id) as {
+      year: number
+      first: number
+      prices: string
+      name: string | null
+    }[]
+    const joined = joinYears(
+      rows.map(({ year, first, prices }) => ({ year, first, prices: JSON.parse(prices) })),
+    )
+    return joined && { name: rows[0]!.name, ...joined }
+  }
 }
