@@ -18,6 +18,7 @@ export function Panel({
   className,
   flush = false,
   titleRef,
+  headingLevel = 2,
   children,
 }: {
   title: ReactNode
@@ -29,6 +30,8 @@ export function Panel({
   flush?: boolean
   /** Le titre peut recevoir le focus : quand une action fait disparaître ce qui l'avait. */
   titleRef?: Ref<HTMLHeadingElement>
+  /** 3 dans une fenêtre, dont le titre est le h2. */
+  headingLevel?: 2 | 3
   children?: ReactNode
 }) {
   return (
@@ -38,7 +41,7 @@ export function Panel({
           <CardTitle
             ref={titleRef}
             tabIndex={titleRef ? -1 : undefined}
-            headingLevel={2}
+            headingLevel={headingLevel}
             className={styles.title}
           >
             {title}

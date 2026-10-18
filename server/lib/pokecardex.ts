@@ -23,13 +23,25 @@ export interface PokecardexCard {
   sort: number
   name_card_fr: string | null
   name_card_en: string | null
+  name_card_de: string | null
   /** Ses Pokémon (numéros du Pokédex) ; vide pour un dresseur ou une énergie. */
   id_pokedex_list: number[] | null
   id_cardmarket: number | null
   /** Sa rareté (`raretes` de la page). */
   id_rarete: number | null
-  /** Son type (`CARD_TYPES`, `src/config/catalog.ts`). */
+  /** Son type (`CARD_TYPES`, `src/config/catalog.ts`), ou sa catégorie de dresseur, ou énergie. */
   id_type: number | null
+  nom_illustrateur: string | null
+  /** Ses versions : « Standard », « Reverse », « Reverse Masterball »… */
+  versions: { nom_version: string }[] | null
+}
+
+/** Un bloc du menu des séries (« Scarlet & Violet ») : ses séries en boosters, puis ses decks. */
+interface PokecardexBlock {
+  name: string
+  nameUS: string
+  series: { shortName: string }[]
+  decks?: { shortName: string }[]
 }
 
 /** Une série japonaise : sa page (`/series/jp/SV2A`). */
@@ -43,11 +55,12 @@ export interface PokecardexSeries {
   cartes: PokecardexCard[]
   /** Toutes ses raretés (pas seulement celles de la série), dans son ordre. */
   raretes?: { id_rarete: number; nom_rarete: string; order_rarete: number }[]
-  /** Le menu des séries, par bloc (« Scarlet & Violet », « Asia Exclusive »…). */
-  seriesMenu?: {
-    blocksByRegion?: { JP?: { nameUS: string; series: { shortName: string }[] }[] }
-  }
+  /** Le menu des séries, par bloc (« Scarlet & Violet », « Asia Exclusive »…), des plus récents aux plus anciens. */
+  seriesMenu?: { blocksByRegion?: { JP?: PokecardexBlock[] } }
 }
+
+/** Les blocs japonais du menu de la page, dans son ordre. */
+export const menuBlocks = (page: PokecardexSeries) => page.seriesMenu?.blocksByRegion?.JP ?? []
 
 /**
  * Les séries du bloc « Asia Exclusive » du menu (Chine, Hong Kong et Taïwan, Indonésie,
@@ -55,7 +68,7 @@ export interface PokecardexSeries {
  */
 export const asiaExclusive = (page: PokecardexSeries) =>
   new Set(
-    (page.seriesMenu?.blocksByRegion?.JP ?? [])
+    menuBlocks(page)
       .filter((block) => /asia exclusive/i.test(block.nameUS))
       .flatMap((block) => block.series.map((series) => series.shortName)),
   )

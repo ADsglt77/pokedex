@@ -85,7 +85,9 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
     que créée après S2 107 (464054), la V.2 ; dans Pokémon Card 151, sv2a 004 (719446) est la V.1,
     sv2a 168 (719621) la V.2.
   - Ce numéro, seul le catalogue Pokécardex le connaît (`cards.number` des cartes dont
-    `cards.cardmarket` est ce produit). La version n'est donnée que si chaque produit du groupe y a
+    `cards.cardmarket` est ce produit ; dresseurs et énergies compris depuis octobre 2026 : leurs
+    produits ont aussi leur ligne, aux mêmes règles, et pour une carte Pokémon cela ne peut que
+    retirer des lignes, un nom de série pouvant être porté par plus d'extensions). La version n'est donnée que si chaque produit du groupe y a
     exactement un numéro, fait de chiffres seulement, et que deux produits n'ont jamais le même :
     c'est alors le rang du numéro du produit dans le groupe, par valeur (037 → 37), à partir de 1.
     Sinon (un produit du groupe absent du catalogue, un numéro comme TG01 ou SV-P, deux produits

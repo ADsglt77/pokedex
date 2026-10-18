@@ -11,11 +11,10 @@ import type { CardPrice } from '@/types'
 import styles from './CatalogTile.module.css'
 
 /**
- * Une carte du catalogue à choisir, serrée : son image ; sur une ligne `heading` (« SV2A 166 », ou
- * « 166 » dans une seule extension) et son prix Cardmarket du jour (une ébauche tant que les prix
- * arrivent) ; sur la suivante, sa rareté et ce qu'on veut dire de plus (`children` : le Pokémon,
- * « déjà une carte »…).
- * Un bouton : `pressed` pour la carte choisie, `disabled` quand on ne peut pas la prendre.
+ * Une carte du catalogue, serrée : son image ; sur une ligne `heading` (« SV2A 166 », ou « 166 »
+ * dans une seule extension) et son prix Cardmarket du jour (une ébauche tant que les prix
+ * arrivent) ; sur la suivante, sa rareté et ce qu'on veut dire de plus (`children` : son nom, ses
+ * autres Pokémon…). Un bouton : `pressed` pour la carte choisie.
  */
 export function CatalogTile({
   card,
@@ -23,28 +22,21 @@ export function CatalogTile({
   price,
   speciesId,
   pressed,
-  disabled,
   onPick,
   children,
 }: {
-  card: CatalogCard
+  card: Pick<CatalogCard, 'image' | 'reference' | 'rarity'>
   heading: string
   price: CardPrice | null
-  speciesId: number
+  /** Son Pokémon (le sprite d'une carte sans image) ; aucun pour un dresseur, une énergie. */
+  speciesId?: number
   pressed?: boolean
-  disabled?: boolean
   onPick: () => void
   children?: ReactNode
 }) {
-  // Pas d'`aria-label` : le texte de la tuile la nomme, `children` compris (« Choisir pour… »).
+  // Pas d'`aria-label` : le texte de la tuile la nomme, `children` compris.
   return (
-    <button
-      type="button"
-      className={styles.choice}
-      aria-pressed={pressed}
-      disabled={disabled}
-      onClick={onPick}
-    >
+    <button type="button" className={styles.choice} aria-pressed={pressed} onClick={onPick}>
       <CardArt card={card} speciesId={speciesId} alt="" className={styles.art} />
       <span className={styles.line}>
         <span className={styles.code}>{heading}</span>

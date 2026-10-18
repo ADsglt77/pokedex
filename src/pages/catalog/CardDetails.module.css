@@ -1,0 +1,96 @@
+/* La fiche d'une carte : son image à gauche, qui reste à l'écran quand le reste défile, ce qu'on en
+   sait et son prix à droite ; l'une sous l'autre sur un écran étroit. */
+.sheet {
+  display: grid;
+  grid-template-columns: minmax(14rem, 22rem) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--camply-space-6);
+  max-width: 72rem;
+  margin-inline: auto;
+  /* Ramenée à l'écran pour une autre carte (`scrollIntoView`), la fiche remonte tout en haut de
+     ce qui défile, marge de la fenêtre comprise. */
+  scroll-margin-top: 100vh;
+}
+
+.art {
+  position: sticky;
+  top: 0;
+}
+
+.info {
+  display: grid;
+  gap: var(--camply-space-5);
+  min-width: 0;
+}
+
+.facts {
+  display: grid;
+  gap: var(--camply-space-2);
+}
+
+.heading {
+  margin: 0;
+  color: var(--camply-text-strong);
+  font-size: var(--title-sm);
+}
+
+/* Une icône (rareté, type) ou une pastille à côté de son texte. */
+.inline {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+/* Le pied : les flèches des cartes voisines à gauche, l'ajout à droite (dessous s'il ne tient pas). */
+.footer {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--camply-space-2) var(--camply-space-4);
+  min-width: 0;
+}
+
+.browse {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.position {
+  min-width: 4.5rem;
+  color: var(--camply-text-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* « Dans votre collection », à la place du bouton : il peut recevoir le focus après l'ajout. */
+.done {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--camply-success);
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+@media (max-width: 48rem) {
+  .sheet {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .art {
+    position: static;
+    justify-self: center;
+    width: min(100%, 18rem);
+  }
+}

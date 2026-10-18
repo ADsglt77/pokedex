@@ -1,15 +1,11 @@
-/* L'extension montrée : son logo, son nom et sa progression, puis les réglages de l'ajout et les
-   filtres, chacun sous un filet. */
-.set {
-  min-width: 0;
-}
-
-/* Le logo à gauche, le nom et la progression au milieu, le bouton à droite (dessous sur téléphone). */
+/* L'extension montrée : son logo à gauche, son nom et ce qu'on en sait au milieu, le bouton qui en
+   change à droite (dessous sur téléphone). */
 .head {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--camply-space-3) var(--camply-space-5);
+  min-width: 0;
   padding: var(--space-panel);
 }
 
@@ -25,7 +21,6 @@
   min-width: 0;
 }
 
-/* Le titre peut recevoir le focus (fin d'une extension) : pas de contour à la souris. */
 .name {
   margin: 0;
   font-size: var(--title-sm);
@@ -37,54 +32,20 @@
   font-size: var(--text-sm);
 }
 
-/* Ce que l'extension apporte : ses Pokémon qui ont déjà leur carte, en texte et en réglette. */
-.coverage {
-  display: grid;
-  gap: 0.375rem;
-  max-width: 32rem;
-  margin-top: 0.375rem;
-  font-size: var(--text-md);
-}
-
-.coverage p {
-  margin: 0;
-}
-
-.coverage strong {
-  color: var(--camply-text-strong);
-}
-
 .change {
   align-self: start;
 }
 
-/* Les réglages de l'ajout et les filtres, chacun sous un filet. */
-.options,
-.filters {
-  padding: var(--camply-space-3) var(--space-panel);
-  border-top: 1px solid var(--camply-border-soft);
+/* La recherche, puis les filtres de rareté et de type. */
+.tools {
+  display: grid;
+  gap: var(--camply-space-3);
 }
 
-.options {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem 1.5rem;
-}
-
-.filters {
-  padding-bottom: var(--space-panel);
-}
-
-/* Sans filtre à montrer (une seule rareté, un seul type), pas de bande vide. */
-.filters:empty {
-  display: none;
-}
-
-/* Le libellé de « Ajouter comme », à la taille de celui de l'interrupteur voisin. */
-.label {
-  color: var(--camply-text-muted);
-  font-size: var(--text-md);
+/* La recherche à une largeur de champ, pas celle de la page. */
+.search,
+.searchSkeleton {
+  max-width: 28rem;
 }
 
 /* Sur un écran étroit, le logo et le nom côte à côte, le bouton dessous, de toute la largeur. */

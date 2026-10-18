@@ -11,11 +11,25 @@ import { loadPriceHistory, usePrices, usePricesMissing } from '@/store/prices'
 import type { PokemonCard } from '@/types'
 import styles from './PricePanel.module.css'
 
+/** Une carte chez Cardmarket : de quoi trouver son prix, sa page, et nommer sa courbe. */
+type PricedCard = Pick<PokemonCard, 'cardmarket' | 'page' | 'reference'>
+
 /**
  * La carte chez Cardmarket : son id et sa page, son prix du jour, son évolution et, si le prix
- * payé (`paid`) est noté, l'écart.
+ * payé (`paid`) est noté, l'écart (la fiche d'un Pokémon, une carte du catalogue). `withoutId` :
+ * ce qu'il dit d'une carte sans id Cardmarket.
  */
-export function PricePanel({ card, paid }: { card: PokemonCard; paid: number | null }) {
+export function PricePanel({
+  card,
+  paid = null,
+  withoutId,
+  headingLevel,
+}: {
+  card: PricedCard
+  paid?: number | null
+  withoutId: string
+  headingLevel?: 2 | 3
+}) {
   // L'historique est demandé tout de suite, avec les prix du jour (plus d'un Mo) et pas après eux :
   // la même promesse, que la courbe lira (`use`).
   if (card.cardmarket !== undefined) void loadPriceHistory(card.cardmarket)
@@ -26,6 +40,7 @@ export function PricePanel({ card, paid }: { card: PokemonCard; paid: number | n
   return (
     <Panel
       title="Prix Cardmarket"
+      headingLevel={headingLevel}
       description={
         card.cardmarket !== undefined && (
           <>
@@ -59,7 +74,7 @@ export function PricePanel({ card, paid }: { card: PokemonCard; paid: number | n
             ? 'Les prix ne sont pas disponibles pour le moment.'
             : card.cardmarket
               ? 'Cardmarket n’a pas de prix pour cette carte.'
-              : 'Pas de prix : ajoutez l’id Cardmarket de la carte (« Modifier la carte »).'}
+              : withoutId}
         </p>
       ) : (
         // Les prix arrivent : la place du prix est gardée.
@@ -74,7 +89,7 @@ export function PricePanel({ card, paid }: { card: PokemonCard; paid: number | n
  * choisie, et ses chiffres ; en repère, la moyenne de ses ventes sur 30 jours que donne le guide
  * des prix du jour (une vraie donnée de Cardmarket, quand l'historique relevé est encore court).
  */
-function PriceHistory({ card, avg30 }: { card: PokemonCard; avg30: number | null }) {
+function PriceHistory({ card, avg30 }: { card: PricedCard; avg30: number | null }) {
   const [period, setPeriod] = useState<ChartPeriod>('month')
   const history = use(loadPriceHistory(card.cardmarket!))
   const series = cardHistory(history)

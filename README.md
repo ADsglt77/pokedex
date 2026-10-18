@@ -25,9 +25,12 @@ bun run format   # Prettier
   jour, tri par date ou par prix, filtres de rareté et de type) ou saisie à la main, puis corrigée ou retirée ; en grand, son statut
   (commandée / possédée) et son prix payé, son prix Cardmarket et sa courbe, le lien
   vers sa page Cardmarket, les détails de l'espèce.
-- **Catalogue** : les cartes japonaises extension par extension, en tuiles serrées, filtrées par
-  rareté et par type ; les extensions se choisissent sur leur logo japonais ; un clic donne la
-  carte à ses Pokémon qui n'en ont pas (tous, pour une carte TAG TEAM).
+- **Catalogue** : un grand catalogue de toutes les cartes japonaises, Pokémon, dresseurs et
+  énergies, extension par extension (choisie sur son logo japonais), en tuiles serrées, avec une
+  recherche et des filtres de rareté et de type ; chaque carte a sa fiche (image en grand, numéro,
+  rareté, type, Pokémon, illustrateur, versions, noms anglais et allemand, prix Cardmarket et sa
+  courbe) et, pour une carte Pokémon, « Ajouter à la collection » (à acheter ; si le Pokémon a
+  déjà sa carte, elle la remplace après confirmation).
 - **Valeur** : prix Cardmarket du jour, valeur de la collection (et gain par rapport au prix
   payé), commandes, dépensé en tout, coût pour compléter le Pokédex ; courbes jour par jour (valeur,
   Pokémon débloqués, dépenses) sur 7 jours, 30 jours, 1 an ou tout, avec leurs chiffres.
@@ -53,9 +56,11 @@ bun run format   # Prettier
 Toutes les données passent par le serveur de l'app (`server/`, Elysia et une base SQLite) : le
 navigateur ne parle qu'à lui. Des tâches d'ingestion lisent les sources et remplissent la base :
 - `catalog`, chaque jour : le catalogue des cartes japonaises, d'après Pokécardex : ses ≈ 450
-  séries japonaises depuis 1996, decks et promos compris, avec le numéro, le nom, les Pokémon, l'id
-  Cardmarket, la rareté et le type de chaque carte (`/api/catalog`). Une page par série, une
-  toutes les 3 s : le premier passage prend une vingtaine de minutes ;
+  séries japonaises depuis 1996, decks et promos compris, toutes leurs cartes (dresseurs et
+  énergies comprises) avec le numéro, les noms, les Pokémon, l'id Cardmarket, la rareté, le type,
+  l'illustrateur et les versions de chacune, et le bloc de chaque série (`/api/catalog`,
+  `/api/catalog/sets`). Une page par série, une toutes les 3 s : le premier passage prend une
+  vingtaine de minutes ;
 - `prices`, toutes les 6 h : les prix d'après les fichiers publics de Cardmarket (le prix du jour
   de toutes ses cartes à l'unité, et l'historique de chacune ; `/api/prices`, `/api/histories`),
   et l'extension de chaque carte, pour les lignes de la liste de souhaits (`/api/wants`) ;

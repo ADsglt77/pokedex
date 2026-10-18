@@ -15,7 +15,7 @@
  * erreur (panne, réponse qui n'est pas une image) n'empêche pas les autres : rien n'est noté pour
  * elle, la tâche échoue à la fin pour être relancée, et l'image est redemandée. À la 20e
  * erreur, la source est sans doute en panne : la tâche s'arrête là. En fin de tâche, même
- * arrêtée, la réponse de `/api/catalog` est recalculée.
+ * arrêtée, les réponses du catalogue sont recalculées (`saveCatalog`).
  */
 
 import type { Database } from 'bun:sqlite'

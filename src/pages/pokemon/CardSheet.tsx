@@ -2,6 +2,7 @@ import { Button } from '@camply/ui'
 import { Plus } from '@camply/ui/icons'
 import { useEffect, useState, type Ref } from 'react'
 import { Panel } from '@/components/Panel'
+import { PricePanel } from '@/components/PricePanel'
 import { loadCatalog } from '@/lib/card-catalog'
 import { details, statusCaption } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
@@ -9,7 +10,6 @@ import { otherSpeciesNames } from '@/lib/species'
 import type { PokemonSpecies } from '@/types'
 import { CardActions } from './CardActions'
 import { CardForm } from './CardForm'
-import { PricePanel } from './PricePanel'
 import styles from './CardSheet.module.css'
 
 /**
@@ -41,7 +41,11 @@ export function CardSheet({
       >
         <CardActions view={view} species={species} />
       </Panel>
-      <PricePanel card={card} paid={view.paidPrice} />
+      <PricePanel
+        card={card}
+        paid={view.paidPrice}
+        withoutId="Pas de prix : ajoutez l’id Cardmarket de la carte (« Modifier la carte »)."
+      />
     </div>
   )
 }

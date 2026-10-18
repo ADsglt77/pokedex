@@ -201,6 +201,24 @@ const DATA_STEPS = [
   -- \`catalog\` la refasse, dès son démarrage (ou la boucle d'ingestion, à la sienne).
   DELETE FROM snapshots WHERE name = 'catalog';
   `,
+  `
+  -- Toutes les cartes de chaque série, dresseurs et énergies compris (sans Pokémon : rien dans
+  -- \`card_species\`), avec ce que Pokécardex en dit de plus, pour la page Catalogue : le numéro
+  -- tel qu'imprimé (« 006/165 » ; '' sans numéro), leurs noms anglais et allemand, leur
+  -- illustrateur, leurs versions (JSON : « Standard », « Reverse »…).
+  ALTER TABLE cards ADD COLUMN printed TEXT NOT NULL DEFAULT '';
+  ALTER TABLE cards ADD COLUMN name_en TEXT NOT NULL DEFAULT '';
+  ALTER TABLE cards ADD COLUMN name_de TEXT NOT NULL DEFAULT '';
+  ALTER TABLE cards ADD COLUMN illustrator TEXT NOT NULL DEFAULT '';
+  ALTER TABLE cards ADD COLUMN versions TEXT NOT NULL DEFAULT '[]';
+  -- Le bloc de chaque série dans le menu de Pokécardex (« Scarlet & Violet ») et son rang dans
+  -- le menu, nuls s'il ne la range pas ; \`deck\` : 1 pour un deck, 0 pour une série en boosters.
+  ALTER TABLE sets ADD COLUMN block TEXT;
+  ALTER TABLE sets ADD COLUMN block_rank INTEGER;
+  ALTER TABLE sets ADD COLUMN deck INTEGER NOT NULL DEFAULT 0;
+  -- Pour les remplir : le prochain passage de la tâche \`catalog\` relit toutes les séries.
+  UPDATE sets SET read_at = '1970-01-01T00:00:00.000Z';
+  `,
 ]
 
 /**

@@ -8,7 +8,8 @@ import styles from './CardArt.module.css'
 interface CardArtProps {
   /** `null` : aucune carte connue, on montre une pochette vide. */
   card: Pick<PokemonCard, 'image' | 'reference'> | null
-  speciesId: number
+  /** Son Pokémon, dont le sprite orne la carte de substitution ; aucun pour un dresseur, une énergie. */
+  speciesId?: number
   alt: string
   /** `large` charge le scan haute définition. */
   large?: boolean
@@ -67,7 +68,9 @@ export function CardArt({
           className={styles.placeholder}
           {...(alt ? { role: 'img', 'aria-label': alt } : { 'aria-hidden': true })}
         >
-          <img src={spriteUrl(speciesId)} alt="" loading="lazy" className={styles.sprite} />
+          {speciesId !== undefined && (
+            <img src={spriteUrl(speciesId)} alt="" loading="lazy" className={styles.sprite} />
+          )}
           {card && (
             <>
               <span className={styles.reference}>{card.reference}</span>

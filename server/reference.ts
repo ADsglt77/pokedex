@@ -5,7 +5,9 @@
  * - `GET /api/health` : pour une surveillance (UptimeRobot…), 200 si chaque tâche nécessaire a
  *   réussi récemment (deux intervalles au plus, `isOverdue`), 503 sinon, avec les tâches en retard ;
  * - `GET /api/species`, `/api/species/details` : les espèces, et ce qu'en montre la fiche ;
- * - `GET /api/catalog` : le catalogue des cartes japonaises ;
+ * - `GET /api/catalog` : les cartes Pokémon japonaises, par Pokémon (la fenêtre d'ajout) ;
+ *   `GET /api/catalog/sets` : les séries du catalogue ; `GET /api/catalog/sets/:id` : toutes les
+ *   cartes d'une série, dresseurs et énergies compris (la page Catalogue) ;
  * - `GET /api/prices` : les prix Cardmarket du jour ; `GET /api/prices/:id` : l'historique d'une
  *   carte Cardmarket, par son id produit (la fiche) ;
  * - `GET /api/histories?ids=719621,719654` : l'historique de chaque carte Cardmarket demandée,
@@ -135,7 +137,17 @@ export function referenceRoutes(data: Database) {
       snapshot('species-details'),
       doc('Les détails des espèces : catégorie, description, taille…'),
     )
-    .get('/catalog', snapshot('catalog'), doc('Le catalogue des cartes japonaises'))
+    .get('/catalog', snapshot('catalog'), doc('Les cartes Pokémon japonaises, par Pokémon'))
+    .get('/catalog/sets', snapshot('catalog/sets'), doc('Les séries du catalogue'))
+    .get(
+      '/catalog/sets/:id',
+      ({ params, request }) => serveSnapshot(data, `catalog/sets/${params.id}`, request),
+      {
+        // Un code de série chez Pokécardex : « SV2A », « S8A-G ».
+        params: t.Object({ id: t.String({ pattern: '^[A-Za-z0-9_-]{1,32}$' }) }),
+        ...doc('Toutes les cartes d’une série du catalogue'),
+      },
+    )
     .get('/prices', snapshot('prices'), doc('Les prix du jour'))
     .get(
       '/prices/:id',

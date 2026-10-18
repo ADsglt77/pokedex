@@ -183,7 +183,10 @@ export interface SpeciesDetailsFile {
  */
 export type CatalogRow = [string, string, number, string, number, number, number, number[]?]
 
-/** `/api/catalog` : les cartes Pokémon japonaises de Pokécardex (tâche `catalog`, `server/jobs/catalog.ts`). */
+/**
+ * `/api/catalog` : les cartes Pokémon japonaises de Pokécardex, par Pokémon (tâche `catalog`,
+ * `server/jobs/catalog.ts`) : la fenêtre d'ajout d'une carte.
+ */
 export interface CatalogFile {
   /**
    * Clé : le code de la série chez Pokécardex (« SV2A ») ; [nom, date de sortie au Japon, 1 si son
@@ -194,6 +197,59 @@ export interface CatalogFile {
   cards: Partial<Record<string, CatalogRow[]>>
   /** Clé : le numéro d'une rareté de ces cartes ; [son nom chez Pokécardex, son rang]. */
   rarities: Record<string, [name: string, rank: number]>
+}
+
+/** `/api/catalog/sets` : les séries du catalogue, pour la page Catalogue (tâche `catalog`). */
+export interface CatalogSetsFile {
+  /** Les blocs du menu de Pokécardex (« Scarlet & Violet »), des plus récents aux plus anciens. */
+  blocks: string[]
+  /**
+   * Des plus récentes aux plus anciennes : [code (« SV2A »), nom, sortie au Japon (YYYY-MM-DD, ''
+   * si inconnue), logo (comme `CatalogFile`), nombre de cartes, rang de son bloc dans `blocks` (-1 :
+   * aucun), 1 pour un deck].
+   */
+  sets: [
+    id: string,
+    name: string,
+    released: string,
+    logo: 0 | 1,
+    cards: number,
+    block: number,
+    deck: 0 | 1,
+  ][]
+}
+
+/** Une carte d'une série, telle que la donne `/api/catalog/sets/<code>`. */
+export interface CatalogSetRow {
+  /** Le numéro de sa référence (« 006 » ; sans numéro imprimé : son rang), unique dans la série. */
+  number: string
+  /** Le numéro tel qu'imprimé : « 006/165 », « R/RGB » ; '' sans numéro. */
+  printed: string
+  /** Son nom français ; '' si Pokécardex ne le donne pas. */
+  name: string
+  /** Ses noms anglais et allemand ; '' si inconnus. */
+  en: string
+  de: string
+  /** Ses Pokémon ; aucun pour un dresseur ou une énergie. */
+  dexIds: number[]
+  /** 0 : aucun. */
+  cardmarket: number
+  /** Le numéro de son image chez Pokécardex ; 0 : aucune. */
+  image: number
+  /** 0 : inconnue. */
+  rarity: number
+  /** `CARD_TYPES` ; 0 : inconnu. */
+  type: number
+  /** '' : inconnu. */
+  illustrator: string
+  /** « Standard », « Reverse »… */
+  versions: string[]
+}
+
+/** `/api/catalog/sets/<code>` : toutes les cartes d'une série, dans son ordre, et leurs raretés. */
+export interface CatalogSetFile {
+  cards: CatalogSetRow[]
+  rarities: CatalogFile['rarities']
 }
 
 /* État du serveur : `/api/status`, d'après le journal des tâches d'ingestion (`server/ingest.ts`) */

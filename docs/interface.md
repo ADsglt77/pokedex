@@ -62,10 +62,13 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   une ligne, les filtres rapides passent dessous (sur téléphone, ils défilent de côté). Achats :
   sur téléphone, les filtres de la liste dans un panneau « Filtres », l'onglet ouvert amené dans
   la rangée d'onglets qui défile ; page étroite, les badges des onglets se resserrent. Le
-  catalogue : un panneau (le logo japonais de l'extension, son nom, ses Pokémon qui ont déjà leur
-  carte et « Changer d'extension » ; puis les réglages de l'ajout ; puis les filtres de rareté et
-  de type, chacun sur une ligne qui défile de côté sur téléphone), puis ses cartes en tuiles
-  serrées (10 colonnes sur un écran de 1440 px, 3 sur téléphone). Données : un sommaire (collé à
+  catalogue : un panneau (le logo japonais de l'extension, son nom, sa sortie, son nombre de cartes
+  et son bloc, et « Changer d'extension »), puis la recherche, les filtres de rareté et de type
+  (chacun sur une ligne qui défile de côté sur téléphone), ce que compte l'extension et ses cartes
+  en tuiles serrées (10 colonnes sur un écran de 1440 px, 3 sur téléphone) ; la fiche d'une carte,
+  pleine page : l'image à gauche, qui reste à l'écran quand le reste défile, ce qu'on sait de la
+  carte et son prix à droite (l'une sous l'autre sous 48rem) ; dans le pied, les flèches des
+  cartes voisines et l'ajout, qui passe dessous s'il ne tient pas. Données : un sommaire (collé à
   gauche sur grand écran) et un panneau par section, deux colonnes sur très grand écran dans
   l'ordre du sommaire (la collection à gauche, le compte et le Pokédex public à droite ; l'export
   et l'import côte à côte ; les données du serveur et l'effacement sur
@@ -134,7 +137,10 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   Mon compte l'importent, la déconnexion le charge à la demande. Une
   donnée chargée à la demande et lue par `use()` passe par `settled` : sans lui, React retient
   l'affichage environ 300 ms à chaque ouverture (fenêtre d'ajout, catalogue). La fiche d'un
-  Pokémon sans carte prépare le catalogue pendant que le navigateur est libre. Les longues listes
+  Pokémon sans carte prépare le catalogue pendant que le navigateur est libre. La page Catalogue
+  ne charge que la liste des séries (`/api/catalog/sets`, environ 8 Ko compressés) puis les
+  cartes de l'extension montrée (`/api/catalog/sets/<code>`), chacune une fois : pas le catalogue
+  par Pokémon (plus de 250 Ko compressés) de la fenêtre d'ajout. Les longues listes
   du catalogue (les cartes d'une extension ou d'un Pokémon, jusqu'à 382 pour Pikachu ; les plus de
   400 extensions) sont dessinées au fur et à mesure (`useGrowingList` : 60 cartes ou 40
   extensions, puis autant chaque fois qu'un repère haut d'un écran, `growing-sentinel`, paraît au

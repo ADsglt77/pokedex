@@ -1,50 +1,34 @@
 import { Button, EmptyState, Input, Modal, SegmentedControl } from '@camply/ui'
 import { ArrowLeftRight, Search } from '@camply/ui/icons'
-import {
-  startTransition,
-  useDeferredValue,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type RefObject,
-} from 'react'
+import { startTransition, useDeferredValue, useMemo, useRef, useState, type RefObject } from 'react'
 import { useGrowingList } from '@/hooks/useGrowingList'
-import type { CatalogSet } from '@/lib/card-catalog'
+import type { SetSummary } from '@/lib/card-catalog'
 import { searchForm } from '@/lib/filters'
-import { details, formatInteger } from '@/lib/format'
+import { details, plural } from '@/lib/format'
 import { SetLogo } from './SetLogo'
 import styles from './SetPicker.module.css'
 
 const SET_ORDERS = [
-  { value: 'recent', label: 'Plus récentes' },
-  { value: 'useful', label: 'Plus utiles' },
-  { value: 'advanced', label: 'Plus avancées' },
+  { value: 'recent', label: 'Par année' },
+  { value: 'block', label: 'Par bloc' },
 ] as const
 
-export type SetOrder = (typeof SET_ORDERS)[number]['value']
+type SetOrder = (typeof SET_ORDERS)[number]['value']
 
 const ORDER_HINTS: Record<SetOrder, string> = {
   recent: 'Des plus récentes aux plus anciennes, année par année.',
-  useful: 'Celles qui donnent leur carte au plus de vos Pokémon qui n’en ont pas.',
-  advanced: 'Celles dont la plus grande part des Pokémon a déjà sa carte.',
+  block: 'Bloc par bloc, des plus récents aux plus anciens : leurs extensions, puis leurs decks.',
 }
 
 /** Les extensions dessinées d'un coup : plus qu'un grand écran n'en montre. */
 const SETS_STEP = 40
 
-/** Combien des Pokémon d'une extension ont leur carte, sur tous les siens. */
-export interface SetCoverage {
-  covered: number
-  total: number
-}
-
 /**
  * La fenêtre du choix d'une extension : leurs logos japonais, cherchées par code ou par nom
- * (« sv2a », « 151 »), dans l'ordre choisi (`order` : les plus récentes, rangées par année, les plus
- * utiles ou les plus avancées), chacune avec la part de ses Pokémon qui ont déjà leur carte. Pleine
- * page : la recherche reste en haut quand la liste défile. Le bouton « Changer d'extension » qui
- * l'ouvre est ici, avec son état : l'ouvrir ne fait pas redessiner la page et ses cartes.
+ * (« sv2a », « 151 »), rangées par année ou par bloc (l'ordre choisi reste d'une ouverture à
+ * l'autre), chacune avec son nombre de cartes. Pleine page : la recherche reste en haut quand la
+ * liste défile. Le bouton « Changer d'extension » qui l'ouvre est ici, avec son état : l'ouvrir ne
+ * fait pas redessiner la page et ses cartes.
  */
 export function SetPicker({
   className,
@@ -53,15 +37,15 @@ export function SetPicker({
 }: {
   /** Celle du bouton. */
   className?: string
-  /** Dans l'ordre `order`. */
-  sets: CatalogSet[]
-  order: SetOrder
-  onOrder: (order: SetOrder) => void
+  /** Des plus récentes aux plus anciennes. */
+  sets: SetSummary[]
+  /** Les blocs, des plus récents aux plus anciens. */
+  blocks: string[]
   current: string
-  coverage: (setId: string) => SetCoverage
   onPick: (setId: string) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [order, setOrder] = useState<SetOrder>('recent')
   // La recherche prend le focus à l'ouverture, pour taper tout de suite.
   const field = useRef<HTMLInputElement>(null)
   const pick = (setId: string) => {
@@ -85,7 +69,7 @@ export function SetPicker({
         size="full"
         initialFocus={field}
       >
-        <SetList {...list} field={field} onPick={pick} />
+        <SetList {...list} order={order} onOrder={setOrder} field={field} onPick={pick} />
       </Modal>
     </>
   )
@@ -94,13 +78,15 @@ export function SetPicker({
 /** Le contenu de la fenêtre : sa recherche repart de zéro à chaque ouverture. */
 function SetList({
   sets,
+  blocks,
+  current,
   order,
   onOrder,
-  current,
-  coverage,
   onPick,
   field,
 }: Omit<Parameters<typeof SetPicker>[0], 'className'> & {
+  order: SetOrder
+  onOrder: (order: SetOrder) => void
   field: RefObject<HTMLInputElement | null>
 }) {
   const [query, setQuery] = useState('')
@@ -111,14 +97,21 @@ function SetList({
     () => new Map(sets.map(({ id, name }) => [id, searchForm(`${id} ${name}`)])),
     [sets],
   )
-  const found = search ? sets.filter((set) => searchable.get(set.id)!.includes(search)) : sets
+  // Par bloc : dans l'ordre des blocs (ceux sans bloc à la fin), leurs extensions puis leurs
+  // decks, chacun des plus récents aux plus anciens (l'ordre reçu).
+  const ordered = useMemo(() => {
+    if (order === 'recent') return sets
+    const rank = (set: SetSummary) =>
+      set.block === null ? blocks.length : blocks.indexOf(set.block)
+    return [...sets].sort((a, b) => rank(a) - rank(b) || Number(a.deck) - Number(b.deck))
+  }, [sets, blocks, order])
+  const found = search ? ordered.filter((set) => searchable.get(set.id)!.includes(search)) : ordered
   // Plus de 400 extensions : dessinées au fur et à mesure du défilement, la fenêtre s'ouvre et se
   // ferme vite.
   const { limit, sentinel, more } = useGrowingList(found.length, SETS_STEP)
-  // Les plus récentes, rangées par année ; les autres ordres, d'un seul tenant.
-  const groups = new Map<string, CatalogSet[]>()
+  const groups = new Map<string, SetSummary[]>()
   for (const set of found.slice(0, limit)) {
-    const key = order === 'recent' ? (set.year ?? 'Sans date') : ''
+    const key = order === 'recent' ? (set.year ?? 'Sans date') : (set.block ?? 'Hors des blocs')
     const list = groups.get(key)
     if (list) list.push(set)
     else groups.set(key, [set])
@@ -157,38 +150,27 @@ function SetList({
         />
       ) : (
         <div className={styles.results}>
-          {[...groups].map(([year, list]) => (
-            <section key={year} className={styles.group}>
-              {year && <h3 className={styles.year}>{year}</h3>}
+          {[...groups].map(([title, list]) => (
+            <section key={title} className={styles.group}>
+              <h3 className={styles.heading}>{title}</h3>
               <ul className={styles.sets}>
-                {list.map((set) => {
-                  const { covered, total } = coverage(set.id)
-                  return (
-                    <li key={set.id}>
-                      <button
-                        type="button"
-                        className={styles.set}
-                        aria-current={set.id === current || undefined}
-                        onClick={() => onPick(set.id)}
-                      >
-                        <SetLogo set={set} size="md" className={styles.logo} />
-                        <span className={styles.name}>{set.name}</span>
-                        <span className={styles.meta}>{details(set.id, set.year)}</span>
-                        <span className={styles.coverage}>
-                          <span
-                            className={styles.bar}
-                            style={{ '--covered': total ? covered / total : 0 } as CSSProperties}
-                            aria-hidden="true"
-                          />
-                          <span className="numeric">
-                            {formatInteger(covered)} / {formatInteger(total)}
-                          </span>
-                          <span className="visually-hidden"> Pokémon ont leur carte</span>
-                        </span>
-                      </button>
-                    </li>
-                  )
-                })}
+                {list.map((set) => (
+                  <li key={set.id}>
+                    <button
+                      type="button"
+                      className={styles.set}
+                      aria-current={set.id === current || undefined}
+                      onClick={() => onPick(set.id)}
+                    >
+                      <SetLogo set={set} size="md" className={styles.logo} />
+                      <span className={styles.name}>{set.name}</span>
+                      <span className={styles.meta}>{details(set.id, set.year)}</span>
+                      <span className={styles.count}>
+                        {details(plural(set.count, 'carte', 'cartes'), set.deck && 'deck')}
+                      </span>
+                    </button>
+                  </li>
+                ))}
               </ul>
             </section>
           ))}

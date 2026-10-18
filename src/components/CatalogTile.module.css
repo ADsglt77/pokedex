@@ -1,4 +1,4 @@
-/* Une carte du catalogue à choisir, et la grille qui les range, serrée ; la carte choisie entourée. */
+/* Une carte du catalogue, et la grille qui les range, serrée ; la carte choisie entourée. */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(6.25rem, 1fr));
@@ -76,7 +76,7 @@
   max-width: 100%;
 }
 
-/* Ce que fait le clic (le Pokémon qui la recevrait), sur deux lignes au plus, éclairé au survol. */
+/* Ce qu'on dit de plus (son nom, ses autres Pokémon), sur deux lignes au plus, éclairé au survol. */
 .extra {
   display: -webkit-box;
   flex: 1 1 0;
@@ -93,19 +93,6 @@
 
 .choice:hover .extra {
   color: var(--camply-accent-hover);
-}
-
-.choice:disabled {
-  cursor: default;
-  opacity: 0.55;
-}
-
-.choice:disabled:hover {
-  background: none;
-}
-
-.choice:disabled .extra {
-  color: var(--camply-text-muted);
 }
 
 /* Une carte en ébauche (`CatalogGridSkeleton`) : l'image au format d'une carte, puis son code. */

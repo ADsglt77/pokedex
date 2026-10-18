@@ -24,21 +24,26 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   (retirés à la demande de l'utilisateur, octobre 2026) ; tant qu'elle n'est ni commandée ni
   possédée, elle est dans la liste d'achats.
 - Catalogue (tâche `catalog`, `server/jobs/catalog.ts`, une fois par jour → tables `sets`, `cards`,
-  `card_species`, `rarities` → `/api/catalog`, `lib/card-catalog.ts`) : les cartes Pokémon japonaises de
-  Pokécardex (`server/lib/pokecardex.ts`), ≈ 450 séries de 1996 à aujourd'hui, decks, promos et
+  `card_species`, `rarities` → `/api/catalog`, `/api/catalog/sets`, `/api/catalog/sets/<code>`,
+  `lib/card-catalog.ts`) : les cartes japonaises de Pokécardex, Pokémon, dresseurs et énergies (`server/lib/pokecardex.ts`), ≈ 450 séries de 1996 à aujourd'hui, decks, promos et
   anciennes séries compris (27 Herbizarre japonaises, contre 8 chez TCGdex), sans les exclusivités
   d'autres pays d'Asie (bloc « Asia Exclusive » de son menu, `asiaExclusive`). La liste des séries
   vient de son plan du site (`sitemap_fr.xml`, `/series/jp/<code>`) ; chaque série, de sa page :
   son nom, sa sortie au Japon, et ses cartes (id Pokécardex, numéro imprimé « 001/165 », `sort`,
-  nom français, Pokémon `id_pokedex_list`, id Cardmarket, rareté `id_rarete`, type `id_type`), et
-  toutes les raretés (`raretes` : nom et ordre, gardés depuis la première page lue de chaque
-  passage). Les types sont numérotés par Pokécardex sans être nommés : leurs noms sont dans
+  noms français, anglais et allemand, Pokémon `id_pokedex_list`, id Cardmarket, rareté
+  `id_rarete`, type `id_type`, illustrateur `nom_illustrateur`, versions `versions` : « Standard »,
+  « Reverse »… ; un tiret seul, « — », qu'il écrit pour « inconnu », est gardé vide), toutes les
+  raretés (`raretes` : nom et ordre) et le menu des séries (`seriesMenu` : le bloc de chacune,
+  « Scarlet & Violet », son rang dans le menu, et si c'est un deck), gardés depuis la première page
+  lue de chaque passage. Les types sont numérotés par Pokécardex sans être nommés : leurs noms sont dans
   `CARD_TYPES` (`src/config/catalog.ts` : 1 Plante, 2 Eau, 3 Feu, 4 Électrique, 5 Psy,
-  6 Obscurité, 7 Métal, 8 Combat, 9 Dragon, 10 Incolore, 11 Fée, d'après ses icônes ; au-delà, les
-  dresseurs et les énergies). Les raretés gardent les noms de Pokécardex : « C », « SAR »… pour
+  6 Obscurité, 7 Métal, 8 Combat, 9 Dragon, 10 Incolore, 11 Fée ; les catégories des dresseurs,
+  12 Stade, 13 Dresseur (une carte d'avant les catégories), 14 Supporter, 15 Objet, 41 Outil
+  (`TRAINER_TYPES`), et 16 Énergie (`ENERGY_TYPE`), d'après ses icônes et ses cartes). Les raretés gardent les noms de Pokécardex : « C », « SAR »… pour
   les cartes récentes, « Commune », « Unco », « Rare », « Holographique » pour les anciennes, « Sans
-  rareté » pour celles qui n'en impriment pas. Seules les cartes Pokémon (dresseurs et
-  énergies n'ont pas de Pokémon). Ses pages portent leurs données chiffrées
+  rareté » pour celles qui n'en impriment pas. Toutes les cartes, dresseurs et énergies compris
+  (pour la page Catalogue, à la demande de l'utilisateur, octobre 2026) : sans Pokémon, rien dans
+  `card_species` (ni dans `/api/catalog`, qui ne donne que les cartes Pokémon). Ses pages portent leurs données chiffrées
   (`__INITIAL_DATA_ENCRYPTED__`, AES-CBC) : déchiffrées avec la clé que contient son JavaScript,
   relue quand l'adresse de son script change (à chaque mise en ligne du site), jamais recopiée dans le
   dépôt. Une page toutes les 3 s, User-Agent identifié : le premier passage prend une vingtaine de
@@ -49,10 +54,10 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   des cartes qu'elle avait est refusée (format des pages changé : rien n'est gardé, c'est un échec).
   Une page sans cartes (série annoncée, ou
   site changé) ne retire rien et n'est pas notée : elle est relue au passage suivant. Tant qu'aucune
-  carte n'a été lue, rien n'est publié : `/api/catalog` répond 404 (« pas disponible »).
+  carte n'a été lue, rien n'est publié : les réponses du catalogue répondent 404 (« pas disponible »).
   Une carte qu'une lecture de sa série ne voit plus est retirée (`seen`). Sans serveur, la fenêtre
-  d'ajout et la page Catalogue le disent (« pas disponible pour le moment »). Par Pokémon, des plus
-  récentes aux plus anciennes : `[série, numéro (sans numéro imprimé : `sort`), id Cardmarket (0 :
+  d'ajout et la page Catalogue le disent (« pas disponible pour le moment »). `/api/catalog`, les
+  cartes Pokémon par Pokémon (la fenêtre d'ajout), des plus récentes aux plus anciennes : `[série, numéro (sans numéro imprimé : `sort`), id Cardmarket (0 :
   aucun), nom français, numéro de son image (`sort`, 0 : Pokécardex ne l'a pas), rareté (0 :
   inconnue), type (0 : inconnu), Pokémon s'ils sont plusieurs]` ; chaque série : `[nom, sortie,
   logo]` (0 : Pokécardex n'a pas de logo) ; les raretés de ces cartes : `[nom, rang]`. La forme a
@@ -60,7 +65,17 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   relire toutes les séries au passage suivant de la tâche (`read_at` remis à 1970), la suivante
   retire l'ancienne réponse, que le navigateur ne sait plus lire (404, « pas disponible », plutôt
   qu'une page en erreur), et la tâche la refait dès son démarrage d'après les tables (`saveCatalog`,
-  comme la boucle d'ingestion au sien), avant de relire les séries. La référence d'une carte : « Dracaufeu ex (SV2A 006) », son nom puis le code de
+  comme la boucle d'ingestion au sien), avant de relire les séries. Pour la page Catalogue :
+  `/api/catalog/sets`, les séries, des plus récentes aux plus anciennes, `[code, nom, sortie, logo,
+  nombre de cartes, rang de son bloc dans `blocks` (-1 : aucun), 1 pour un deck]`, et les blocs
+  dans l'ordre du menu ; `/api/catalog/sets/<code>`, toutes les cartes d'une série dans son ordre
+  (`sort`), chacune `{ number, printed, name, en, de, dexIds, cardmarket, image, rarity, type,
+  illustrator, versions }`, et leurs raretés ; une réponse par série (`snapshots` :
+  `catalog/sets/<code>`, celles des séries disparues retirées), gardée hors ligne par le service
+  worker une fois vue. Toutes les cartes et ce qu'on en sait de plus (octobre 2026) : l'étape du
+  schéma qui ajoute ces colonnes fait relire toutes les séries (`read_at` remis à 1970) ; jusque-là,
+  les dresseurs et les énergies manquent et les nouveaux champs sont vides, et `/api/catalog`
+  garde sa forme. La référence d'une carte : « Dracaufeu ex (SV2A 006) », son nom puis le code de
   sa série et son numéro. « Ajouter une carte »
   (`pokemon/CardForm`) s'ouvre sur l'onglet « Cartes japonaises » (`CatalogPicker` : image
   Pokécardex, code, rareté, prix du jour, tri par date ou par prix, filtres de rareté et de type
@@ -74,21 +89,38 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   aide : la carte enregistrée est une carte saisie comme les autres (`manual:<uuid>`).
   L'enregistrement (`useCardDraft.save`) attend le prix et l'image : une seule fois à la fois, la
   fenêtre ne se ferme pas pendant ce temps. Une page Cardmarket qui n'était que celle de l'id de
-  départ est oubliée quand l'id change (le lien suit alors le nouvel id). La page Catalogue
-  (`/catalogue?set=…`, dans le menu, `pages/catalog/`) : en tête, l'extension (une série de
-  Pokécardex) avec son logo japonais (`SetLogo`), sa progression, les réglages de l'ajout et les
-  filtres ; « Changer d'extension » ouvre la fenêtre pleine page des extensions (`SetPicker` : leurs logos, une
-  recherche par code ou par nom, les plus récentes rangées par année, les plus utiles (celles qui
-  donnent leur carte au plus de Pokémon qui n'en ont pas) ou les plus avancées (la plus grande part
-  de leurs Pokémon a déjà sa carte) ; chacune dit combien de ses Pokémon l'ont, sur tous les siens).
-  Les cartes, en tuiles serrées (`CatalogTile` : le numéro et le prix, puis la rareté et le
-  Pokémon) ; un clic donne la carte à ses Pokémon sans carte (tous, pour une TAG TEAM), à acheter ou
-  possédée (« Ajouter comme »), et le focus passe à la carte suivante. Filtres de rareté et de type
+  départ est oubliée quand l'id change (le lien suit alors le nouvel id).
+  La page Catalogue (`/catalogue?set=…`, dans le menu, `pages/catalog/`), un grand catalogue sans
+  lien avec le Pokédex (à la demande de l'utilisateur, octobre 2026 : plus de progression par
+  extension, de « Seulement les Pokémon sans carte », d'« Ajouter comme », ni d'extensions « plus
+  utiles » ou « plus avancées ») : en tête, l'extension (une série de Pokécardex) avec son logo
+  japonais (`SetLogo`), son code, sa sortie, son nombre de cartes et son bloc ; « Changer
+  d'extension » ouvre la fenêtre pleine page des extensions (`SetPicker` : leurs logos, une
+  recherche par code ou par nom, rangées par année ou par bloc, dans l'ordre du menu de Pokécardex,
+  leurs extensions puis leurs decks ; chacune avec son nombre de cartes). Puis une recherche (nom
+  français, anglais ou allemand, numéro, illustrateur), les filtres de rareté et de type (catégories
+  des dresseurs et énergies comprises), ce que compte l'extension (« 188 Pokémon, 21 dresseurs et 1
+  énergie · 45 secrètes » ; une secrète est numérotée au-delà du nombre imprimé, « 201/165 ») et ses
+  cartes en tuiles serrées (`CatalogTile` : le numéro et le prix, puis la rareté et le nom). Un clic
+  ouvre la fiche de la carte (`CardDetails`, pleine page) : son image en grand, l'extension et son
+  bloc, le numéro imprimé (« Secrète »), la rareté, le type ou la catégorie, ses Pokémon,
+  l'illustrateur, ses versions, ses noms anglais et allemand, la sortie au Japon, où elle en est
+  dans la collection, et son prix Cardmarket avec sa courbe (`PricePanel`, comme la fiche d'un
+  Pokémon) ; des flèches passent aux cartes voisines de la grille, dans l'ordre affiché. Une carte
+  Pokémon a un seul bouton, « Ajouter à la collection » : elle devient la carte de tous ses Pokémon
+  (une seule pour une TAG TEAM), toujours à acheter (décision de l'utilisateur, octobre 2026). Si
+  l'un d'eux a déjà la sienne, elle la remplace après confirmation : l'ancienne part avec son statut
+  et son prix payé (une carte TAG TEAM reste celle de ses autres Pokémon : `removeCard`) ; pas si
+  une commande la retient et qu'elle quitterait tous ses Pokémon (le bouton est désactivé, la fiche
+  dit pourquoi : le registre tiendrait mal). Déjà la leur (le même code dans la référence ou le même
+  id Cardmarket : `isCatalogCard`) : « Dans votre collection », qui reçoit le focus après l'ajout.
+  Annoncé avec « Annuler ». Les dresseurs, les énergies et les cartes dont Pokécardex ne donne pas
+  les Pokémon (« Togepi, Mélo et Toudoudou-GX ») n'ont pas de bouton. Filtres de rareté et de type
   (`CardFilters`, demandés par l'utilisateur, octobre 2026) : des pastilles à icône, chacune avec le
-  nombre de cartes qu'elle montrerait parmi celles que garde l'autre filtre ; plusieurs choix d'un
-  filtre s'ajoutent, les deux filtres se combinent (`passesFilter`) ; un filtre qui n'offrirait
-  qu'un choix n'est pas montré ; changer d'extension les retire. Ce sont des filtres que
-  l'utilisateur choisit : rien n'est trié ni écarté seul.
+  nombre de cartes qu'elle montrerait parmi celles que gardent l'autre filtre et la recherche ;
+  plusieurs choix d'un filtre s'ajoutent, les deux filtres se combinent (`passesFilter`) ; un filtre
+  qui n'offrirait qu'un choix n'est pas montré ; changer d'extension les retire, avec la recherche.
+  Ce sont des filtres que l'utilisateur choisit : rien n'est trié ni écarté seul.
 - Plus de favori « Ajouter au Pokédex » (un lien `javascript:` qui reprenait une page produit de
   Cardmarket, `/ajouter`) : retiré à la demande de l'utilisateur (octobre 2026), le catalogue
   Pokécardex donnant presque toutes les cartes avec leur id Cardmarket ; une carte qu'il n'a pas se

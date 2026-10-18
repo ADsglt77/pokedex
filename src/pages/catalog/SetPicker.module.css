@@ -1,4 +1,4 @@
-/* La recherche et l'ordre en tête, puis les extensions, année par année. */
+/* La recherche et l'ordre en tête, puis les extensions, année par année ou bloc par bloc. */
 .picker {
   display: grid;
   gap: var(--camply-space-4);
@@ -20,21 +20,20 @@
   max-width: 36rem;
 }
 
-/* Les extensions, année par année ; le repère de la suite (`growing-sentinel`) à leur bas. */
+/* Les extensions, par année ou par bloc ; le repère de la suite (`growing-sentinel`) à leur bas. */
 .results {
   position: relative;
   display: grid;
   gap: var(--camply-space-4);
 }
 
-/* Une année. Pas de `content-visibility` : le piège à focus de la fenêtre mesure chaque bouton à
-   l'ouverture et à chaque Tab, ce qui forcerait la mise en page des années cachées une à une. */
+/* Une année, ou un bloc. */
 .group {
   display: grid;
   gap: var(--camply-space-2);
 }
 
-.year {
+.heading {
   margin: 0;
   color: var(--camply-text-muted);
   font-size: var(--text-sm);
@@ -50,7 +49,7 @@
   list-style: none;
 }
 
-/* Une extension : son logo, son nom, son code et son année, puis ce qu'ont déjà ses Pokémon. */
+/* Une extension : son logo, son nom, son code et son année, puis son nombre de cartes. */
 .set {
   display: grid;
   gap: 0.25rem;
@@ -97,26 +96,11 @@
   font-size: var(--text-xs);
 }
 
-/* La part de ses Pokémon qui ont leur carte : une réglette fine et son décompte. */
-.coverage {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+/* Son nombre de cartes (et « deck »), en bas de la tuile. */
+.count {
   margin-top: auto;
   padding-top: 0.25rem;
   color: var(--camply-text-muted);
   font-size: var(--text-xs);
-}
-
-.bar {
-  flex: 1;
-  height: 0.25rem;
-  border-radius: var(--camply-radius-pill);
-  background:
-    linear-gradient(
-      to right,
-      var(--camply-accent) calc(var(--covered) * 100%),
-      transparent calc(var(--covered) * 100%)
-    ),
-    var(--camply-border-soft);
+  font-variant-numeric: tabular-nums;
 }
