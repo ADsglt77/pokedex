@@ -1,4 +1,9 @@
 /* La page d'erreur remplace toute la coquille : sa propre marge, en haut et en bas. */
 .page {
-  padding-block: 4rem;
+  padding-block: 2.5rem 4rem;
+}
+
+/* La marque, en tête : la coquille et son logo ne sont plus là. */
+.brand {
+  margin-bottom: var(--space-block);
 }

@@ -232,6 +232,40 @@ export interface PriceFile {
   cards: Record<string, CardPriceRow>
 }
 
+/* Le compte (`/api/account`) et la collection synchronisée (`/api/collection`), `server/` */
+
+/** Le compte connecté : son id, son e-mail, son pseudo. */
+export interface AccountUser {
+  id: string
+  email: string
+  name: string
+}
+
+/** `GET /api/account` : une seule requête au démarrage (`loadAccount`). */
+export interface AccountState {
+  /** Le site a-t-il son compte ? Sinon, c'est la première visite (`/bienvenue`). */
+  exists: boolean
+  /** Qui est connecté sur ce navigateur ; `null` : personne. */
+  user: AccountUser | null
+}
+
+/**
+ * `GET /api/collection` : le document du compte, numéroté (`version`, que l'appareil renvoie avec
+ * ses modifications) ; `version` 0 et le reste `null` tant qu'aucun appareil n'a rien envoyé.
+ * Enregistré tel que l'appareil l'a envoyé : une ancienne version de l'app a pu l'écrire (il se
+ * relit comme le stockage du navigateur, `readCollection`, `readShopping`).
+ */
+export interface CollectionResponse {
+  version: number
+  collection: CollectionData | null
+  shopping: ShoppingData | null
+}
+
+/** `PUT /api/collection`, enregistré : la nouvelle version du document. */
+export interface CollectionSaved {
+  version: number
+}
+
 /** Le Pokédex public (`/api/vitrine`, `server/vitrine.ts`). */
 export interface VitrineData {
   /** Le pseudo du compte ; `null` sans pseudo. */

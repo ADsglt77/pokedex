@@ -82,6 +82,9 @@ export function PlannerPanel({
   const change = (next: PlannerSettings) => onSettingsChange({ ...settings, ...next })
   const [draft, setDraft] = useState<Order | null>(null)
   const [wantsOpen, setWantsOpen] = useState(false)
+  // Les groupes ouverts. camply rend le contenu d'un groupe fermé (seulement caché) : un groupe ne
+  // rend ses cartes qu'ouvert, sans quoi chaque pas du curseur les rendrait toutes.
+  const [openGroups, setOpenGroups] = useState<string[]>([])
   const planTitle = useId()
   const heading = useRef<HTMLHeadingElement>(null)
   const pickedList = useRef<HTMLUListElement>(null)
@@ -158,6 +161,23 @@ export function PlannerPanel({
             {plan.picked.length > 0 && ` · port réservé ${formatEuro(budget.shippingReserve)}`}
             {` · reste ${formatEuro(Math.max(0, amount - plan.total))}`}
           </p>
+          {plan.picked.length > 0 && (
+            <Stack direction="horizontal" gap={2} wrap className={styles.planActions}>
+              <Button
+                variant="secondary"
+                leftIcon={<Copy size={16} />}
+                onClick={() => setWantsOpen(true)}
+              >
+                Copier pour Cardmarket
+              </Button>
+              <Button
+                leftIcon={<Receipt size={16} />}
+                onClick={() => setDraft(planOrder(plan.picked, budget.shippingReserve))}
+              >
+                Enregistrer comme commande…
+              </Button>
+            </Stack>
+          )}
         </div>
 
         {plan.overBudget && (
@@ -203,34 +223,20 @@ export function PlannerPanel({
           </p>
         )}
 
-        {plan.picked.length > 0 && (
-          <Stack direction="horizontal" gap={2} wrap>
-            <Button
-              size="sm"
-              variant="secondary"
-              leftIcon={<Copy size={14} />}
-              onClick={() => setWantsOpen(true)}
-            >
-              Copier pour Cardmarket
-            </Button>
-            <Button
-              size="sm"
-              leftIcon={<Receipt size={14} />}
-              onClick={() => setDraft(planOrder(plan.picked, budget.shippingReserve))}
-            >
-              Enregistrer comme commande…
-            </Button>
-          </Stack>
-        )}
         <p className={page.note}>
           Ce plan n’est pas une commande : rien n’est acheté. Copiez les cartes pour votre liste de
           souhaits Cardmarket (ou cherchez-les), commandez, puis enregistrez la commande avec les
           prix réellement payés.
         </p>
 
-        <Accordion multiple>
+        <Accordion
+          multiple
+          value={openGroups}
+          onChange={(value) => setOpenGroups(value as string[])}
+        >
           <PlanGroup
             value="left"
+            open={openGroups.includes('left')}
             fallback={heading}
             title="Hors budget"
             rows={plan.left}
@@ -239,6 +245,7 @@ export function PlannerPanel({
           />
           <PlanGroup
             value="covered"
+            open={openGroups.includes('covered')}
             fallback={heading}
             title="Pokémon déjà prévu"
             rows={plan.covered}
@@ -248,6 +255,7 @@ export function PlannerPanel({
           />
           <PlanGroup
             value="unpriced"
+            open={openGroups.includes('unpriced')}
             fallback={heading}
             title="Sans prix"
             rows={plan.unpriced}
@@ -256,6 +264,7 @@ export function PlannerPanel({
           />
           <PlanGroup
             value="skipped"
+            open={openGroups.includes('skipped')}
             fallback={heading}
             title="Retirées à la main"
             rows={plan.skipped}
@@ -336,8 +345,10 @@ interface PlanAction {
   run: (row: WishRow) => void
 }
 
+/** Un groupe de cartes mises de côté ; fermé, il ne rend que son titre et son nombre. */
 function PlanGroup({
   value,
+  open,
   fallback,
   title,
   rows,
@@ -346,6 +357,7 @@ function PlanGroup({
   action,
 }: {
   value: string
+  open: boolean
   fallback: RefObject<HTMLElement | null>
   title: string
   rows: WishRow[]
@@ -356,28 +368,33 @@ function PlanGroup({
   const list = useRef<HTMLUListElement>(null)
   return (
     <AccordionItem value={value} title={`${title} (${rows.length})`} headingLevel={3}>
-      {hint && rows.length > 0 && <p className="muted">{hint}</p>}
-      {rows.length === 0 ? (
-        <p className="muted">{empty}</p>
-      ) : (
-        <ul ref={list} className={page.lines}>
-          {rows.map((row, index) => (
-            <li key={row.card.id}>
-              <PlanLine row={row}>
-                {action && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => keepFocusInList(list, index, () => action.run(row), fallback)}
-                  >
-                    {action.label}
-                  </Button>
-                )}
-              </PlanLine>
-            </li>
-          ))}
-        </ul>
-      )}
+      {open &&
+        (rows.length === 0 ? (
+          <p className="muted">{empty}</p>
+        ) : (
+          <>
+            {hint && <p className="muted">{hint}</p>}
+            <ul ref={list} className={page.lines}>
+              {rows.map((row, index) => (
+                <li key={row.card.id}>
+                  <PlanLine row={row}>
+                    {action && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          keepFocusInList(list, index, () => action.run(row), fallback)
+                        }
+                      >
+                        {action.label}
+                      </Button>
+                    )}
+                  </PlanLine>
+                </li>
+              ))}
+            </ul>
+          </>
+        ))}
     </AccordionItem>
   )
 }

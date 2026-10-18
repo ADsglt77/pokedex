@@ -1,5 +1,5 @@
 import { Input, Stack } from '@camply/ui'
-import { Suspense, use } from 'react'
+import { Suspense, use, type Ref } from 'react'
 import { CardArt } from '@/components/CardArt'
 import { ImageCredit } from './ImageCredit'
 import type { CardDraft } from '@/hooks/useCardDraft'
@@ -10,16 +10,31 @@ import { loadPriceHistory, usePrices, usePricesMissing } from '@/store/prices'
 import styles from './CardFields.module.css'
 
 /**
+ * Ce que tapent ces champs (codes, adresses, numéros) n'est pas du français : ni correcteur, ni
+ * correction automatique (un téléphone récrirait « SV2A 166 »), ni saisie proposée.
+ */
+const RAW_TEXT = { spellCheck: false, autoCorrect: 'off', autoComplete: 'off' } as const
+
+/**
  * Les champs d'une carte : sa référence (d'où son image est retrouvée), l'adresse de son image
  * (vide : celle retrouvée), son id Cardmarket (vérifié dans les prix), sa page Cardmarket, et
- * l'aperçu de la carte. `speciesId` : pour l'aperçu sans image.
+ * l'aperçu de la carte. `speciesId` : pour l'aperçu sans image ; `ref` : le bloc des champs.
  */
-export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: number }) {
+export function CardFields({
+  draft,
+  speciesId,
+  ref,
+}: {
+  draft: CardDraft
+  speciesId: number
+  ref: Ref<HTMLDivElement>
+}) {
   const { errors } = draft
   return (
-    <div className={styles.layout}>
+    <div className={styles.layout} ref={ref}>
       <Stack gap={4}>
         <Input
+          {...RAW_TEXT}
           label="Référence"
           hint="Le nom, puis le code de l’extension et le numéro : « Bulbizarre (SV2A 166) ». Il sert à trouver l’image chez Pokécardex. Vide : le nom de la carte chez Cardmarket."
           value={draft.reference}
@@ -27,6 +42,7 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
           onBlur={draft.searchImage}
         />
         <Input
+          {...RAW_TEXT}
           label="Adresse de l’image"
           hint="Facultatif : vide, l’image est cherchée chez Pokécardex d’après la référence. Sinon, clic droit sur une image en ligne › « Copier l’adresse de l’image » (pas sur Cardmarket : ses images ne s’affichent que chez lui)."
           placeholder="https://…"
@@ -45,6 +61,7 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
           )}
         </div>
         <Input
+          {...RAW_TEXT}
           label="Id Cardmarket"
           hint="Le numéro du produit chez Cardmarket (idProduct), pour son prix. Le catalogue le remplit."
           inputMode="numeric"
@@ -61,6 +78,7 @@ export function CardFields({ draft, speciesId }: { draft: CardDraft; speciesId: 
           )}
         </div>
         <Input
+          {...RAW_TEXT}
           label="Page Cardmarket"
           hint="Facultatif : vide, le lien se fait par l’id Cardmarket."
           placeholder="https://www.cardmarket.com/…"

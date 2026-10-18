@@ -1,6 +1,5 @@
 import { Button, Input, Modal, Select, Stack, Textarea } from '@camply/ui'
 import { useRef, useState } from 'react'
-import { flushSync } from 'react-dom'
 import { EuroField } from '@/components/EuroInput'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SegmentedField } from '@/components/SegmentedField'
@@ -8,6 +7,7 @@ import { ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { monthOf, spentIn } from '@/lib/budget'
 import { cx } from '@/lib/cx'
+import { focusFirstError } from '@/lib/focus'
 import {
   euroInput,
   formatEuro,
@@ -129,7 +129,8 @@ function readDraft(draft: Draft, base: Order, stored: Order | null, collection: 
 
 /**
  * Enregistrer ou corriger une commande : fournisseur, dates, cartes et prix, port, frais,
- * remboursement, état. Au-delà du plafond du mois, une confirmation est demandée (sans bloquer).
+ * remboursement, état. Au-delà du plafond du mois, une confirmation est demandée (sans bloquer) ;
+ * fermer une saisie commencée aussi.
  */
 export function OrderForm({
   order: base,
@@ -145,12 +146,20 @@ export function OrderForm({
   const { orders, budget } = useShoppingStore((state) => state.shopping)
   const stored = orders.find((known) => known.id === base.id) ?? null
   const others = orders.filter((known) => known.id !== base.id)
-  const [draft, setDraft] = useState(() => toDraft(base))
+  const [initial] = useState(() => toDraft(base))
+  const [draft, setDraft] = useState(initial)
   // Les erreurs s'affichent après une première tentative, puis suivent la saisie.
   const [submitted, setSubmitted] = useState(false)
   const [overCeiling, setOverCeiling] = useState<{ order: Order; monthTotal: number } | null>(null)
+  const [abandoning, setAbandoning] = useState(false)
   const fields = useRef<HTMLElement>(null)
   const set = (change: Partial<Draft>) => setDraft({ ...draft, ...change })
+  // Échap (même depuis un champ), la croix ou « Annuler » : une saisie commencée n'est pas perdue
+  // sans confirmation.
+  const close = () => {
+    if (JSON.stringify(draft) === JSON.stringify(initial)) onClose()
+    else setAbandoning(true)
+  }
 
   const read = readDraft(draft, base, stored, collection)
   const { order } = read
@@ -175,11 +184,7 @@ export function OrderForm({
 
   const submit = () => {
     if (Object.keys(read.errors).length > 0) {
-      // Les erreurs affichées, le premier champ en erreur est mis sous les yeux.
-      flushSync(() => setSubmitted(true))
-      const field = fields.current?.querySelector<HTMLElement>('[aria-invalid="true"]')
-      field?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-      field?.focus({ preventScroll: true })
+      focusFirstError(fields, () => setSubmitted(true))
       return
     }
     // Le plafond est dépassé par cet enregistrement : on demande, sans interdire.
@@ -191,7 +196,7 @@ export function OrderForm({
   return (
     <Modal
       open
-      onClose={onClose}
+      onClose={close}
       // Un clic à côté ne perd pas une longue saisie.
       closeOnBackdrop={false}
       size="lg"
@@ -199,7 +204,7 @@ export function OrderForm({
       description="Les prix réellement payés : ils font le budget et le prix payé de chaque carte."
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={close}>
             Annuler
           </Button>
           <Button onClick={submit}>Enregistrer</Button>
@@ -235,6 +240,9 @@ export function OrderForm({
           <Input
             label="Référence"
             hint="Numéro de commande du fournisseur."
+            spellCheck={false}
+            autoCorrect="off"
+            autoComplete="off"
             value={draft.reference}
             onChange={(event) => set({ reference: event.target.value })}
           />
@@ -326,6 +334,20 @@ export function OrderForm({
             {formatEuro(budget.ceiling)}.
           </p>
         )}
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={abandoning}
+        title="Abandonner la saisie ?"
+        confirmLabel="Abandonner"
+        tone="warn"
+        onClose={() => setAbandoning(false)}
+        onConfirm={onClose}
+      >
+        <p>
+          {stored
+            ? 'Vos modifications de cette commande ne seront pas enregistrées.'
+            : 'Cette commande ne sera pas enregistrée.'}
+        </p>
       </ConfirmDialog>
     </Modal>
   )

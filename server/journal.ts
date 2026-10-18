@@ -81,10 +81,19 @@ const TIME = new Intl.DateTimeFormat('fr-FR', {
   second: '2-digit',
 })
 
-/** `carte="Pikachu ex (SV8 033)"` : entre guillemets dès qu'il y a une espace. */
+/**
+ * `carte="Pikachu ex (SV8 033)"` : entre guillemets, échappée comme en JSON, dès qu'il y a une
+ * espace, un guillemet, un `=` ou un caractère de contrôle. Une valeur peut venir d'un visiteur
+ * (l'e-mail ou le pseudo d'une connexion refusée) : un retour à la ligne lui ferait écrire une
+ * fausse ligne du journal, un échappement ANSI piloter le terminal. Ceux que JSON laisse passer
+ * (DEL, les contrôles C1 dont le CSI `\x9b`) sont échappés aussi.
+ */
 const detail = (key: string, value: string | number) => {
   const text = String(value)
-  return `${dim(`${key}=`)}${/[\s="]/.test(text) ? `"${text.replaceAll('"', '\\"')}"` : text}`
+  const shown = /[\s="\p{Cc}]/u.test(text)
+    ? JSON.stringify(text).replace(/\p{Cc}/gu, (char) => `\\u00${char.charCodeAt(0).toString(16)}`)
+    : text
+  return `${dim(`${key}=`)}${shown}`
 }
 
 /** La colonne du message : les détails commencent tous au même endroit. */

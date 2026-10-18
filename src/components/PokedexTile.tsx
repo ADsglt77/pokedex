@@ -1,5 +1,4 @@
 import { memo } from 'react'
-import { Link } from 'react-router'
 import { speciesPath } from '@/lib/filters'
 import { formatDexNumber } from '@/lib/format'
 import type { PokedexEntry } from '@/lib/pokedex'
@@ -17,9 +16,11 @@ const SPECIES_LABELS: Record<CardStatus | 'none', string> = {
 /**
  * Une pochette du classeur : la carte de l'espèce (ou son dessin), son numéro et son nom ; un
  * lien vers sa fiche, sauf sur le Pokédex public (`linked` faux : la fiche serait celle du
- * visiteur), où c'est une image décrite. Mémoïsée : quand la recherche ou un filtre change la
- * grille, les pochettes restées ne se redessinent pas (leur entrée est la même tant que la
- * collection ne change pas).
+ * visiteur), où c'est une image décrite. Un simple `<a>`, pas un `Link` de react-router : celui-ci
+ * lit l'adresse, et les 1 025 pochettes se redessineraient à chaque frappe de la recherche ; la
+ * page du classeur fait suivre ses liens par le routeur (`PokedexPage`). Mémoïsée : quand la
+ * recherche ou un filtre change la grille, les pochettes restées ne se redessinent pas (leur entrée
+ * est la même tant que la collection ne change pas).
  */
 export const PokedexTile = memo(function PokedexTile({
   entry,
@@ -51,9 +52,9 @@ export const PokedexTile = memo(function PokedexTile({
   )
 
   return linked ? (
-    <Link to={speciesPath(species.id)} className={styles.tile} aria-label={label}>
+    <a href={speciesPath(species.id)} className={styles.tile} aria-label={label}>
       {content}
-    </Link>
+    </a>
   ) : (
     <div className={styles.tile} role="img" aria-label={label}>
       {content}

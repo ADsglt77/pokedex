@@ -1,11 +1,15 @@
 import { Badge, Tab, TabList, TabPanel, Tabs } from '@camply/ui'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
-import { SHOPPING_VIEWS } from '@/lib/filters'
+import {
+  parseShopping,
+  serializeShopping,
+  type ShoppingView,
+  type WishlistFilters,
+} from '@/lib/filters'
 import { pageTitle } from '@/lib/format'
 import { pendingCount } from '@/lib/orders'
-import { DEFAULT_WISHLIST_FILTERS, type WishlistFilters } from '@/lib/wishlist'
 import { useShoppingStore } from '@/store/shopping'
 import { BudgetOverview } from './BudgetOverview'
 import { BudgetPanel } from './BudgetPanel'
@@ -17,18 +21,35 @@ import styles from './ShoppingPage.module.css'
 
 /**
  * Achats (`/achats`) : le budget du mois, la liste d'achats, l'assistant de la prochaine commande,
- * le registre des commandes et le suivi du budget. L'onglet ouvert est dans l'adresse (`?vue=`) ;
- * les filtres de la liste et les réglages de l'assistant sont gardés ici, l'onglet caché étant
- * démonté.
+ * le registre des commandes et le suivi du budget. L'onglet ouvert et les filtres de la liste sont
+ * dans l'adresse (`?vue=`, `q`, `generation`, `tri` : `parseShopping`) : ils survivent à
+ * l'ouverture d'une fiche et au retour. Les réglages de l'assistant sont gardés ici, l'onglet
+ * caché étant démonté.
  */
 export function ShoppingPage() {
   const [params, setParams] = useSearchParams()
-  const view = SHOPPING_VIEWS.find((known) => known === params.get('vue')) ?? 'liste'
-  // `vue` est le seul paramètre de l'adresse ; la liste, l'onglet par défaut, n'en a pas.
-  const openView = (next: string) =>
-    setParams(next === 'liste' ? {} : { vue: next }, { replace: true, preventScrollReset: true })
+  const { view, filters } = useMemo(() => parseShopping(params), [params])
+  // Change l'onglet ou des filtres, et garde le reste : changer d'onglet garde les filtres.
+  const update = (change: { view?: ShoppingView; filters?: Partial<WishlistFilters> }) =>
+    setParams(
+      (current) => {
+        const now = parseShopping(current)
+        return serializeShopping(change.view ?? now.view, { ...now.filters, ...change.filters })
+      },
+      {
+        // Pas une entrée d'historique par onglet, par filtre ou par frappe.
+        replace: true,
+        preventScrollReset: true,
+        // Le routeur passe ses mises à jour dans une transition : le champ de recherche, qui lit
+        // l'adresse, suivrait la frappe en retard. La liste, elle, reste différée (WishlistPanel).
+        flushSync: change.filters !== undefined && 'search' in change.filters,
+        // Sans relancer le chargement de la route : sinon le curseur du champ part au bout du texte
+        // (voir usePokedexFilters).
+        defaultShouldRevalidate: false,
+      },
+    )
+  const openView = (next: ShoppingView) => update({ view: next })
   const { rows } = useWishlist()
-  const [filters, setFilters] = useState<WishlistFilters>(DEFAULT_WISHLIST_FILTERS)
   const [planner, setPlanner] = useState<PlannerSettings>({})
   // Une commande enregistrée depuis le plan ouvre « Commandes » : le focus va à son onglet, le
   // bouton du plan disparaissant avec le sien.
@@ -60,7 +81,12 @@ export function ShoppingPage() {
 
       <BudgetOverview />
 
-      <Tabs value={view} onChange={openView} defaultValue="liste" className={styles.tabs}>
+      <Tabs
+        value={view}
+        onChange={(next) => openView(next as ShoppingView)}
+        defaultValue="liste"
+        className={styles.tabs}
+      >
         <TabList ref={tabList} aria-label="Achats" className={styles.tabList}>
           <Tab value="liste">
             Liste d’achats <Badge size="sm">{rows.length}</Badge>
@@ -78,7 +104,10 @@ export function ShoppingPage() {
           <Tab value="budget">Budget</Tab>
         </TabList>
         <TabPanel value="liste">
-          <WishlistPanel filters={filters} onFiltersChange={setFilters} />
+          <WishlistPanel
+            filters={filters}
+            onFiltersChange={(patch) => update({ filters: patch })}
+          />
         </TabPanel>
         <TabPanel value="prochaine-commande">
           <PlannerPanel

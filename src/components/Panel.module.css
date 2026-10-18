@@ -1,8 +1,9 @@
+/* Le fond est celui de la `Card` de camply (`--camply-fill-1`), comme celui d'un `Stat` : un seul
+   fond de bloc dans les deux thèmes. */
 .panel {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: var(--camply-surface);
   /* Une ancre (#exporter…) arrive sous le haut de l'écran, pas collée contre. */
   scroll-margin-top: 1rem;
 }

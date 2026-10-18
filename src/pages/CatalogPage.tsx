@@ -1,8 +1,23 @@
-import { Combobox, Progress, SegmentedControl, Stack, Switch } from '@camply/ui'
+import {
+  Button,
+  Combobox,
+  EmptyState,
+  Progress,
+  SegmentedControl,
+  Skeleton,
+  Stack,
+  Switch,
+} from '@camply/ui'
+import { CloudOff, Flag } from '@camply/ui/icons'
 import { Suspense, use, useId, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useSearchParams } from 'react-router'
-import { CatalogCredit, CatalogGrid, CatalogTile } from '@/components/CatalogTile'
+import {
+  CatalogCredit,
+  CatalogGrid,
+  CatalogGridSkeleton,
+  CatalogTile,
+} from '@/components/CatalogTile'
 import { PageHeader } from '@/components/PageHeader'
 import { ADD_AS_LABELS, ADDED_AS } from '@/config/shopping'
 import { Panel } from '@/components/Panel'
@@ -40,7 +55,7 @@ export function CatalogPage() {
         Les cartes japonaises, extension par extension : choisissez d’un clic la carte d’un Pokémon
         qui n’en a pas encore.
       </PageHeader>
-      <Suspense fallback={<p className="muted">Chargement du catalogue…</p>}>
+      <Suspense fallback={<CatalogSkeleton />}>
         <CatalogContent />
       </Suspense>
     </div>
@@ -55,14 +70,39 @@ const SET_ORDERS = [
 
 type SetOrder = (typeof SET_ORDERS)[number]['value']
 
+/**
+ * L'ébauche de la page tant que le catalogue arrive, à la taille de ce qui vient (l'extension et
+ * l'ordre, son panneau, ses cartes) : la page ne saute pas.
+ */
+function CatalogSkeleton() {
+  return (
+    <Stack gap={5}>
+      <p className="visually-hidden">Chargement du catalogue…</p>
+      <div className={styles.controls}>
+        <div className={styles.search}>
+          <Skeleton width="5rem" className={styles.labelSkeleton} />
+          <Skeleton variant="rect" height="2.5rem" />
+        </div>
+        <Skeleton variant="rect" width="min(22rem, 100%)" height="2.5rem" />
+      </div>
+      <Skeleton variant="rect" height="13rem" />
+      <Skeleton width="12rem" />
+      <CatalogGridSkeleton count={12} />
+    </Stack>
+  )
+}
+
 function CatalogContent() {
   const catalog = use(loadCatalog())
   return catalog ? (
     <SetBrowser catalog={catalog} />
   ) : (
-    <p className="muted">
-      Le catalogue n’est pas disponible pour le moment : réessayez dans quelques minutes.
-    </p>
+    <EmptyState
+      headingLevel={2}
+      icon={<CloudOff size={22} />}
+      title="Le catalogue n’est pas disponible pour le moment"
+      description="Réessayez dans quelques minutes."
+    />
   )
 }
 
@@ -146,6 +186,17 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
   // Les Pokémon de l'extension, et ceux d'entre eux qui ont déjà leur carte (d'ici ou d'ailleurs).
   const total = speciesCount(set.id)
   const covered = total - openCount(set.id)
+  // L'extension qui donnerait leur carte au plus de vos Pokémon qui n'en ont pas ; aucune s'ils
+  // l'ont tous.
+  const mostUseful = catalog.sets.reduce((best, known) =>
+    openCount(known.id) > openCount(best.id) ? known : best,
+  )
+  // Le bouton disparaît avec l'extension terminée : le focus va au titre, celui de la suivante.
+  const showMostUseful = () => {
+    setSetOrder('useful')
+    setParams({ set: mostUseful.id }, { replace: true })
+    setTitle.current?.focus()
+  }
 
   const choose = (card: CatalogCard, receivers: number[], rank: number) => {
     // Ajoutée et affichée tout de suite : le focus va alors à la carte suivante, celle ajoutée
@@ -250,7 +301,16 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
         {plural(shown.length, 'carte', 'cartes')} · <CatalogCredit />
       </p>
       {shown.length === 0 ? (
-        <p className="muted">Tous les Pokémon de cette extension ont déjà leur carte.</p>
+        <EmptyState
+          icon={<Flag size={22} />}
+          title="Extension terminée"
+          description="Tous ses Pokémon ont déjà leur carte, d’ici ou d’une autre extension."
+          actions={
+            openCount(mostUseful.id) > 0 && (
+              <Button onClick={showMostUseful}>Voir les plus utiles</Button>
+            )
+          }
+        />
       ) : (
         <CatalogGrid ref={grid}>
           {shown.map(({ card, open, receivers, price }, index) => {

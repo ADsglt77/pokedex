@@ -1,12 +1,13 @@
 /**
  * `/api/collection` : la collection et les achats du compte, que ses appareils partagent
  * (`src/store/sync.ts`). Un seul document, numéroté (`version`) :
- * - `GET` : `{ version, collection, shopping }` (`version` 0 et rien d'autre tant qu'aucun appareil
- *   n'a rien envoyé) ; 304 si l'appareil a déjà cette version (`If-None-Match`).
+ * - `GET` : `{ version, collection, shopping }` (`CollectionResponse` ; `version` 0 et rien d'autre
+ *   tant qu'aucun appareil n'a rien envoyé) ; 304 si l'appareil a déjà cette version
+ *   (`If-None-Match`).
  * - `PUT` `{ baseVersion, collection, shopping }` : enregistré seulement si `baseVersion` est la
- *   version du serveur, et rend `{ version }` ; sinon 409 : l'appareil relit la version du serveur,
- *   qu'il n'écrase jamais sans le demander. Le document est contrôlé aux règles d'un fichier
- *   importé (`readDocument`).
+ *   version du serveur, et rend `{ version }` (`CollectionSaved`) ; sinon 409 : l'appareil relit
+ *   la version du serveur, qu'il n'écrase jamais sans le demander. Le document est contrôlé aux
+ *   règles d'un fichier importé (`readDocument`).
  * Sans session : 401 ; jamais gardé en cache (`no-store`), ni par le navigateur ni par Cloudflare
  * (macro `auth`, `auth.ts`).
  */
@@ -15,6 +16,7 @@ import type { Database } from 'bun:sqlite'
 import { Elysia, t } from 'elysia'
 import { DAY, HOUR } from '@/lib/time'
 import { readDocument } from '@/lib/transfer'
+import type { CollectionSaved } from '@/types'
 import type { accountRoutes } from './auth'
 import { documentChanges, journal } from './journal'
 import { matchesEtag } from './snapshots'
@@ -28,7 +30,10 @@ interface Row {
 const json = (text: string, status = 200, headers: Record<string, string> = {}) =>
   new Response(text, { status, headers: { 'Content-Type': 'application/json', ...headers } })
 
-/** Le document tel que le lit l'appareil, sans le relire : il est enregistré en JSON. */
+/**
+ * Le document tel que le lit l'appareil (`CollectionResponse`), écrit sans le relire : il est
+ * enregistré en JSON.
+ */
 const documentText = (row: Row | null) =>
   `{"version":${row?.version ?? 0},"collection":${row?.collection ?? 'null'},"shopping":${row?.shopping ?? 'null'}}`
 
@@ -119,7 +124,7 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
           return json('null', 409)
         }
         for (const change of documentChanges(result.previous ?? null, document)) journal(change)
-        return json(JSON.stringify({ version: result.version }))
+        return json(JSON.stringify({ version: result.version } satisfies CollectionSaved))
       },
       {
         auth: true,

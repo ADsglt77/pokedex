@@ -1,16 +1,17 @@
 import { Badge, Button, EmptyState, Input, Popover, Select, Stack } from '@camply/ui'
-import { ListChecks, Search, SlidersHorizontal } from '@camply/ui/icons'
+import { ListChecks, Search, SearchX, SlidersHorizontal } from '@camply/ui/icons'
+import { useDeferredValue, useMemo } from 'react'
 import { Link } from 'react-router'
 import { GENERATION_OPTIONS } from '@/config/pokedex'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
-import { pokedexUrl } from '@/lib/filters'
-import { plural, toOptions } from '@/lib/format'
 import {
   DEFAULT_WISHLIST_FILTERS,
-  filterWishlist,
+  pokedexUrl,
   type WishlistFilters,
   type WishlistSort,
-} from '@/lib/wishlist'
+} from '@/lib/filters'
+import { plural, toOptions } from '@/lib/format'
+import { filterWishlist } from '@/lib/wishlist'
 import type { GenerationId } from '@/types'
 import { useWishlist } from '@/hooks/useWishlist'
 import { WishCard } from './WishCard'
@@ -26,19 +27,20 @@ const SORT_LABELS: Record<WishlistSort, string> = {
 
 /**
  * La liste d'achats : la carte de chaque Pokémon, ni possédée ni commandée ; chercher, filtrer,
- * trier. Ses filtres sont gardés par la page (`ShoppingPage`) : l'onglet caché est
- * démonté.
+ * trier. Ses filtres sont dans l'adresse, lus et changés par la page (`ShoppingPage`) : ils
+ * survivent à l'ouverture d'une fiche et au retour.
  */
 export function WishlistPanel({
   filters,
-  onFiltersChange,
+  onFiltersChange: set,
 }: {
   filters: WishlistFilters
-  onFiltersChange: (filters: WishlistFilters) => void
+  onFiltersChange: (change: Partial<WishlistFilters>) => void
 }) {
   const { rows } = useWishlist()
-  const shown = filterWishlist(rows, filters)
-  const set = (change: Partial<WishlistFilters>) => onFiltersChange({ ...filters, ...change })
+  // La liste suit la saisie dès que le navigateur a le temps : la frappe reste fluide.
+  const shownFilters = useDeferredValue(filters)
+  const shown = useMemo(() => filterWishlist(rows, shownFilters), [rows, shownFilters])
   // Sur téléphone, les listes passent dans un panneau « Filtres » : la liste commence plus haut.
   const compact = useMediaQuery('(max-width: 40rem)')
 
@@ -128,12 +130,11 @@ export function WishlistPanel({
       {shown.length === 0 ? (
         <EmptyState
           headingLevel={2}
-          title="Aucune carte ne correspond"
-          description="Changez la recherche ou les filtres."
+          icon={<SearchX size={22} />}
+          title="Aucune carte ne correspond à ces filtres"
+          description="Essayez une autre recherche, ou élargissez les filtres."
           actions={
-            <Button variant="secondary" onClick={() => onFiltersChange(DEFAULT_WISHLIST_FILTERS)}>
-              Effacer les filtres
-            </Button>
+            <Button onClick={() => set(DEFAULT_WISHLIST_FILTERS)}>Réinitialiser les filtres</Button>
           }
         />
       ) : (

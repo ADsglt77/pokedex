@@ -43,21 +43,23 @@ export function createApp({ data, app, accounts }: AppContext) {
           },
         }),
       )
-      // Une adresse inconnue : 404, sans corps. Une erreur inattendue : dans le journal du serveur,
-      // et 500 sans corps (rien de ses détails, une requête SQL par exemple, ne part vers le site).
+      // Une adresse inconnue : 404, sans corps. Laissés à Elysia : un corps illisible (400), refusé
+      // par son schéma (422) et un statut levé exprès (`status(…)`, un code numérique). Tout le
+      // reste est inattendu, même une erreur qui porte son propre code (base verrouillée
+      // `SQLITE_BUSY`, fichier absent `ENOENT`…) : dans le journal du serveur, et 500 sans corps
+      // (rien de ses détails, une requête SQL par exemple, ne part vers le site).
       .onError(({ code, error, request }) => {
         if (code === 'NOT_FOUND') return notFound()
-        if (code === 'UNKNOWN' || code === 'INTERNAL_SERVER_ERROR') {
-          const { pathname } = new URL(request.url)
-          journal({
-            topic: 'serveur',
-            level: 'error',
-            message: 'Erreur de l’API',
-            details: { route: `${request.method} ${pathname}` },
-          })
-          console.error(error)
-          return new Response(null, { status: 500, headers: { 'Cache-Control': 'no-store' } })
-        }
+        if (code === 'VALIDATION' || code === 'PARSE' || typeof code === 'number') return
+        const { pathname } = new URL(request.url)
+        journal({
+          topic: 'serveur',
+          level: 'error',
+          message: 'Erreur de l’API',
+          details: { route: `${request.method} ${pathname}` },
+        })
+        console.error(error)
+        return new Response(null, { status: 500, headers: { 'Cache-Control': 'no-store' } })
       })
       .group('/api', (api) =>
         api

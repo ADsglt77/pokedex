@@ -65,7 +65,7 @@ export function ProgressPanel() {
       <div inert={narrow} className={styles.ruler}>
         <ProgressRuler generations={generations} />
       </div>
-      {narrow && <RegionList generations={generations} linked />}
+      {narrow && <RegionList generations={generations} />}
     </Panel>
   )
 }

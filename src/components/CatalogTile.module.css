@@ -84,3 +84,15 @@
 .choice:disabled .extra {
   color: var(--camply-text-muted);
 }
+
+/* Une carte en ébauche (`CatalogGridSkeleton`) : l'image au format d'une carte, puis son code. */
+.skeleton {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.375rem;
+}
+
+.skeletonArt {
+  aspect-ratio: 63 / 88;
+  border-radius: 4.6% / 3.3%;
+}

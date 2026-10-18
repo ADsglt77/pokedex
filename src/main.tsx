@@ -2,13 +2,16 @@ import { Button, EmptyState, ToastProvider } from '@camply/ui'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router/dom'
-import '@fontsource/manrope/400.css'
-import '@fontsource/manrope/500.css'
-import '@fontsource/manrope/600.css'
-import '@fontsource/manrope/700.css'
-import '@fontsource/space-grotesk/500.css'
-import '@fontsource/space-grotesk/600.css'
-import '@fontsource/space-grotesk/700.css'
+// Le jeu latin seul : il couvre le français (œ, €, ’, « », l'espace fine insécable) ; les autres
+// (cyrillique, grec, vietnamien, latin étendu) alourdiraient le CSS qui bloque l'affichage et ce
+// que garde le service worker.
+import '@fontsource/manrope/latin-400.css'
+import '@fontsource/manrope/latin-500.css'
+import '@fontsource/manrope/latin-600.css'
+import '@fontsource/manrope/latin-700.css'
+import '@fontsource/space-grotesk/latin-500.css'
+import '@fontsource/space-grotesk/latin-600.css'
+import '@fontsource/space-grotesk/latin-700.css'
 import '@camply/ui/styles.css'
 import './styles/theme.css'
 import './styles/global.css'
@@ -30,7 +33,8 @@ const root = createRoot(document.getElementById('root')!)
 // Point d'entrée : polices, styles camply, le thème (ses couleurs redéfinies), puis ceux de l'app.
 // Les espèces viennent du serveur avant tout affichage (toutes les pages en ont besoin), avec
 // l'existence du compte (sans lui, la première visite) et qui est connecté (personne : le Pokédex
-// public), en une requête ; puis notifications et routeur.
+// public), en une requête ; puis notifications et routeur. D'ici là, `#root` montre le logo
+// (`index.html`, qui demande aussi les espèces avant ce script).
 Promise.all([loadSpecies(), loadAccount()]).then(([loaded, account]) => {
   startSession(account)
   root.render(

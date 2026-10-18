@@ -219,6 +219,7 @@ export function AppShell() {
           >
             <Icon size={20} aria-hidden="true" />
             <span>{label}</span>
+            <LateBadge to={to} className={styles.tabBadge} />
           </Link>
         ))}
       </nav>
@@ -235,12 +236,26 @@ export function AppShell() {
   )
 }
 
-/** Un lien de la barre latérale ; les achats signalent les commandes en retard. */
-function SideLink({ place, pathname }: { place: Place; pathname: string }) {
-  const { to, label, icon: Icon } = place
+/**
+ * Les commandes en retard, sur le lien des achats (barre latérale et barre d'onglets) : rien
+ * ailleurs, ni sans retard.
+ */
+function LateBadge({ to, className }: { to: string; className?: string }) {
   const late = useShoppingStore((state) =>
     to === shoppingUrl() ? latePendingOrders(state.shopping.orders, today()).length : 0,
   )
+  if (late === 0) return null
+  return (
+    <Badge size="sm" tone="warn" className={className}>
+      {formatInteger(late)}
+      <span className="visually-hidden"> en retard</span>
+    </Badge>
+  )
+}
+
+/** Un lien de la barre latérale ; les achats signalent les commandes en retard. */
+function SideLink({ place, pathname }: { place: Place; pathname: string }) {
+  const { to, label, icon: Icon } = place
   return (
     <Link
       to={to}
@@ -249,12 +264,7 @@ function SideLink({ place, pathname }: { place: Place; pathname: string }) {
     >
       <Icon size={18} aria-hidden="true" />
       <span>{label}</span>
-      {late > 0 && (
-        <Badge size="sm" tone="warn" className={styles.sideBadge}>
-          {formatInteger(late)}
-          <span className="visually-hidden"> en retard</span>
-        </Badge>
-      )}
+      <LateBadge to={to} className={styles.sideBadge} />
     </Link>
   )
 }

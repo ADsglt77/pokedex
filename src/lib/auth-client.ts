@@ -1,25 +1,17 @@
 /**
- * La connexion côté navigateur (client Better Auth) : le serveur du site, `/api/auth`
- * (`server/auth.ts`). La session vit dans un cookie ; qui est connecté se lit une fois au démarrage
- * (`loadAccount`, avec l'existence du compte), puis le store de la synchronisation le suit.
+ * La connexion côté navigateur : le serveur du site (`/api/account`, `server/auth.ts`). La session
+ * vit dans un cookie ; qui est connecté se lit une fois au démarrage (`loadAccount`, avec
+ * l'existence du compte), puis le store de la synchronisation le suit. Lu par le premier
+ * affichage : le client Better Auth, plus lourd, est à part (`auth.ts`).
  */
 
-import { createAuthClient } from 'better-auth/react'
-
-export const authClient = createAuthClient()
+import type { AccountState, AccountUser } from '@/types'
 
 /** Trop de tentatives (5 par minute, `server/auth.ts`) : la réponse 429 du serveur. */
 export const TOO_MANY_ATTEMPTS = 'Trop de tentatives : réessayez dans une minute.'
 
 /** La page de connexion, qui ramène ensuite à `back` (une page du site, filtres compris). */
 export const loginPath = (back: string) => `/connexion?retour=${encodeURIComponent(back)}`
-
-/** Le compte connecté : son id, son e-mail, son pseudo. */
-export interface AccountUser {
-  id: string
-  email: string
-  name: string
-}
 
 /**
  * Le site a-t-il son compte ? Sinon, c'est la première visite : toute page mène à `/bienvenue`,
@@ -40,7 +32,7 @@ export async function loadAccount(): Promise<AccountUser | null | undefined> {
       signal: AbortSignal.timeout(15_000),
     })
     if (!response.ok) return
-    const body = (await response.json()) as { exists: boolean; user: AccountUser | null }
+    const body = (await response.json()) as AccountState
     accountExists = body.exists
     return body.user
   } catch {

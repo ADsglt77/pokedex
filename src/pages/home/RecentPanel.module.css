@@ -99,7 +99,7 @@
   font-weight: 600;
 }
 
-/* Les cartes sont « distribuées » une à une. */
+/* Les cartes arrivées depuis le premier affichage sont « distribuées » une à une. */
 .dealt {
   animation: deal 0.45s var(--ease-out) backwards;
 }

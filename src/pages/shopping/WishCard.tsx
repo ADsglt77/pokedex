@@ -1,4 +1,5 @@
 import { Card } from '@camply/ui'
+import { memo } from 'react'
 import { Link } from 'react-router'
 import { speciesPath } from '@/lib/filters'
 import { CardArt } from '@/components/CardArt'
@@ -10,8 +11,11 @@ import { priceLabel } from '@/lib/prices'
 import type { WishRow } from '@/lib/wishlist'
 import styles from './WishCard.module.css'
 
-/** Une carte de la liste d'achats : ce qu'elle est, ce qu'elle coûte, où la trouver. */
-export function WishCard({ row }: { row: WishRow }) {
+/**
+ * Une carte de la liste d'achats : ce qu'elle est, ce qu'elle coûte, où la trouver. Mémoïsée : les
+ * lignes de `useWishlist` restent les mêmes d'un filtre à l'autre, seules les nouvelles se rendent.
+ */
+export const WishCard = memo(function WishCard({ row }: { row: WishRow }) {
   const { card, price, change30 } = row
   const speciesId = card.dexIds[0]!
 
@@ -52,4 +56,4 @@ export function WishCard({ row }: { row: WishRow }) {
       </div>
     </Card>
   )
-}
+})

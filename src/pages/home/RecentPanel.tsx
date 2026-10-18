@@ -1,4 +1,5 @@
 import { Button } from '@camply/ui'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { CardArt } from '@/components/CardArt'
 import { Panel } from '@/components/Panel'
@@ -14,8 +15,14 @@ import styles from './RecentPanel.module.css'
 /** Les cartes de la rangée de l'accueil : le panneau en montre autant que sa largeur en tient. */
 export const SHOWN_CARDS = 10
 
-/** Les dernières cartes obtenues, « distribuées » une à une à l'arrivée. */
+/**
+ * Les dernières cartes obtenues ; celles qui arrivent pendant qu'on regarde (obtenues, ou venues
+ * d'un autre appareil) sont « distribuées » une à une, pas celles du premier affichage : l'accueil
+ * se remonte à chaque visite, la donne se rejouerait chaque fois.
+ */
 export function RecentPanel({ cards }: { cards: RecentCard[] }) {
+  const [first] = useState(() => new Set(cards.map((recent) => recent.card.id)))
+  let dealt = 0
   return (
     <Panel
       title="Dernières cartes obtenues"
@@ -27,14 +34,15 @@ export function RecentPanel({ cards }: { cards: RecentCard[] }) {
       }
     >
       <ul className={styles.cards}>
-        {cards.map((recent, index) => {
+        {cards.map((recent) => {
           const speciesId = recent.card.dexIds[0]!
           const date = formatDate(recent.acquiredAt)
+          const deal = !first.has(recent.card.id)
           return (
             <li
               key={recent.card.id}
-              className={styles.dealt}
-              style={{ animationDelay: `${index * 70}ms` }}
+              className={deal ? styles.dealt : undefined}
+              style={deal ? { animationDelay: `${dealt++ * 70}ms` } : undefined}
             >
               <CardLink
                 card={recent.card}

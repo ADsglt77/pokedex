@@ -1,7 +1,9 @@
 import { Button, Input, Stack } from '@camply/ui'
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
+import { flushSync } from 'react-dom'
 import { useNotify } from '@/hooks/useNotify'
-import { authClient, TOO_MANY_ATTEMPTS } from '@/lib/auth-client'
+import { authClient } from '@/lib/auth'
+import { TOO_MANY_ATTEMPTS } from '@/lib/auth-client'
 import { pokedexTitle } from '@/lib/format'
 import { renameAccount, useSyncStore } from '@/store/sync'
 import { DataSection } from './DataSection'
@@ -88,6 +90,7 @@ function PasswordForm() {
   const [next, setNext] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const currentField = useRef<HTMLInputElement>(null)
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -98,7 +101,12 @@ function PasswordForm() {
       .changePassword({ currentPassword: current, newPassword: next, revokeOtherSessions: true })
       .catch(() => ({ error: { status: 0 } }))
     setBusy(false)
-    if (refused) return setError(failure(refused.status))
+    if (refused) {
+      // Le refus s'affiche sous le mot de passe actuel, qui reçoit le focus : il est lu avec lui.
+      flushSync(() => setError(failure(refused.status)))
+      currentField.current?.focus()
+      return
+    }
     setCurrent('')
     setNext('')
     notify('Mot de passe changé.')
@@ -108,6 +116,7 @@ function PasswordForm() {
     <form onSubmit={submit}>
       <Stack gap={3} align="start">
         <Input
+          ref={currentField}
           label="Mot de passe actuel"
           type="password"
           autoComplete="current-password"

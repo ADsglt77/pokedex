@@ -6,12 +6,13 @@ import styles from './RegionList.module.css'
 
 /**
  * Les régions et leurs Pokémon débloqués, en liste, sur téléphone, où la réglette n'est qu'une
- * image : sous elle sur l'accueil, à sa place sur le Pokédex public. `linked` : chacune mène au
- * Pokédex de sa génération (pas sur le Pokédex public, celui du visiteur).
+ * image : sous elle sur l'accueil, à sa place sur le Pokédex public. Chacune mène au Pokédex de sa
+ * génération, sauf sur le Pokédex public (`linked` faux, comme la réglette et les pochettes : ce
+ * serait celui du visiteur).
  */
 export function RegionList({
   generations,
-  linked = false,
+  linked = true,
 }: {
   generations: GenerationProgress[]
   linked?: boolean

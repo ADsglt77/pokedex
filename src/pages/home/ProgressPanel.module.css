@@ -22,7 +22,7 @@
 .ringValue {
   color: var(--camply-text-strong);
   font-family: var(--camply-font-display);
-  font-size: 2rem;
+  font-size: var(--title-xl);
   font-weight: 700;
 }
 

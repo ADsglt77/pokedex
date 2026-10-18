@@ -21,6 +21,7 @@ import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
 import type { Database } from 'bun:sqlite'
 import { Elysia, type Context } from 'elysia'
+import type { AccountState } from '@/types'
 import { journal, type JournalLevel } from './journal'
 
 /** Un jour, en secondes (Better Auth compte ses durées en secondes ; `@/lib/time` en ms). */
@@ -141,7 +142,7 @@ export const appOrigin = (auth: Accounts['auth']) => new URL(auth.options.baseUR
 /**
  * Le compte dans l'API (`/api/…`) :
  * - `/api/auth/*` : Better Auth (connexion, déconnexion, session, création du compte) ;
- * - `GET /api/account` : `{ exists, user }`, si le compte existe déjà (sinon, la première visite) et
+ * - `GET /api/account` : `AccountState`, si le compte existe déjà (sinon, la première visite) et
  *   qui est connecté sur ce navigateur (`null` : personne) : une seule requête au démarrage ;
  * - la macro `auth` des routes réservées au compte : 401 sans session, 403 pour une modification
  *   venue d'une autre origine (le cookie part avec toute requête vers le site), jamais en cache ;
@@ -208,7 +209,7 @@ export function accountRoutes({ auth, account }: Accounts) {
     )
     .get(
       '/account',
-      async ({ request, set }) => {
+      async ({ request, set }): Promise<AccountState> => {
         set.headers['cache-control'] = 'no-store'
         const exists = account() !== null
         const session = exists ? await sessionOf(request, set) : null

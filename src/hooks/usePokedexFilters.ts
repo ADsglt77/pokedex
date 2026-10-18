@@ -25,6 +25,10 @@ export function usePokedexFilters() {
         // Le routeur passe ses mises à jour dans une transition : le champ de recherche, qui lit
         // l'adresse, suivrait la frappe en retard. La grille, elle, reste différée (PokedexPage).
         flushSync: 'search' in patch,
+        // Sans relancer le chargement de la route (le compte) : une navigation qui charge est
+        // asynchrone, et le champ, remis un instant à l'ancienne valeur, enverrait le curseur au
+        // bout du texte.
+        defaultShouldRevalidate: false,
       }),
     [setParams],
   )

@@ -26,7 +26,8 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     Après « Enregistrer comme commande », l'assistant repart de ses réglages par défaut (le budget :
     le reste du mois, cette commande comprise) ;
   - « Copier pour Cardmarket » (`shopping/WantsDialog`, à côté d'« Enregistrer comme commande… »,
-    affiché comme lui dès que la prochaine commande a une carte) en fait des lignes pour la liste de
+    sous la jauge du total, affiché comme lui dès que la prochaine commande a une carte) en fait
+    des lignes pour la liste de
     souhaits de Cardmarket, que l'utilisateur colle lui-même : l'app n'envoie rien à Cardmarket
     (format, version et extension : `/api/wants`, `docs/prix.md`). La fenêtre « Ajouter à ma liste
     Cardmarket » attend les lignes (« Réessayer » si le serveur ne répond pas), puis donne les
@@ -59,8 +60,9 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   - budget calculé depuis les commandes : une commande compte une fois, au mois de sa date d'achat,
     remboursé déduit (jamais plus que la commande), rien si annulée. Au-delà du plafond :
     confirmation, jamais de blocage ; le formulaire montre le mois avec la commande en cours de
-    saisie. Les filtres de la liste et les réglages de l'assistant (prochaine commande) sont gardés
-    par la page, l'onglet caché étant démonté ;
+    saisie ; fermer une saisie commencée (Échap, « Annuler ») demande confirmation. Les filtres de
+    la liste sont dans l'adresse (`docs/interface.md`) ; les réglages de l'assistant (prochaine
+    commande) sont gardés par la page, l'onglet caché étant démonté ;
   - l'export contient `shopping` (un export plus ancien, sans lui, s'importe et garde les achats
     en place). Un import demande toujours confirmation ; un fichier abîmé (enregistrement ou bloc
     d'achats illisible : image, montant en texte, état de commande, date ou jour qui

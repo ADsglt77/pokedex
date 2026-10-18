@@ -14,7 +14,7 @@
 }
 
 .title {
-  font-size: clamp(1.875rem, 1.4rem + 1.8vw, 2.75rem);
+  font-size: var(--title-page);
   letter-spacing: -0.02em;
 }
 

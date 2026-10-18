@@ -44,17 +44,17 @@ export function ProgressRuler({
             </span>
           </>
         )
-        const tip = `${generation.region} : ${unlockedOf(row)}`
+        // Le nom dit tout ce que montre le segment, compte compris (même quand la place manque et
+        // que les libellés disparaissent) ; la bulle le montre au survol et au focus.
+        const label = `${generation.region}, génération ${generation.numeral} : ${unlockedOf(row)}`
         const props = {
           className: cx(styles.segment, selected === generation.id && styles.selected),
           style: { flexGrow: total },
-          // Le nom reste quand la place manque et que les libellés disparaissent ; le compte vient
-          // de la bulle (sa description), sans répéter la région.
-          'aria-label': generation.region,
+          'aria-label': label,
         }
 
         return (
-          <Tooltip key={generation.id} content={tip}>
+          <Tooltip key={generation.id} content={label}>
             {onSelect ? (
               <button
                 {...props}
@@ -69,7 +69,7 @@ export function ProgressRuler({
                 {content}
               </Link>
             ) : (
-              <span {...props} role="img" aria-label={tip}>
+              <span {...props} role="img">
                 {content}
               </span>
             )}

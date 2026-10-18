@@ -1,7 +1,10 @@
-/* Connexion et première visite : une carte seule, centrée, à la largeur d'un formulaire. */
+/* Connexion et première visite : la marque, puis une carte seule, centrées, à la largeur d'un
+   formulaire. */
 .page {
   display: grid;
   place-items: center;
+  align-content: center;
+  gap: var(--camply-space-6);
   min-height: 60svh;
   padding: var(--camply-space-6) var(--gutter);
 }

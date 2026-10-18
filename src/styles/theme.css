@@ -10,7 +10,9 @@
  */
 
 :root {
-  /* La marque : la Poké Ball du logo et de l'icône de l'onglet, la même dans les deux thèmes. */
+  /* La marque : la Poké Ball du logo et de l'icône de l'onglet, la même dans les deux thèmes. Ses
+     copies figées, à changer avec elle : `public/favicon.svg` et l'attente du démarrage
+     (`index.html`). */
   --brand-red: #e3350d;
   --brand-ink: #1f1f22;
   --brand-white: #ffffff;
@@ -130,7 +132,9 @@
   --camply-accent-soft: rgba(212, 42, 12, 0.08);
   --camply-accent-soft-hover: rgba(212, 42, 12, 0.14);
   --camply-accent-border: rgba(212, 42, 12, 0.32);
-  --camply-ring: 0 0 0 3px rgba(212, 42, 12, 0.28);
+  /* Le contour du focus (et `--camply-danger-ring`) : 3:1 au moins sur le blanc, comme en sombre ;
+     plus pâle, il ne se voyait pas. */
+  --camply-ring: 0 0 0 3px rgba(212, 42, 12, 0.75);
   --camply-gradient-accent: linear-gradient(90deg, #a81f05, var(--camply-accent));
 
   /* Danger : un cramoisi, plus rose que le rouge de l'accent. */
@@ -140,14 +144,16 @@
   --camply-danger-soft: rgba(190, 18, 60, 0.08);
   --camply-danger-soft-hover: rgba(190, 18, 60, 0.14);
   --camply-danger-border: rgba(190, 18, 60, 0.3);
-  --camply-danger-ring: 0 0 0 3px rgba(190, 18, 60, 0.26);
+  --camply-danger-ring: 0 0 0 3px rgba(190, 18, 60, 0.7);
   --camply-gradient-danger: linear-gradient(90deg, #881337, var(--camply-danger));
 
-  --camply-warn: #b45309;
+  /* Avertissement : un orange brûlé, assez foncé pour le petit texte d'un badge sur son fond
+     teinté (4,5:1 au moins). */
+  --camply-warn: #a34b07;
   --camply-warn-contrast: #ffffff;
-  --camply-warn-soft: rgba(180, 83, 9, 0.1);
-  --camply-warn-border: rgba(180, 83, 9, 0.28);
-  --camply-gradient-warn: linear-gradient(90deg, #92400e, var(--camply-warn));
+  --camply-warn-soft: rgba(163, 75, 7, 0.1);
+  --camply-warn-border: rgba(163, 75, 7, 0.28);
+  --camply-gradient-warn: linear-gradient(90deg, #843c06, var(--camply-warn));
 
   --camply-success: #047857;
   --camply-success-contrast: #ffffff;

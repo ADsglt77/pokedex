@@ -1,13 +1,15 @@
 import { Button, Stack } from '@camply/ui'
 import { Link, useRouteError } from 'react-router'
+import { Logo } from '@/components/Logo'
 import { PageHeader } from '@/components/PageHeader'
 import { cx } from '@/lib/cx'
 import { pageTitle } from '@/lib/format'
 import styles from './ErrorPage.module.css'
 
 /**
- * Filet de sécurité : une erreur d'affichage ne laisse jamais une page blanche. Le message de
- * l'erreur est montré, discret : de quoi la signaler sans ouvrir la console.
+ * Filet de sécurité : une erreur d'affichage ne laisse jamais une page blanche. Elle remplace la
+ * coquille : la marque (logo et nom) en haut. Le message de l'erreur est montré, discret : de quoi
+ * la signaler sans ouvrir la console.
  */
 export function ErrorPage() {
   const error = useRouteError()
@@ -15,6 +17,9 @@ export function ErrorPage() {
   return (
     <main className={cx('container', styles.page)}>
       <title>{pageTitle('Erreur')}</title>
+      <div className={styles.brand}>
+        <Logo>Mon Pokédex</Logo>
+      </div>
       <PageHeader title="Quelque chose s’est mal passé">
         L’affichage de cette page a échoué. Recharger la page règle souvent le problème ; votre
         collection, elle, ne risque rien.

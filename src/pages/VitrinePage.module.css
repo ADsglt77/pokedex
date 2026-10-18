@@ -32,9 +32,35 @@
   gap: var(--camply-space-5);
 }
 
+/* Le titre et la phrase prennent la place qui reste à côté de l'anneau, et passent dessous quand
+   elle manque (pas un bloc serré à la largeur d'un mot sur tablette). */
+.headline {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+/* À la taille des titres des autres pages. */
 .title {
   margin-bottom: var(--camply-space-2);
-  font-size: clamp(1.5rem, 1.2rem + 1.5vw, 2.25rem);
+  font-size: var(--title-page);
+  letter-spacing: -0.02em;
+}
+
+/* L'ébauche de la page (`VitrineSkeleton`) : le titre, à sa hauteur, et les chiffres. */
+.titleSkeleton {
+  width: min(22rem, 100%);
+  height: calc(var(--title-page) * 1.15);
+  margin-bottom: var(--camply-space-3);
+}
+
+.statSkeleton {
+  height: 9.25rem;
+}
+
+@media (max-width: 40rem) {
+  .statSkeleton {
+    height: 6.75rem;
+  }
 }
 
 .ring {

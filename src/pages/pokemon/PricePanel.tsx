@@ -16,6 +16,9 @@ import styles from './PricePanel.module.css'
  * payé (`paid`) est noté, l'écart.
  */
 export function PricePanel({ card, paid }: { card: PokemonCard; paid: number | null }) {
+  // L'historique est demandé tout de suite, avec les prix du jour (plus d'un Mo) et pas après eux :
+  // la même promesse, que la courbe lira (`use`).
+  if (card.cardmarket !== undefined) void loadPriceHistory(card.cardmarket)
   const prices = usePrices()
   const missing = usePricesMissing()
   const price = priceOf(prices, card)

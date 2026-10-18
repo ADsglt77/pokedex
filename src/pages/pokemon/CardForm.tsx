@@ -1,4 +1,4 @@
-import { Button, Modal, Stack, Tab, TabList, TabPanel, Tabs } from '@camply/ui'
+import { Button, Modal, Skeleton, Stack, Tab, TabList, TabPanel, Tabs } from '@camply/ui'
 import { Suspense, useRef, useState } from 'react'
 import { useCardDraft } from '@/hooks/useCardDraft'
 import { useCollectionAction } from '@/hooks/useNotify'
@@ -7,6 +7,7 @@ import { addCard, useCollectionStore } from '@/store/collection'
 import type { AddAs, PokemonCard, PokemonSpecies } from '@/types'
 import { CardFields } from './CardFields'
 import { CatalogPicker, type PickerView } from './CatalogPicker'
+import { CatalogGridSkeleton } from '@/components/CatalogTile'
 import { SegmentedField } from '@/components/SegmentedField'
 import { ADD_AS_LABELS, ADDED_AS } from '@/config/shopping'
 import { usePokedex } from '@/hooks/usePokedex'
@@ -30,7 +31,9 @@ export function CardForm({
   onClose: () => void
 }) {
   const act = useCollectionAction()
-  const draft = useCardDraft(card)
+  // Le bloc des champs : le premier en erreur y reçoit le focus à l'enregistrement.
+  const form = useRef<HTMLDivElement>(null)
+  const draft = useCardDraft(card, form)
   const [tab, setTab] = useState('catalogue')
   const [picked, setPicked] = useState<CatalogCard | null>(null)
   const { entryById } = usePokedex()
@@ -71,7 +74,7 @@ export function CardForm({
     if (!draft.saving) onClose()
   }
 
-  const fields = <CardFields draft={draft} speciesId={species.id} />
+  const fields = <CardFields ref={form} draft={draft} speciesId={species.id} />
 
   return (
     <Modal
@@ -114,7 +117,7 @@ export function CardForm({
             </Tab>
           </TabList>
           <TabPanel value="catalogue">
-            <Suspense fallback={<p className="muted">Chargement des cartes…</p>}>
+            <Suspense fallback={<PickerSkeleton />}>
               <CatalogPicker
                 species={species}
                 selected={picked?.key ?? null}
@@ -138,5 +141,17 @@ export function CardForm({
         </Tabs>
       )}
     </Modal>
+  )
+}
+
+/** Les cartes du catalogue tant qu'elles arrivent : réglages, décompte et grille en ébauche. */
+function PickerSkeleton() {
+  return (
+    <Stack gap={4}>
+      <p className="visually-hidden">Chargement des cartes…</p>
+      <Skeleton variant="rect" width="min(30rem, 100%)" height="2rem" />
+      <Skeleton width="14rem" />
+      <CatalogGridSkeleton count={8} />
+    </Stack>
   )
 }

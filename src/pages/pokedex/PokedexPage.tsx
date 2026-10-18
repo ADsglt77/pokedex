@@ -1,7 +1,7 @@
 import { Button, EmptyState } from '@camply/ui'
 import { Layers, SearchX } from '@camply/ui/icons'
-import { useDeferredValue, useMemo } from 'react'
-import { Link } from 'react-router'
+import { useDeferredValue, useMemo, type MouseEvent } from 'react'
+import { Link, useNavigate } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { usePokedex } from '@/hooks/usePokedex'
 import { usePokedexFilters } from '@/hooks/usePokedexFilters'
@@ -41,6 +41,29 @@ export function PokedexPage() {
   )
   const filtering = filters.search.trim() !== '' || activeFilterCount(filters) > 0
   const resetFilters = () => setFilters(DEFAULT_FILTERS)
+  const navigate = useNavigate()
+
+  // Les pochettes sont de simples liens (`PokedexTile`) : un clic ordinaire sur l'une d'elles
+  // (Entrée au clavier en est un) passe par le routeur, sans recharger la page ; avec Ctrl, ⌘, Maj
+  // ou Alt, le navigateur fait comme pour tout lien (nouvel onglet…).
+  const followTile = (event: MouseEvent) => {
+    const link = (event.target as Element).closest('a')
+    if (
+      !link ||
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.altKey ||
+      link.target ||
+      link.hasAttribute('download')
+    ) {
+      return
+    }
+    event.preventDefault()
+    navigate(link.getAttribute('href')!)
+  }
 
   return (
     <div className="container">
@@ -68,7 +91,10 @@ export function PokedexPage() {
       />
 
       {visible.length > 0 ? (
-        <PokedexGrid entries={visible} generations={pokedex.generations} />
+        // Le clic se lit ici, une fois pour toute la grille (pas un gestionnaire par pochette).
+        <div onClick={followTile}>
+          <PokedexGrid entries={visible} generations={pokedex.generations} />
+        </div>
       ) : (
         <EmptyState
           headingLevel={2}

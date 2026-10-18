@@ -7,12 +7,18 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   à compléter : `no-image`, `no-cardmarket`, `no-paid` : possédée sans prix payé), `order=desc` ;
   un lien filtré se
   construit avec `pokedexUrl`. La recherche passe par `flushSync` (le routeur met l'adresse à jour
-  dans une transition, le champ suivrait la frappe en retard) ; la grille, mémoïsée, suit par
-  `useDeferredValue`.
+  dans une transition, le champ suivrait la frappe en retard), sans relancer le chargement de la
+  route (`defaultShouldRevalidate: false` : sinon le curseur partirait au bout du texte) ; la
+  grille, mémoïsée, suit par
+  `useDeferredValue`. De même pour la liste d'achats (Achats) : `q`, `generation`, `tri` (`price`
+  par défaut, `price-desc`, `drop`, `dex`), à côté de l'onglet (`vue`), qui les garde
+  (`parseShopping`) ; ses cartes (`WishCard`) sont mémoïsées. Les groupes fermés de l'assistant ne
+  rendent pas leurs cartes (camply rend le contenu d'un `AccordionItem` fermé).
 - Interface : les cartes portent la couleur, l'interface reste sobre (deux thèmes,
   `styles/theme.css`). Le système
   de design vit dans `styles/global.css` : échelle de texte (`--text-xs`, `--text-sm`,
-  `--text-md` ; `--title-sm`, `--title-md` ; les titres de page ont leur taille fluide), rythme
+  `--text-md` ; `--title-sm`, `--title-md`, `--title-xl` pour le grand chiffre d'un panneau ;
+  `--title-page`, fluide, pour le titre d'une page, Pokédex public compris), rythme
   (`--space-block` entre les blocs d'une page, `--space-panel` dans un panneau), mise en page
   (`--sidebar-width`, `--tabbar-height`), mouvement (`--ease-out`, `--duration-fast`) : une valeur
   hors d'eux doit avoir une raison. Ses classes partagées, entre autres : `.quiet-link` (un lien
@@ -104,10 +110,18 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   fois plus lent) : le Pokédex affiche 1 025 pochettes. Seules celles à l'écran sont dessinées
   (`content-visibility`, de même pour la liste d'achats et le catalogue), les marques de
   possession sont des icônes CSS (masques, pas de SVG : plus de 1 000 sinon), et rien de ce qui
-  défile n'a de `backdrop-filter` (flou recalculé à chaque image). Les pages autres que l'accueil,
+  défile n'a de `backdrop-filter` (flou recalculé à chaque image). Les pochettes sont de simples
+  liens (`<a>`, pas un `Link` de react-router, qui lit l'adresse : les 1 025 se redessineraient à
+  chaque frappe de la recherche, environ 20 ms) ; `PokedexPage` lit le clic une fois pour toute la
+  grille et fait suivre un clic ordinaire (Entrée comprise) par le routeur, pas un clic avec Ctrl,
+  ⌘, Maj ou Alt. Les animations ne se rejouent pas à chaque visite (les pages se remontent) : la
+  marque de possession seulement quand le statut change sous les yeux, les cartes de l'accueil
+  seulement quand une nouvelle arrive. Les pages autres que l'accueil,
   le Pokédex et les fiches sont chargées à leur première ouverture (`lazy`, `router.tsx` : une
   route parente sans chemin porte une seule fois la page d'erreur et l'attente, vide, d'une page
-  ouverte directement). Une
+  ouverte directement). Le client Better Auth non plus (`lib/auth.ts`, à part de
+  `lib/auth-client.ts` que lit le démarrage) : seules la connexion, la première visite et Données ›
+  Mon compte l'importent, la déconnexion le charge à la demande. Une
   donnée chargée à la demande et lue par `use()` passe par `settled` : sans lui, React retient
   l'affichage environ 300 ms à chaque ouverture (fenêtre d'ajout, catalogue). La fiche d'un
   Pokémon sans carte prépare le catalogue pendant que le navigateur est libre.

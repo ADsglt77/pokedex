@@ -280,6 +280,13 @@
   font-size: var(--text-xs);
   font-weight: 600;
   text-decoration: none;
+  transition: background var(--duration-fast);
+}
+
+/* Le retour du toucher (le voile gris du navigateur est retiré, `global.css`) : l'onglet se teinte
+   tant que le doigt est dessus. */
+.tab:active {
+  background: var(--camply-fill-3);
 }
 
 .tab[aria-current='page'] {
@@ -294,6 +301,18 @@
   height: 2px;
   border-radius: 2px;
   background: var(--camply-accent);
+}
+
+/* Les commandes en retard : une pastille sur le coin haut droit de l'icône. Le fond teinté du badge
+   est transparent : posé sur celui de la barre, il cache le coin de l'icône ; un liseré de la barre
+   l'en détache. */
+.tabBadge {
+  position: absolute;
+  top: 0.25rem;
+  left: calc(50% + 0.25rem);
+  background:
+    linear-gradient(var(--camply-warn-soft), var(--camply-warn-soft)), var(--camply-surface);
+  box-shadow: 0 0 0 2px var(--camply-surface);
 }
 
 @media (max-width: 63.99rem) {

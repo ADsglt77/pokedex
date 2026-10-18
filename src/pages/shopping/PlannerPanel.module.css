@@ -26,7 +26,7 @@
 
 .planTotal {
   font-family: var(--camply-font-display);
-  font-size: 2rem;
+  font-size: var(--title-xl);
   font-weight: 600;
   line-height: 1.1;
 }
@@ -34,6 +34,11 @@
 .planTotal :global(.muted) {
   font-size: 1rem;
   font-weight: 400;
+}
+
+/* Copier, enregistrer : sous la jauge, à côté du total, un peu détachés de ses chiffres. */
+.planActions {
+  margin-top: 0.5rem;
 }
 
 @container page (max-width: 46rem) {

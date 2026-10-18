@@ -11,6 +11,10 @@
   background: color-mix(in srgb, var(--camply-bg) 90%, transparent);
   color: var(--camply-text-muted);
   box-shadow: 0 0 0 1px var(--camply-border-strong);
+}
+
+/* Le statut vient de changer (pas au premier affichage) : la marque est tamponnée. */
+.stamp {
   animation: stamp 0.3s var(--ease-out);
 }
 

@@ -5,11 +5,11 @@
  */
 
 import { speciesOf } from '@/lib/species'
-import { searchForm, searchMatcher } from '@/lib/filters'
+import { searchForm, searchMatcher, type WishlistFilters, type WishlistSort } from '@/lib/filters'
 import type { PokedexEntry } from '@/lib/pokedex'
 import { isToBuy } from '@/lib/collection'
 import { priceChange, priceOf } from '@/lib/prices'
-import type { GenerationId, PokemonCard, PriceFile } from '@/types'
+import type { PokemonCard, PriceFile } from '@/types'
 
 /** Une carte de la liste d'achats, ni possédée ni commandée, prête à afficher et à planifier. */
 export interface WishRow {
@@ -46,20 +46,6 @@ export function wishlistEstimate(rows: readonly WishRow[]) {
     else estimate.value += row.price
   }
   return estimate
-}
-
-export type WishlistSort = 'price' | 'price-desc' | 'drop' | 'dex'
-
-export interface WishlistFilters {
-  search: string
-  generation: GenerationId | null
-  sort: WishlistSort
-}
-
-export const DEFAULT_WISHLIST_FILTERS: WishlistFilters = {
-  search: '',
-  generation: null,
-  sort: 'price',
 }
 
 /** Du plus petit au plus grand, les valeurs inconnues à la fin. */

@@ -11,8 +11,13 @@ const EAGER_TILES = 12
 interface PokedexGridProps {
   entries: PokedexEntry[]
   generations: GenerationProgress[]
-  /** Faux sur le Pokédex public : les pochettes ne mènent pas aux fiches. */
+  /**
+   * Faux sur le Pokédex public : les pochettes ne mènent pas aux fiches. Vrai, ce sont de simples
+   * liens : la page les fait suivre par le routeur (`PokedexPage`).
+   */
   linked?: boolean
+  /** Le niveau des intertitres des générations : 3 sous un titre de section (Pokédex public). */
+  headingLevel?: 2 | 3
 }
 
 /**
@@ -24,8 +29,10 @@ export const PokedexGrid = memo(function PokedexGrid({
   entries,
   generations,
   linked,
+  headingLevel = 2,
 }: PokedexGridProps) {
   const groups = groupByGeneration(entries)
+  const Heading = headingLevel === 3 ? 'h3' : 'h2'
   let rank = 0
 
   return groups.map(({ generation, entries: groupEntries }) => {
@@ -34,10 +41,10 @@ export const PokedexGrid = memo(function PokedexGrid({
       <section key={generation.id} className={styles.group}>
         {groups.length > 1 && (
           <div className={styles.heading}>
-            <h2>
+            <Heading>
               {generation.region}{' '}
               <span className={styles.numeral}>génération {generation.numeral}</span>
-            </h2>
+            </Heading>
             <span className={styles.count}>{unlockedOf(progress)}</span>
           </div>
         )}

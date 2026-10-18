@@ -38,3 +38,8 @@
   color: var(--camply-text-muted);
   font-size: var(--text-md);
 }
+
+/* L'ébauche du libellé du champ des extensions (`CatalogSkeleton`), au-dessus de lui. */
+.labelSkeleton {
+  margin-bottom: 0.5rem;
+}

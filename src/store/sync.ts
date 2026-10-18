@@ -12,7 +12,6 @@
  */
 
 import { create } from 'zustand'
-import { authClient, type AccountUser } from '@/lib/auth-client'
 import { emptyCollection } from '@/lib/collection'
 import { emptyShopping } from '@/lib/orders'
 import { decide, documentHash, isEmptyDocument, type SyncDocument } from '@/lib/sync'
@@ -20,6 +19,7 @@ import { parseStored, readCollection, readShopping } from '@/lib/transfer'
 import { useCollectionStore } from '@/store/collection'
 import { currentDocument, replaceDocument, sameDocument } from '@/store/document'
 import { useShoppingStore } from '@/store/shopping'
+import type { AccountUser, CollectionResponse, CollectionSaved } from '@/types'
 import { readStored, writeStored } from './persist'
 
 /**
@@ -150,7 +150,7 @@ async function call(method: 'GET' | 'PUT', init: { body?: string; etag?: string 
 
 /** Le document du serveur ; `null` tant qu'aucun appareil n'a rien envoyé. */
 async function readServer(response: Response): Promise<ServerDocument | null> {
-  const body = (await response.json()) as { version: number } & Partial<SyncDocument>
+  const body = (await response.json()) as CollectionResponse
   if (!body.collection || !body.shopping) return null
   // Lu comme le stockage du navigateur : un document d'une ancienne version (« souhaitée ») aussi.
   const document = {
@@ -170,7 +170,7 @@ async function push(document: SyncDocument, hash: string, baseVersion: number) {
   // un redémarrage…) est une panne passagère : l'envoi repartira.
   if (response.status === 400 || response.status === 422) return setStatus('refused')
   if (!response.ok) return offline()
-  const body = (await response.json().catch(() => null)) as { version: number } | null
+  const body = (await response.json().catch(() => null)) as CollectionSaved | null
   // Une réponse illisible (coupée en route) : l'envoi est peut-être passé, on comparera de nouveau.
   if (!body) return offline()
   writeBase(body.version, hash)
@@ -273,10 +273,13 @@ export async function hasUnsentChanges() {
 /**
  * Se déconnecter : la collection quitte aussi ce navigateur (elle reste sur le serveur), pour ne
  * rien laisser sur un appareil partagé. Effacée après la déconnexion : aucun onglet ne peut plus
- * envoyer la collection vide. `false` si le serveur ne répond pas : rien n'est effacé.
+ * envoyer la collection vide. `false` si le serveur ne répond pas : rien n'est effacé. Le client
+ * Better Auth est chargé ici, à la demande : il n'alourdit pas le premier affichage.
  */
 export async function signOut() {
-  const { error } = await authClient.signOut().catch(() => ({ error: true }))
+  const { error } = await import('@/lib/auth')
+    .then(({ authClient }) => authClient.signOut())
+    .catch(() => ({ error: true }))
   if (error) return false
   user = null
   // Une synchronisation en cours finit d'abord (elle s'arrête, sans compte) : rien ne passe après

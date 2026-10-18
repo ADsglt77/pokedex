@@ -1,7 +1,8 @@
 /**
  * Les filtres de la page Pokédex : leur place dans l'adresse, leur application aux Pokémon, la
  * recherche par nom ou numéro. Et les adresses de l'app : le Pokédex filtré (`pokedexUrl`), la
- * fiche d'un Pokémon (`speciesPath`), les onglets des Achats (`shoppingUrl`).
+ * fiche d'un Pokémon (`speciesPath`), les onglets des Achats et les filtres de leur liste
+ * d'achats (`parseShopping`, `shoppingUrl`).
  */
 
 import { generationById, POKEMON_TYPES, type Generation } from '@/config/pokedex'
@@ -75,14 +76,58 @@ export function pokedexUrl(filters: Partial<PokedexFilters>): string {
 export const speciesPath = (id: number) => `/pokemon/${id}`
 
 /** Les onglets des Achats, dans l'adresse (`?vue=`) ; la liste d'achats est celui par défaut. */
-export const SHOPPING_VIEWS = ['liste', 'prochaine-commande', 'commandes', 'budget'] as const
-type ShoppingView = (typeof SHOPPING_VIEWS)[number]
+const SHOPPING_VIEWS = ['liste', 'prochaine-commande', 'commandes', 'budget'] as const
+export type ShoppingView = (typeof SHOPPING_VIEWS)[number]
+
+/** Les tris de la liste d'achats, dans l'adresse (`?tri=`) ; par prix croissant par défaut. */
+const WISHLIST_SORTS = ['price', 'price-desc', 'drop', 'dex'] as const
+export type WishlistSort = (typeof WISHLIST_SORTS)[number]
+
+/** Les filtres de la liste d'achats (`filterWishlist`), dans l'adresse comme ceux du Pokédex. */
+export interface WishlistFilters {
+  search: string
+  generation: GenerationId | null
+  sort: WishlistSort
+}
+
+export const DEFAULT_WISHLIST_FILTERS: WishlistFilters = {
+  search: '',
+  generation: null,
+  sort: 'price',
+}
+
+/**
+ * L'adresse des Achats → l'onglet ouvert et les filtres de la liste d'achats, avec les noms du
+ * Pokédex (`q`, `generation`) et `tri`. Une valeur inconnue (adresse tapée à la main) vaut le
+ * défaut.
+ */
+export function parseShopping(params: URLSearchParams): {
+  view: ShoppingView
+  filters: WishlistFilters
+} {
+  return {
+    view: oneOf(SHOPPING_VIEWS, params.get('vue')) ?? 'liste',
+    filters: {
+      search: params.get('q') ?? '',
+      generation: generationById(Number(params.get('generation')))?.id ?? null,
+      sort: oneOf(WISHLIST_SORTS, params.get('tri')) ?? 'price',
+    },
+  }
+}
+
+/** L'onglet et les filtres → l'adresse, sans les valeurs par défaut : `?vue=commandes&q=pikachu`. */
+export function serializeShopping(view: ShoppingView, filters: WishlistFilters): URLSearchParams {
+  const params = new URLSearchParams()
+  if (view !== 'liste') params.set('vue', view)
+  if (filters.search) params.set('q', filters.search)
+  if (filters.generation) params.set('generation', String(filters.generation))
+  if (filters.sort !== 'price') params.set('tri', filters.sort)
+  return params
+}
 
 /** L'adresse des Achats : `shoppingUrl({ view: 'commandes' })` → `/achats?vue=commandes`. */
-export function shoppingUrl({ view }: { view?: ShoppingView } = {}) {
-  const params = new URLSearchParams()
-  if (view && view !== 'liste') params.set('vue', view)
-  const search = params.toString()
+export function shoppingUrl({ view = 'liste' }: { view?: ShoppingView } = {}) {
+  const search = serializeShopping(view, DEFAULT_WISHLIST_FILTERS).toString()
   return search ? `/achats?${search}` : '/achats'
 }
 

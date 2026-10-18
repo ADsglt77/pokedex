@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type RefObject } from 'react'
 import { findCardImage, type CatalogCard } from '@/lib/card-catalog'
 import { imageSource } from '@/lib/card-images'
 import { referenceCode } from '@/lib/card-code'
 import { isCardmarketImage, parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
 import { newCardId } from '@/lib/collection'
+import { focusFirstError } from '@/lib/focus'
 import { parseLink } from '@/lib/format'
 import { loadPriceHistory } from '@/store/prices'
 import type { CardImage, PokemonCard } from '@/types'
@@ -16,9 +17,10 @@ const isFoundImage = (card: PokemonCard) => card.image !== null && imageSource(c
 
 /**
  * La saisie d'une carte : l'adresse de son image (vide : celle retrouvée d'après la référence),
- * son id Cardmarket, sa référence, sa page chez Cardmarket. `card` : la carte à corriger.
+ * son id Cardmarket, sa référence, sa page chez Cardmarket. `card` : la carte à corriger ;
+ * `fields` : le bloc de ses champs, où le premier en erreur reçoit le focus à l'enregistrement.
  */
-export function useCardDraft(card: PokemonCard | null) {
+export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLElement | null>) {
   // Tiré une fois : deux clics sur « Enregistrer » écrivent la même carte, pas deux.
   const [id] = useState(() => card?.id ?? newCardId())
   const [image, setImage] = useState(() =>
@@ -66,14 +68,17 @@ export function useCardDraft(card: PokemonCard | null) {
 
   /**
    * La carte saisie, pour les Pokémon `dexIds` ; `null` tant qu'un champ est illisible (ses
-   * erreurs s'affichent alors). Sans référence notée, le nom de la carte chez Cardmarket, sinon
-   * `fallback` ; une référence qui n'était que le nom de l'ancien id suit l'id corrigé, et une
-   * page qui n'était que celle de l'ancien id est oubliée (le lien suit alors l'id). Sans adresse
-   * collée, l'image retrouvée d'après la référence, s'il y en a une.
+   * erreurs s'affichent alors, et le premier reçoit le focus). Sans référence notée, le nom de la
+   * carte chez Cardmarket, sinon `fallback` ; une référence qui n'était que le nom de l'ancien id
+   * suit l'id corrigé, et une page qui n'était que celle de l'ancien id est oubliée (le lien suit
+   * alors l'id). Sans adresse collée, l'image retrouvée d'après la référence, s'il y en a une.
    */
   async function read(dexIds: number[], fallback: string): Promise<PokemonCard | null> {
+    if (cardmarket === undefined || errors.image || errors.page) {
+      focusFirstError(fields, () => setSubmitted(true))
+      return null
+    }
     setSubmitted(true)
-    if (cardmarket === undefined || errors.image || errors.page) return null
     const changedId = cardmarket !== initial.cardmarket
     // Le nom de l'id saisi, et celui de l'ancien id s'il a changé (la référence le reprenait-elle ?).
     const [known, previous] = await Promise.all([

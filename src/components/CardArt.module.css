@@ -11,7 +11,8 @@
   transition:
     filter 0.25s,
     opacity 0.25s,
-    transform 0.2s;
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .scan {

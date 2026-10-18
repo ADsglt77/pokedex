@@ -101,7 +101,8 @@ function PossessionStatement({ entry }: { entry: PokedexEntry }) {
   return (
     <p className={styles.statement}>
       <span className={styles.statementMark}>
-        <PossessionMark status={status} />
+        {/* Une clé par Pokémon : passer au suivant ne change pas un statut (pas d'animation). */}
+        <PossessionMark key={entry.species.id} status={status} />
       </span>
       <span>
         <strong>{entry.unlocked ? 'Débloqué' : 'À débloquer'}</strong> :{' '}

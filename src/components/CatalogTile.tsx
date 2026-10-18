@@ -1,3 +1,4 @@
+import { Skeleton } from '@camply/ui'
 import type { ReactNode, Ref } from 'react'
 import { CardArt } from '@/components/CardArt'
 import { ExternalLink } from '@/components/ExternalLink'
@@ -64,6 +65,23 @@ export function CatalogGrid({
   return (
     <ul ref={ref} className={styles.grid}>
       {children}
+    </ul>
+  )
+}
+
+/**
+ * La grille tant que le catalogue arrive : `count` cartes en ébauche, à la taille des vraies (la
+ * page ne saute pas à leur arrivée).
+ */
+export function CatalogGridSkeleton({ count }: { count: number }) {
+  return (
+    <ul className={styles.grid} aria-hidden="true">
+      {Array.from({ length: count }, (_, index) => (
+        <li key={index} className={styles.skeleton}>
+          <Skeleton variant="rect" className={styles.skeletonArt} />
+          <Skeleton width="70%" />
+        </li>
+      ))}
     </ul>
   )
 }

@@ -16,13 +16,17 @@
   --gutter: clamp(1rem, 0.4rem + 2.5vw, 2.5rem);
   /* La largeur des pages : tout l'écran jusqu'au très grand (2 560 px), où la page reste centrée. */
   --page-max: 120rem;
-  /* Les tailles de texte de l'app, de la mention au titre de section (les titres de page ont la
-     leur, fluide). Une taille hors de cette échelle doit avoir une raison. */
+  /* Les tailles de texte de l'app, de la mention au titre de page. Une taille hors de cette échelle
+     doit avoir une raison. */
   --text-xs: 0.75rem;
   --text-sm: 0.8125rem;
   --text-md: 0.875rem;
   --title-sm: 1.125rem;
   --title-md: 1.5rem;
+  /* Le grand chiffre d'un panneau (Pokémon débloqués, total de la prochaine commande). */
+  --title-xl: 2rem;
+  /* Le titre d'une page (`PageHeader`, Pokédex public), fluide. */
+  --title-page: clamp(1.875rem, 1.4rem + 1.8vw, 2.75rem);
   /* La coquille (AppShell) : barre latérale sur grand écran, barres du haut et du bas ailleurs. */
   --sidebar-width: 15.5rem;
   --tabbar-height: 4rem;
@@ -323,11 +327,14 @@ img {
   white-space: nowrap;
 }
 
+/* Mouvement réduit : tout arrive d'un coup, sans délai non plus (les cartes récentes de l'accueil
+   n'apparaissent plus l'une après l'autre). */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
   }
 }

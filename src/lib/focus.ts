@@ -1,6 +1,7 @@
 /**
  * Le focus au clavier : où il va quand une action retire son propre bouton d'une liste
- * (`keepFocusInList`), et quand un raccourci de la page ne s'applique pas (`shortcutBlocked`).
+ * (`keepFocusInList`), quand un formulaire refuse un enregistrement (`focusFirstError`), et quand
+ * un raccourci de la page ne s'applique pas (`shortcutBlocked`).
  */
 
 import type { RefObject } from 'react'
@@ -28,6 +29,21 @@ export function keepFocusInList(
     item?.querySelector<HTMLElement>('a[href]') ??
     fallback.current
   target?.focus()
+}
+
+/**
+ * Un enregistrement refusé : `show` affiche les erreurs (par `flushSync`, pour qu'elles soient
+ * déjà là), puis le premier champ en erreur de `fields` est mis sous les yeux et reçoit le focus.
+ * Sans animation pour qui les a réduites (réglage du système).
+ */
+export function focusFirstError(fields: RefObject<HTMLElement | null>, show: () => void) {
+  flushSync(show)
+  const field = fields.current?.querySelector<HTMLElement>('[aria-invalid="true"]')
+  field?.scrollIntoView({
+    block: 'center',
+    behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+  })
+  field?.focus({ preventScroll: true })
 }
 
 /**

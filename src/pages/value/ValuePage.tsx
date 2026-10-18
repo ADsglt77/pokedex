@@ -159,7 +159,13 @@ function Evolution({ owned }: { owned: PokemonCard[] }) {
     <Panel
       title="Évolution"
       description="Jour par jour, sur la période choisie."
-      actions={<ChartPeriodControl value={period} onChange={setPeriod} />}
+      // Sans courbe, pas de période à choisir : la valeur et les Pokémon débloqués en ont une dès
+      // qu'une carte est possédée, les dépenses dès la première commande.
+      actions={
+        (unlocks.length > 0 || spending.length > 0) && (
+          <ChartPeriodControl value={period} onChange={setPeriod} />
+        )
+      }
     >
       <div className={styles.charts}>
         <section className={cx(styles.chart, styles.chartWide)}>

@@ -63,7 +63,8 @@ Le seul compte, la collection synchronisée entre les appareils, le Pokédex pub
   la version que le serveur a reçue. Connecté, la collection et les achats
   forment un seul document par compte (une commande modifie les deux), dans `app.db`, numéroté par
   le serveur (`/api/collection` : `PUT` refusé, 409, corps `null`, si l'appareil part d'une version
-  dépassée : il relit alors la version du serveur et compare de nouveau ; accepté, la réponse ne
+  dépassée, testé sur le serveur entier avec 304, 401 et 403, `tests/collection.test.ts` : il
+  relit alors la version du serveur et compare de nouveau ; accepté, la réponse ne
   donne que `{ version }`, sans ETag ; le document passe les contrôles d'un import,
   `readDocument`). Le navigateur garde sa copie (hors
   ligne, l'app marche ; l'envoi part au retour du réseau) et note la dernière version échangée

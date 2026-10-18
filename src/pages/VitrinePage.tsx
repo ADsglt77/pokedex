@@ -1,5 +1,5 @@
-import { Button, EmptyState, RadialProgress, SegmentedControl, Stat } from '@camply/ui'
-import { CloudOff, Flag, House, Layers, LogIn, Wallet } from '@camply/ui/icons'
+import { Button, EmptyState, RadialProgress, SegmentedControl, Skeleton, Stat } from '@camply/ui'
+import { CloudOff, Flag, House, Layers, Lock, LogIn, Wallet } from '@camply/ui/icons'
 import { Suspense, use, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { ChartPeriodControl } from '@/components/ChartParts'
@@ -55,13 +55,36 @@ export function VitrinePage() {
         )}
       </header>
       <main className={styles.main}>
-        <Suspense fallback={<p className="muted">Chargement du Pokédex…</p>}>
+        <Suspense fallback={<VitrineSkeleton />}>
           <VitrineContent />
         </Suspense>
       </main>
       <footer className={styles.footer}>
         <SiteCredits />
       </footer>
+    </div>
+  )
+}
+
+/** L'ébauche de la page tant qu'elle arrive, à la taille de ce qui vient : la page ne saute pas. */
+function VitrineSkeleton() {
+  return (
+    <div className={styles.layout}>
+      <p className="visually-hidden">Chargement du Pokédex…</p>
+      <div className={styles.intro}>
+        <Skeleton variant="circle" width={112} height={112} />
+        <div className={styles.headline}>
+          <Skeleton className={styles.titleSkeleton} />
+          <Skeleton width="min(26rem, 100%)" />
+        </div>
+      </div>
+      <div className="stat-grid">
+        {['unlocked', 'value', 'chosen', 'regions'].map((stat) => (
+          <Skeleton key={stat} variant="rect" className={styles.statSkeleton} />
+        ))}
+      </div>
+      <Skeleton variant="rect" height="9rem" />
+      <Skeleton variant="rect" height="20rem" />
     </div>
   )
 }
@@ -126,7 +149,7 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
         >
           <span className={cx(styles.ring, 'numeric')}>{formatShare(progress.percent)}</span>
         </RadialProgress>
-        <div>
+        <div className={styles.headline}>
           <title>{heading}</title>
           <h1 className={styles.title}>{heading}</h1>
           <p className="muted">
@@ -165,7 +188,7 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
 
       <Panel title="Par région">
         {narrow ? (
-          <RegionList generations={generations} />
+          <RegionList generations={generations} linked={false} />
         ) : (
           <ProgressRuler generations={generations} linked={false} />
         )}
@@ -174,7 +197,8 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
       <Panel
         title="Progression"
         description="Les Pokémon débloqués, jour après jour."
-        actions={<ChartPeriodControl value={period} onChange={setPeriod} />}
+        // Sans courbe, pas de période à choisir.
+        actions={unlocks.length > 0 && <ChartPeriodControl value={period} onChange={setPeriod} />}
       >
         <UnlockedChart events={unlocks} period={period} day={today()} />
       </Panel>
@@ -195,9 +219,26 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
           />
         </div>
         {visible.length > 0 ? (
-          <PokedexGrid entries={visible} generations={generations} linked={false} />
+          <PokedexGrid
+            entries={visible}
+            generations={generations}
+            linked={false}
+            headingLevel={3}
+          />
+        ) : shown === 'unlocked' ? (
+          <EmptyState
+            icon={<Lock size={22} />}
+            title="Aucun Pokémon débloqué pour l’instant"
+            description="Un Pokémon est débloqué quand sa carte est possédée."
+            actions={<Button onClick={() => setShown('all')}>Voir tous les Pokémon</Button>}
+          />
         ) : (
-          <p className="muted">Aucun Pokémon à montrer ici pour l’instant.</p>
+          <EmptyState
+            icon={<Layers size={22} />}
+            title="Aucune carte choisie à obtenir"
+            description="Les cartes choisies, pas encore obtenues, apparaissent ici."
+            actions={<Button onClick={() => setShown('all')}>Voir tous les Pokémon</Button>}
+          />
         )}
       </section>
     </div>
