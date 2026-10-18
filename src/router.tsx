@@ -7,6 +7,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PokedexPage } from '@/pages/pokedex/PokedexPage'
 import { PokemonPage } from '@/pages/pokemon/PokemonPage'
 import { useSyncStore } from '@/store/sync'
+import { getJson } from '@/lib/api'
 
 /** Sans compte, la première visite. */
 const firstVisit = () => (accountExists ? null : redirect('/bienvenue'))
@@ -54,7 +55,12 @@ export const createRouter = () =>
         },
         {
           path: 'vitrine',
-          loader: firstVisit,
+          // Ses données demandées en même temps que la page, pas après elle (`getJson` garde la
+          // réponse, que la page lit).
+          loader: () => {
+            void getJson('/api/vitrine')
+            return firstVisit()
+          },
           lazy: () =>
             import('@/pages/VitrinePage').then(({ VitrinePage }) => ({ Component: VitrinePage })),
         },

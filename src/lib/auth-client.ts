@@ -22,14 +22,15 @@ export let accountExists = true
 
 /**
  * Une seule requête au démarrage : le compte existe-t-il, et qui est connecté. Rend le compte
- * connecté sur ce navigateur : `null` personne, `undefined` sans réponse du serveur (hors ligne :
- * `startSession` reprend alors celui de la dernière synchronisation).
+ * connecté sur ce navigateur : `null` personne, `undefined` sans réponse du serveur en `timeout` ms
+ * (hors ligne : `startSession` reprend alors celui de la dernière synchronisation). `?demarrage` :
+ * la demande que `index.html` précharge, et que le service worker partage avec celle-ci.
  */
-export async function loadAccount(): Promise<AccountUser | null | undefined> {
+export async function loadAccount(timeout: number): Promise<AccountUser | null | undefined> {
   try {
-    const response = await fetch('/api/account', {
+    const response = await fetch('/api/account?demarrage', {
       cache: 'no-store',
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(timeout),
     })
     if (!response.ok) return
     const body = (await response.json()) as AccountState

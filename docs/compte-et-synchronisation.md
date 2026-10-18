@@ -31,10 +31,12 @@ Le seul compte, la collection synchronisée entre les appareils, le Pokédex pub
   l'utilisateur, octobre 2026 : vitrine pour un visiteur, tableau de bord pour lui ; plus de
   collection « dans ce navigateur » sans compte, ni de rappel de sauvegarde) : le compte connecté
   du store (`account`, `store/sync.ts` ; `null` : personne), fixé au démarrage avant le routeur
-  (`loadAccount` lit `GET /api/account`, qui dit en une requête si le compte existe et qui est
-  connecté, et `main.tsx` passe ce compte à `startSession` ; sans réponse du serveur, un appareil
-  déjà synchronisé et pas déconnecté l'est encore, pour marcher hors ligne, avec l'e-mail et le
-  pseudo gardés dans `pokedex-collection.sync`), puis à la connexion et à la création du compte
+  (`loadAccount` lit `GET /api/account?demarrage`, qui dit en une requête si le compte existe et
+  qui est connecté ; `index.html` le précharge, avec les espèces, sans attendre le script ; et
+  `main.tsx` passe ce compte à `startSession` ; sans réponse du serveur, en 15 s, ou en 4 s pour un
+  appareil déjà synchronisé (`syncedBefore` : un réseau faible ne le fait pas attendre), un
+  appareil déjà synchronisé et pas déconnecté l'est encore, pour marcher hors ligne, avec l'e-mail
+  et le pseudo gardés dans `pokedex-collection.sync`), puis à la connexion et à la création du compte
   (`signIn`, d'après la réponse de Better Auth, qui lance la synchronisation, une seule fois : elle
   commence, ou reprend après une session expirée ; `LoginPage` ne la relance pas) et à la
   déconnexion. Plus de `useSession` de

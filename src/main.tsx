@@ -19,13 +19,15 @@ import { loadAccount } from './lib/auth-client'
 import { loadSpecies } from './lib/species'
 import { createRouter } from './router'
 import { requestPersistentStorage } from './store/persist'
-import { startSession } from './store/sync'
+import { startSession, syncedBefore } from './store/sync'
 
 requestPersistentStorage()
 
 // Hors développement : le service worker garde l'app, pour qu'elle démarre hors ligne (`public/sw.js`).
+// Enregistré une fois la page chargée : à la première visite, ce qu'il garde (polices, pages pas
+// encore ouvertes) ne se télécharge pas en même temps que les données du premier affichage.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {})
+  addEventListener('load', () => void navigator.serviceWorker.register('/sw.js').catch(() => {}))
 }
 
 const root = createRoot(document.getElementById('root')!)
@@ -34,25 +36,28 @@ const root = createRoot(document.getElementById('root')!)
 // Les espèces viennent du serveur avant tout affichage (toutes les pages en ont besoin), avec
 // l'existence du compte (sans lui, la première visite) et qui est connecté (personne : le Pokédex
 // public), en une requête ; puis notifications et routeur. D'ici là, `#root` montre le logo
-// (`index.html`, qui demande aussi les espèces avant ce script).
-Promise.all([loadSpecies(), loadAccount()]).then(([loaded, account]) => {
-  startSession(account)
-  root.render(
-    <StrictMode>
-      {loaded ? (
-        <ToastProvider position="bottom-left">
-          <RouterProvider router={createRouter()} />
-        </ToastProvider>
-      ) : (
-        <main className="container">
-          <EmptyState
-            title="Le Pokédex ne peut pas s’afficher"
-            description="Le serveur ne répond pas, ou ses données ne sont pas encore prêtes (premier démarrage). Réessayez dans un instant."
-            headingLevel={2}
-            actions={<Button onClick={() => location.reload()}>Réessayer</Button>}
-          />
-        </main>
-      )}
-    </StrictMode>,
-  )
-})
+// (`index.html`, qui demande aussi les espèces et le compte avant ce script). Un navigateur déjà
+// synchronisé n'attend pas le compte plus de 4 s (un réseau faible) : il démarre comme hors ligne.
+Promise.all([loadSpecies(), loadAccount(syncedBefore() ? 4_000 : 15_000)]).then(
+  ([loaded, account]) => {
+    startSession(account)
+    root.render(
+      <StrictMode>
+        {loaded ? (
+          <ToastProvider position="bottom-left">
+            <RouterProvider router={createRouter()} />
+          </ToastProvider>
+        ) : (
+          <main className="container">
+            <EmptyState
+              title="Le Pokédex ne peut pas s’afficher"
+              description="Le serveur ne répond pas, ou ses données ne sont pas encore prêtes (premier démarrage). Réessayez dans un instant."
+              headingLevel={2}
+              actions={<Button onClick={() => location.reload()}>Réessayer</Button>}
+            />
+          </main>
+        )}
+      </StrictMode>,
+    )
+  },
+)

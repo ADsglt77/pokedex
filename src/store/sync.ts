@@ -120,6 +120,13 @@ export function startSession(account: AccountUser | null | undefined) {
   }
 }
 
+/**
+ * Ce navigateur a-t-il déjà été synchronisé avec le compte (et pas déconnecté depuis) ? Il peut
+ * alors démarrer sans la réponse du serveur, comme hors ligne (`startSession`).
+ */
+export const syncedBefore = () =>
+  typeof (parseStored(readStored(BASE_KEY)) as Record<string, unknown> | null)?.user === 'string'
+
 /** Le pseudo vient de changer (Données › Mon compte). */
 export function renameAccount(name: string) {
   const { account } = useSyncStore.getState()

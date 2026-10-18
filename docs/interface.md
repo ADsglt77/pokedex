@@ -96,16 +96,24 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
 - Installation et hors ligne : le site s'installe sur téléphone et ordinateur
   (`public/manifest.webmanifest`, icônes de `public/icons` et `public/apple-touch-icon.png`,
   dessinées d'après `favicon.svg`) et démarre hors ligne. Le service worker (`public/sw.js`, en
-  production seulement, `main.tsx`) garde à son installation l'app : `/index.html`, ses scripts,
+  production seulement, enregistré une fois la page chargée, `main.tsx` : à la première visite, ce
+  qu'il garde ne se télécharge pas en même temps que les données du premier affichage) garde à son
+  installation l'app : `/index.html`, ses scripts,
   styles et polices (`.woff2` seulement : les `.woff` ne servent qu'aux navigateurs qui n'ont pas
   `.woff2`) et ce que la page demande de `public/` au démarrage (thème, manifeste, icône). La liste
   est écrite à chaque construction par le plugin `precache` de `vite.config.ts` (`/index.html` à la
   main : ce plugin passe avant celui de Vite qui l'ajoute) : un nouveau service worker à chaque
   version. Une page : le réseau, sinon l'app gardée (aucune autre réponse ne prend sa place, pas
-  même une page d'erreur de nginx ou de Cloudflare : plus bas). Les
-  fichiers de `public/`, dont le nom ne change pas, et les données de référence (espèces,
-  catalogue, prix, historiques) : le réseau d'abord, la dernière réponse gardée sans lui. Celles-ci
-  sont gardées par leur chemin, sans les paramètres : une seule copie des historiques de la
+  même une page d'erreur de nginx ou de Cloudflare : plus bas). Les fichiers de `public/`, dont le
+  nom ne change pas : la copie gardée tout de suite, rafraîchie pour la fois suivante (`theme.js`
+  bloque le premier affichage : sur un réseau faible, il attendait jusqu'à 4 s). Les données de
+  référence (espèces, catalogue, prix, historiques) : le réseau d'abord, la dernière réponse gardée
+  sans lui ; inchangée (le même ETag), elle n'est pas réécrite (plusieurs Mo à chaque ouverture
+  sinon). Les demandes du démarrage qu'`index.html` précharge (les espèces, le compte : derrière un
+  service worker, le navigateur ne réutilise pas toujours le préchargement et l'app les redemande
+  aussitôt) : la réponse du réseau sert aussi à la demande suivante de la même adresse, une fois,
+  dans les 10 s (`startup` ; le compte, seulement sa demande marquée `?demarrage`, celle du
+  démarrage). Les données de référence sont gardées par leur chemin, sans les paramètres : une seule copie des historiques de la
   collection (`/api/histories?ids=…`), quels que soient les ids, au lieu d'une de plus à chaque
   carte possédée. Une copie d'autres ids sert encore : chaque id y a sa clé, la page Valeur y prend
   ceux de ses cartes ; une carte qui n'y est pas (ajoutée depuis) ne pèse pas sur la courbe, et la

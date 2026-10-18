@@ -1,6 +1,6 @@
 import { Button, ButtonGroup, Stack, Toggle } from '@camply/ui'
 import { Pencil, Trash2 } from '@camply/ui/icons'
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { useCollectionAction } from '@/hooks/useNotify'
@@ -12,9 +12,14 @@ import type { CardView } from '@/lib/pokedex'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
 import type { CardStatus, PokemonSpecies } from '@/types'
-import { CardForm } from './CardForm'
 import { PaidPriceField } from './PaidPriceField'
 import styles from './CardActions.module.css'
+
+/**
+ * La fenêtre d'ajout ou de correction, chargée à sa première ouverture (avec le choix dans le
+ * catalogue et la saisie) : elle n'alourdit pas le premier chargement.
+ */
+const CardForm = lazy(() => import('./CardForm').then(({ CardForm }) => ({ default: CardForm })))
 
 const STATUS_BUTTONS: { status: CardStatus; label: string }[] = [
   { status: 'owned', label: 'Je possède cette carte' },
@@ -133,7 +138,11 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
         </p>
       </Stack>
 
-      {editing && <CardForm species={species} card={card} onClose={() => setEditing(false)} />}
+      {editing && (
+        <Suspense>
+          <CardForm species={species} card={card} onClose={() => setEditing(false)} />
+        </Suspense>
+      )}
 
       <ConfirmDialog
         open={leaving !== null}

@@ -4,20 +4,25 @@
  *   la liste que la construction écrit ici (`PRECACHE`, `vite.config.ts`) ; elle change à
  *   chaque construction, donc ce fichier aussi : le navigateur installe la nouvelle version et
  *   oublie l'ancienne. Les pages : le réseau d'abord, l'app gardée (`/index.html`) sans lui. Les
- *   fichiers de `public/` (thème, manifeste, icônes), dont le nom ne change pas : le réseau
- *   d'abord, eux aussi.
+ *   fichiers de `public/` (thème, manifeste, icônes), dont le nom ne change pas : la copie gardée
+ *   tout de suite, rafraîchie pour la fois suivante (`theme.js` bloque le premier affichage : il
+ *   n'attend jamais le réseau).
  * - Les données de référence (espèces, catalogue, prix et historiques) : le réseau d'abord, la
  *   dernière réponse sans lui, gardée par son chemin, sans les paramètres : une seule copie des
  *   historiques de la collection (`/api/histories?ids=…`), quels que soient les ids, et non une
  *   par collection. Une copie demandée avec d'autres ids sert encore : chaque id y a sa clé, la
  *   page y prend ceux de ses cartes ; une carte qui n'y est pas (ajoutée depuis) ne pèse pas sur
- *   la courbe, et la page Valeur le dit sous elle.
+ *   la courbe, et la page Valeur le dit sous elle. Une réponse inchangée (le même ETag) n'est pas
+ *   réécrite : les gardées pèsent plusieurs Mo, l'app les redemande à chaque ouverture.
+ * - Les demandes du démarrage que `index.html` précharge (les espèces, le compte) : derrière un
+ *   service worker, le navigateur ne réutilise pas toujours le préchargement, et l'app les
+ *   redemande aussitôt ; la réponse du réseau est partagée avec la demande suivante (`startup`).
  * - « Le réseau d'abord » : sans réponse en 4 s (un réseau faible), la version gardée s'il y en a
  *   une ; sinon le réseau, aussi lent soit-il. Une erreur du serveur (5xx : le 502 de nginx pendant
  *   le redémarrage d'un déploiement, la page d'erreur de Cloudflare…) : la version gardée aussi,
  *   s'il y en a une ; sinon cette erreur.
  * - Les images : gardées dès leur premier affichage (elles ne changent pas), 3 000 au plus.
- * Jamais le compte ni la collection (`/api/account`, `/api/collection`, `/api/auth`…) : sans
+ * Jamais le compte ni la collection gardés (`/api/account`, `/api/collection`, `/api/auth`…) : sans
  * réseau, la collection vient du stockage du navigateur, et elle part au retour du réseau.
  * Seulement en production (`main.tsx`).
  */
@@ -36,6 +41,15 @@ const MAX_IMAGES = 3000
 
 /** Les réponses de l'API gardées pour le hors-ligne : les données de référence, publiques. */
 const REFERENCE = ['/api/species', '/api/catalog', '/api/prices', '/api/histories']
+
+/**
+ * Les demandes que `index.html` précharge, par adresse : le compte, seulement sa demande marquée
+ * `?demarrage` (une connexion qui suivrait ne reçoit jamais la réponse d'avant elle).
+ */
+const STARTUP = ['/api/species', '/api/account?demarrage']
+
+/** La réponse du réseau d'une demande du démarrage, en attendant la suivante (`startup`). */
+const shared = new Map()
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -72,8 +86,27 @@ self.addEventListener('fetch', (event) => {
   else if (REFERENCE.some((path) => url.pathname.startsWith(path))) {
     event.respondWith(fresh(DATA, event, url.pathname))
   } else if (url.pathname.startsWith('/images/')) event.respondWith(image(request))
-  else if (PRECACHE.includes(url.pathname)) event.respondWith(fresh(APP, event))
+  else if (STARTUP.includes(url.pathname + url.search)) event.respondWith(startup(request))
+  else if (PRECACHE.includes(url.pathname)) event.respondWith(revalidated(APP, event))
 })
+
+/**
+ * Une demande du démarrage (`STARTUP`) : sa réponse du réseau sert aussi à la demande suivante de
+ * la même adresse, une fois, dans les 10 s (le préchargement d'`index.html`, puis celle de l'app :
+ * une seule requête). Chacune reçoit sa copie.
+ */
+function startup(request) {
+  const known = shared.get(request.url)
+  if (known) {
+    shared.delete(request.url)
+    return known.then((response) => response.clone())
+  }
+  const response = fetch(request)
+  response.catch(() => {})
+  shared.set(request.url, response)
+  setTimeout(() => shared.delete(request.url), 10_000)
+  return response.then((fetched) => fetched.clone())
+}
 
 /**
  * Le réseau d'abord (`response`, sa réponse attendue) ; sans lui, la copie gardée (`cached`).
@@ -112,22 +145,43 @@ async function kept(name, request) {
 /**
  * Le réseau d'abord ; sans lui, la dernière réponse gardée. Celle du réseau est gardée dans le
  * cache `name` dès qu'elle arrive, même après la copie servie (`waitUntil` : le service worker
- * l'attend), sous la clé `key` (la requête, ou son seul chemin).
+ * l'attend), sous la clé `key` (son seul chemin) ; inchangée (le même ETag), elle n'est pas réécrite.
  */
-function fresh(name, event, key = event.request) {
+function fresh(name, event, key) {
   const { request } = event
-  const response = fetch(request)
+  const url = new URL(request.url)
+  const response = STARTUP.includes(url.pathname + url.search) ? startup(request) : fetch(request)
   event.waitUntil(
     response
       .then(async (fetched) => {
         if (!fetched.ok) return
         // Copiée avant que la page ne lise la réponse.
         const copy = fetched.clone()
-        await (await caches.open(name)).put(key, copy)
+        const cache = await caches.open(name)
+        const etag = fetched.headers.get('etag')
+        if (etag && (await cache.match(key))?.headers.get('etag') === etag) {
+          return copy.body?.cancel()
+        }
+        await cache.put(key, copy)
       })
       .catch(() => {}),
   )
   return networkFirst(response, () => caches.match(key))
+}
+
+/**
+ * Un fichier de `public/` (le thème, le manifeste, les icônes) : la copie gardée tout de suite,
+ * rafraîchie en arrière-plan pour la fois suivante ; le réseau sans copie.
+ */
+async function revalidated(name, event) {
+  const { request } = event
+  const cached = await caches.match(request)
+  const response = fetch(request).then(async (fetched) => {
+    if (fetched.ok) await (await caches.open(name)).put(request, fetched.clone())
+    return fetched
+  })
+  event.waitUntil(response.catch(() => {}))
+  return cached ?? response
 }
 
 let added = 0

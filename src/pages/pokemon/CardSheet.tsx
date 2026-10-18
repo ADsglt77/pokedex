@@ -1,6 +1,6 @@
 import { Button } from '@camply/ui'
 import { Plus } from '@camply/ui/icons'
-import { useEffect, useState, type Ref } from 'react'
+import { lazy, Suspense, useEffect, useState, type Ref } from 'react'
 import { Panel } from '@/components/Panel'
 import { PricePanel } from '@/components/PricePanel'
 import { loadSpeciesCards } from '@/lib/card-catalog'
@@ -9,8 +9,13 @@ import type { CardView } from '@/lib/pokedex'
 import { otherSpeciesNames } from '@/lib/species'
 import type { PokemonSpecies } from '@/types'
 import { CardActions } from './CardActions'
-import { CardForm } from './CardForm'
 import styles from './CardSheet.module.css'
+
+/**
+ * La fenêtre d'ajout ou de correction, chargée à sa première ouverture (avec le choix dans le
+ * catalogue et la saisie) : elle n'alourdit pas le premier chargement.
+ */
+const CardForm = lazy(() => import('./CardForm').then(({ CardForm }) => ({ default: CardForm })))
 
 /**
  * La fiche de la carte du Pokémon, en deux panneaux : ce que l'utilisateur en fait (statut, prix
@@ -62,10 +67,13 @@ export function EmptySheet({
   titleRef: Ref<HTMLHeadingElement>
 }) {
   const [adding, setAdding] = useState(false)
-  // Ses cartes du catalogue, préparées quand le navigateur a le temps (au plus tard 2 s après) :
-  // la fenêtre d'ajout s'ouvre sans attendre. Safari n'a pas `requestIdleCallback`.
+  // La fenêtre d'ajout et ses cartes du catalogue, préparées quand le navigateur a le temps (au plus
+  // tard 2 s après) : elle s'ouvre sans attendre. Safari n'a pas `requestIdleCallback`.
   useEffect(() => {
-    const load = () => void loadSpeciesCards(species.id)
+    const load = () => {
+      void import('./CardForm')
+      void loadSpeciesCards(species.id)
+    }
     if ('requestIdleCallback' in window) requestIdleCallback(load, { timeout: 2000 })
     else setTimeout(load, 1000)
   }, [species.id])
@@ -80,7 +88,11 @@ export function EmptySheet({
           Ajouter une carte
         </Button>
       </div>
-      {adding && <CardForm species={species} card={null} onClose={() => setAdding(false)} />}
+      {adding && (
+        <Suspense>
+          <CardForm species={species} card={null} onClose={() => setAdding(false)} />
+        </Suspense>
+      )}
     </Panel>
   )
 }
