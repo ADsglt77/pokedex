@@ -128,6 +128,15 @@ export function previousOf(cardId: string, stored: Order | null, collection: Col
     : current
 }
 
+/**
+ * La commande peut être (re)mise « en cours » (`stored` : sa version enregistrée, `null` pour une
+ * nouvelle). Pas une commande reçue : ses cartes resteraient possédées (une possession n'est jamais
+ * retirée), avec sa date et son prix payé, sans plus porter son effet. Au prochain enregistrement,
+ * `previousOf` les croirait possédées avant elle : son remboursé ne changerait plus leur prix payé,
+ * et l'annuler ou la supprimer leur laisserait sa date et son prix.
+ */
+export const canBePending = (stored: Order | null) => stored?.state !== 'received'
+
 /** La commande de `orders` dans cet état qui contient la carte ; `undefined` s'il n'y en a pas. */
 const orderWith = (orders: readonly Order[], cardId: string, state: OrderState) =>
   orders.find(

@@ -109,9 +109,11 @@ const isText = (value: unknown) => typeof value === 'string'
 
 /**
  * Un jour qui existe (YYYY-MM-DD, pas `2026-13-45`) : le budget en tire le mois, la réception la
- * date d'obtention.
+ * date d'obtention. Pas d'avant l'an 100 : `Date.UTC` lit les années 0 à 99 comme 1900 à 1999 (une
+ * année tapée en deux chiffres, « 05/10/26 », donne l'an 26). Le formulaire de commande refuse les
+ * mêmes jours, sans quoi le serveur refuserait le document synchronisé.
  */
-function isDay(value: unknown) {
+export function isDay(value: unknown) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
   const [year, month, day] = value.split('-').map(Number) as [number, number, number]
   // Un jour qui n'existe pas déborde sur le suivant (le 30 février devient le 2 mars).

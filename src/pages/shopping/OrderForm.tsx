@@ -1,5 +1,6 @@
 import { Button, Input, Modal, Select, Stack, Textarea } from '@camply/ui'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useBlocker } from 'react-router'
 import { EuroField } from '@/components/EuroInput'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SegmentedField } from '@/components/SegmentedField'
@@ -17,7 +18,8 @@ import {
   plural,
   toOptions,
 } from '@/lib/format'
-import { cardCount, cents, orderSpent, previousOf, refundFits } from '@/lib/orders'
+import { canBePending, cardCount, cents, orderSpent, previousOf, refundFits } from '@/lib/orders'
+import { isDay } from '@/lib/transfer'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
 import type { CollectionData, Order, OrderLine, OrderState, Supplier } from '@/types'
@@ -29,6 +31,14 @@ import styles from './OrderForm.module.css'
 
 const SUPPLIER_OPTIONS = toOptions(SUPPLIER_LABELS)
 const STATE_OPTIONS = toOptions(ORDER_STATE_LABELS)
+// Reçue, une commande ne repasse pas « en cours » (`canBePending`).
+const STATE_OPTIONS_RECEIVED = STATE_OPTIONS.filter((option) => option.value !== 'pending')
+const RECEIVED_HINT = 'Une commande reçue ne repasse pas en cours : ses cartes restent possédées.'
+
+/** Le plus petit jour des champs de date : le calendrier du navigateur ne propose rien avant. */
+const MIN_DAY = '2000-01-01'
+/** Un jour que l'import et le serveur refuseraient (`isDay`) : une année tapée en deux chiffres. */
+const DAY_ERROR = 'L’année en quatre chiffres, par exemple 05/10/2026.'
 
 const STATE_HINTS: Record<OrderState, string> = {
   pending: 'Ses cartes passent en « commandée », sauf celles déjà possédées.',
@@ -103,7 +113,12 @@ function readDraft(draft: Draft, base: Order, stored: Order | null, collection: 
       previous,
     }
   })
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.date)) errors.date = 'Indiquez la date d’achat.'
+  // Les jours que l'import et le serveur acceptent (`isDay`) : « 05/10/26 » donnerait l'an 26, un
+  // document que la synchronisation refuserait, compté au budget d'« octobre 26 ».
+  if (!isDay(draft.date)) errors.date = draft.date ? DAY_ERROR : 'Indiquez la date d’achat.'
+  if (draft.state === 'received' && draft.receivedAt && !isDay(draft.receivedAt)) {
+    errors.receivedAt = DAY_ERROR
+  }
   if (lines.length === 0) errors.lines = 'Ajoutez au moins une carte.'
   const link = draft.link.trim()
   if (link && !parseLink(link)) errors.link = 'Une adresse web, par exemple https://…'
@@ -130,7 +145,10 @@ function readDraft(draft: Draft, base: Order, stored: Order | null, collection: 
 /**
  * Enregistrer ou corriger une commande : fournisseur, dates, cartes et prix, port, frais,
  * remboursement, état. Au-delà du plafond du mois, une confirmation est demandée (sans bloquer) ;
- * fermer une saisie commencée aussi.
+ * fermer une saisie commencée, ou quitter la page avec elle, aussi. Une question remplace la
+ * fenêtre le temps d'y répondre, à côté d'elle et pas dedans (deux fenêtres ouvertes se
+ * disputeraient le focus, et la page resterait sans défilement) : la saisie, gardée ici, revient
+ * telle quelle si l'on répond « Annuler ».
  */
 export function OrderForm({
   order: base,
@@ -154,11 +172,47 @@ export function OrderForm({
   const [abandoning, setAbandoning] = useState(false)
   const fields = useRef<HTMLElement>(null)
   const set = (change: Partial<Draft>) => setDraft({ ...draft, ...change })
+  const started = JSON.stringify(draft) !== JSON.stringify(initial)
+  // Enregistrer ou abandonner ferme la saisie : la page peut alors changer sans question
+  // (« Enregistrer comme commande » ouvre « Commandes »). Une `ref` : lue par le routeur au moment
+  // de la navigation, dans le même clic, avant que la fenêtre ne soit retirée.
+  const closing = useRef(false)
+  // Quitter la page avec une saisie commencée (le titre d'une carte, le retour du navigateur, la
+  // recherche Ctrl K) : la même question que fermer la fenêtre.
+  const blocker = useBlocker(() => started && !closing.current)
+  const asking = abandoning || blocker.state === 'blocked'
+  const formOpen = !asking && overCeiling === null
+  // Le focus : après « Abandonner », il revient au bouton qui avait ouvert la saisie (`opener`, le
+  // focus à l'ouverture ; la question le rendrait sinon à un champ qui n'existe plus). Après
+  // « Annuler », la fenêtre revient et le met à son premier bouton, comme à son ouverture ; au
+  // plafond, il retourne plutôt à « Enregistrer ».
+  const [opener] = useState(() => document.activeElement as HTMLElement | null)
+  const saveButton = useRef<HTMLButtonElement>(null)
+  const backToSave = useRef(false)
+  useEffect(() => {
+    if (!formOpen || !backToSave.current) return
+    backToSave.current = false
+    saveButton.current?.focus()
+  }, [formOpen])
   // Échap (même depuis un champ), la croix ou « Annuler » : une saisie commencée n'est pas perdue
   // sans confirmation.
   const close = () => {
-    if (JSON.stringify(draft) === JSON.stringify(initial)) onClose()
-    else setAbandoning(true)
+    if (started) setAbandoning(true)
+    else onClose()
+  }
+  // « Abandonner » : la fenêtre se ferme, et la navigation retenue repart.
+  const abandon = () => {
+    closing.current = true
+    blocker.proceed?.()
+    onClose()
+    // Une fois la question retirée (elle rend le focus en se fermant).
+    requestAnimationFrame(() => opener?.focus())
+  }
+  // « Annuler » (aussi appelé après « Abandonner », par ConfirmDialog : la navigation est déjà
+  // repartie) : la saisie revient, et la navigation retenue est oubliée.
+  const keepEditing = () => {
+    setAbandoning(false)
+    if (!closing.current) blocker.reset?.()
   }
 
   const read = readDraft(draft, base, stored, collection)
@@ -169,6 +223,7 @@ export function OrderForm({
   const monthTotal = cents(spentIn(others, month).spent + orderSpent(order))
 
   const save = (order: Order) => {
+    closing.current = true
     const count = cardCount(order.lines)
     act(
       () => useShoppingStore.getState().saveOrder(order),
@@ -194,137 +249,151 @@ export function OrderForm({
   }
 
   return (
-    <Modal
-      open
-      onClose={close}
-      // Un clic à côté ne perd pas une longue saisie.
-      closeOnBackdrop={false}
-      size="lg"
-      title={stored ? 'Modifier la commande' : 'Enregistrer une commande'}
-      description="Les prix réellement payés : ils font le budget et le prix payé de chaque carte."
-      footer={
-        <>
-          <Button variant="ghost" onClick={close}>
-            Annuler
-          </Button>
-          <Button onClick={submit}>Enregistrer</Button>
-        </>
-      }
-    >
-      <Stack gap={5} ref={fields}>
-        <div className={styles.formGrid}>
-          <Select
-            label="Fournisseur"
-            options={SUPPLIER_OPTIONS}
-            value={draft.supplier}
-            onChange={(supplier) => set({ supplier })}
-          />
-          {draft.supplier === 'other' ? (
+    <>
+      <Modal
+        open={formOpen}
+        onClose={close}
+        // Un clic à côté ne perd pas une longue saisie.
+        closeOnBackdrop={false}
+        size="lg"
+        title={stored ? 'Modifier la commande' : 'Enregistrer une commande'}
+        description="Les prix réellement payés : ils font le budget et le prix payé de chaque carte."
+        footer={
+          <>
+            <Button variant="ghost" onClick={close}>
+              Annuler
+            </Button>
+            <Button ref={saveButton} onClick={submit}>
+              Enregistrer
+            </Button>
+          </>
+        }
+      >
+        <Stack gap={5} ref={fields}>
+          <div className={styles.formGrid}>
+            <Select
+              label="Fournisseur"
+              options={SUPPLIER_OPTIONS}
+              value={draft.supplier}
+              onChange={(supplier) => set({ supplier })}
+            />
+            {draft.supplier === 'other' ? (
+              <Input
+                label="Nom du fournisseur"
+                value={draft.supplierName}
+                onChange={(event) => set({ supplierName: event.target.value })}
+              />
+            ) : (
+              // Cale la date sous la colonne de droite ; caché sur téléphone (une colonne).
+              <span aria-hidden="true" className={styles.gridFiller} />
+            )}
             <Input
-              label="Nom du fournisseur"
-              value={draft.supplierName}
-              onChange={(event) => set({ supplierName: event.target.value })}
+              label="Date d’achat"
+              type="date"
+              required
+              min={MIN_DAY}
+              value={draft.date}
+              error={errors.date}
+              onChange={(event) => set({ date: event.target.value })}
             />
-          ) : (
-            // Cale la date sous la colonne de droite ; caché sur téléphone (une colonne).
-            <span aria-hidden="true" className={styles.gridFiller} />
-          )}
-          <Input
-            label="Date d’achat"
-            type="date"
-            required
-            value={draft.date}
-            error={errors.date}
-            onChange={(event) => set({ date: event.target.value })}
-          />
-          <Input
-            label="Référence"
-            hint="Numéro de commande du fournisseur."
-            spellCheck={false}
-            autoCorrect="off"
-            autoComplete="off"
-            value={draft.reference}
-            onChange={(event) => set({ reference: event.target.value })}
-          />
-        </div>
-
-        <SegmentedField
-          label="État"
-          hint={STATE_HINTS[draft.state]}
-          options={STATE_OPTIONS}
-          value={draft.state}
-          onChange={(state) => set({ state })}
-        />
-        {draft.state === 'received' && (
-          <Input
-            className={styles.narrowField}
-            label="Date de réception"
-            type="date"
-            value={draft.receivedAt || draft.date}
-            onChange={(event) => set({ receivedAt: event.target.value })}
-          />
-        )}
-
-        <OrderLines
-          lines={draft.lines}
-          order={order}
-          others={others}
-          errors={errors}
-          readErrors={read.errors}
-          onChange={(lines) => set({ lines })}
-        />
-
-        <div className={page.formGrid3}>
-          {(['shipping', 'fees', 'refunded'] as const).map((key) => (
-            <EuroField
-              key={key}
-              label={{ shipping: 'Port', fees: 'Autres frais', refunded: 'Remboursé' }[key]}
-              value={draft[key]}
-              error={errors[key]}
-              onChange={(event) => set({ [key]: event.target.value })}
+            <Input
+              label="Référence"
+              hint="Numéro de commande du fournisseur."
+              spellCheck={false}
+              autoCorrect="off"
+              autoComplete="off"
+              value={draft.reference}
+              onChange={(event) => set({ reference: event.target.value })}
             />
-          ))}
-        </div>
-
-        <OrderTotals order={order} />
-        {!read.errors.date && (
-          <div className={cx(page.amountsColumn, styles.orderBudget)}>
-            <p>
-              En {formatMonth(month)}, avec cette commande&nbsp;:{' '}
-              <strong>{formatEuro(monthTotal)}</strong>{' '}
-              <BudgetLevelBadge spent={monthTotal} budget={budget} />
-            </p>
-            <BudgetMeter spent={monthTotal} budget={budget} />
           </div>
-        )}
-        <p className="muted">
-          Le port, les frais et le remboursé sont répartis entre les cartes au prorata de leur prix
-          : c’est le prix payé noté sur chaque carte.
-        </p>
 
-        <Input
-          label="Lien"
-          hint="La commande chez le fournisseur."
-          inputMode="url"
-          placeholder="https://…"
-          value={draft.link}
-          error={errors.link}
-          onChange={(event) => set({ link: event.target.value })}
-        />
-        <Textarea
-          label="Notes"
-          rows={2}
-          value={draft.note}
-          onChange={(event) => set({ note: event.target.value })}
-        />
-      </Stack>
+          <SegmentedField
+            label="État"
+            hint={
+              canBePending(stored)
+                ? STATE_HINTS[draft.state]
+                : `${STATE_HINTS[draft.state]} ${RECEIVED_HINT}`
+            }
+            options={canBePending(stored) ? STATE_OPTIONS : STATE_OPTIONS_RECEIVED}
+            value={draft.state}
+            onChange={(state) => set({ state })}
+          />
+          {draft.state === 'received' && (
+            <Input
+              className={styles.narrowField}
+              label="Date de réception"
+              type="date"
+              min={MIN_DAY}
+              value={draft.receivedAt || draft.date}
+              error={errors.receivedAt}
+              onChange={(event) => set({ receivedAt: event.target.value })}
+            />
+          )}
+
+          <OrderLines
+            lines={draft.lines}
+            order={order}
+            others={others}
+            errors={errors}
+            readErrors={read.errors}
+            onChange={(lines) => set({ lines })}
+          />
+
+          <div className={page.formGrid3}>
+            {(['shipping', 'fees', 'refunded'] as const).map((key) => (
+              <EuroField
+                key={key}
+                label={{ shipping: 'Port', fees: 'Autres frais', refunded: 'Remboursé' }[key]}
+                value={draft[key]}
+                error={errors[key]}
+                onChange={(event) => set({ [key]: event.target.value })}
+              />
+            ))}
+          </div>
+
+          <OrderTotals order={order} />
+          {!read.errors.date && (
+            <div className={cx(page.amountsColumn, styles.orderBudget)}>
+              <p>
+                En {formatMonth(month)}, avec cette commande&nbsp;:{' '}
+                <strong>{formatEuro(monthTotal)}</strong>{' '}
+                <BudgetLevelBadge spent={monthTotal} budget={budget} />
+              </p>
+              <BudgetMeter spent={monthTotal} budget={budget} />
+            </div>
+          )}
+          <p className="muted">
+            Le port, les frais et le remboursé sont répartis entre les cartes au prorata de leur
+            prix : c’est le prix payé noté sur chaque carte.
+          </p>
+
+          <Input
+            label="Lien"
+            hint="La commande chez le fournisseur."
+            inputMode="url"
+            placeholder="https://…"
+            value={draft.link}
+            error={errors.link}
+            onChange={(event) => set({ link: event.target.value })}
+          />
+          <Textarea
+            label="Notes"
+            rows={2}
+            value={draft.note}
+            onChange={(event) => set({ note: event.target.value })}
+          />
+        </Stack>
+      </Modal>
 
       <ConfirmDialog
-        open={overCeiling !== null}
+        open={overCeiling !== null && !asking}
         title="Dépasser votre plafond du mois ?"
         confirmLabel="Enregistrer quand même"
         tone="warn"
-        onClose={() => setOverCeiling(null)}
+        onClose={() => {
+          backToSave.current = true
+          setOverCeiling(null)
+        }}
         onConfirm={() => save(overCeiling!.order)}
       >
         {overCeiling && (
@@ -336,12 +405,12 @@ export function OrderForm({
         )}
       </ConfirmDialog>
       <ConfirmDialog
-        open={abandoning}
+        open={asking}
         title="Abandonner la saisie ?"
         confirmLabel="Abandonner"
         tone="warn"
-        onClose={() => setAbandoning(false)}
-        onConfirm={onClose}
+        onClose={keepEditing}
+        onConfirm={abandon}
       >
         <p>
           {stored
@@ -349,6 +418,6 @@ export function OrderForm({
             : 'Cette commande ne sera pas enregistrée.'}
         </p>
       </ConfirmDialog>
-    </Modal>
+    </>
   )
 }

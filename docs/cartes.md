@@ -33,7 +33,7 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   nom français, Pokémon `id_pokedex_list`, id Cardmarket). Seules les cartes Pokémon (dresseurs et
   énergies n'ont pas de Pokémon). Ses pages portent leurs données chiffrées
   (`__INITIAL_DATA_ENCRYPTED__`, AES-CBC) : déchiffrées avec la clé que contient son JavaScript,
-  relue à chaque passage (son adresse change à chaque mise en ligne), jamais recopiée dans le
+  relue quand l'adresse de son script change (à chaque mise en ligne du site), jamais recopiée dans le
   dépôt. Une page toutes les 3 s, User-Agent identifié : le premier passage prend une vingtaine de
   minutes ; ensuite, une série est relue chaque semaine, chaque jour si elle est sortie depuis
   moins de 90 jours (`read_at`), et `--refresh` les relit toutes. Une page en échec n'empêche pas
@@ -84,10 +84,10 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   deux tailles, et note s'il existe (`cards.image`) : le catalogue le dit d'avance. Une carte sans
   scan est recherchée chaque semaine. Une image en erreur (panne, réponse qui n'est pas une image)
   n'arrête pas les autres : rien n'est noté pour elle, elle est redemandée au passage suivant, et la
-  tâche échoue à la fin (au-delà de 20 erreurs, elle s'arrête : la source est sans doute en panne).
+  tâche échoue à la fin (à la 20e erreur, elle s'arrête : la source est sans doute en panne).
   Une image absente du volume (référence saisie hors du
   catalogue, image pas encore copiée) est copiée à la demande par le serveur (`serveImage` :
-  seulement les chemins connus, `upstreamUrl` : chez Pokécardex, une série du catalogue et un
+  seulement les chemins plausibles, `plausible` : chez Pokécardex, une série du catalogue et un
   numéro d'image jusqu'au plus grand des siens ; un Pokémon de 1 à 1 025 ; jamais plus chez TCGplayer ; une absence retenue une semaine ; une source en panne :
   502, et « Image non copiée » au journal ; nginx limite à 10 copies par seconde). Les images de TCGplayer qu'une ancienne version a enregistrées
   s'affichent encore si le volume en a la copie (jamais plus copiées, citées « TCGplayer ») ;

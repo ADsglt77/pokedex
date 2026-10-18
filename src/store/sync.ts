@@ -12,6 +12,7 @@
  */
 
 import { create } from 'zustand'
+import { forget } from '@/lib/api'
 import { emptyCollection } from '@/lib/collection'
 import { emptyShopping } from '@/lib/orders'
 import { decide, documentHash, isEmptyDocument, type SyncDocument } from '@/lib/sync'
@@ -86,11 +87,18 @@ function writeBase(version: number, hash: string) {
 const setStatus = (status: SyncStatus) => useSyncStore.setState({ status })
 
 /**
+ * Le Pokédex public (`/api/vitrine`), lu une fois par `getJson` : oublié à la connexion et à la
+ * déconnexion, pour qu'il montre ensuite ce que le compte a changé entre-temps.
+ */
+const forgetVitrine = () => forget('/api/vitrine')
+
+/**
  * Connecté (connexion, création du compte, démarrage) : la synchronisation commence, ou reprend
  * (le même compte, après une session expirée).
  */
 export function signIn(account: AccountUser) {
   user = account.id
+  forgetVitrine()
   useSyncStore.setState({ account, status: 'syncing', conflict: null })
   void sync()
 }
@@ -287,6 +295,7 @@ export async function signOut() {
   await exclusive(async () => {
     writeStored(BASE_KEY, null)
     replaceDocument({ collection: emptyCollection(), shopping: emptyShopping() })
+    forgetVitrine()
     useSyncStore.setState({ account: null, conflict: null })
   })
   return true

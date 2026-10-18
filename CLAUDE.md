@@ -78,7 +78,7 @@ bun run ingest images  # copie les images (≈ 1,5 Go ; inutile en développemen
   composant (le fond, `--camply-bg`, est aussi la couleur de la barre du navigateur, lue par
   `store/theme.ts` ; ses copies figées, `index.html`, manifeste, `public/theme.js`, y sont
   nommées) ; ce qui diffère d'un thème à l'autre hors camply y a aussi son jeton
-  (`--empty-sprite-opacity` : le sprite grisé d'un Pokémon sans carte, `--card-glare` ; `--link`
+  (`--empty-sprite-opacity` : le sprite grisé d'un Pokémon sans carte ; `--link`
   et `--chart-*` : en clair, liens et courbes à l'encre, liens soulignés de rouge, pour que le
   rouge reste la marque et l'action principale, pas une alerte ; le choix d'un `SegmentedControl`
   y est un bouton blanc en relief). Le logo

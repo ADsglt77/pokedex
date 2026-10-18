@@ -27,8 +27,9 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
   Sans serveur, ou base encore vide, l'app marche sans prix. Une réponse manquante (404) n'est pas
   redemandée ; après une panne passagère (réseau, délai, réponse illisible), elle l'est la fois
   suivante où elle sert, au plus une fois par minute (`getJson`, `lib/api.ts` : la règle vaut pour
-  toute lecture de l'API, catalogue et historiques compris, sauf l'état des tâches et les lignes de
-  la liste de souhaits, demandés à chaque fois : `fetchFresh`). Une carte sans id Cardmarket, ou dont
+  les données de référence, catalogue et historiques compris, sauf l'état des tâches et les lignes
+  de la liste de souhaits, demandés à chaque fois : `fetchFresh` ; le compte et la collection ont
+  leurs propres lectures). Une carte sans id Cardmarket, ou dont
   l'id n'a pas de prix ce jour, n'a pas de prix (aucun n'est inventé ; Pokécardex donne l'id de presque toutes).
   L'ancien historique (les fichiers du volume `prices`,
   un par carte) est repris au premier démarrage d'`ingest` (`legacy-prices.ts`), vérifié avant
@@ -90,8 +91,8 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
     Sinon (un produit du groupe absent du catalogue, un numéro comme TG01 ou SV-P, deux produits
     au même numéro, un produit à deux numéros), pas de ligne : la carte s'ajoute depuis sa page.
     Mesuré sur les vraies données (octobre 2026) : 16 117 produits seuls dans leur groupe, 4 808
-    versions sûres, 96 sans (37 dont un produit du groupe manque au catalogue, 43 à numéro qui
-    n'est pas un nombre, 16 ex aequo).
+    versions sûres, 96 sans (16 ex aequo ; les autres, un produit du groupe absent du catalogue
+    ou un numéro vide).
   - L'extension : ses noms ne sont dans aucun fichier public de Cardmarket ; ceux des séries
     Pokécardex du catalogue leur correspondent (vérifié : « Pokémon Card 151 »). On prend les noms
     distincts des séries (`sets`, par `cards.set_id`) des cartes du catalogue dont le produit

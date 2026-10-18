@@ -26,8 +26,8 @@ bun run format   # Prettier
   par date ou par prix) ou saisie à la main, puis corrigée ou retirée ; en grand, son statut
   (commandée / possédée) et son prix payé, son prix Cardmarket et sa courbe, le lien
   vers sa page Cardmarket, les détails de l'espèce.
-- **Catalogue** : les cartes japonaises extension par extension ; un clic donne sa carte au
-  premier Pokémon qui n'en a pas.
+- **Catalogue** : les cartes japonaises extension par extension ; un clic donne la carte à ses
+  Pokémon qui n'en ont pas (tous, pour une carte TAG TEAM).
 - **Valeur** : prix Cardmarket du jour, valeur de la collection (et gain par rapport au prix
   payé), commandes, dépensé en tout, coût pour compléter le Pokédex ; courbes jour par jour (valeur,
   Pokémon débloqués, dépenses) sur 7 jours, 30 jours, 1 an ou tout, avec leurs chiffres.
@@ -190,8 +190,9 @@ déclaration en bas), redéployer (`docker compose up -d`), puis `docker volume 
    Si cloudflared tourne lui-même dans Docker, mettre les deux conteneurs sur un même réseau et
    viser `http://pokedex:80`.
 4. Créer votre compte, le seul : ouvrez le site, la première visite le demande (pseudo, e-mail,
-   mot de passe). Seule l'adresse `ACCOUNT_EMAIL` peut le créer : personne ne peut le prendre avant
-   vous. Gardez bien le mot de passe : le site n'envoie pas d'e-mail, il n'y a pas de « mot de
+   mot de passe). Seule l'adresse `ACCOUNT_EMAIL` peut le créer, sans vérification de l'e-mail :
+   quelqu'un qui connaîtrait cette adresse pourrait le prendre avant vous. Créez-le donc juste
+   après le premier démarrage, et vérifiez « Compte créé » dans `docker compose logs server`. Gardez bien le mot de passe : le site n'envoie pas d'e-mail, il n'y a pas de « mot de
    passe oublié » ; il se change dans Données › Mon compte, en donnant l'actuel.
 
 **Ensuite, à chaque déploiement** (`.github/workflows/deploy.yml`, lancé à la main depuis l'onglet

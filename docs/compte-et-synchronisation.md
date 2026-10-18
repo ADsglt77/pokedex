@@ -15,7 +15,9 @@ Le seul compte, la collection synchronisée entre les appareils, le Pokédex pub
   créations simultanées), et `/bienvenue` mène à `/connexion`. Seule l'adresse `ACCOUNT_EMAIL`
   (variable du serveur, exigée en production : `server/index.ts` refuse de démarrer sans elle ;
   facultative en développement) peut le créer : un visiteur arrivé avant l'utilisateur ne peut pas
-  le prendre (403 d'emblée, sans dire si l'adresse est la bonne ; « Création refusée » au journal).
+  le prendre (403 d'emblée, sans dire si l'adresse est la bonne ; « Création refusée » au journal),
+  sauf s'il connaît cette adresse : l'e-mail n'est pas vérifié, le compte se crée donc juste après
+  le premier démarrage (README, mise en ligne).
   Pas de mot de passe oublié (le site n'envoie pas d'e-mail). **Une seule session par compte** :
   se connecter sur un appareil déconnecte les autres (crochet `session.create.after`) ; l'appareil
   déconnecté garde ses modifications et affiche « Reconnectez-vous ». Sessions de 60 jours,
@@ -60,7 +62,11 @@ Le seul compte, la collection synchronisée entre les appareils, le Pokédex pub
   montre que les cartes (sans leur page notée) et les possessions avec leur date
   (`shownCollection`, testé) : jamais un prix payé, une commande, le budget, la liste d'achats ni
   le statut « commandée » ; une collection vide tant qu'aucun appareil n'a rien envoyé. Il montre
-  la version que le serveur a reçue. Connecté, la collection et les achats
+  la version que le serveur a reçue. La page la lit une fois (`getJson`, gardée pour la vie de la
+  page) et la relit après une connexion ou une déconnexion (`forget`, `signIn` et `signOut` de
+  `store/sync.ts`) : déconnecté, on ne revoit pas la vitrine d'avant les changements de la session.
+  Au journal, une visite (« Pokédex public consulté ») ou un aperçu (« Lien partagé lu ») une fois
+  par visiteur et par heure au plus (`journalVisit`, `server/vitrine.ts`). Connecté, la collection et les achats
   forment un seul document par compte (une commande modifie les deux), dans `app.db`, numéroté par
   le serveur (`/api/collection` : `PUT` refusé, 409, corps `null`, si l'appareil part d'une version
   dépassée, testé sur le serveur entier avec 304, 401 et 403, `tests/collection.test.ts` : il

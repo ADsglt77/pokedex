@@ -3,12 +3,14 @@
 import { describe, expect, test } from 'bun:test'
 import {
   applyOrder,
+  canBePending,
   duplicateReason,
   latePendingOrders,
   orderSpent,
   previousOf,
   unitCosts,
 } from '@/lib/orders'
+import type { CollectionData, Order } from '@/types'
 import { collectionWith, line, NOW, order, ownership } from './fixtures'
 
 describe('ce que coûte une commande', () => {
@@ -317,13 +319,47 @@ describe('commande reçue modifiée', () => {
     })
   })
 
-  test('remise en cours : la carte reste possédée, telle quelle', () => {
+  test('reçue, elle ne repasse pas en cours : remboursée puis annulée, sa carte la suit', () => {
     const received = order({ lines: [line('a', 20)], state: 'received', receivedAt: '2026-10-09' })
+    // En cours, sa carte resterait possédée (jamais retirée) : au prochain enregistrement, elle
+    // passerait pour possédée avant la commande, et garderait son prix et sa date.
+    expect(canBePending(received)).toBe(false)
+    expect(canBePending(null)).toBe(true)
+    expect(canBePending({ ...received, state: 'pending' })).toBe(true)
+    expect(canBePending({ ...received, state: 'cancelled' })).toBe(true)
+
+    // Les enregistrements suivants, comme le store : l'état d'avant relu (`previousOf`).
+    const resave = (before: Order, change: Partial<Order>, collection: CollectionData) => {
+      const after = {
+        ...before,
+        ...change,
+        lines: before.lines.map((known) => ({
+          ...known,
+          previous: previousOf(known.cardId, before, collection),
+        })),
+      }
+      return { after, collection: applyOrder(collection, before, after, [], NOW) }
+    }
     const owned = applyOrder(collectionWith(), null, received, [], NOW)
-    const pending = { ...received, state: 'pending' as const, receivedAt: undefined }
-    const after = applyOrder(owned, received, pending, [], NOW)
-    expect(after).toBe(owned)
-    expect(after.cards.a).toMatchObject({ status: 'owned', paidPrice: 20 })
+    const refunded = resave(received, { refunded: 5 }, owned)
+    expect(refunded.after.lines[0]?.previous).toBeNull()
+    expect(duplicateReason(refunded.after.lines[0]!, [])).toBeNull()
+    expect(refunded.collection.cards.a).toEqual({
+      status: 'owned',
+      updatedAt: NOW,
+      acquiredAt: new Date('2026-10-09T12:00:00').toISOString(),
+      paidPrice: 15,
+    })
+    const cancelled = resave(
+      refunded.after,
+      { state: 'cancelled', receivedAt: undefined },
+      refunded.collection,
+    )
+    expect(cancelled.collection.cards.a).toEqual({
+      status: 'owned',
+      updatedAt: NOW,
+      acquiredAt: null,
+    })
   })
 
   test('une carte possédée avant la commande (doublon) n’est pas touchée', () => {

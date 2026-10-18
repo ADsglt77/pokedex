@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import { applyOrder, emptyShopping } from '@/lib/orders'
-import { buildExportFile, parseImport, readDocument } from '@/lib/transfer'
+import { buildExportFile, isDay, parseImport, readDocument } from '@/lib/transfer'
 import type { CollectionData, ShoppingData } from '@/types'
 import { card, collectionWith, line, NOW, order, ownership } from './fixtures'
 
@@ -85,6 +85,14 @@ describe('import', () => {
     expect(reimport([...ORDER, 'date'], '2026-02-30')).toBeNull()
     expect(reimport([...ORDER, 'receivedAt'], '2026-02-29')).toBeNull()
     expect(reimport([...ORDER, 'receivedAt'], '2028-02-29')).not.toBeNull()
+  })
+
+  test('une année tapée en deux chiffres (« 05/10/26 » : l’an 26) est refusée, comme au formulaire', () => {
+    // `isDay` est aussi le contrôle du formulaire de commande : il refuse ce que le serveur refuse.
+    expect(isDay('0026-10-05')).toBe(false)
+    expect(isDay('2026-10-05')).toBe(true)
+    expect(reimport([...ORDER, 'date'], '0026-10-05')).toBeNull()
+    expect(reimport([...ORDER, 'receivedAt'], '0026-10-05')).toBeNull()
   })
 
   test('une commande sans id, ou du même id qu’une autre, est refusée', () => {

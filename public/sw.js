@@ -13,7 +13,9 @@
  *   page y prend ceux de ses cartes ; une carte qui n'y est pas (ajoutée depuis) ne pèse pas sur
  *   la courbe, et la page Valeur le dit sous elle.
  * - « Le réseau d'abord » : sans réponse en 4 s (un réseau faible), la version gardée s'il y en a
- *   une ; sinon le réseau, aussi lent soit-il.
+ *   une ; sinon le réseau, aussi lent soit-il. Une erreur du serveur (5xx : le 502 de nginx pendant
+ *   le redémarrage d'un déploiement, la page d'erreur de Cloudflare…) : la version gardée aussi,
+ *   s'il y en a une ; sinon cette erreur.
  * - Les images : gardées dès leur premier affichage (elles ne changent pas), 3 000 au plus.
  * Jamais le compte ni la collection (`/api/account`, `/api/collection`, `/api/auth`…) : sans
  * réseau, la collection vient du stockage du navigateur, et elle part au retour du réseau.
@@ -77,7 +79,8 @@ self.addEventListener('fetch', (event) => {
  * Le réseau d'abord (`response`, sa réponse attendue) ; sans lui, la copie gardée (`cached`).
  * Sans réponse en 4 s (un réseau faible), la copie gardée s'il y en a une ; sinon on attend le
  * réseau, aussi lent soit-il. Seulement l'attente des en-têtes : un long téléchargement (les prix)
- * va à son terme.
+ * va à son terme. Une erreur du serveur (5xx : nginx sans le serveur de l'app, Cloudflare sans le
+ * site) : la copie gardée s'il y en a une, plutôt qu'une page d'erreur ou des données absentes.
  */
 async function networkFirst(response, cached) {
   try {
@@ -85,14 +88,14 @@ async function networkFirst(response, cached) {
       response,
       new Promise((resolve) => setTimeout(resolve, 4000)),
     ])
-    if (early) return early
+    if (early) return early.status >= 500 ? ((await cached()) ?? early) : early
   } catch {
     return (await cached()) ?? Response.error()
   }
   return (await cached()) ?? response.catch(() => Response.error())
 }
 
-/** Une page de l'app : le réseau, sinon l'app gardée à l'installation. */
+/** Une page de l'app : le réseau, sinon (ou sur une erreur 5xx) l'app gardée à l'installation. */
 function page(request) {
   return networkFirst(fetch(request), () => caches.match('/index.html'))
 }

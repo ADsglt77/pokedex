@@ -50,24 +50,36 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     ou carte corrigée à la main depuis). Une possession n'est jamais retirée ; une carte qui quitte
     une commande reçue (ligne retirée, commande annulée ou supprimée) reste possédée, sans la date
     ni le prix payé que la commande lui avait donnés : ceux d'une autre commande reçue qui la
-    contient (réception, prix de revient), sinon aucun. Le prix payé est le prix de revient (port,
-    frais et remboursé répartis au prorata, au centime ; les centimes d'arrondi vont aux lignes
-    d'une seule carte, en plusieurs tours, jamais sous 0 €, pour que les prix de revient fassent le
-    total). Corriger la date de réception corrige la date d'obtention. Une carte déjà dans une autre
+    contient (réception, prix de revient), sinon aucun. Une commande reçue ne repasse pas « en
+    cours » (le formulaire ne le propose plus : `canBePending`) : ses cartes resteraient possédées
+    avec sa date et son prix payé sans plus porter son effet ; au prochain enregistrement, elles
+    passeraient pour possédées avant elle (« Déjà possédée avant cette commande »), son remboursé
+    ne changerait plus leur prix payé, et l'annuler ou la supprimer leur laisserait sa date et son
+    prix. Une réception notée par erreur se défait par « Annuler » du message ; sinon, l'état
+    « Annulée ». Le prix payé est le prix de revient (port, frais et remboursé répartis au prorata,
+    au centime ; les centimes d'arrondi vont aux lignes d'une seule carte, en plusieurs tours,
+    jamais sous 0 €, pour que les prix de revient fassent le total). Corriger la date de réception
+    corrige la date d'obtention. Une carte déjà dans une autre
     commande est signalée à la saisie (son prix payé serait remplacé). Une commande en cours depuis
     plus de 28 jours est signalée, aux Achats et à l'accueil (`latePendingOrders`) ; chaque
     commande s'ouvre en détail (coût réel de chaque carte) ;
   - budget calculé depuis les commandes : une commande compte une fois, au mois de sa date d'achat,
     remboursé déduit (jamais plus que la commande), rien si annulée. Au-delà du plafond :
     confirmation, jamais de blocage ; le formulaire montre le mois avec la commande en cours de
-    saisie ; fermer une saisie commencée (Échap, « Annuler ») demande confirmation. Les filtres de
+    saisie ; fermer une saisie commencée (Échap, « Annuler »), ou quitter la page avec elle (le
+    titre d'une carte, le retour du navigateur, la recherche Ctrl K : `useBlocker`), demande
+    confirmation (« Abandonner la saisie ? ») ; enregistrer ou abandonner ne demande rien de plus.
+    Une question (plafond, abandon) remplace la fenêtre le temps d'y répondre, jamais ouverte
+    dedans (deux fenêtres se disputeraient le focus, et la page resterait sans défilement) : la
+    saisie revient telle quelle après « Annuler ». Les dates (achat, réception) sont celles que
+    l'import et le serveur acceptent (`isDay`) : « 05/10/26 », l'an 26, est refusé. Les filtres de
     la liste sont dans l'adresse (`docs/interface.md`) ; les réglages de l'assistant (prochaine
     commande) sont gardés par la page, l'onglet caché étant démonté ;
   - l'export contient `shopping` (un export plus ancien, sans lui, s'importe et garde les achats
     en place). Un import demande toujours confirmation ; un fichier abîmé (enregistrement ou bloc
-    d'achats illisible : image, montant en texte, état de commande, date ou jour qui
-    n'existe pas, remboursé plus grand que la commande, commande sans id ou en double, carte d'un
-    Pokémon hors du Pokédex ou sans clé `image` (« Modifier la carte » planterait), id Cardmarket
+    d'achats illisible : image, montant en texte, état de commande, date ou jour qui n'existe pas
+    ou d'avant l'an 100, remboursé plus grand que la commande, commande sans id ou en double, carte
+    d'un Pokémon hors du Pokédex ou sans clé `image` (« Modifier la carte » planterait), id Cardmarket
     que la saisie refuserait (0, négatif, plus de 9 chiffres…), texte qui n'en est pas un, lien…)
     est refusé (`lib/transfer.ts`), comme par le serveur à la synchronisation. « Effacer ma
     collection » efface les cartes, leurs statuts et leurs prix payés ; les commandes et le budget

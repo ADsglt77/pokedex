@@ -11,7 +11,8 @@
  *   d'avant (`documentChanges`, `collection.ts`) : cartes ajoutées, possédées, commandes, budget… ;
  * - `données` : l'export et l'import, que le navigateur signale (`POST /api/journal`) : le serveur
  *   ne les voit pas autrement ;
- * - `vitrine` : une visite du Pokédex public, un lien partagé lu par un robot d'aperçu ;
+ * - `vitrine` : une visite du Pokédex public, un lien partagé lu par un robot d'aperçu (une ligne
+ *   par visiteur et par heure au plus, `vitrine.ts`) ;
  * - `serveur` : une erreur imprévue de l'API ou de Better Auth, une image que sa source n'a pas
  *   donnée (`images.ts`).
  * Pas les requêtes une à une : seulement ce qui se passe.
@@ -81,15 +82,21 @@ const TIME = new Intl.DateTimeFormat('fr-FR', {
   second: '2-digit',
 })
 
+/** La longueur d'une valeur écrite, au plus (un e-mail, une référence de carte y tiennent). */
+const MAX_VALUE = 200
+
 /**
  * `carte="Pikachu ex (SV8 033)"` : entre guillemets, échappée comme en JSON, dès qu'il y a une
  * espace, un guillemet, un `=` ou un caractère de contrôle. Une valeur peut venir d'un visiteur
  * (l'e-mail ou le pseudo d'une connexion refusée) : un retour à la ligne lui ferait écrire une
  * fausse ligne du journal, un échappement ANSI piloter le terminal. Ceux que JSON laisse passer
- * (DEL, les contrôles C1 dont le CSI `\x9b`) sont échappés aussi.
+ * (DEL, les contrôles C1 dont le CSI `\x9b`) sont échappés aussi. Coupée au-delà de `MAX_VALUE`
+ * caractères (« … » à la fin) : un e-mail de 2 Mo ferait une ligne de 2 Mo, et quelques-unes
+ * suffiraient à faire tourner le journal de Docker (3 × 10 Mo) et à effacer les connexions.
  */
 const detail = (key: string, value: string | number) => {
-  const text = String(value)
+  const full = String(value)
+  const text = full.length > MAX_VALUE ? `${full.slice(0, MAX_VALUE)}…` : full
   const shown = /[\s="\p{Cc}]/u.test(text)
     ? JSON.stringify(text).replace(/\p{Cc}/gu, (char) => `\\u00${char.charCodeAt(0).toString(16)}`)
     : text

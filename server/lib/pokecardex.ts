@@ -2,8 +2,8 @@
  * Pokécardex (pokecardex.com), avec son accord (octobre 2026 : lire ce qu'on veut sur son site,
  * copier ses images chez nous, le citer avec un lien). Il ne fournit ni export ni API : chaque page
  * porte ses données chiffrées (AES-CBC, `__INITIAL_DATA_ENCRYPTED__`), que son propre JavaScript
- * déchiffre. On fait de même, avec la clé relue dans ce JavaScript à chaque passage (son adresse
- * change à chaque mise en ligne du site), jamais recopiée ici.
+ * déchiffre. On fait de même, avec la clé lue dans ce JavaScript et relue quand son adresse
+ * change (à chaque mise en ligne du site), jamais recopiée ici.
  * Une page toutes les 3 s, User-Agent identifié. S'il présentait un défi anti-robot (Cloudflare),
  * la lecture échouerait : on ne le contourne pas.
  */

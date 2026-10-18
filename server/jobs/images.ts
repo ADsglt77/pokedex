@@ -23,7 +23,7 @@ import { mirror } from '../images'
 import { mapPool } from '../lib/net'
 import { saveCatalog } from './catalog'
 
-/** Au-delà, la source est sans doute en panne : on ne la sollicite pas davantage. */
+/** À la 20e erreur, la source est sans doute en panne : on ne la sollicite pas davantage. */
 const MAX_FAILURES = 20
 
 export async function images(db: Database) {

@@ -94,7 +94,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   `.woff2`) et ce que la page demande de `public/` au démarrage (thème, manifeste, icône). La liste
   est écrite à chaque construction par le plugin `precache` de `vite.config.ts` (`/index.html` à la
   main : ce plugin passe avant celui de Vite qui l'ajoute) : un nouveau service worker à chaque
-  version. Une page : le réseau, sinon l'app gardée (aucune autre réponse ne prend sa place). Les
+  version. Une page : le réseau, sinon l'app gardée (aucune autre réponse ne prend sa place, pas
+  même une page d'erreur de nginx ou de Cloudflare : plus bas). Les
   fichiers de `public/`, dont le nom ne change pas, et les données de référence (espèces,
   catalogue, prix, historiques) : le réseau d'abord, la dernière réponse gardée sans lui. Celles-ci
   sont gardées par leur chemin, sans les paramètres : une seule copie des historiques de la
@@ -104,7 +105,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   page le dit sous elle (`docs/prix.md`). « Le réseau d'abord » attend les en-têtes 4 s au plus (un réseau faible) quand une
   version est gardée, aussi longtemps qu'il faut sinon, et jamais la fin d'un long téléchargement
   (les prix) ; la réponse du réseau est gardée dès qu'elle arrive, même si la version gardée a déjà
-  été servie. Les images affichées : gardées dès leur premier affichage, 3 000 au plus. Jamais le
+  été servie. Une erreur du serveur (5xx : le 502 de nginx pendant le redémarrage d'un déploiement
+  ou le serveur arrêté, la page d'erreur de Cloudflare sans le site) vaut une absence de réseau :
+  la version gardée s'il y en a une (sinon cette erreur), jamais gardée elle-même : sans quoi
+  l'écran « Le Pokédex ne peut pas s’afficher » viendrait alors que les espèces sont gardées. Les
+  images affichées : gardées dès leur premier affichage, 3 000 au plus. Jamais le
   compte ni la collection, qui viennent du stockage du navigateur.
 - Performance (mesurer en production, `bun run build` puis `bun run preview` : `bun dev` est 3 à 4
   fois plus lent) : le Pokédex affiche 1 025 pochettes. Seules celles à l'écran sont dessinées
@@ -117,7 +122,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   ⌘, Maj ou Alt. Les animations ne se rejouent pas à chaque visite (les pages se remontent) : la
   marque de possession seulement quand le statut change sous les yeux, les cartes de l'accueil
   seulement quand une nouvelle arrive. Les pages autres que l'accueil,
-  le Pokédex et les fiches sont chargées à leur première ouverture (`lazy`, `router.tsx` : une
+  le Pokédex, les fiches, la page introuvable et la page d'erreur sont chargées à leur première
+  ouverture (`lazy`, `router.tsx` : une
   route parente sans chemin porte une seule fois la page d'erreur et l'attente, vide, d'une page
   ouverte directement). Le client Better Auth non plus (`lib/auth.ts`, à part de
   `lib/auth-client.ts` que lit le démarrage) : seules la connexion, la première visite et Données ›

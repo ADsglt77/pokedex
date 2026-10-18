@@ -10,6 +10,7 @@
  * - `GET /api/vitrine/apercu` : la page que lisent les robots d'aperçu (Discord, WhatsApp…) quand
  *   on partage le lien : « Le Pokédex de … » et sa progression (ils ne lancent pas le JavaScript
  *   de l'app). nginx les y envoie (`deploy/nginx.conf`).
+ * Chacune au journal, une fois par heure au plus par visiteur (`journalVisit`).
  */
 
 import type { Database } from 'bun:sqlite'
@@ -18,6 +19,7 @@ import { TOTAL_SPECIES } from '@/config/pokedex'
 import { emptyCollection } from '@/lib/collection'
 import { formatShare, pokedexTitle, unlockedOf } from '@/lib/format'
 import { progressPercent, unlockEvents } from '@/lib/pokedex'
+import { HOUR } from '@/lib/time'
 import type { CardOwnership, CollectionData, PokemonCard, VitrineData } from '@/types'
 import { readPrices } from './jobs/prices'
 import { journal } from './journal'
@@ -54,6 +56,23 @@ const escape = (text: string) =>
 const PREVIEW_BOTS =
   /discordbot|whatsapp|facebookexternalhit|twitterbot|slackbot|telegrambot|linkedinbot|skypeuripreview|redditbot|embedly/i
 
+/** La dernière ligne écrite au journal pour chaque visiteur et chaque message, et quand. */
+const noted = new Map<string, number>()
+
+/**
+ * Une visite au journal, une fois par heure au plus par visiteur (`cf-connecting-ip`) et par
+ * message : des visites répétées (un rechargement sans fin, un robot) ne font pas tourner le
+ * journal de Docker, qui effacerait les connexions.
+ */
+function journalVisit(entry: Parameters<typeof journal>[0], request: Request) {
+  const key = `${entry.message} ${request.headers.get('cf-connecting-ip') ?? ''}`
+  if (Date.now() - (noted.get(key) ?? 0) < HOUR) return
+  // Une liste bornée : des adresses sans fin ne la font pas grossir sans fin.
+  if (noted.size > 10_000) noted.clear()
+  noted.set(key, Date.now())
+  journal(entry, request)
+}
+
 /**
  * `app` : le compte et sa collection ; `data` : les prix ; `origin` : l'adresse publique du site
  * (`BETTER_AUTH_URL`), pour les liens de l'aperçu.
@@ -73,7 +92,7 @@ export function vitrineRoutes(app: Database, data: Database, origin: string) {
       '/vitrine',
       ({ request, set }): VitrineData => {
         set.headers['cache-control'] = 'no-cache'
-        journal({ topic: 'vitrine', message: 'Pokédex public consulté' }, request)
+        journalVisit({ topic: 'vitrine', message: 'Pokédex public consulté' }, request)
         const collection = shown()
         const owned = Object.values(collection.customCards).flatMap(({ id, cardmarket }) =>
           cardmarket && collection.cards[id] ? [cardmarket] : [],
@@ -86,7 +105,7 @@ export function vitrineRoutes(app: Database, data: Database, origin: string) {
       '/vitrine/apercu',
       ({ request }) => {
         const robot = request.headers.get('user-agent')?.match(PREVIEW_BOTS)?.[0]
-        journal({ topic: 'vitrine', message: 'Lien partagé lu', details: { robot } }, request)
+        journalVisit({ topic: 'vitrine', message: 'Lien partagé lu', details: { robot } }, request)
         const { title, description } = vitrineSummary(owner(), shown())
         const meta = (property: string, content: string) =>
           `<meta property="${property}" content="${escape(content)}">`
