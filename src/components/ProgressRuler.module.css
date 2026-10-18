@@ -26,21 +26,23 @@
   cursor: pointer;
 }
 
-/* La barre est un `Progress` de camply : on ne retouche que sa piste. Classe interne de camply
-   (pas une API) : à revérifier après une mise à jour. */
-.segment :global(.camply-progress__track) {
-  height: 6px;
-  transition:
-    height var(--duration-fast),
-    background var(--duration-fast);
+/* La barre, un `Progress` de camply, réglée par ses variables : plus épaisse pour la région
+   choisie, piste plus marquée au survol. */
+.segment {
+  --camply-progress-height: 6px;
 }
 
-.segment:is(a, button):hover :global(.camply-progress__track) {
-  background: var(--camply-fill-4);
+.segment:is(a, button):hover {
+  --camply-progress-track: var(--camply-fill-4);
 }
 
-.selected :global(.camply-progress__track) {
-  height: 10px;
+.selected {
+  --camply-progress-height: 10px;
+}
+
+/* L'anneau de la région choisie, autour de la barre (sa racine, que vise `className`). */
+.selected .bar {
+  border-radius: var(--camply-radius-pill);
   box-shadow: 0 0 0 1px var(--camply-accent-border);
 }
 

@@ -34,7 +34,12 @@ export function ProgressRuler({
         const content = (
           <>
             {/* Un premier Pokémon débloqué se voit, même sur 151. */}
-            <Progress size="sm" value={unlocked > 0 ? Math.max(percent, 3) : 0} aria-hidden />
+            <Progress
+              size="sm"
+              value={unlocked > 0 ? Math.max(percent, 3) : 0}
+              className={styles.bar}
+              aria-hidden
+            />
             <span className={styles.label}>
               <span className={styles.region}>{generation.region}</span>
               <span className={styles.numeral}>{generation.numeral}</span>

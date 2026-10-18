@@ -49,22 +49,9 @@
   padding: var(--camply-space-4) var(--space-panel) var(--space-panel);
 }
 
-/* Un tableau bord à bord : sans le cadre de camply, ses colonnes alignées sur le titre. Classes
-   internes de camply (pas une API) : à revérifier après une mise à jour. */
+/* Un tableau bord à bord (`Table bordered={false}`) : ses colonnes du bord alignées sur le titre
+   (variable de composant de camply). */
 .flush {
+  --camply-table-edge-padding: var(--space-panel);
   padding: var(--camply-space-2) 0 0;
-}
-
-.flush :global(.camply-table__wrap) {
-  border: 0;
-  border-radius: 0;
-}
-
-/* `:where` : sans poids, ces marges cèdent à celles d'un tableau devenu liste (`.stack-table`). */
-.flush :global(:where(.camply-table__th, .camply-table__td):first-child) {
-  padding-left: var(--space-panel);
-}
-
-.flush :global(:where(.camply-table__th, .camply-table__td):last-child) {
-  padding-right: var(--space-panel);
 }

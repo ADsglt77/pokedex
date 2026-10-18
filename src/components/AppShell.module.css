@@ -322,10 +322,10 @@
   }
 
   /* Les notifications au-dessus de la barre d'onglets, pas dessus : un toucher visant un onglet
-     ne tombe pas sur « Annuler ». Classe interne de camply (pas une API) : à revérifier après une
-     mise à jour. */
-  :global(.camply-toast__viewport[data-position='bottom-left']) {
-    bottom: calc(var(--tabbar-height) + 0.75rem + env(safe-area-inset-bottom));
+     ne tombe pas sur « Annuler » (camply ajoute la zone sûre de l'écran). Sur la page qui a la
+     barre seulement : la variable est lue par les toasts, portalisés hors de la coquille. */
+  :global(:root):has(.shell) {
+    --camply-toast-offset-y: calc(var(--tabbar-height) + 0.75rem);
   }
 }
 

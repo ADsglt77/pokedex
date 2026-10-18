@@ -11,6 +11,7 @@ import { latePendingOrders, pendingCount } from '@/lib/orders'
 import { useShoppingStore } from '@/store/shopping'
 import page from './HomePage.module.css'
 import styles from './Indicators.module.css'
+import { useStatSize } from '@/hooks/useStatSize'
 
 /** Une statistique qui mène à sa page. */
 function StatLink({ to, children }: { to: string; children: ReactNode }) {
@@ -23,6 +24,7 @@ function StatLink({ to, children }: { to: string; children: ReactNode }) {
 
 /** Valeur, budget du mois, liste d'achats, commandes en cours : chacun mène à sa page. */
 export function Indicators() {
+  const statSize = useStatSize()
   const orders = useShoppingStore((state) => state.shopping.orders)
   const late = latePendingOrders(orders, today()).length
 
@@ -39,6 +41,7 @@ export function Indicators() {
       </StatLink>
       <StatLink to={shoppingUrl({ view: 'commandes' })}>
         <Stat
+          size={statSize}
           label="Commandes en cours"
           icon={<Package size={18} />}
           value={formatInteger(pendingCount(orders))}

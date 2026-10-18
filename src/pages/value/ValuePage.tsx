@@ -51,12 +51,14 @@ import { loadPriceHistories, usePrices, usePricesMissing } from '@/store/prices'
 import type { PokemonCard } from '@/types'
 import { CardsTable, CompletionTable } from './ValueTables'
 import styles from './ValuePage.module.css'
+import { useStatSize } from '@/hooks/useStatSize'
 
 /**
  * Valeur : ce que vaut la collection au prix Cardmarket du jour, ce qu'elle a coûté, ce que
  * coûterait de la compléter, et son évolution.
  */
 export function ValuePage() {
+  const statSize = useStatSize()
   const prices = usePrices()
   const pricesMissing = usePricesMissing()
   const collection = useCollectionStore((state) => state.collection)
@@ -91,12 +93,14 @@ export function ValuePage() {
         <div className="stat-grid">
           <CollectionValueStat label="Ma collection" />
           <Stat
+            size={statSize}
             label="Commandées"
             icon={<STATUS_ICONS.ordered size={18} />}
             value={money(tallies.ordered.value)}
             hint={tallyHint(tallies.ordered, priced)}
           />
           <Stat
+            size={statSize}
             label="Dépensé en tout"
             icon={<Wallet size={18} />}
             value={formatEuro(spent.spent)}
@@ -106,6 +110,7 @@ export function ValuePage() {
             )}
           />
           <Stat
+            size={statSize}
             label="Pour compléter le Pokédex"
             icon={<Flag size={18} />}
             value={money(toComplete.value)}

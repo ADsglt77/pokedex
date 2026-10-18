@@ -41,6 +41,7 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
 
   return (
     <Table
+      bordered={false}
       className={cx('data-table stack-table', styles.cardsTable)}
       data={rows}
       rowKey={(row) => row.id}
@@ -120,6 +121,7 @@ export function CompletionTable({
 }) {
   return (
     <Table
+      bordered={false}
       className={cx('data-table stack-table', styles.completion)}
       data={rows}
       rowKey={(row) => row.generation.id}

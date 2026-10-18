@@ -197,20 +197,12 @@
 }
 
 /* Thème clair : le choix d'un `SegmentedControl` (ordre, « Ajouter comme », liste d'achats) est un
-   bouton blanc en relief sur un rail gris, pas un pavé rouge qui ressemblerait à une alerte.
-   Classes internes de camply (pas une API) : à revérifier après une mise à jour. */
-:root[data-camply-theme='light'] .camply-segmentedcontrol__root {
-  border-color: var(--camply-border-soft);
-  background: var(--camply-surface-2);
-}
-
-:root[data-camply-theme='light'] .camply-segmentedcontrol__thumb {
-  background: var(--camply-surface);
-  box-shadow:
-    0 0 0 1px var(--camply-border),
-    var(--camply-shadow-sm);
-}
-
-:root[data-camply-theme='light'] .camply-segmentedcontrol__active {
-  color: var(--camply-text-strong);
+   bouton blanc en relief sur un rail gris, pas un pavé rouge qui ressemblerait à une alerte
+   (variables de composant de camply). */
+:root[data-camply-theme='light'] {
+  --camply-segmented-rail: var(--camply-surface-2);
+  --camply-segmented-rail-border: var(--camply-border-soft);
+  --camply-segmented-thumb: var(--camply-surface);
+  --camply-segmented-thumb-shadow: 0 0 0 1px var(--camply-border), var(--camply-shadow-sm);
+  --camply-segmented-thumb-ink: var(--camply-text-strong);
 }

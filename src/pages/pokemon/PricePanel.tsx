@@ -38,7 +38,7 @@ export function PricePanel({ card, paid }: { card: PokemonCard; paid: number | n
       {price ? (
         <>
           <Stat
-            className={styles.stat}
+            variant="plain"
             label="Prix du marché"
             value={formatEuro(price.price)}
             delta={paid === null ? undefined : gainPercent(price.price, paid)}

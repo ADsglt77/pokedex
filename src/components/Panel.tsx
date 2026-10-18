@@ -5,7 +5,8 @@ import styles from './Panel.module.css'
 
 /**
  * Un bloc d'une page (tableau de bord, valeur, réglages) : une `Card` de camply, son titre et sa
- * phrase, ses actions à droite, puis son contenu (`flush` : un tableau, bord à bord). Pas une
+ * phrase, ses actions à droite, puis son contenu (`flush` : un tableau `bordered={false}`, bord à
+ * bord). Pas une
  * région nommée : une page en compte jusqu'à huit, trop de points de repère ; son titre (h2) suffit
  * à s'y retrouver.
  */

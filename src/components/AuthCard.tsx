@@ -1,12 +1,12 @@
-import { Card, CardDescription, CardHeader } from '@camply/ui'
+import { Card, CardDescription, CardHeader, CardTitle } from '@camply/ui'
 import type { ReactNode } from 'react'
 import { Logo } from '@/components/Logo'
 import styles from './AuthCard.module.css'
 
 /**
  * Une page du compte (connexion, première visite), hors de la coquille : son `<main>`, la marque
- * (logo et nom) au-dessus d'une carte seule, centrée, son titre (`h1` : camply n'a pas de
- * `CardTitle` de niveau 1) et son chapeau, puis son contenu.
+ * (logo et nom) au-dessus d'une carte seule, centrée, son titre (le `h1` de la page) et son
+ * chapeau, puis son contenu.
  */
 export function AuthCard({
   title,
@@ -22,7 +22,9 @@ export function AuthCard({
       <Logo>Mon Pokédex</Logo>
       <Card padding="lg" className={styles.card}>
         <CardHeader>
-          <h1 className={styles.title}>{title}</h1>
+          <CardTitle headingLevel={1} className={styles.title}>
+            {title}
+          </CardTitle>
           <CardDescription>{description}</CardDescription>
         </CardHeader>
         {children}

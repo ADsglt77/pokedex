@@ -20,7 +20,7 @@ export const WishCard = memo(function WishCard({ row }: { row: WishRow }) {
   const speciesId = card.dexIds[0]!
 
   return (
-    <Card padding="sm" role="article" className={styles.wish}>
+    <Card as="article" padding="sm" className={styles.wish}>
       {/* La vignette double le lien du titre : cachée au clavier et aux lecteurs d'écran. */}
       <Link to={speciesPath(speciesId)} className={styles.wishArt} tabIndex={-1} aria-hidden="true">
         <CardArt card={card} speciesId={speciesId} alt="" />

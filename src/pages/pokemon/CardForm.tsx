@@ -1,4 +1,14 @@
-import { Button, Modal, Skeleton, Stack, Tab, TabList, TabPanel, Tabs } from '@camply/ui'
+import {
+  Button,
+  Modal,
+  SegmentedControl,
+  Skeleton,
+  Stack,
+  Tab,
+  TabList,
+  TabPanel,
+  Tabs,
+} from '@camply/ui'
 import { Suspense, useRef, useState } from 'react'
 import { useCardDraft } from '@/hooks/useCardDraft'
 import { useCollectionAction } from '@/hooks/useNotify'
@@ -8,7 +18,6 @@ import type { AddAs, PokemonCard, PokemonSpecies } from '@/types'
 import { CardFields } from './CardFields'
 import { CatalogPicker, type PickerView } from './CatalogPicker'
 import { CatalogGridSkeleton } from '@/components/CatalogTile'
-import { SegmentedField } from '@/components/SegmentedField'
 import { ADD_AS_LABELS, ADDED_AS } from '@/config/shopping'
 import { usePokedex } from '@/hooks/usePokedex'
 import { cardSpecies } from '@/lib/collection'
@@ -135,7 +144,8 @@ export function CardForm({
           <TabPanel value="saisie">
             <Stack gap={5}>
               {fields}
-              <SegmentedField
+              <SegmentedControl
+                size="sm"
                 label="Ajouter comme"
                 options={toOptions(ADD_AS_LABELS)}
                 value={addAs}

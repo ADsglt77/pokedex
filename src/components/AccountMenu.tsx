@@ -101,8 +101,12 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
           </Button>
         }
       >
-        <MenuLabel className={styles.email}>{details(account.name, account.email)}</MenuLabel>
-        <MenuLabel className={styles.text}>{text}</MenuLabel>
+        <MenuLabel uppercase={false} className={styles.email}>
+          {details(account.name, account.email)}
+        </MenuLabel>
+        <MenuLabel uppercase={false} className={styles.text}>
+          {text}
+        </MenuLabel>
         <MenuSeparator />
         {/* Pendant un conflit, la synchronisation attend le choix ; expirée, la session. */}
         {status === 'conflict' ? (

@@ -13,6 +13,7 @@ import { cx } from '@/lib/cx'
 import { BudgetField } from './BudgetField'
 import page from './ShoppingPage.module.css'
 import styles from './BudgetPanel.module.css'
+import { useStatSize } from '@/hooks/useStatSize'
 
 type Row = ReturnType<typeof spendingByMonth>[number]
 
@@ -34,6 +35,7 @@ const COUNT_COLUMNS: Column<Row>[] = [
 
 /** Le budget : ses réglages, et ce que disent les commandes, par mois et par fournisseur. */
 export function BudgetPanel() {
+  const statSize = useStatSize()
   const { orders, budget } = useShoppingStore((state) => state.shopping)
   const collection = useCollectionStore((state) => state.collection)
   const months = spendingByMonth(orders)
@@ -54,6 +56,7 @@ export function BudgetPanel() {
 
       <div className="stat-grid">
         <Stat
+          size={statSize}
           label="Dépensé en tout"
           icon={<Wallet size={18} />}
           value={formatEuro(total.spent)}
@@ -63,18 +66,21 @@ export function BudgetPanel() {
           )}
         />
         <Stat
+          size={statSize}
           label="Port et frais"
           icon={<Truck size={18} />}
           value={formatEuro(total.shipping)}
           hint="Cumulés, toutes commandes comprises."
         />
         <Stat
+          size={statSize}
           label="Coût moyen d’un Pokémon"
           icon={<Calculator size={18} />}
           value={perSpecies.average === null ? '—' : formatEuro(perSpecies.average)}
           hint={`Pour ${plural(perSpecies.species, 'Pokémon acheté', 'Pokémon achetés')}, port compris.`}
         />
         <Stat
+          size={statSize}
           label="Commandes"
           icon={<Receipt size={18} />}
           value={formatInteger(orders.length)}
@@ -92,6 +98,7 @@ export function BudgetPanel() {
         description="Chaque commande compte une fois, dans le mois de sa date d’achat : cartes, port et frais, moins le remboursé. Une commande annulée ne compte pas."
       >
         <Table
+          bordered={false}
           className={cx('data-table stack-table', styles.months)}
           data={months}
           rowKey={(row) => row.key}
@@ -127,6 +134,7 @@ export function BudgetPanel() {
 
       <Panel title="Par fournisseur" flush>
         <Table
+          bordered={false}
           className={cx('data-table stack-table', styles.suppliers)}
           data={suppliers}
           rowKey={(row) => row.key}

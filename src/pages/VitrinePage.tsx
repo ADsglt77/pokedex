@@ -30,6 +30,7 @@ import { tallyByStatus, trackedCards } from '@/lib/prices'
 import { useSyncStore } from '@/store/sync'
 import type { VitrineData } from '@/types'
 import styles from './VitrinePage.module.css'
+import { useStatSize } from '@/hooks/useStatSize'
 
 /**
  * `/vitrine` : le Pokédex public, toujours montré, la page d'accueil d'un visiteur ; en lecture
@@ -119,6 +120,7 @@ const isChosen = (entry: PokedexEntry) => entry.card !== null && !entry.unlocked
  * possédées, envoyés avec elles (sans prix, la valeur est « — »).
  */
 function Vitrine({ owner, collection, prices }: VitrineData) {
+  const statSize = useStatSize()
   const heading = owner ? pokedexTitle(owner) : 'Un Pokédex de cartes japonaises'
   const { entries, progress, generations } = useMemo(() => buildPokedex(collection), [collection])
   const owned = useMemo(
@@ -161,24 +163,28 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
 
       <div className="stat-grid">
         <Stat
+          size={statSize}
           label="Pokémon débloqués"
           icon={<STATUS_ICONS.owned size={18} />}
           value={formatInteger(progress.unlocked)}
           hint={`sur ${formatInteger(progress.total)}`}
         />
         <Stat
+          size={statSize}
           label="Valeur de la collection"
           icon={<Wallet size={18} />}
           value={prices ? formatEuro(owned.value) : '—'}
           hint="au prix Cardmarket du jour"
         />
         <Stat
+          size={statSize}
           label="Cartes choisies"
           icon={<Layers size={18} />}
           value={formatInteger(chosen)}
           hint="pas encore obtenues"
         />
         <Stat
+          size={statSize}
           label="Régions complètes"
           icon={<Flag size={18} />}
           value={formatInteger(generations.filter((row) => row.missing === 0).length)}

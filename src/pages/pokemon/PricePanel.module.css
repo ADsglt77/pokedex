@@ -2,14 +2,6 @@
   font-size: var(--text-md);
 }
 
-/* Le prix du jour, à plat dans son panneau (pas une carte dans la carte). Classe interne de camply
-   (pas une API) : à revérifier après une mise à jour. */
-.stat:global(.camply-stat__root) {
-  padding: 0;
-  border: 0;
-  background: none;
-}
-
 /* La courbe du prix : sa période au-dessus, ses chiffres dessous. */
 .history {
   display: flex;

@@ -7,9 +7,11 @@ import { formatEuro, formatInteger, plural } from '@/lib/format'
 import { summarize } from '@/lib/pokedex'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
+import { useStatSize } from '@/hooks/useStatSize'
 
 /** Le mois en cours en un coup d'œil : dépensé, restant, liste d'achats, Pokémon à débloquer. */
 export function BudgetOverview() {
+  const statSize = useStatSize()
   const { orders, budget } = useShoppingStore((state) => state.shopping)
   const ordered = useCollectionStore((state) => summarize(state.collection).ordered)
   const { progress } = usePokedex()
@@ -19,6 +21,7 @@ export function BudgetOverview() {
     <div className="stat-grid">
       <SpentThisMonthStat />
       <Stat
+        size={statSize}
         label="Restant ce mois-ci"
         icon={<Flag size={18} />}
         value={formatEuro(Math.max(0, budget.monthly - spent))}
@@ -26,6 +29,7 @@ export function BudgetOverview() {
       />
       <WishlistStat />
       <Stat
+        size={statSize}
         label="Pokémon à débloquer"
         icon={<Package size={18} />}
         value={formatInteger(progress.missing)}

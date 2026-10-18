@@ -1,9 +1,8 @@
-import { Button, Input, Modal, Select, Stack, Textarea } from '@camply/ui'
+import { Button, Input, Modal, SegmentedControl, Select, Stack, Textarea } from '@camply/ui'
 import { useEffect, useRef, useState } from 'react'
 import { useBlocker } from 'react-router'
 import { EuroField } from '@/components/EuroInput'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { SegmentedField } from '@/components/SegmentedField'
 import { ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { monthOf, spentIn } from '@/lib/budget'
@@ -307,7 +306,8 @@ export function OrderForm({
             />
           </div>
 
-          <SegmentedField
+          <SegmentedControl
+            size="sm"
             label="État"
             hint={
               canBePending(stored)

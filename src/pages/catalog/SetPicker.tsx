@@ -3,11 +3,11 @@ import { ArrowLeftRight, Search } from '@camply/ui/icons'
 import {
   startTransition,
   useDeferredValue,
-  useEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
+  type RefObject,
 } from 'react'
 import { useGrowingList } from '@/hooks/useGrowingList'
 import type { CatalogSet } from '@/lib/card-catalog'
@@ -62,6 +62,8 @@ export function SetPicker({
   onPick: (setId: string) => void
 }) {
   const [open, setOpen] = useState(false)
+  // La recherche prend le focus à l'ouverture, pour taper tout de suite.
+  const field = useRef<HTMLInputElement>(null)
   const pick = (setId: string) => {
     setOpen(false)
     onPick(setId)
@@ -76,8 +78,14 @@ export function SetPicker({
       >
         Changer d’extension
       </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title="Choisir une extension" size="full">
-        <SetList {...list} onPick={pick} />
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Choisir une extension"
+        size="full"
+        initialFocus={field}
+      >
+        <SetList {...list} field={field} onPick={pick} />
       </Modal>
     </>
   )
@@ -91,15 +99,11 @@ function SetList({
   current,
   coverage,
   onPick,
-}: Omit<Parameters<typeof SetPicker>[0], 'className'>) {
+  field,
+}: Omit<Parameters<typeof SetPicker>[0], 'className'> & {
+  field: RefObject<HTMLInputElement | null>
+}) {
   const [query, setQuery] = useState('')
-  const field = useRef<HTMLInputElement>(null)
-  // La fenêtre donne le focus à son premier bouton (« Fermer ») après ce rendu : la recherche le
-  // prend juste après, pour taper tout de suite.
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => field.current?.focus())
-    return () => cancelAnimationFrame(frame)
-  }, [])
   // La liste suit la frappe sans la ralentir : plus de 400 extensions à refaire.
   const search = searchForm(useDeferredValue(query))
 

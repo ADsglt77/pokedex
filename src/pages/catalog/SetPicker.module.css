@@ -4,13 +4,11 @@
   gap: var(--camply-space-4);
 }
 
-/* La recherche et l'ordre restent en haut quand la liste défile, sur le fond de la fenêtre, collés
-   au bord de la zone qui défile, par-dessus sa marge (18 px chez camply, `.camply-modal__content` :
-   classe interne, à revérifier après une mise à jour). */
+/* La recherche et l'ordre restent en haut quand la liste défile, sur le fond de la fenêtre. */
 .controls {
   position: sticky;
   z-index: 1;
-  top: -18px;
+  top: 0;
   display: grid;
   gap: var(--camply-space-2);
   padding-block: var(--camply-space-2);

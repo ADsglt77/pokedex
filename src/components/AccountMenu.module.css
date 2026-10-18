@@ -13,8 +13,6 @@
 .email,
 .text {
   max-width: 17rem;
-  text-transform: none;
-  letter-spacing: normal;
 }
 
 .text {

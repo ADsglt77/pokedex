@@ -24,12 +24,13 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   hors d'eux doit avoir une raison. Ses classes partagées, entre autres : `.quiet-link` (un lien
   discret, titre d'une carte ou fil d'Ariane : la couleur de son texte, souligné au survol
   seulement, de jaune en sombre, de rouge en clair), `.shortcut` (un raccourci clavier, `Kbd`,
-  masqué sur écran tactile seul), `.amounts` (une liste « libellé : montant », `DescriptionList` :
-  le libellé prend la place, le montant à droite en chiffres alignés ; le décompte d'une collection
-  sur la page Données, `SummaryLedger`, les totaux d'une commande). Une page : `PageHeader`
+  masqué sur écran tactile seul). Une liste « libellé : montant » est une `DescriptionList`
+  `layout="split"` de camply (le libellé prend la place, le montant à droite en chiffres alignés :
+  le décompte d'une collection sur la page Données, `SummaryLedger`, les totaux d'une commande). Une page : `PageHeader`
   (titre, phrase, actions à droite), puis ses blocs en `Panel` (une `Card` de camply : titre `h2`, phrase, actions, contenu ; `flush`
-  pour un tableau bord à bord ; pas une région nommée : trop de points de repère) ; statistiques par
-  deux, par quatre quand la page a 50rem (`.stat-grid`, plus compactes sur téléphone). Une page
+  pour un tableau bord à bord, `Table bordered={false}` ; pas une région nommée : trop de points de
+  repère) ; statistiques par deux, par quatre quand la page a 50rem (`.stat-grid` ; compactes sur
+  téléphone, `Stat size="sm"` par `useStatSize`). Une page
   découpée en composants (l'accueil, `pages/home/` ; Achats) : les classes d'un seul composant dans
   son propre module CSS, celles qu'en partagent plusieurs dans celui de la page, importé sous le
   nom `page`. Occuper l'écran : une page va jusqu'à 120rem (`--page-max`, toute la largeur jusqu'au très grand écran,
@@ -139,12 +140,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   extensions, puis autant chaque fois qu'un repère haut d'un écran, `growing-sentinel`, paraît au
   bas de la liste) : mesuré en production (octobre 2026), la fenêtre des extensions s'ouvre en
   40 à 80 ms au lieu de 270 à 490, et se ferme en une dizaine de millisecondes au lieu de 250 à
-  430 (démonter des centaines de tuiles coûtait autant que les dessiner). Dans une fenêtre, pas de
-  `content-visibility` sur un bloc qui contient des boutons : le piège à focus de camply mesure
-  chaque bouton à l'ouverture et à chaque Tab (`offsetWidth`), ce qui forcerait la mise en page
-  de chaque bloc caché. Le bouton « Changer d'extension » porte lui-même l'état de sa fenêtre
+  430 (démonter des centaines de tuiles coûtait autant que les dessiner). Le piège à focus de
+  camply ne mesure que les bords d'une fenêtre (depuis la 0.3 ; avant, chaque bouton à chaque Tab,
+  d'où l'absence de `content-visibility` sur les années de `SetPicker`). Le bouton « Changer d'extension » porte lui-même l'état de sa fenêtre
   (`SetPicker`) : l'ouvrir ne redessine pas la page et ses cartes. Changer l'ordre des extensions
   passe en arrière-plan (`startTransition`). Les deux grandes fenêtres (le choix d'une extension,
   l'ajout d'une carte) sont pleine page (`Modal size="full"`) : seul leur contenu défile, leur
-  titre et leurs boutons restent à l'écran (`.camply-modal__full`, `global.css`), la recherche des
-  extensions reste en haut (`position: sticky`).
+  titre et leurs boutons restent à l'écran (camply), la recherche des extensions reste en haut
+  (`position: sticky; top: 0`) et prend le focus à l'ouverture (`initialFocus`).
