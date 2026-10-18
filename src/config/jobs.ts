@@ -18,11 +18,11 @@ export const INGEST_JOBS: Record<
   }
 > = {
   // Les espèces ne changent qu'avec une nouvelle génération.
-  species: { label: 'Espèces (PokéAPI)', every: 30 * DAY },
+  species: { label: 'Espèces', every: 30 * DAY },
   // De nouvelles cartes quelques fois par mois (Pokécardex : une page par série, toutes les 3 s).
-  catalog: { label: 'Catalogue (Pokécardex)', every: DAY },
+  catalog: { label: 'Catalogue', every: DAY },
   // Les prix changent une fois par jour ; la tâche ne retélécharge que ce qui a changé.
-  prices: { label: 'Prix (Cardmarket)', every: 6 * HOUR },
+  prices: { label: 'Prix', every: 6 * HOUR },
   // Les deux bases, copiées chaque jour (`BACKUP_DIR`) ; avant les images, pour ne pas attendre
   // leur premier passage.
   backups: { label: 'Sauvegardes', every: DAY },

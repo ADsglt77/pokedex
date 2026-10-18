@@ -3,9 +3,8 @@
 Pokédex personnel de cartes Pokémon japonaises : pour chacun des 1 025 Pokémon, on ajoute la
 carte que l'on veut (sa référence, d'où son image est retrouvée, et son id Cardmarket pour suivre
 son prix) ; le Pokémon se débloque quand on la possède. React + Vite + TypeScript, interface
-[`@camply/ui`](https://www.npmjs.com/package/@camply/ui), espèces [PokéAPI](https://pokeapi.co/),
-cartes et images [Pokécardex](https://www.pokecardex.com/) (avec son autorisation), prix
-[Cardmarket](https://www.cardmarket.com/).
+[`@camply/ui`](https://www.npmjs.com/package/@camply/ui) ; espèces, cartes, images et prix relus
+par le serveur de l'app (plus bas).
 
 ```sh
 bun install
@@ -52,15 +51,14 @@ bun run format   # Prettier
 
 Toutes les données passent par le serveur de l'app (`server/`, Elysia et une base SQLite) : le
 navigateur ne parle qu'à lui. Des tâches d'ingestion lisent les sources et remplissent la base :
-- `catalog`, chaque jour : le catalogue des cartes japonaises, d'après Pokécardex (avec son
-  accord) : ses ≈ 450 séries japonaises depuis 1996, decks et promos compris, avec le numéro, le
+- `catalog`, chaque jour : le catalogue des cartes japonaises, d'après Pokécardex : ses ≈ 450 séries japonaises depuis 1996, decks et promos compris, avec le numéro, le
   nom, les Pokémon et l'id Cardmarket de chaque carte (`/api/catalog`). Une page par série, une
   toutes les 3 s : le premier passage prend une vingtaine de minutes ;
 - `prices`, toutes les 6 h : les prix d'après les fichiers publics de Cardmarket (le prix du jour
   de toutes ses cartes à l'unité, et l'historique de chacune ; `/api/prices`, `/api/histories`),
   et l'extension de chaque carte, pour les lignes de la liste de souhaits (`/api/wants`) ;
 - `images`, chaque jour : les images copiées chez nous (`/images/…`) — cartes chez Pokécardex,
-  qui demande qu'elles soient hébergées chez nous, avec un lien vers son site sur chaque page ;
+  hébergées chez nous (jamais affichées depuis ses serveurs) ;
   sprites et illustrations des Pokémon chez PokéAPI. Une image qui manque encore est copiée à la
   demande.
 

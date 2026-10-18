@@ -12,12 +12,7 @@ import { CloudOff, Flag } from '@camply/ui/icons'
 import { Suspense, use, useId, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useSearchParams } from 'react-router'
-import {
-  CatalogCredit,
-  CatalogGrid,
-  CatalogGridSkeleton,
-  CatalogTile,
-} from '@/components/CatalogTile'
+import { CatalogGrid, CatalogGridSkeleton, CatalogTile } from '@/components/CatalogTile'
 import { PageHeader } from '@/components/PageHeader'
 import { ADD_AS_LABELS, ADDED_AS } from '@/config/shopping'
 import { Panel } from '@/components/Panel'
@@ -297,9 +292,7 @@ function SetBrowser({ catalog }: { catalog: Catalog }) {
         </div>
       </Panel>
 
-      <p className="muted">
-        {plural(shown.length, 'carte', 'cartes')} · <CatalogCredit />
-      </p>
+      <p className="muted">{plural(shown.length, 'carte', 'cartes')}</p>
       {shown.length === 0 ? (
         <EmptyState
           icon={<Flag size={22} />}

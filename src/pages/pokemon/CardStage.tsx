@@ -1,6 +1,5 @@
 import type { PointerEvent } from 'react'
 import { CardArt } from '@/components/CardArt'
-import { ImageCredit } from './ImageCredit'
 import type { CardView } from '@/lib/pokedex'
 import type { PokemonSpecies } from '@/types'
 import styles from './CardStage.module.css'
@@ -35,10 +34,7 @@ function release(event: PointerEvent<HTMLDivElement>) {
   for (const name of ['--tilt-x', '--tilt-y']) holder.style.removeProperty(name)
 }
 
-/**
- * La carte du Pokémon en grand, ou une pochette vide tant qu'il n'en a pas. Son image cite sa
- * source (Pokécardex, la condition de son autorisation), avec un lien.
- */
+/** La carte du Pokémon en grand, ou une pochette vide tant qu'il n'en a pas. */
 export function CardStage({ view, species }: { view: CardView | null; species: PokemonSpecies }) {
   if (!view) {
     return (
@@ -66,7 +62,6 @@ export function CardStage({ view, species }: { view: CardView | null; species: P
           <span className={styles.glare} aria-hidden="true" />
         </CardArt>
       </div>
-      <ImageCredit image={card.image} />
     </figure>
   )
 }

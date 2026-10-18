@@ -1,7 +1,7 @@
 import { SegmentedControl, Select, Stack, Switch } from '@camply/ui'
 import { use } from 'react'
 import { Link } from 'react-router'
-import { CatalogCredit, CatalogGrid, CatalogTile } from '@/components/CatalogTile'
+import { CatalogGrid, CatalogTile } from '@/components/CatalogTile'
 import { loadCatalog, setOption, type CatalogCard } from '@/lib/card-catalog'
 import { plural } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
@@ -99,7 +99,7 @@ export function CatalogPicker({
         />
       </Stack>
       <p className="muted">
-        {plural(shown.length, 'carte japonaise', 'cartes japonaises')} · <CatalogCredit />
+        {plural(shown.length, 'carte japonaise', 'cartes japonaises')}
         {set && (
           <>
             {' '}

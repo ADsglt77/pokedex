@@ -1,10 +1,8 @@
 import { Skeleton } from '@camply/ui'
 import type { ReactNode, Ref } from 'react'
 import { CardArt } from '@/components/CardArt'
-import { ExternalLink } from '@/components/ExternalLink'
 import { PricedValue } from '@/components/PricedValue'
 import type { CatalogCard } from '@/lib/card-catalog'
-import { POKECARDEX } from '@/lib/card-images'
 import { priceLabel } from '@/lib/prices'
 import type { CardPrice } from '@/types'
 import styles from './CatalogTile.module.css'
@@ -83,14 +81,5 @@ export function CatalogGridSkeleton({ count }: { count: number }) {
         </li>
       ))}
     </ul>
-  )
-}
-
-/** D'où viennent les images de la grille, avec un lien (en tête de grille). */
-export function CatalogCredit() {
-  return (
-    <>
-      images <ExternalLink href={POKECARDEX}>Pokécardex</ExternalLink>
-    </>
   )
 }

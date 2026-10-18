@@ -45,12 +45,9 @@ export function MissingImages() {
     const missing = candidates.length - found.length
     const others = missing ? ` ; introuvable pour ${plural(missing, 'autre', 'autres')}` : ''
     if (found.length === 0) {
-      notify(
-        `Pokécardex n’a pas l’image de ${candidates.length > 1 ? 'ces cartes' : 'cette carte'}.`,
-        {
-          tone: 'info',
-        },
-      )
+      notify(`Pas d’image trouvée pour ${candidates.length > 1 ? 'ces cartes' : 'cette carte'}.`, {
+        tone: 'info',
+      })
       return
     }
     act(
@@ -70,7 +67,7 @@ export function MissingImages() {
   return (
     <Stack gap={3} align="start">
       <p>
-        {plural(candidates.length, 'carte', 'cartes')} sans image de Pokécardex :{' '}
+        {plural(candidates.length, 'carte', 'cartes')} sans image retrouvée :{' '}
         {candidates.length > 1 ? 'leur référence donne' : 'sa référence donne'} un code d’extension
         et un numéro, l’image peut y être cherchée.
       </p>

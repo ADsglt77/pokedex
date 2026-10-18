@@ -1,7 +1,6 @@
 import { Input, Stack } from '@camply/ui'
 import { Suspense, use, type Ref } from 'react'
 import { CardArt } from '@/components/CardArt'
-import { ImageCredit } from './ImageCredit'
 import type { CardDraft } from '@/hooks/useCardDraft'
 import { findCardImage } from '@/lib/card-catalog'
 import { formatEuro } from '@/lib/format'
@@ -36,7 +35,7 @@ export function CardFields({
         <Input
           {...RAW_TEXT}
           label="Référence"
-          hint="Le nom, puis le code de l’extension et le numéro : « Bulbizarre (SV2A 166) ». Il sert à trouver l’image chez Pokécardex. Vide : le nom de la carte chez Cardmarket."
+          hint="Le nom, puis le code de l’extension et le numéro : « Bulbizarre (SV2A 166) ». Il sert à trouver l’image. Vide : le nom de la carte chez Cardmarket."
           value={draft.reference}
           onChange={(event) => draft.setReference(event.target.value)}
           onBlur={draft.searchImage}
@@ -44,7 +43,7 @@ export function CardFields({
         <Input
           {...RAW_TEXT}
           label="Adresse de l’image"
-          hint="Facultatif : vide, l’image est cherchée chez Pokécardex d’après la référence. Sinon, clic droit sur une image en ligne › « Copier l’adresse de l’image » (pas sur Cardmarket : ses images ne s’affichent que chez lui)."
+          hint="Facultatif : vide, l’image est cherchée d’après la référence. Sinon, clic droit sur une image en ligne › « Copier l’adresse de l’image » (pas sur Cardmarket : ses images ne s’affichent que chez lui)."
           placeholder="https://…"
           inputMode="url"
           value={draft.image}
@@ -96,7 +95,7 @@ export function CardFields({
 }
 
 /**
- * L'aperçu : l'adresse collée, sinon l'image retrouvée chez Pokécardex (citée), sinon celle gardée
+ * L'aperçu : l'adresse collée, sinon l'image retrouvée d'après la référence, sinon celle gardée
  * (comme à l'enregistrement) ; sans image, ou si l'adresse ne mène pas à une image, la carte de
  * substitution. `searching` : pendant la recherche.
  */
@@ -118,33 +117,27 @@ function Preview({
         speciesId={speciesId}
         alt="Aperçu de la carte"
       />
-      <ImageCredit image={image} />
     </figure>
   )
 }
 
-/** Ce que Pokécardex a pour la référence : l'image, ou rien. `kept` : l'image actuelle reste. */
+/** L'image retrouvée d'après la référence, ou rien. `kept` : l'image actuelle reste. */
 function FoundImage({ reference, kept }: { reference: string; kept: boolean }) {
   const image = use(findCardImage(reference))
   if (image) {
-    return (
-      <p className={styles.check}>
-        Image trouvée chez Pokécardex d’après la référence : vérifiez l’aperçu.
-      </p>
-    )
+    return <p className={styles.check}>Image trouvée d’après la référence : vérifiez l’aperçu.</p>
   }
   if (kept) {
     return (
       <p className="muted">
-        Pokécardex ne donne pas d’image pour cette référence, ou ne répond pas : l’image actuelle
-        est gardée.
+        Pas d’image trouvée pour cette référence : l’image actuelle est gardée.
       </p>
     )
   }
   return (
     <p className={styles.warn}>
-      Pokécardex n’a pas l’image de cette carte, ou ne répond pas (elle sera cherchée de nouveau à
-      l’enregistrement) : vérifiez la référence, ou collez une adresse si vous voulez.
+      Pas d’image trouvée pour cette carte (elle sera cherchée de nouveau à l’enregistrement) :
+      vérifiez la référence, ou collez une adresse si vous voulez.
     </p>
   )
 }

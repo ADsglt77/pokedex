@@ -8,7 +8,7 @@ import { Panel } from '@/components/Panel'
 import { PokedexGrid } from '@/components/PokedexGrid'
 import { ProgressRuler } from '@/components/ProgressRuler'
 import { RegionList } from '@/components/RegionList'
-import { SiteCredits } from '@/components/SiteCredits'
+import { SiteDisclaimer } from '@/components/SiteDisclaimer'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { UnlockedChart } from '@/components/UnlockedChart'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
@@ -60,7 +60,7 @@ export function VitrinePage() {
         </Suspense>
       </main>
       <footer className={styles.footer}>
-        <SiteCredits />
+        <SiteDisclaimer />
       </footer>
     </div>
   )

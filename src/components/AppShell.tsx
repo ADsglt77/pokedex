@@ -14,7 +14,7 @@ import {
 import { useEffect, useRef, type ComponentType } from 'react'
 import { Link, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { Logo } from '@/components/Logo'
-import { SiteCredits } from '@/components/SiteCredits'
+import { SiteDisclaimer } from '@/components/SiteDisclaimer'
 import { shoppingUrl } from '@/lib/filters'
 import { AccountMenu } from '@/components/AccountMenu'
 import { AppSearch } from '@/components/AppSearch'
@@ -205,7 +205,7 @@ export function AppShell() {
         </main>
 
         <footer className={cx('container', styles.footer)}>
-          <SiteCredits />
+          <SiteDisclaimer />
         </footer>
       </div>
 

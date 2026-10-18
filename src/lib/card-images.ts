@@ -1,6 +1,6 @@
 /**
  * Les images des cartes japonaises, chez Pokécardex (avec son accord, octobre 2026 : copiées et
- * hébergées chez nous, citées avec un lien vers son site). L'adresse exacte vient du catalogue
+ * hébergées chez nous). L'adresse exacte vient du catalogue
  * (la série et le rang de la carte chez Pokécardex) ; pour une référence hors du catalogue, elle se
  * déduit de la référence : « Bulbizarre (sv2a 166) », le code de la série puis le numéro.
  * La collection garde l'adresse d'origine ; le navigateur charge la copie qu'en a le serveur
@@ -11,16 +11,15 @@ import { numberKey, referenceCode, setKey } from '@/lib/card-code'
 import type { CardImage } from '@/types'
 
 const SCANS = 'https://pokecardex-scans.b-cdn.net'
-export const POKECARDEX = 'https://www.pokecardex.com/'
 
 /** Une ancienne image de TCGplayer (retiré) : encore affichée si le serveur en a la copie. */
 const TCGPLAYER_PRODUCTS = 'https://tcgplayer-cdn.tcgplayer.com/product/'
-const TCGPLAYER = 'https://www.tcgplayer.com/'
 
 export const isTcgplayerImage = (image: CardImage) => image.small.startsWith(TCGPLAYER_PRODUCTS)
 
-/** Une image de Pokécardex, et non une adresse collée. */
-const isPokecardexImage = (image: CardImage) => image.small.startsWith(SCANS)
+/** Une image retrouvée (Pokécardex, ou une ancienne de TCGplayer), et non une adresse collée. */
+export const isFoundImage = (image: CardImage) =>
+  image.small.startsWith(SCANS) || isTcgplayerImage(image)
 
 /** Les adresses d'origine dont le serveur a la copie, et le chemin de cette copie. */
 const MIRRORED: [RegExp, string][] = [
@@ -43,13 +42,6 @@ export function localSrc(url: string) {
     if (pattern.test(url)) return url.replace(pattern, path)
   }
   return url
-}
-
-/** D'où vient une image, pour la citer sous la carte ; `null` : une adresse collée. */
-export function imageSource(image: CardImage): { name: string; href: string } | null {
-  if (isPokecardexImage(image)) return { name: 'Pokécardex', href: POKECARDEX }
-  if (isTcgplayerImage(image)) return { name: 'TCGplayer', href: TCGPLAYER }
-  return null
 }
 
 /**

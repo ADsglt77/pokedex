@@ -90,14 +90,14 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   seulement les chemins plausibles, `plausible` : chez Pokécardex, une série du catalogue et un
   numéro d'image jusqu'au plus grand des siens ; un Pokémon de 1 à 1 025 ; jamais plus chez TCGplayer ; une absence retenue une semaine ; une source en panne :
   502, et « Image non copiée » au journal ; nginx limite à 10 copies par seconde). Les images de TCGplayer qu'une ancienne version a enregistrées
-  s'affichent encore si le volume en a la copie (jamais plus copiées, citées « TCGplayer ») ;
+  s'affichent encore si le volume en a la copie (jamais plus copiées) ;
   Données › « Chercher les images » les remplace par celles de Pokécardex, comme il cherche celles
   des cartes sans image. `findCardImage` (`lib/card-catalog.ts`) : l'image du catalogue pour
   cette référence, sinon celle que la référence désigne, si elle se charge (sans réponse en 10 s :
-  absente, pour ne pas bloquer l'enregistrement) ; la saisie le dit, et la fiche et l'aperçu citent
-  sa source sous la carte (`imageSource`, `ImageCredit`, d'après l'adresse d'origine). Un échec
+  absente, pour ne pas bloquer l'enregistrement) ; la saisie le dit, sans nommer de source (aucun
+  crédit dans l'app, à la demande de l'utilisateur, octobre 2026 : CLAUDE.md). Un échec
   est redemandé à l'enregistrement (panne passagère), et une image déjà enregistrée reste si elle
-  ne répond pas. Une adresse collée s'affiche telle quelle, sans crédit : la seule image que le
+  ne répond pas. Une adresse collée s'affiche telle quelle : la seule image que le
   navigateur va chercher ailleurs. Sans adresse collée, l'image suit la référence (cherchée en
   quittant le champ). Le code d'une carte (`lib/card-code.ts`) :
   `codeKey` en fait une clé (« SV2A 166 », « S8AG 1 » : série en majuscules sans tiret, numéro sans

@@ -1,6 +1,6 @@
 import { useRef, useState, type RefObject } from 'react'
 import { findCardImage, type CatalogCard } from '@/lib/card-catalog'
-import { imageSource } from '@/lib/card-images'
+import { isFoundImage } from '@/lib/card-images'
 import { referenceCode } from '@/lib/card-code'
 import { isCardmarketImage, parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
 import { newCardId } from '@/lib/collection'
@@ -9,11 +9,8 @@ import { parseLink } from '@/lib/format'
 import { loadPriceHistory } from '@/store/prices'
 import type { CardImage, PokemonCard } from '@/types'
 
-/**
- * L'image enregistrée vient d'une source connue (Pokécardex, ou TCGplayer d'une ancienne version) :
- * elle suit la référence, ce n'est pas une adresse collée.
- */
-const isFoundImage = (card: PokemonCard) => card.image !== null && imageSource(card.image) !== null
+/** L'image enregistrée a été retrouvée : elle suit la référence, ce n'est pas une adresse collée. */
+const hasFoundImage = (card: PokemonCard) => card.image !== null && isFoundImage(card.image)
 
 /**
  * La saisie d'une carte : l'adresse de son image (vide : celle retrouvée d'après la référence),
@@ -24,7 +21,7 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
   // Tiré une fois : deux clics sur « Enregistrer » écrivent la même carte, pas deux.
   const [id] = useState(() => card?.id ?? newCardId())
   const [image, setImage] = useState(() =>
-    card?.image && !isFoundImage(card) ? card.image.large : '',
+    card?.image && !hasFoundImage(card) ? card.image.large : '',
   )
   // L'id et la page de départ : ceux de la carte.
   const [initial] = useState(() => ({
@@ -64,7 +61,8 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
   const lookup = image.trim() || !referenceCode(searched) ? null : searched
   // L'image déjà retrouvée reste, pour la même référence : si elle ne répond pas cette fois, ou si
   // la référence n'a pas de code où la chercher (une image d'une ancienne version).
-  const kept = card && reference.trim() === card.reference && isFoundImage(card) ? card.image : null
+  const kept =
+    card && reference.trim() === card.reference && hasFoundImage(card) ? card.image : null
 
   /**
    * La carte saisie, pour les Pokémon `dexIds` ; `null` tant qu'un champ est illisible (ses

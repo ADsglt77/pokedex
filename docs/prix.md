@@ -118,7 +118,7 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
     la route n'ayant ni session ni limite de rythme. `Cache-Control: no-cache`. L'app la demande à
     chaque ouverture de la fenêtre (`loadWantsLines`, par `fetchFresh` : sans cache, 10 s au plus) ;
     sans réponse du serveur, elle propose de réessayer.
-- État des données (page Données › Sources des données, `ReferenceSection`) : où en est chaque
+- État des données (page Données › Données du serveur, `ReferenceSection`) : où en est chaque
   tâche d'ingestion, d'après son journal (`/api/status` : dernière réussite, dernier passage, et le
   jour des prix en base), demandé à chaque ouverture de la page (`loadStatus`, `lib/api.ts`). À jour ; en retard (deux
   intervalles sans réussite, `INGEST_JOBS` de `config/jobs.ts`, que suit aussi `ingest.ts`) ; en
