@@ -5,7 +5,7 @@ description: How to use the @camply/ui React component library in this app (impo
 
 # @camply/ui
 
-The user's own React component library (60 components, dark theme by default, French built-in labels, zero runtime deps, ESM, tree-shakable). Version installed: see `package.json` (0.2.x). Typings are the source of truth: `node_modules/@camply/ui/dist/components/<Name>/<Name>.d.ts`, and the built JS next to them shows the behaviour. The source lives in `../camply/Camply-UI` when that repo is checked out next to this one (the user co-maintains it): a missing feature is fixed **there** when convenient; meanwhile the workarounds below are the only allowed ones.
+The user's own React component library (60 components, dark theme by default, French built-in labels, zero runtime deps, ESM, tree-shakable). Version installed: see `package.json` (0.3.x). Typings are the source of truth: `node_modules/@camply/ui/dist/components/<Name>/<Name>.d.ts`, and the built JS next to them shows the behaviour. The source lives in `../Camply-UI` (next to this repo) when it is checked out (the user co-maintains it): a missing feature is fixed **there** when convenient; meanwhile the workarounds below are the only allowed ones.
 
 ## Setup rules
 
