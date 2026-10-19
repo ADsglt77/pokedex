@@ -301,6 +301,11 @@ export const APP_STEPS = [
   -- déclencheur sur la table de Better Auth).
   DROP TRIGGER IF EXISTS one_account;
   `,
+  `
+  -- Les pseudos qu'un compte a quittés (changé, ou compte supprimé) : jamais repris par un autre
+  -- compte (\`auth.ts\`), sans quoi un lien partagé vers \`/@pseudo\` mènerait au Pokédex d'un autre.
+  CREATE TABLE released_pseudos (username TEXT PRIMARY KEY, user_id TEXT NOT NULL) WITHOUT ROWID;
+  `,
 ]
 
 const userVersion = (db: Database) =>

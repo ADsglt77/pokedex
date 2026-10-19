@@ -2,8 +2,6 @@
  * Les données de référence, publiques, que remplissent les tâches d'ingestion (`ingest.ts`) :
  * - `GET /api/status` : la dernière réussite et le dernier passage de chaque tâche, et le jour des
  *   prix en base (la page Données le montre) ;
- * - `GET /api/status/errors`, réservé au compte : la cause du dernier échec de chaque tâche en
- *   échec (elle peut nommer une source : pas publique) ;
  * - `GET /api/health` : pour une surveillance (UptimeRobot…), 200 si chaque tâche nécessaire a
  *   réussi récemment (deux intervalles au plus, `isOverdue`) et que les prix ne sont pas figés
  *   (`pricesFrozen`), 503 sinon, avec les tâches en retard ;
@@ -32,8 +30,7 @@ import { INGEST_JOB_NAMES, INGEST_JOBS } from '@/config/jobs'
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { wantsLine, type ExpansionName } from '@/lib/cardmarket'
 import { isOverdue, pricesFrozen } from '@/lib/jobs'
-import type { JobErrors, JobStatus, PriceHistories, ServerStatus, WantsLines } from '@/types'
-import type { accountRoutes } from './auth'
+import type { JobStatus, PriceHistories, ServerStatus, WantsLines } from '@/types'
 import { readSource } from './db'
 import { historyReader } from './history'
 import { readPrices } from './jobs/prices'
@@ -48,35 +45,6 @@ const idsPattern = (max: number) => `^[1-9]\\d{0,8}(,[1-9]\\d{0,8}){0,${max - 1}
 /** La réponse de chaque id demandé, une clé par id : chacun n'est lu qu'une fois, même répété. */
 const eachId = <T>(ids: string, read: (id: number) => T) =>
   Object.fromEntries([...new Set(ids.split(','))].map((id) => [id, read(Number(id))]))
-
-/** `/api/status/errors` : la cause du dernier échec de chaque tâche en échec, pour le compte. */
-export function jobErrorsRoutes(data: Database, account: ReturnType<typeof accountRoutes>) {
-  /** La cause du dernier passage de chaque tâche, quand il a échoué. */
-  const failures = data.query(
-    `SELECT job, message FROM runs
-     WHERE id IN (SELECT MAX(id) FROM runs WHERE finished_at IS NOT NULL GROUP BY job)
-       AND ok = 0 AND message IS NOT NULL`,
-  )
-  return new Elysia({ name: 'job-errors' })
-    .use(account)
-    .get(
-      '/status/errors',
-      (): JobErrors =>
-        Object.fromEntries(
-          (failures.all() as { job: string; message: string }[]).map(({ job, message }) => [
-            job,
-            message.slice(0, 500),
-          ]),
-        ),
-      {
-        auth: true,
-        detail: {
-          summary: 'La cause du dernier échec de chaque tâche en échec (le compte)',
-          tags: ['Référence'],
-        },
-      },
-    )
-}
 
 export function referenceRoutes(data: Database) {
   const runs = data.query(

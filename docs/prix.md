@@ -150,8 +150,8 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
   tâche d'ingestion, d'après son journal (`/api/status` : dernière réussite, dernier passage, et le
   jour des prix en base), demandé à chaque ouverture de la page (`loadStatus`, `lib/api.ts`). À jour ; en retard (deux
   intervalles sans réussite, `INGEST_JOBS` de `config/jobs.ts`, que suit aussi `ingest.ts`) ; en
-  échec (le dernier passage), avec sa cause (`GET /api/status/errors`, réservée au compte : une
-  cause peut nommer une source) ; prix figés (le guide de Cardmarket inchangé depuis plus de deux jours : la
+  échec (le dernier passage ; sa cause n'est que dans le journal du serveur : elle peut nommer une
+  source, et tout le monde peut avoir un compte) ; prix figés (le guide de Cardmarket inchangé depuis plus de deux jours : la
   tâche réussit, mais chaque jour sans prix est un trou dans l'historique, `pricesFrozen` de
   `lib/jobs.ts`) ; à lancer (jamais passée : la commande est donnée), sauf les images,
   facultatives (le serveur copie à la demande celles affichées). `/api/health` (la surveillance)

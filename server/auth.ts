@@ -7,7 +7,11 @@
  *   envoie pas et n'en garde pas (Better Auth en exige une : chaque compte reçoit une adresse sans
  *   boîte, `<uuid>@pokedex.invalid`, que personne ne connaît) ; pas de mot de passe oublié, donc.
  * - Le pseudo et le mot de passe se changent dans l'app (Données › Mon compte) ; le compte s'y
- *   supprime, avec son mot de passe, et sa collection part avec lui.
+ *   supprime, avec son mot de passe, et sa collection part avec lui. Un pseudo quitté (changé, ou
+ *   compte supprimé) n'est jamais repris par un autre compte (`released_pseudos`) : un lien partagé
+ *   vers `/@pseudo` ne mène jamais au Pokédex d'un autre.
+ * - Une modification du compte venue d'une autre origine est refusée (403) : un autre site ne
+ *   connecte pas un visiteur à un compte qu'il ne connaît pas.
  * - Une seule session par compte : se connecter sur un appareil déconnecte ses autres. La
  *   collection n'est donc modifiée que d'un appareil à la fois.
  * Sessions de 60 jours, renouvelées chaque jour d'usage, dans un cookie (`__Secure-`, SameSite
@@ -153,10 +157,21 @@ export async function createAuth(db: Database) {
   await (await getMigrations(options)).runMigrations()
 
   const count = db.query('SELECT COUNT(*) AS count FROM "user"')
+  const holder = db.query('SELECT user_id FROM released_pseudos WHERE username = ?')
+  const release = db.query(
+    'INSERT OR REPLACE INTO released_pseudos (username, user_id) VALUES (?, ?)',
+  )
   return {
     auth: betterAuth(options),
     /** Le nombre de comptes (le journal du démarrage). */
     count: () => (count.get() as { count: number }).count,
+    /** Ce pseudo (en minuscules) a-t-il été quitté par un autre compte que `userId` ? */
+    releasedByOther: (pseudo: string, userId: string | undefined) => {
+      const row = holder.get(pseudo) as { user_id: string } | null
+      return row !== null && row.user_id !== userId
+    },
+    /** Le compte `userId` quitte son pseudo (en minuscules) : personne d'autre ne le reprendra. */
+    release: (pseudo: string, userId: string) => void release.run(pseudo, userId),
   }
 }
 
@@ -167,6 +182,16 @@ async function typedPseudo(request: { json: () => Promise<unknown> }) {
   const body = (await request.json().catch(() => null)) as { username?: unknown } | null
   return typeof body?.username === 'string' ? body.username.toLowerCase() : undefined
 }
+
+/** La réponse d'un pseudo pris, telle que la donne Better Auth (son code, que lit l'app). */
+const pseudoTaken = () =>
+  Response.json(
+    {
+      code: 'USERNAME_IS_ALREADY_TAKEN',
+      message: 'Username is already taken. Please try another.',
+    },
+    { status: 400 },
+  )
 
 /** Les actions du compte que note le journal, d'après leur chemin. */
 const WATCHED =
@@ -230,14 +255,14 @@ export const appOrigin = (auth: Accounts['auth']) => new URL(auth.options.baseUR
 /**
  * Le compte dans l'API (`/api/…`) :
  * - `/api/auth/*` : Better Auth (création du compte, connexion, déconnexion, session, pseudo, mot
- *   de passe, suppression) ;
+ *   de passe, suppression) ; une modification d'une autre origine, refusée (403) ;
  * - `GET /api/account` : `AccountState`, qui est connecté sur ce navigateur (`null` : personne) :
  *   une seule requête au démarrage ;
  * - la macro `auth` des routes réservées au compte : 401 sans session, 403 pour une modification
  *   venue d'une autre origine (le cookie part avec toute requête vers le site), jamais en cache ;
  *   la route reçoit `user`.
  */
-export function accountRoutes({ auth }: Accounts) {
+export function accountRoutes({ auth, releasedByOther, release }: Accounts) {
   const origin = appOrigin(auth)
   /**
    * La session d'une requête. Renouvelée (une fois par jour d'usage), son nouveau cookie part avec
@@ -281,16 +306,28 @@ export function accountRoutes({ auth }: Accounts) {
   return new Elysia({ name: 'account' })
     .all(
       '/auth/*',
-      async ({ request }) => {
+      async ({ request, status }) => {
+        if (foreign(request)) return status(403, null)
         const path = new URL(request.url).pathname
         if (!WATCHED.test(path)) return auth.handler(request)
         // Lus avant que Better Auth ne lise la requête (une copie, et la session d'avant : celle
         // d'un compte qui se supprime n'existe plus après).
         const typed = await typedPseudo(request.clone())
-        const pseudo = /\/sign-(in\/username|up\/email)$/.test(path)
+        const user = /\/sign-(in\/username|up\/email)$/.test(path)
           ? undefined
-          : ((await auth.api.getSession({ headers: request.headers }))?.user.username ?? undefined)
-        const response = await auth.handler(request)
+          : (await auth.api.getSession({ headers: request.headers }))?.user
+        const pseudo = user?.username ?? undefined
+        // Un pseudo qu'un autre compte a quitté : refusé comme un pseudo pris.
+        const taken =
+          typed !== undefined &&
+          /\/(sign-up\/email|update-user)$/.test(path) &&
+          releasedByOther(typed, user?.id)
+        const response = taken ? pseudoTaken() : await auth.handler(request)
+        // Le pseudo quitté, réservé à ce compte.
+        if (response.ok && user && pseudo) {
+          const renamed = path.endsWith('/update-user') && typed !== undefined && typed !== pseudo
+          if (renamed || path.endsWith('/delete-user')) release(pseudo, user.id)
+        }
         journalAuth(path, request, response, pseudo, typed)
         return response
       },

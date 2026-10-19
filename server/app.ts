@@ -14,7 +14,7 @@ import { Elysia } from 'elysia'
 import { accountRoutes, appOrigin, ForeignOrigin, type Accounts } from './auth'
 import { collectionRoutes } from './collection'
 import { serveImage } from './images'
-import { jobErrorsRoutes, referenceRoutes } from './reference'
+import { referenceRoutes } from './reference'
 import { journal, journalRoutes } from './journal'
 import { vitrineRoutes } from './vitrine'
 import { notFound } from './snapshots'
@@ -69,7 +69,6 @@ export function createApp({ data, app, accounts }: AppContext) {
         api
           .use(account)
           .use(referenceRoutes(data))
-          .use(jobErrorsRoutes(data, account))
           .use(collectionRoutes(app, account))
           .use(journalRoutes(account))
           .use(vitrineRoutes(app, data, appOrigin(accounts.auth))),

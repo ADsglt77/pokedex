@@ -99,10 +99,11 @@ export function LegalPage() {
           <h3>Combien de temps</h3>
           <p>
             Votre compte et ce que vous y enregistrez, tant que le compte existe ; supprimé, il part
-            aussitôt du serveur, et des copies de sauvegarde au bout de 90 jours au plus. Une
-            session est fermée 60 jours après votre dernière visite, ou dès que vous vous connectez
-            sur un autre appareil. Le journal du serveur, limité à 30 Mo, efface ses plus anciennes
-            lignes au fil de l’eau, et repart de zéro à chaque mise à jour du site.
+            aussitôt du serveur (seul votre pseudo reste réservé : aucun autre compte ne le
+            reprendra), et des copies de sauvegarde au bout de 90 jours au plus. Une session est
+            fermée 60 jours après votre dernière visite, ou dès que vous vous connectez sur un autre
+            appareil. Le journal du serveur, limité à 30 Mo, efface ses plus anciennes lignes au fil
+            de l’eau, et repart de zéro à chaque mise à jour du site.
           </p>
           <h3>Vos droits</h3>
           <ul>

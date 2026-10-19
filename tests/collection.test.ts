@@ -260,6 +260,42 @@ describe('les comptes : chacun le sien', () => {
     expect(left('collection_versions')).toEqual({ count: 0 })
     expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/pierre`))).status).toBe(404)
     expect((await collection('GET', undefined, asPierre)).status).toBe(401)
+    // Son pseudo n'est pas repris par un autre : ses liens partagés ne mèneraient plus à lui.
+    const { response } = await createAccount('pierre')
+    expect(response.status).toBe(400)
+    expect(((await response.json()) as { code: string }).code).toBe('USERNAME_IS_ALREADY_TAKEN')
+  })
+
+  test('un pseudo quitté n’est jamais repris par un autre compte ; le sien peut le reprendre', async () => {
+    const flora = await createAccount('Flora')
+    const rename = (to: string) => authCall('update-user', { name: to, username: to }, flora.cookie)
+    expect((await rename('Flora-2')).status).toBe(200)
+    expect((await createAccount('flora')).response.status).toBe(400)
+    expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/flora`))).status).toBe(404)
+    expect((await rename('Flora')).status).toBe(200)
+    expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/flora`))).status).toBe(200)
+  })
+
+  test('envoyé d’un autre site : ni création ni connexion (403)', async () => {
+    const from = (path: string, body: unknown) =>
+      server.handle(
+        new Request(`${ORIGIN}/api/auth/${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Origin: 'https://autre.exemple' },
+          body: JSON.stringify(body),
+        }),
+      )
+    const created = await from('sign-up/email', {
+      name: 'Brock',
+      username: 'Brock',
+      email: '',
+      password: PASSWORD,
+    })
+    expect(created.status).toBe(403)
+    expect(app.query('SELECT 1 FROM "user" WHERE username = ?').get('brock')).toBeNull()
+    const signedIn = await from('sign-in/username', { username: 'Sacha', password: PASSWORD })
+    expect(signedIn.status).toBe(403)
+    expect(signedIn.headers.getSetCookie()).toEqual([])
   })
 })
 

@@ -261,12 +261,6 @@ export interface ServerStatus {
   pricesDate: string | null
 }
 
-/**
- * `/api/status/errors` (le compte) : la cause du dernier échec de chaque tâche en échec. Clé : la
- * tâche ; absente si son dernier passage a réussi.
- */
-export type JobErrors = Partial<Record<string, string>>
-
 /*
  * Prix : `/api/prices/collection` et `/api/prices/selection`, mis à jour par la tâche d'ingestion
  * `prices` (`server/jobs/prices.ts`)

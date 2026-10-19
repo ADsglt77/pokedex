@@ -10,8 +10,10 @@ Les comptes, la collection synchronisée entre les appareils, le Pokédex public
   compte des majuscules (plugin `username` de Better Auth). Il est gardé deux fois, d'accord
   (`guard`, crochet `before`) : `name` tel que tapé (« Le Pokédex de Sacha », le menu du compte),
   `username` en minuscules (la connexion, l'adresse du Pokédex public `/@sacha`) ; une requête ne
-  peut pas mettre autre chose dans `name`. **Pas d'e-mail** : le site n'en envoie pas et n'en garde
-  pas ; Better Auth en exige une, chaque compte reçoit donc une adresse sans boîte
+  peut pas mettre autre chose dans `name`. Un pseudo quitté (changé, ou compte supprimé) n'est
+  jamais repris par un autre compte (`released_pseudos`, testé) : un lien partagé vers `/@pseudo` ne
+  mène jamais au Pokédex d'un autre ; son compte peut le reprendre. **Pas d'e-mail** : le site n'en
+  envoie pas et n'en garde pas ; Better Auth en exige une, chaque compte reçoit donc une adresse sans boîte
   (`<uuid>@pokedex.invalid`, donnée par le serveur, jamais montrée, testé), et la connexion par
   e-mail est fermée (`disabledPaths`). Pas de mot de passe oublié, donc : le mot de passe perdu, le
   compte l'est aussi (l'inscription et Mon compte le disent). Les mentions légales et la
@@ -27,8 +29,8 @@ Les comptes, la collection synchronisée entre les appareils, le Pokédex public
   (`changePassword`, l'actuel exigé, les autres sessions fermées) et la suppression du compte
   (`deleteUser`, le mot de passe exigé par `guard` : Better Auth s'en passerait pour une session de
   moins d'un jour ; après une confirmation qui propose l'export) : sa collection et ses versions
-  gardées partent avec lui (`afterDelete`, testé), son pseudo redevient libre ; elle reste 30 jours
-  dans les sauvegardes. Un mauvais mot de passe (400) le dit ; une session fermée (401 : une
+  gardées partent avec lui (`afterDelete`, testé), son pseudo reste réservé ; elle reste 90 jours
+  au plus dans les sauvegardes. Un mauvais mot de passe (400) le dit ; une session fermée (401 : une
   connexion sur un autre appareil) dit « Session expirée », jamais « mot de passe incorrect »
   (l'utilisateur croirait le sien perdu), et le menu du compte propose de se reconnecter
   (`markExpired`) ; un pseudo pris (`USERNAME_IS_ALREADY_TAKEN`) le dit. Les réponses du client
@@ -41,7 +43,9 @@ Les comptes, la collection synchronisée entre les appareils, le Pokédex public
   `GET /api/account` et des routes du compte (`sessionOf`, dans la macro `auth` aussi, sans quoi la
   synchronisation au retour de la page consommerait le renouvellement du jour ; sans lui, le
   navigateur garderait l'ancien cookie et il faudrait se reconnecter au bout de 60 jours). Les
-  réponses de ces routes ne sont jamais gardées en cache (`no-store`, macro `auth`). En production,
+  réponses de ces routes ne sont jamais gardées en cache (`no-store`, macro `auth`). Une
+  modification venue d'une autre origine est refusée (403), sur `/api/auth/*` aussi : un autre site
+  ne connecte pas un visiteur à un compte qu'il ne connaît pas (testé). En production,
   par visiteur (`cf-connecting-ip`) : 10 tentatives de création de compte par heure, 5 tentatives
   de connexion, de changement du mot de passe ou de suppression du compte par minute ; devant,
   nginx limite tout le compte (`/api/auth/`) à 2 requêtes par seconde et par visiteur, 20 d'un

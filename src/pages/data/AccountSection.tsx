@@ -245,8 +245,8 @@ function DeleteForm() {
       >
         <p>
           Votre collection, vos achats, votre budget et votre Pokédex public sont effacés du
-          serveur, sans retour possible, et votre pseudo redevient libre. Exportez d’abord votre
-          collection pour la garder.
+          serveur, sans retour possible ; votre pseudo ne sera jamais repris par un autre compte.
+          Exportez d’abord votre collection pour la garder.
         </p>
         <ExportCollectionButton>Exporter ma collection</ExportCollectionButton>
       </ConfirmDialog>

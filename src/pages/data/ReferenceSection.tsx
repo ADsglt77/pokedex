@@ -4,7 +4,7 @@ import { INGEST_JOB_NAMES, INGEST_JOBS, type IngestJob } from '@/config/jobs'
 import { loadStatus } from '@/lib/api'
 import { isOverdue, pricesFrozen } from '@/lib/jobs'
 import { details, formatDate, formatDateTime } from '@/lib/format'
-import type { JobErrors, JobStatus, ServerStatus } from '@/types'
+import type { JobStatus, ServerStatus } from '@/types'
 import { DataSection } from './DataSection'
 import styles from './DataPage.module.css'
 
@@ -45,7 +45,6 @@ export function ReferenceSection() {
 function describeJob(
   job: IngestJob,
   status: JobStatus | undefined,
-  error: string | undefined,
   pricesDate: string | null,
   now: number,
 ): { tone: BadgeTone; badge: string; text: ReactNode } {
@@ -76,7 +75,7 @@ function describeJob(
       text: details(
         `Dernier essai le ${formatDateTime(status.lastRun)}`,
         since || 'aucune réussite',
-        error && `cause : ${error}`,
+        'la cause est dans le journal du serveur',
       ),
     }
   }
@@ -93,11 +92,7 @@ function describeJob(
   return { tone: 'success', badge: 'À jour', text: since }
 }
 
-function JobsStatus({
-  status,
-}: {
-  status: Promise<(ServerStatus & { errors: JobErrors }) | null>
-}) {
+function JobsStatus({ status }: { status: Promise<ServerStatus | null> }) {
   const current = use(status)
   const [now] = useState(() => Date.now())
   if (!current) {
@@ -113,13 +108,7 @@ function JobsStatus({
       className={styles.jobs}
       divided
       items={INGEST_JOB_NAMES.map((job) => {
-        const { tone, badge, text } = describeJob(
-          job,
-          current.jobs[job],
-          current.errors[job],
-          current.pricesDate,
-          now,
-        )
+        const { tone, badge, text } = describeJob(job, current.jobs[job], current.pricesDate, now)
         // Le jour des prix, qui peut précéder celui de leur relevé.
         const pricesDate =
           job === 'prices' && current.pricesDate && `Prix du ${formatDate(current.pricesDate)}. `

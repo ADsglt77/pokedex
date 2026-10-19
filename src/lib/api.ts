@@ -6,7 +6,7 @@
  */
 
 import { settled } from '@/lib/settled'
-import type { JobErrors, ServerStatus, WantsLines } from '@/types'
+import type { ServerStatus, WantsLines } from '@/types'
 
 /**
  * Note dans le journal du serveur ce que le navigateur fait seul (`server/journal.ts`) : un export,
@@ -89,18 +89,13 @@ export const loadWantsLines = (ids: readonly number[]) =>
   settled(fetchFresh<WantsLines>(`/api/wants?ids=${ids.join()}`))
 
 /**
- * L'état des tâches du serveur (`/api/status`), avec la cause de leurs échecs
- * (`/api/status/errors`, vide sans elle), demandés à chaque appel (`fetchFresh`) ; `null` s'il ne
- * répond pas, ou s'il n'est pas de la même version que le site (pas encore redémarré après une
- * mise à jour). Lu par `use()`.
+ * L'état des tâches du serveur (`/api/status`), demandé à chaque appel (`fetchFresh`) ; `null`
+ * s'il ne répond pas, ou s'il n'est pas de la même version que le site (pas encore redémarré
+ * après une mise à jour). La cause d'un échec n'est que dans le journal du serveur : elle peut
+ * nommer une source, et tout le monde peut avoir un compte. Lu par `use()`.
  */
 export const loadStatus = () =>
-  settled(
-    Promise.all([
-      fetchFresh<ServerStatus>('/api/status'),
-      fetchFresh<JobErrors>('/api/status/errors'),
-    ]).then(([status, errors]) => (status?.jobs ? { ...status, errors: errors ?? {} } : null)),
-  )
+  settled(fetchFresh<ServerStatus>('/api/status').then((status) => (status?.jobs ? status : null)))
 
 /**
  * Ce que l'app tire d'une réponse de l'API (le catalogue lu, les détails par espèce…), calculé
