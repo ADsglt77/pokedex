@@ -80,7 +80,7 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
   const { limit, sentinel, more } = useGrowingList(rows.length, ROWS_STEP)
 
   return (
-    <div className={styles.growing}>
+    <div className="growing">
       <Table
         bordered={false}
         className={cx('data-table stack-table', styles.cardsTable)}

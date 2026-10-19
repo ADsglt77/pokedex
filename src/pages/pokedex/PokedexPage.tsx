@@ -6,13 +6,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { useFollowLinks } from '@/hooks/useFollowLinks'
 import { usePokedex } from '@/hooks/usePokedex'
 import { usePokedexFilters } from '@/hooks/usePokedexFilters'
-import {
-  activeFilterCount,
-  DEFAULT_FILTERS,
-  filterEntries,
-  POSSESSIONS,
-  type PossessionFilter,
-} from '@/lib/filters'
+import { DEFAULT_FILTERS, filterEntries, POSSESSIONS, type PossessionFilter } from '@/lib/filters'
 import { focusAfter } from '@/lib/focus'
 import { formatInteger, pageTitle, plural } from '@/lib/format'
 import { PokedexGrid } from '@/components/PokedexGrid'
@@ -24,10 +18,6 @@ const SCROLL_POSITIONS = 'react-router-scroll-positions'
 /** Les pochettes du premier affichage : plus qu'un grand écran n'en montre. */
 const FIRST_TILES = 60
 
-/**
- * Le classeur : les 1 025 Pokémon, filtrés par la barre d'outils (filtres dans l'adresse). Chaque
- * filtre rapide dit combien de Pokémon il montrerait, les autres filtres appliqués.
- */
 /**
  * Le routeur garde-t-il une position de défilement pour cette adresse (`ScrollRestoration`, la
  * coquille : sous l'adresse du Pokédex et ses filtres, dans le stockage de la session) ?
@@ -41,6 +31,10 @@ function hasScrollPosition() {
   }
 }
 
+/**
+ * Le classeur : les 1 025 Pokémon, filtrés par la barre d'outils (filtres dans l'adresse). Chaque
+ * filtre rapide dit combien de Pokémon il montrerait, les autres filtres appliqués.
+ */
 export function PokedexPage() {
   const pokedex = usePokedex()
   const [filters, setFilters] = usePokedexFilters()
@@ -80,7 +74,12 @@ export function PokedexPage() {
     () => new Set(visible.map((entry) => entry.species.generation)).size > 1,
     [visible],
   )
-  const filtering = filters.search.trim() !== '' || activeFilterCount(filters) > 0
+  const filtering =
+    filters.search.trim() !== '' ||
+    filters.possession !== 'all' ||
+    filters.generation !== null ||
+    filters.card !== null ||
+    filters.type !== null
   const search = useRef<HTMLInputElement>(null)
   const resetFilters = () => setFilters(DEFAULT_FILTERS)
   // Les pochettes sont de simples liens (`PokedexTile`), suivis par le routeur.

@@ -7,7 +7,7 @@ import {
   Unlink,
   type IconProps,
 } from '@camply/ui/icons'
-import { useMemo, type ComponentType } from 'react'
+import type { ComponentType } from 'react'
 import { Link } from 'react-router'
 import { Panel } from '@/components/Panel'
 import { usePokedex } from '@/hooks/usePokedex'
@@ -83,46 +83,38 @@ export function TodoPanel() {
   const { entries } = usePokedex()
   const orders = useShoppingStore((state) => state.shopping.orders)
   const late = latePendingOrders(orders, today()).length
-  const toComplete = useMemo(
-    () =>
-      TO_COMPLETE.map((todo) => ({
-        ...todo,
-        // Une carte TAG TEAM compte une fois, pas une fois par Pokémon.
-        count: new Set(
-          filterEntries(entries, { ...DEFAULT_FILTERS, card: todo.card }).map(
-            ({ species, card }) => card?.card.id ?? species.id,
-          ),
-        ).size,
-      })),
-    [entries],
-  )
-
-  const todos: Todo[] = [
-    ...(late > 0
+  const todos: Todo[] = TO_COMPLETE.flatMap(({ card, one, many, hint, icon }) => {
+    // Une carte TAG TEAM compte une fois, pas une fois par Pokémon.
+    const count = new Set(
+      filterEntries(entries, { ...DEFAULT_FILTERS, card }).map(
+        ({ species, card }) => card?.card.id ?? species.id,
+      ),
+    ).size
+    return count > 0
       ? [
           {
-            key: 'late',
-            label: plural(late, 'commande en retard', 'commandes en retard'),
-            hint:
-              late === 1
-                ? `En cours depuis plus de ${LATE_AFTER_DAYS} jours : réclamez-la au vendeur`
-                : `En cours depuis plus de ${LATE_AFTER_DAYS} jours : réclamez-les aux vendeurs`,
-            to: shoppingUrl({ view: 'commandes' }),
-            icon: Clock,
-            tone: 'warn' as const,
+            key: card,
+            label: plural(count, one, many),
+            hint: hint[count === 1 ? 0 : 1],
+            to: pokedexUrl({ card }),
+            icon,
           },
         ]
-      : []),
-    ...toComplete
-      .filter(({ count }) => count > 0)
-      .map(({ card, count, one, many, hint, icon }) => ({
-        key: card,
-        label: plural(count, one, many),
-        hint: hint[count === 1 ? 0 : 1],
-        to: pokedexUrl({ card }),
-        icon,
-      })),
-  ]
+      : []
+  })
+  if (late > 0) {
+    todos.unshift({
+      key: 'late',
+      label: plural(late, 'commande en retard', 'commandes en retard'),
+      hint:
+        late === 1
+          ? `En cours depuis plus de ${LATE_AFTER_DAYS} jours : réclamez-la au vendeur`
+          : `En cours depuis plus de ${LATE_AFTER_DAYS} jours : réclamez-les aux vendeurs`,
+      to: shoppingUrl({ view: 'commandes' }),
+      icon: Clock,
+      tone: 'warn',
+    })
+  }
 
   return (
     <Panel title="À faire" description="Ce qui attend une action de votre part.">

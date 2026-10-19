@@ -6,7 +6,8 @@
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
 import { details, formatEuro, formatInteger, plural } from '@/lib/format'
-import { cardsWithStatus, isTaken, type PokedexEntry } from '@/lib/pokedex'
+import { isToBuy } from '@/lib/collection'
+import { cardsWithStatus, type PokedexEntry } from '@/lib/pokedex'
 import type { PricePoint } from '@/lib/chart'
 import { addDays, daysBetween } from '@/lib/time'
 import type {
@@ -68,14 +69,12 @@ export interface TrackedCard {
 }
 
 export const trackedCards = (collection: CollectionData, prices: PriceFile | null): TrackedCard[] =>
-  cardsWithStatus(collection).map(({ card, ownership }) => {
-    return {
-      card,
-      status: ownership.status,
-      paid: ownership.paidPrice ?? null,
-      value: marketPrice(prices, card),
-    }
-  })
+  cardsWithStatus(collection).map(({ card, ownership }) => ({
+    card,
+    status: ownership.status,
+    paid: ownership.paidPrice ?? null,
+    value: marketPrice(prices, card),
+  }))
 
 export interface Tally {
   count: number
@@ -180,11 +179,13 @@ export function completionCost(
 ): CompletionCost {
   const cost = { value: 0, priced: 0, unpriced: 0, noCard: 0 }
   const counted = new Set<string>()
-  for (const { card } of entries.filter((entry) => !isTaken(entry))) {
+  for (const { card } of entries) {
     if (!card) {
       cost.noCard++
       continue
     }
+    // Obtenu ou en route : sa carte est possédée ou commandée.
+    if (!isToBuy(card)) continue
     const price = marketPrice(prices, card.card)
     if (price === null) {
       cost.unpriced++

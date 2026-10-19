@@ -44,10 +44,9 @@ export function PriceChart({
   const { from, to } = window
   const values = points.map((point) => point.value)
   const low = Math.min(...values)
-  const high = Math.max(...values)
+  const max = Math.max(...values)
   // Les bornes de l'axe, étiquetées : zéro pour un total.
   const min = fromZero ? Math.min(low, 0) : low
-  const max = high
   const start = Date.parse(from)
   const span = Date.parse(to) - start || 1
   const x = (date: string) => ((Date.parse(date) - start) / span) * WIDTH
@@ -62,7 +61,7 @@ export function PriceChart({
     .join(' ')
   // Sur plusieurs années, les dates de l'axe disent l'année.
   const withYear = from.slice(0, 4) !== to.slice(0, 4)
-  const summary = `${label} : ${format(first.value)} le ${formatDate(first.date)}, ${format(last.value)} le ${formatDate(last.date)} ; au plus bas ${format(low)}, au plus haut ${format(high)}.`
+  const summary = `${label} : ${format(first.value)} le ${formatDate(first.date)}, ${format(last.value)} le ${formatDate(last.date)} ; au plus bas ${format(low)}, au plus haut ${format(max)}.`
 
   return (
     <figure className={styles.chart}>

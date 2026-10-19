@@ -58,7 +58,7 @@ let answeredAt = 0
  */
 function requestPrices(ids: readonly number[]) {
   const { known, failed } = usePriceStore.getState()
-  // Une panne : redemandée (`getJson` attend une minute) à chaque rendu, comme avant.
+  // Une panne : redemandée (`getJson` attend une minute) à chaque rendu.
   if (requested.get(ids) === known && (!failed.size || !ids.some((id) => failed.has(id)))) return
   requested.set(ids, known)
   const wanted = [...new Set(ids)].filter((id) => !known.has(id)).sort((a, b) => a - b)

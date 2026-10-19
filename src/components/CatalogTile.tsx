@@ -89,7 +89,7 @@ export function CatalogGrid({
   const tiles = Children.toArray(children)
   const { limit, sentinel, more } = useGrowingList(tiles.length, TILES_STEP)
   return (
-    <div className={styles.growing}>
+    <div className="growing">
       <ul ref={ref} className={cx(styles.grid, wide && styles.wide)}>
         {tiles.slice(0, limit)}
       </ul>

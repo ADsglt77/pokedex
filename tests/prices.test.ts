@@ -58,7 +58,7 @@ describe('historiesOf', () => {
     ])
   })
 
-  test('sans historique, ou absente d’une réponse gardée hors ligne : ne compte pas', () => {
+  test('sans historique, ou absente de la réponse : ne compte pas', () => {
     expect(historiesOf(response, [719445, 1, 719621])).toEqual([a])
     expect(historiesOf({}, [719621])).toEqual([])
   })

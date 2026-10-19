@@ -155,8 +155,3 @@
     font-weight: 600;
   }
 }
-
-/* Le tableau des cartes, dessiné au fur et à mesure : son repère (`growing-sentinel`) à son bas. */
-.growing {
-  position: relative;
-}

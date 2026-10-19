@@ -4,7 +4,7 @@
  */
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
-import { findCard, isToBuy } from '@/lib/collection'
+import { findCard } from '@/lib/collection'
 import { localDayOf } from '@/lib/format'
 import type { PricePoint } from '@/lib/chart'
 import { SPECIES } from '@/lib/species'
@@ -73,7 +73,7 @@ function describeCard(card: PokemonCard, collection: CollectionData): CardView {
   }
 }
 
-/** La même carte, au même statut (une carte relue du stockage ou du serveur est un autre objet). */
+/** La même carte, au même statut (une carte relue du serveur est un autre objet). */
 const sameView = (a: CardView | null, b: CardView | null) =>
   a === b ||
   (a !== null &&
@@ -82,9 +82,6 @@ const sameView = (a: CardView | null, b: CardView | null) =>
     a.acquiredAt === b.acquiredAt &&
     a.paidPrice === b.paidPrice &&
     (a.card === b.card || JSON.stringify(a.card) === JSON.stringify(b.card)))
-
-/** Un Pokémon obtenu ou en route : sa carte est possédée ou commandée. */
-export const isTaken = (entry: PokedexEntry) => entry.card !== null && !isToBuy(entry.card)
 
 /**
  * Le Pokédex d'une collection. `previous` : celui d'avant ; une entrée inchangée (la même carte au

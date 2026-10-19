@@ -1,5 +1,4 @@
 import { Stat } from '@camply/ui'
-import { useMemo } from 'react'
 import { PricedValue } from '@/components/PricedValue'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { formatEuro } from '@/lib/format'
@@ -16,10 +15,7 @@ export function CollectionValueStat({ label }: { label: string }) {
   const statSize = useStatSize()
   const prices = usePrices()
   const collection = useCollectionStore((state) => state.collection)
-  const owned = useMemo(
-    () => tallyByStatus(trackedCards(collection, prices)).owned,
-    [collection, prices],
-  )
+  const owned = tallyByStatus(trackedCards(collection, prices)).owned
   return (
     <Stat
       size={statSize}

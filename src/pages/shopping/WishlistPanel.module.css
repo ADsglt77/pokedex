@@ -45,8 +45,3 @@
 .wishGrid > li {
   display: flex;
 }
-
-/* La liste, dessinée au fur et à mesure : son repère (`growing-sentinel`) à son bas. */
-.growing {
-  position: relative;
-}

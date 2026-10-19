@@ -19,17 +19,14 @@
   font: inherit;
   text-align: left;
   text-decoration: none;
+  /* La barre, un `Progress` de camply, réglée par ses variables : plus épaisse pour la région
+     choisie, piste plus marquée au survol. */
+  --camply-progress-height: 6px;
 }
 
 /* Un lien ou un filtre ; sur le Pokédex public, une simple image. */
 .segment:is(a, button) {
   cursor: pointer;
-}
-
-/* La barre, un `Progress` de camply, réglée par ses variables : plus épaisse pour la région
-   choisie, piste plus marquée au survol. */
-.segment {
-  --camply-progress-height: 6px;
 }
 
 .segment:is(a, button):hover {

@@ -127,8 +127,12 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Le repère d'une longue liste dessinée au fur et à mesure (`useGrowingList`) : au bas de la liste
-   (son parent est en `position: relative`), haut d'un écran, il paraît un écran avant la fin. */
+/* Une longue liste dessinée au fur et à mesure (`useGrowingList`), et son repère : au bas de la
+   liste, haut d'un écran, il paraît un écran avant la fin. */
+.growing {
+  position: relative;
+}
+
 .growing-sentinel {
   position: absolute;
   bottom: 0;

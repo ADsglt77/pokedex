@@ -1,4 +1,4 @@
-import { useCallback, type MouseEvent } from 'react'
+import type { MouseEvent } from 'react'
 import { useNavigate } from 'react-router'
 
 /** Le dernier lien suivi par `useFollowLinks` : sa page, son adresse. */
@@ -28,29 +28,26 @@ export function returnedLink(root: HTMLElement, pathname: string) {
  */
 export function useFollowLinks() {
   const navigate = useNavigate()
-  return useCallback(
-    (event: MouseEvent) => {
-      const link = (event.target as Element).closest('a')
-      if (
-        !link ||
-        event.defaultPrevented ||
-        event.button !== 0 ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.shiftKey ||
-        event.altKey ||
-        link.target ||
-        link.hasAttribute('download') ||
-        // Un lien vers un autre site (Cardmarket) : le navigateur l'ouvre lui-même.
-        link.origin !== location.origin
-      ) {
-        return
-      }
-      event.preventDefault()
-      const href = link.getAttribute('href')!
-      followed = { from: location.pathname, href }
-      void navigate(href)
-    },
-    [navigate],
-  )
+  return (event: MouseEvent) => {
+    const link = (event.target as Element).closest('a')
+    if (
+      !link ||
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.altKey ||
+      link.target ||
+      link.hasAttribute('download') ||
+      // Un lien vers un autre site (Cardmarket) : le navigateur l'ouvre lui-même.
+      link.origin !== location.origin
+    ) {
+      return
+    }
+    event.preventDefault()
+    const href = link.getAttribute('href')!
+    followed = { from: location.pathname, href }
+    void navigate(href)
+  }
 }

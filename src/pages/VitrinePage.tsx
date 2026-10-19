@@ -33,7 +33,6 @@ import {
   formatShare,
   pageTitle,
   pokedexTitle,
-  today,
   unlockedOf,
 } from '@/lib/format'
 import { buildPokedex, unlockEvents, type PokedexEntry } from '@/lib/pokedex'
@@ -253,7 +252,7 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
         // Sans courbe, pas de période à choisir.
         actions={unlocks.length > 0 && <ChartPeriodControl value={period} onChange={setPeriod} />}
       >
-        <UnlockedChart events={unlocks} period={period} day={today()} />
+        <UnlockedChart events={unlocks} period={period} />
       </Panel>
 
       <section className={styles.binder} aria-labelledby="classeur">

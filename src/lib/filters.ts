@@ -142,13 +142,6 @@ export function shoppingUrl({ view = 'liste' }: { view?: ShoppingView } = {}) {
   return search ? `/achats?${search}` : '/achats'
 }
 
-/** Le nombre de filtres actifs, recherche exclue : le Pokédex filtre-t-il ? */
-export const activeFilterCount = (filters: PokedexFilters) =>
-  Number(filters.generation !== null) +
-  Number(filters.possession !== 'all') +
-  Number(filters.card !== null) +
-  Number(filters.type !== null)
-
 /** Sans casse, accent ni ligature : « Nœunœuf » → « noeunoeuf », « Éli » → « eli ». */
 const fold = (text: string) =>
   text
@@ -173,33 +166,21 @@ export function searchMatcher(search: string): (species: PokemonSpecies) => bool
   const digits = /^(?:#|n°)?\s*(\d+)$/i.exec(search.trim())?.[1]
   if (digits) return (species) => String(species.id).startsWith(String(Number(digits)))
   const needle = searchForm(search)
-  return (species) => speciesIndex().searchNames.get(species.id)!.includes(needle)
+  const names = (searchNames ??= new Map(
+    SPECIES.map(({ id, names }) => [
+      id,
+      [names.fr, names.en, names.ja ?? ''].map(searchForm).join('\n'),
+    ]),
+  ))
+  return (species) => names.get(species.id)!.includes(needle)
 }
-
-let index: {
-  species: readonly PokemonSpecies[]
-  searchNames: Map<number, string>
-} | null = null
 
 /**
  * Les noms des espèces prêts pour la recherche, faits à la première recherche (les espèces arrivent
- * du serveur après le chargement de ce module) : pour chacune, ses noms fr, en et ja, une ligne
+ * du serveur avant le premier affichage, une fois) : pour chacune, ses noms fr, en et ja, une ligne
  * chacun (une recherche ne déborde pas d'un nom sur le suivant).
  */
-function speciesIndex() {
-  if (index?.species !== SPECIES) {
-    index = {
-      species: SPECIES,
-      searchNames: new Map(
-        SPECIES.map(({ id, names }) => [
-          id,
-          [names.fr, names.en, names.ja ?? ''].map(searchForm).join('\n'),
-        ]),
-      ),
-    }
-  }
-  return index
-}
+let searchNames: Map<number, string> | undefined
 
 function cardMatches(card: PokedexEntry['card'], filter: CardFilter) {
   switch (filter) {
@@ -218,7 +199,7 @@ function cardMatches(card: PokedexEntry['card'], filter: CardFilter) {
 
 export function filterEntries(entries: PokedexEntry[], filters: PokedexFilters): PokedexEntry[] {
   const matches = searchMatcher(filters.search)
-  const kept = entries.filter(
+  return entries.filter(
     ({ species, unlocked, card }) =>
       (!filters.generation || species.generation === filters.generation) &&
       (filters.possession === 'all' ||
@@ -229,7 +210,6 @@ export function filterEntries(entries: PokedexEntry[], filters: PokedexFilters):
       (!filters.type || species.types.includes(filters.type)) &&
       matches(species),
   )
-  return filters.descending ? kept.reverse() : kept
 }
 
 /** Une liste triée par numéro, découpée en un groupe par génération. */

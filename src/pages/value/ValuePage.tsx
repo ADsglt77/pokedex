@@ -156,7 +156,6 @@ function Evolution({ owned }: { owned: PokemonCard[] }) {
   const [period, setPeriod] = useState<ChartPeriod>('month')
   const collection = useCollectionStore((state) => state.collection)
   const orders = useShoppingStore((state) => state.shopping.orders)
-  const day = today()
   const unlocks = useMemo(() => unlockEvents(collection), [collection])
   const spending = useMemo(() => spendingEvents(orders), [orders])
 
@@ -178,7 +177,7 @@ function Evolution({ owned }: { owned: PokemonCard[] }) {
           <p className="hint">Vos cartes possédées aujourd’hui, au prix de chaque jour.</p>
           {owned.length > 0 ? (
             <Suspense fallback={<Skeleton height="7rem" />}>
-              <CollectionChart cards={owned} period={period} day={day} />
+              <CollectionChart cards={owned} period={period} />
             </Suspense>
           ) : (
             <p className="muted">Aucune carte possédée pour l’instant : pas de courbe à tracer.</p>
@@ -187,25 +186,19 @@ function Evolution({ owned }: { owned: PokemonCard[] }) {
         <section className={styles.chart}>
           <h3 className={styles.subtitle}>Pokémon débloqués</h3>
           <p className="hint">Le total, jour après jour.</p>
-          <UnlockedChart events={unlocks} period={period} day={day} />
+          <UnlockedChart events={unlocks} period={period} />
         </section>
         <section className={styles.chart}>
           <h3 className={styles.subtitle}>Dépenses</h3>
           <p className="hint">Vos commandes, cumulées depuis le début de la période.</p>
-          <SpendingChart events={spending} period={period} day={day} />
+          <SpendingChart events={spending} period={period} />
         </section>
       </div>
     </Panel>
   )
 }
 
-interface ChartProps {
-  period: ChartPeriod
-  /** Aujourd'hui : le dernier jour de la période. */
-  day: string
-}
-
-function CollectionChart({ cards, period, day }: ChartProps & { cards: PokemonCard[] }) {
+function CollectionChart({ cards, period }: { cards: PokemonCard[]; period: ChartPeriod }) {
   // Les cartes sans id Cardmarket n'ont pas d'historique : elles ne pèsent pas sur la courbe (sans
   // aucune, rien à demander). La même carte Cardmarket possédée pour deux Pokémon compte deux fois,
   // comme dans la valeur du jour ; son historique n'est demandé qu'une fois.
@@ -219,7 +212,7 @@ function CollectionChart({ cards, period, day }: ChartProps & { cards: PokemonCa
     )
   }
   const series = collectionHistory(histories)
-  const window = periodWindow(period, day, series[0]?.date ?? null)
+  const window = periodWindow(period, today(), series[0]?.date ?? null)
   const points = inWindow(series, window)
   return (
     <>
@@ -229,9 +222,9 @@ function CollectionChart({ cards, period, day }: ChartProps & { cards: PokemonCa
   )
 }
 
-function SpendingChart({ events, period, day }: ChartProps & { events: PricePoint[] }) {
+function SpendingChart({ events, period }: { events: PricePoint[]; period: ChartPeriod }) {
   if (events.length === 0) return <p className="muted">Aucune commande pour l’instant.</p>
-  const window = periodWindow(period, day, firstDate(events))
+  const window = periodWindow(period, today(), firstDate(events))
   const points = runningTotal(events, window, false)
   const spent = points.at(-1)!.value
   return (

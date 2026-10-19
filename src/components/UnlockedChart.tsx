@@ -7,26 +7,17 @@ import {
   runningTotal,
   weeksOf,
   type ChartPeriod,
+  type PricePoint,
 } from '@/lib/chart'
-import { formatDecimal, formatInteger } from '@/lib/format'
-import type { PricePoint } from '@/lib/chart'
+import { formatDecimal, formatInteger, today } from '@/lib/format'
 
 /**
  * Les Pokémon débloqués : le total, jour après jour sur la période (`events` : `unlockEvents`), et
- * ses chiffres (gagnés sur la période, au total, par semaine). Valeur et Pokédex public. `day` :
- * aujourd'hui, le dernier jour de la période.
+ * ses chiffres (gagnés sur la période, au total, par semaine). Valeur et Pokédex public.
  */
-export function UnlockedChart({
-  events,
-  period,
-  day,
-}: {
-  events: PricePoint[]
-  period: ChartPeriod
-  day: string
-}) {
+export function UnlockedChart({ events, period }: { events: PricePoint[]; period: ChartPeriod }) {
   if (events.length === 0) return <p className="muted">Aucun Pokémon débloqué pour l’instant.</p>
-  const window = periodWindow(period, day, firstDate(events))
+  const window = periodWindow(period, today(), firstDate(events))
   const points = runningTotal(events, window, true)
   const gained = inWindow(events, window).length
   return (

@@ -84,10 +84,7 @@ export function runningTotal(
 
 /** Le premier jour d'une série d'évènements (`null` sans aucun daté). */
 export const firstDate = (events: readonly PricePoint[]) =>
-  events.reduce<string | null>(
-    (first, { date }) => (!date || (first && first < date) ? first : date),
-    null,
-  )
+  events.flatMap(({ date }) => date || []).sort()[0] ?? null
 
 /** Un chiffre sous une courbe : « Plus haut », « 160,00 € ». */
 export interface ChartStat {

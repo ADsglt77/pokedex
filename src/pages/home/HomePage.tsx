@@ -1,6 +1,5 @@
 import { Button } from '@camply/ui'
 import { Grid3x3, Layers } from '@camply/ui/icons'
-import { useMemo } from 'react'
 import { Link } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { monthOf } from '@/lib/budget'
@@ -23,7 +22,7 @@ import styles from './HomePage.module.css'
 export function HomePage() {
   const collection = useCollectionStore((state) => state.collection)
   const hasOrders = useShoppingStore((state) => state.shopping.orders.length > 0)
-  const obtained = useMemo(() => acquisitions(collection), [collection])
+  const obtained = acquisitions(collection)
   // Des cartes, ou des commandes (gardées par « Effacer ma collection ») : « À faire » les suit.
   const started = Object.keys(collection.customCards).length > 0 || hasOrders
   const month = monthOf(today())
