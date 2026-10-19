@@ -51,8 +51,8 @@ bun run ingest images  # copie les images (≈ 1,5 Go ; inutile en développemen
   sans quoi les dernières modifications se perdraient : `tests/persist.test.ts`), retrait d'une
   carte TAG TEAM (son statut et son prix payé restent à ses autres Pokémon) et les règles de la
   collection et des commandes, qui ne modifient jamais ce qu'elles reçoivent (« Annuler ») ; les
-  comptes (chacun ne touche qu'à sa collection, qui part avec lui ; un pseudo quitté jamais repris
-  par un autre ; rien d'un autre site) et ce que montre le Pokédex
+  comptes (chacun ne touche qu'à sa collection, qui part avec lui ; ses derniers pseudos quittés
+  jamais repris par un autre ; rien d'un autre site) et ce que montre le Pokédex
   public de chacun (ce qu'il laisserait passer serait public ; ses règles et sa route) ;
   et l'historique des prix (`server/history.ts`, irremplaçable : Cardmarket n'en garde pas ; son
   écriture quotidienne, `savePriceGuide` ; sa relecture pour la courbe de la valeur,

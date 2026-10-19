@@ -10,9 +10,14 @@ Les comptes, la collection synchronisée entre les appareils, le Pokédex public
   compte des majuscules (plugin `username` de Better Auth). Il est gardé deux fois, d'accord
   (`guard`, crochet `before`) : `name` tel que tapé (« Le Pokédex de Sacha », le menu du compte),
   `username` en minuscules (la connexion, l'adresse du Pokédex public `/@sacha`) ; une requête ne
-  peut pas mettre autre chose dans `name`. Un pseudo quitté (changé, ou compte supprimé) n'est
-  jamais repris par un autre compte (`released_pseudos`, testé) : un lien partagé vers `/@pseudo` ne
-  mène jamais au Pokédex d'un autre ; son compte peut le reprendre. **Pas d'e-mail** : le site n'en
+  peut pas mettre autre chose dans `name`. Les 3 derniers pseudos qu'un compte a quittés (changés,
+  ou compte supprimé) ne sont jamais repris par un autre (`released_pseudos`, testé) : un lien
+  partagé vers `/@pseudo` ne mène jamais au Pokédex d'un autre ; son compte peut les reprendre. La
+  base les garde elle-même (`PSEUDO_TRIGGERS`), d'un seul tenant avec le changement : deux requêtes
+  ensemble ne passent pas entre un contrôle et l'écriture ; le crochet `guard` (sur le chemin
+  reconnu par Better Auth, quelle que soit l'écriture de l'adresse) ne fait qu'en dire la raison
+  (« déjà pris »). Seulement les 3 derniers, et 10 changements de pseudo par heure : changer de
+  pseudo sans fin n'en réserve pas autant. **Pas d'e-mail** : le site n'en
   envoie pas et n'en garde pas ; Better Auth en exige une, chaque compte reçoit donc une adresse sans boîte
   (`<uuid>@pokedex.invalid`, donnée par le serveur, jamais montrée, testé), et la connexion par
   e-mail est fermée (`disabledPaths`). Pas de mot de passe oublié, donc : le mot de passe perdu, le
@@ -46,7 +51,8 @@ Les comptes, la collection synchronisée entre les appareils, le Pokédex public
   réponses de ces routes ne sont jamais gardées en cache (`no-store`, macro `auth`). Une
   modification venue d'une autre origine est refusée (403), sur `/api/auth/*` aussi : un autre site
   ne connecte pas un visiteur à un compte qu'il ne connaît pas (testé). En production,
-  par visiteur (`cf-connecting-ip`) : 10 tentatives de création de compte par heure, 5 tentatives
+  par visiteur (`cf-connecting-ip`) : 10 tentatives de création de compte et 10 changements de
+  pseudo par heure, 5 tentatives
   de connexion, de changement du mot de passe ou de suppression du compte par minute ; devant,
   nginx limite tout le compte (`/api/auth/`) à 2 requêtes par seconde et par visiteur, 20 d'un
   coup. Au journal : création, connexion, déconnexion, pseudo, mot de passe et suppression, avec le

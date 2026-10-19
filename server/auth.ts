@@ -7,9 +7,9 @@
  *   envoie pas et n'en garde pas (Better Auth en exige une : chaque compte reçoit une adresse sans
  *   boîte, `<uuid>@pokedex.invalid`, que personne ne connaît) ; pas de mot de passe oublié, donc.
  * - Le pseudo et le mot de passe se changent dans l'app (Données › Mon compte) ; le compte s'y
- *   supprime, avec son mot de passe, et sa collection part avec lui. Un pseudo quitté (changé, ou
- *   compte supprimé) n'est jamais repris par un autre compte (`released_pseudos`) : un lien partagé
- *   vers `/@pseudo` ne mène jamais au Pokédex d'un autre.
+ *   supprime, avec son mot de passe, et sa collection part avec lui. Les derniers pseudos qu'un
+ *   compte a quittés (changés, ou compte supprimé) ne sont jamais repris par un autre
+ *   (`PSEUDO_TRIGGERS`) : un lien partagé vers `/@pseudo` ne mène jamais au Pokédex d'un autre.
  * - Une modification du compte venue d'une autre origine est refusée (403) : un autre site ne
  *   connecte pas un visiteur à un compte qu'il ne connaît pas.
  * - Une seule session par compte : se connecter sur un appareil déconnecte ses autres. La
@@ -24,9 +24,9 @@
  */
 
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
-import { APIError, createAuthMiddleware, isAPIError } from 'better-auth/api'
+import { APIError, createAuthMiddleware, getSessionFromCtx, isAPIError } from 'better-auth/api'
 import { getMigrations } from 'better-auth/db/migration'
-import { username } from 'better-auth/plugins'
+import { username, USERNAME_ERROR_CODES } from 'better-auth/plugins'
 import type { Database } from 'bun:sqlite'
 import { Elysia, type Context } from 'elysia'
 import { PSEUDO } from '@/config/account'
@@ -56,30 +56,83 @@ function logError(message: string, ...causes: unknown[]) {
   }
 }
 
+/** Les derniers pseudos quittés que chaque compte garde réservés (`PSEUDO_TRIGGERS`). */
+const KEPT_PSEUDOS = 3
+
 /**
- * Avant Better Auth. À la création et au changement de pseudo : un pseudo exigé (sans lui, ni
- * connexion ni Pokédex public), et `name` qui le reprend tel que tapé : une requête ne peut pas
- * mettre autre chose dans le titre de son Pokédex public. À la création, l'adresse sans boîte du
- * compte. La suppression du compte exige son mot de passe (Better Auth s'en passerait pour une
- * session ouverte depuis moins d'un jour).
+ * Les pseudos quittés, gardés par la base elle-même, d'un seul tenant avec le changement de pseudo
+ * ou la suppression du compte (deux requêtes ensemble ne passent pas entre un contrôle et
+ * l'écriture) : un pseudo quitté reste réservé à son compte, qui peut le reprendre ; un autre
+ * compte qui le prendrait est refusé. Un compte n'en garde que ses `KEPT_PSEUDOS` derniers :
+ * changer de pseudo sans fin n'en réserve pas autant. Sur la table de Better Auth : posés après
+ * qu'il l'a créée.
  */
-const guard = createAuthMiddleware(async (ctx) => {
-  const body = (ctx.body ?? {}) as Record<string, unknown>
-  const signUp = ctx.path === '/sign-up/email'
-  if (signUp || (ctx.path === '/update-user' && ('name' in body || 'username' in body))) {
-    if (typeof body.username !== 'string') {
-      throw new APIError('BAD_REQUEST', { message: 'Pseudo manquant' })
+const PSEUDO_TRIGGERS = `
+  CREATE TRIGGER IF NOT EXISTS pseudo_reserved_on_insert BEFORE INSERT ON "user"
+  WHEN NEW.username IN (SELECT username FROM released_pseudos)
+  BEGIN SELECT RAISE(ABORT, 'pseudo réservé'); END;
+
+  CREATE TRIGGER IF NOT EXISTS pseudo_reserved_on_update BEFORE UPDATE OF username ON "user"
+  WHEN EXISTS (SELECT 1 FROM released_pseudos WHERE username = NEW.username AND user_id != NEW.id)
+  BEGIN SELECT RAISE(ABORT, 'pseudo réservé'); END;
+
+  CREATE TRIGGER IF NOT EXISTS pseudo_released_on_update AFTER UPDATE OF username ON "user"
+  WHEN OLD.username IS NOT NULL AND OLD.username IS NOT NEW.username
+  BEGIN
+    DELETE FROM released_pseudos WHERE username = NEW.username;
+    INSERT OR REPLACE INTO released_pseudos (username, user_id, released_at)
+      VALUES (OLD.username, OLD.id, strftime('%Y-%m-%dT%H:%M:%f', 'now'));
+    DELETE FROM released_pseudos WHERE user_id = OLD.id AND username NOT IN (
+      SELECT username FROM released_pseudos WHERE user_id = OLD.id
+      ORDER BY released_at DESC LIMIT ${KEPT_PSEUDOS});
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS pseudo_released_on_delete AFTER DELETE ON "user"
+  WHEN OLD.username IS NOT NULL
+  BEGIN
+    INSERT OR REPLACE INTO released_pseudos (username, user_id, released_at)
+      VALUES (OLD.username, OLD.id, strftime('%Y-%m-%dT%H:%M:%f', 'now'));
+    DELETE FROM released_pseudos WHERE user_id = OLD.id AND username NOT IN (
+      SELECT username FROM released_pseudos WHERE user_id = OLD.id
+      ORDER BY released_at DESC LIMIT ${KEPT_PSEUDOS});
+  END;
+`
+
+/**
+ * Avant Better Auth, sur le chemin qu'il a reconnu (`ctx.path`, quelle que soit l'écriture de
+ * l'adresse). À la création et au changement de pseudo : un pseudo exigé (sans lui, ni connexion ni
+ * Pokédex public), et `name` qui le reprend tel que tapé : une requête ne peut pas mettre autre
+ * chose dans le titre de son Pokédex public ; un pseudo qu'un autre compte a quitté (`heldBy` : son
+ * compte), refusé comme un pseudo pris (la base le refuse aussi, `PSEUDO_TRIGGERS` : ce contrôle-ci
+ * donne seulement la bonne raison). À la création, l'adresse sans boîte du compte. La suppression
+ * du compte exige son mot de passe (Better Auth s'en passerait pour une session ouverte depuis
+ * moins d'un jour).
+ */
+const guard = (heldBy: (pseudo: string) => string | null) =>
+  createAuthMiddleware(async (ctx) => {
+    const body = (ctx.body ?? {}) as Record<string, unknown>
+    const signUp = ctx.path === '/sign-up/email'
+    if (signUp || (ctx.path === '/update-user' && ('name' in body || 'username' in body))) {
+      if (typeof body.username !== 'string') {
+        throw new APIError('BAD_REQUEST', { message: 'Pseudo manquant' })
+      }
+      const holder = heldBy(body.username.toLowerCase())
+      if (holder !== null && (signUp || holder !== (await getSessionFromCtx(ctx))?.user.id)) {
+        throw APIError.from('BAD_REQUEST', USERNAME_ERROR_CODES.USERNAME_IS_ALREADY_TAKEN)
+      }
+      const email = signUp ? { email: `${crypto.randomUUID()}@pokedex.invalid` } : {}
+      return { context: { body: { ...body, name: body.username, ...email } } }
     }
-    const email = signUp ? { email: `${crypto.randomUUID()}@pokedex.invalid` } : {}
-    return { context: { body: { ...body, name: body.username, ...email } } }
-  }
-  if (ctx.path === '/delete-user' && !body.password) {
-    throw new APIError('BAD_REQUEST', { message: 'Mot de passe manquant' })
-  }
-})
+    if (ctx.path === '/delete-user' && !body.password) {
+      throw new APIError('BAD_REQUEST', { message: 'Mot de passe manquant' })
+    }
+  })
 
 /** La connexion, une fois créées les tables du compte qui manquent. */
 export async function createAuth(db: Database) {
+  const holder = db.query('SELECT user_id FROM released_pseudos WHERE username = ?')
+  const heldBy = (pseudo: string) =>
+    (holder.get(pseudo) as { user_id: string } | null)?.user_id ?? null
   const options = {
     database: db,
     baseURL: process.env.BETTER_AUTH_URL,
@@ -95,11 +148,12 @@ export async function createAuth(db: Database) {
         displayUsername: false,
       }),
     ],
-    hooks: { before: guard },
+    hooks: { before: guard(heldBy) },
     user: {
       deleteUser: {
         enabled: true,
-        // Rien ne reste du compte sur le serveur (hors des sauvegardes, gardées 30 jours).
+        // Rien ne reste du compte sur le serveur (hors des sauvegardes, 90 jours au plus), que son
+        // pseudo, réservé (`PSEUDO_TRIGGERS`).
         afterDelete: async (user) => {
           db.query('DELETE FROM collections WHERE user_id = ?').run(user.id)
           db.query('DELETE FROM collection_versions WHERE user_id = ?').run(user.id)
@@ -140,38 +194,29 @@ export async function createAuth(db: Database) {
     // Derrière le tunnel Cloudflare et nginx (qui n'écoute que sur la machine), l'adresse du
     // visiteur est dans cet en-tête : les limites valent pour lui, pas pour le tunnel.
     advanced: { ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] } },
-    // En production, par visiteur : 10 tentatives de création de compte par heure ; 5 tentatives de
-    // connexion, de changement du mot de passe ou de suppression du compte par minute ; 100
-    // requêtes pour le reste.
+    // En production, par visiteur : 10 tentatives de création de compte et 10 changements de pseudo
+    // par heure ; 5 tentatives de connexion, de changement du mot de passe ou de suppression du
+    // compte par minute ; 100 requêtes pour le reste.
     rateLimit: {
       window: 60,
       max: 100,
       customRules: {
         '/sign-in/username': { window: 60, max: 5 },
         '/sign-up/email': { window: 60 * 60, max: 10 },
+        '/update-user': { window: 60 * 60, max: 10 },
         '/change-password': { window: 60, max: 5 },
         '/delete-user': { window: 60, max: 5 },
       },
     },
   } satisfies BetterAuthOptions
   await (await getMigrations(options)).runMigrations()
+  db.exec(PSEUDO_TRIGGERS)
 
   const count = db.query('SELECT COUNT(*) AS count FROM "user"')
-  const holder = db.query('SELECT user_id FROM released_pseudos WHERE username = ?')
-  const release = db.query(
-    'INSERT OR REPLACE INTO released_pseudos (username, user_id) VALUES (?, ?)',
-  )
   return {
     auth: betterAuth(options),
     /** Le nombre de comptes (le journal du démarrage). */
     count: () => (count.get() as { count: number }).count,
-    /** Ce pseudo (en minuscules) a-t-il été quitté par un autre compte que `userId` ? */
-    releasedByOther: (pseudo: string, userId: string | undefined) => {
-      const row = holder.get(pseudo) as { user_id: string } | null
-      return row !== null && row.user_id !== userId
-    },
-    /** Le compte `userId` quitte son pseudo (en minuscules) : personne d'autre ne le reprendra. */
-    release: (pseudo: string, userId: string) => void release.run(pseudo, userId),
   }
 }
 
@@ -182,16 +227,6 @@ async function typedPseudo(request: { json: () => Promise<unknown> }) {
   const body = (await request.json().catch(() => null)) as { username?: unknown } | null
   return typeof body?.username === 'string' ? body.username.toLowerCase() : undefined
 }
-
-/** La réponse d'un pseudo pris, telle que la donne Better Auth (son code, que lit l'app). */
-const pseudoTaken = () =>
-  Response.json(
-    {
-      code: 'USERNAME_IS_ALREADY_TAKEN',
-      message: 'Username is already taken. Please try another.',
-    },
-    { status: 400 },
-  )
 
 /** Les actions du compte que note le journal, d'après leur chemin. */
 const WATCHED =
@@ -262,7 +297,7 @@ export const appOrigin = (auth: Accounts['auth']) => new URL(auth.options.baseUR
  *   venue d'une autre origine (le cookie part avec toute requête vers le site), jamais en cache ;
  *   la route reçoit `user`.
  */
-export function accountRoutes({ auth, releasedByOther, release }: Accounts) {
+export function accountRoutes({ auth }: Accounts) {
   const origin = appOrigin(auth)
   /**
    * La session d'une requête. Renouvelée (une fois par jour d'usage), son nouveau cookie part avec
@@ -308,7 +343,8 @@ export function accountRoutes({ auth, releasedByOther, release }: Accounts) {
       '/auth/*',
       async ({ request, status }) => {
         if (foreign(request)) return status(403, null)
-        const path = new URL(request.url).pathname
+        // Pour le journal, l'adresse comme la lit Better Auth (« /update-user/ » aussi).
+        const path = new URL(request.url).pathname.replace(/\/{2,}/g, '/').replace(/\/$/, '')
         if (!WATCHED.test(path)) return auth.handler(request)
         // Lus avant que Better Auth ne lise la requête (une copie, et la session d'avant : celle
         // d'un compte qui se supprime n'existe plus après).
@@ -317,17 +353,7 @@ export function accountRoutes({ auth, releasedByOther, release }: Accounts) {
           ? undefined
           : (await auth.api.getSession({ headers: request.headers }))?.user
         const pseudo = user?.username ?? undefined
-        // Un pseudo qu'un autre compte a quitté : refusé comme un pseudo pris.
-        const taken =
-          typed !== undefined &&
-          /\/(sign-up\/email|update-user)$/.test(path) &&
-          releasedByOther(typed, user?.id)
-        const response = taken ? pseudoTaken() : await auth.handler(request)
-        // Le pseudo quitté, réservé à ce compte.
-        if (response.ok && user && pseudo) {
-          const renamed = path.endsWith('/update-user') && typed !== undefined && typed !== pseudo
-          if (renamed || path.endsWith('/delete-user')) release(pseudo, user.id)
-        }
+        const response = await auth.handler(request)
         journalAuth(path, request, response, pseudo, typed)
         return response
       },

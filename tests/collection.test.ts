@@ -274,6 +274,21 @@ describe('les comptes : chacun le sien', () => {
     expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/flora`))).status).toBe(404)
     expect((await rename('Flora')).status).toBe(200)
     expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/flora`))).status).toBe(200)
+    // La base le refuse elle-même (deux requêtes ensemble ne passent pas entre le contrôle et
+    // l'écriture) : « flora-2 », quitté par Flora, n'est à personne d'autre.
+    const take = app.query('UPDATE "user" SET username = ? WHERE id = ?')
+    expect(() => take.run('flora-2', signUp.user!.id)).toThrow('pseudo réservé')
+  })
+
+  test('changer de pseudo sans fin ne réserve que les 3 derniers', async () => {
+    const cynthia = await createAccount('Cynthia')
+    for (const to of ['Cynthia-1', 'Cynthia-2', 'Cynthia-3', 'Cynthia-4']) {
+      const response = await authCall('update-user', { name: to, username: to }, cynthia.cookie)
+      expect(response.status).toBe(200)
+    }
+    // Quittés : cynthia, -1, -2, -3 ; seuls les 3 derniers restent réservés.
+    expect((await createAccount('cynthia-1')).response.status).toBe(400)
+    expect((await createAccount('cynthia')).response.status).toBe(200)
   })
 
   test('envoyé d’un autre site : ni création ni connexion (403)', async () => {

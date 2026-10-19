@@ -306,6 +306,10 @@ export const APP_STEPS = [
   -- compte (\`auth.ts\`), sans quoi un lien partagé vers \`/@pseudo\` mènerait au Pokédex d'un autre.
   CREATE TABLE released_pseudos (username TEXT PRIMARY KEY, user_id TEXT NOT NULL) WITHOUT ROWID;
   `,
+  `
+  -- Quand chaque pseudo a été quitté : un compte ne garde que ses derniers (\`auth.ts\`).
+  ALTER TABLE released_pseudos ADD COLUMN released_at TEXT NOT NULL DEFAULT '';
+  `,
 ]
 
 const userVersion = (db: Database) =>
