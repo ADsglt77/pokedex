@@ -22,7 +22,8 @@ const PRODUCTS_URL = `${DOWNLOADS}/productList/products_singles_6.json`
 /** La catégorie des cartes à l'unité (« Pokémon Single ») ; les autres sont des produits scellés. */
 const SINGLES = 51
 
-interface PriceGuide {
+/** Le guide des prix de Cardmarket (`price_guide_6.json`), ce qu'en lit la tâche. */
+export interface PriceGuide {
   createdAt: string
   priceGuides: {
     idProduct: number
@@ -33,7 +34,8 @@ interface PriceGuide {
   }[]
 }
 
-interface ProductList {
+/** La liste des produits de Cardmarket (`products_singles_6.json`), ce qu'en lit la tâche. */
+export interface ProductList {
   products: { idProduct: number; name: string; idExpansion: number; idMetacard: number }[]
 }
 
@@ -64,8 +66,9 @@ function saveProducts(db: Database, { products }: ProductList) {
 const amount = (value: number | null) => (value ? Math.round(value * 100) / 100 : null)
 
 /**
- * Les prix Cardmarket du jour des cartes `ids`, d'après la base (une carte sans prix ce jour n'y
- * est pas) ; `null` tant que le guide n'a jamais été lu.
+ * Les prix Cardmarket du jour des cartes `ids`, d'après la base : une clé par carte, `null` sans
+ * prix ce jour (le navigateur sait ainsi qu'elle a eu sa réponse) ; `null` tant que le guide n'a
+ * jamais été lu.
  */
 export function readPrices(db: Database, ids: readonly number[]): PriceFile | null {
   const cardmarket = readSource(db, 'cardmarket')
@@ -81,10 +84,9 @@ export function readPrices(db: Database, ids: readonly number[]): PriceFile | nu
     low: number | null
     avg30: number | null
   }[]
-  return {
-    date: cardmarket.date,
-    cards: Object.fromEntries(rows.map(({ id, price, low, avg30 }) => [id, [price, low, avg30]])),
-  }
+  const cards: PriceFile['cards'] = Object.fromEntries(ids.map((id) => [id, null]))
+  for (const { id, price, low, avg30 } of rows) cards[id] = [price, low, avg30]
+  return { date: cardmarket.date, cards }
 }
 
 export async function prices(db: Database) {
@@ -99,6 +101,25 @@ export async function prices(db: Database) {
     download(PRICE_GUIDE_URL).then((response) => response.json() as Promise<PriceGuide>),
     download(PRODUCTS_URL).then((response) => response.json() as Promise<ProductList>),
   ])
+  // Sans date de mise à jour (l'en-tête absent), l'heure du guide : deux guides d'un même jour
+  // n'ont pas le même tampon, ni les réponses tirées des prix le même ETag.
+  const { date, cards, written } = savePriceGuide(db, guide, products, stamp || guide.createdAt)
+  console.log(`Cardmarket, prix du ${date} : ${cards} cartes, ${written} historiques mis à jour`)
+}
+
+/**
+ * Enregistre le guide des prix du jour et la liste des produits, en une transaction : les prix du
+ * jour remplacent ceux de la veille, chacun s'ajoute à l'historique de sa carte (relancée le même
+ * jour, le prix du jour remplacé), et `sources` note le passage (`stamp`). Les cartes à l'unité
+ * seulement, leur prix du marché (la tendance, sinon la moyenne sur 30 jours ; `0` : pas de prix).
+ * Moins de la moitié des prix d'avant : rien n'est écrit, une erreur (le format a changé).
+ */
+export function savePriceGuide(
+  db: Database,
+  guide: PriceGuide,
+  products: ProductList,
+  stamp: string,
+) {
   const date = guide.createdAt.slice(0, 10)
   const [year, day] = yearDay(date)
 
@@ -145,8 +166,5 @@ export async function prices(db: Database) {
     }
     writeSource(db, 'cardmarket', { stamp, date })
   })()
-
-  console.log(
-    `Cardmarket, prix du ${date} : ${cards.length} cartes, ${written} historiques mis à jour`,
-  )
+  return { date, cards: cards.length, written }
 }

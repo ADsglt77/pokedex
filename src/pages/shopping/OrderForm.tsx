@@ -14,6 +14,7 @@ import {
   formatMonth,
   parseEuros,
   parseLink,
+  parseQuantity,
   plural,
   toOptions,
 } from '@/lib/format'
@@ -98,9 +99,9 @@ function readDraft(draft: Draft, base: Order, stored: Order | null, collection: 
     return value ?? 0
   }
   const lines: OrderLine[] = draft.lines.map((line) => {
-    const quantity = Number(line.quantity)
+    const quantity = parseQuantity(line.quantity) ?? 0
     const unitPrice = parseEuros(line.unitPrice)
-    const readable = Number.isInteger(quantity) && quantity >= 1
+    const readable = quantity >= 1
     if (!readable) errors[`quantity-${line.cardId}`] = 'Un nombre entier, 1 ou plus.'
     if (unitPrice === null) errors[`price-${line.cardId}`] = 'Un montant, par exemple 12,50.'
     const previous = previousOf(line.cardId, stored, collection)

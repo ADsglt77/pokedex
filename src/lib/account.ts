@@ -1,14 +1,25 @@
 /**
  * La connexion côté navigateur : le serveur du site (`/api/account`, `server/auth.ts`). La session
  * vit dans un cookie ; qui est connecté se lit une fois au démarrage (`loadAccount`, avec
- * l'existence du compte), puis le store de la synchronisation le suit. Lu par le premier
- * affichage : le client Better Auth, plus lourd, est à part (`auth.ts`).
+ * l'existence du compte), puis le store de la synchronisation le suit ; et les messages d'un refus
+ * (`refusalMessage`). Lu par le premier affichage : le client Better Auth, plus lourd, est à part
+ * (`auth.ts`).
  */
 
 import type { AccountState, AccountUser } from '@/types'
 
 /** Trop de tentatives (5 par minute, `server/auth.ts`) : la réponse 429 du serveur. */
-export const TOO_MANY_ATTEMPTS = 'Trop de tentatives : réessayez dans une minute.'
+const TOO_MANY_ATTEMPTS = 'Trop de tentatives : réessayez dans une minute.'
+
+/**
+ * Le message d'un refus du serveur, d'après son statut (`messages`, propres au formulaire), trop de
+ * tentatives (429), ou `otherwise` pour les autres (0 : pas de réponse).
+ */
+export const refusalMessage = (
+  messages: Partial<Record<number, string>>,
+  status: number,
+  otherwise: string,
+) => messages[status] ?? (status === 429 ? TOO_MANY_ATTEMPTS : otherwise)
 
 /** La page de connexion, qui ramène ensuite à `back` (une page du site, filtres compris). */
 export const loginPath = (back: string) => `/connexion?retour=${encodeURIComponent(back)}`

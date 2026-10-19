@@ -15,7 +15,7 @@ import '@fontsource/space-grotesk/latin-700.css'
 import '@camply/ui/styles.css'
 import './styles/theme.css'
 import './styles/global.css'
-import { loadAccount } from './lib/auth-client'
+import { loadAccount } from './lib/account'
 import { loadSpecies } from './lib/species'
 import { createRouter } from './router'
 import { requestPersistentStorage } from './store/persist'
@@ -27,8 +27,27 @@ requestPersistentStorage()
 // Enregistré une fois la page chargée : à la première visite, ce qu'il garde (polices, pages pas
 // encore ouvertes) ne se télécharge pas en même temps que les données du premier affichage.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  addEventListener('load', () => void navigator.serviceWorker.register('/sw.js').catch(() => {}))
+  addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .catch((error: unknown) => console.warn('Service worker non enregistré', error))
+  })
 }
+
+// Un déploiement a remplacé les fichiers de l'app pendant que cette page était ouverte : une page
+// chargée à la demande n'existe plus (404). La page se recharge, avec la nouvelle version ; une
+// fois par minute au plus (un fichier qui manquerait encore ne la ferait pas recharger sans fin).
+const RELOADED_KEY = 'pokedex-collection.reloaded'
+addEventListener('vite:preloadError', (event) => {
+  try {
+    if (Date.now() - Number(sessionStorage.getItem(RELOADED_KEY)) < 60_000) return
+    sessionStorage.setItem(RELOADED_KEY, String(Date.now()))
+  } catch {
+    return
+  }
+  event.preventDefault()
+  location.reload()
+})
 
 const root = createRoot(document.getElementById('root')!)
 

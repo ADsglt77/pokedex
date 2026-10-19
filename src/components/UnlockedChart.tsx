@@ -9,7 +9,7 @@ import {
   type ChartPeriod,
 } from '@/lib/chart'
 import { formatDecimal, formatInteger } from '@/lib/format'
-import type { PricePoint } from '@/lib/prices'
+import type { PricePoint } from '@/lib/chart'
 
 /**
  * Les Pokémon débloqués : le total, jour après jour sur la période (`events` : `unlockEvents`), et

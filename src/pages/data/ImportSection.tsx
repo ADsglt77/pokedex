@@ -2,14 +2,18 @@ import { Alert, Button, FileUpload, type UploadFile } from '@camply/ui'
 import { useRef, useState } from 'react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useCollectionAction } from '@/hooks/useNotify'
+import { focusAfter } from '@/lib/focus'
 import { summarize } from '@/lib/pokedex'
 import { formatDateTime, plural } from '@/lib/format'
-import { type ImportedFile, parseImport } from '@/lib/transfer'
+import { readImport } from '@/lib/transfer'
 import { report } from '@/lib/api'
 import { replaceDocument } from '@/store/document'
 import { DataSection } from './DataSection'
 import { SummaryLedger } from './SummaryLedger'
 import styles from './DataPage.module.css'
+
+/** « ce n'est pas… » → « Ce n'est pas…. » : la raison d'un refus, en phrase. */
+const sentence = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}.`
 
 /**
  * Reprendre un export : le fichier est lu et résumé, puis, après confirmation, il remplace la
@@ -18,29 +22,33 @@ import styles from './DataPage.module.css'
 export function ImportSection() {
   const act = useCollectionAction()
   const [files, setFiles] = useState<UploadFile[]>([])
-  // `null` : le fichier choisi n'est pas un export.
-  const [imported, setImported] = useState<ImportedFile | null>()
+  // Le fichier choisi, lu : son contenu, ou la raison de son refus.
+  const [read, setRead] = useState<ReturnType<typeof readImport>>()
+  const imported = read?.document
   const [confirming, setConfirming] = useState(false)
   // Le fichier choisi en dernier : la lecture, plus lente, d'un fichier remplacé depuis ne compte
   // plus (on importerait un autre fichier que celui affiché).
   const chosen = useRef<File | undefined>(undefined)
+  const title = useRef<HTMLHeadingElement>(null)
 
   const onFiles = async (next: UploadFile[]) => {
     setFiles(next)
     const file = next[0]?.file
     chosen.current = file
     // L'aperçu du fichier d'avant disparaît pendant la lecture : on n'importe que celui affiché.
-    setImported(undefined)
+    setRead(undefined)
     // Un fichier illisible (supprimé, inaccessible) compte pour un fichier qui n'est pas un export.
-    const read = file ? parseImport(await file.text().catch(() => '')) : undefined
-    if (chosen.current === file) setImported(read)
+    const result = file ? readImport(await file.text().catch(() => '')) : undefined
+    if (chosen.current === file) setRead(result)
   }
 
-  const reset = () => {
-    chosen.current = undefined
-    setFiles([])
-    setImported(undefined)
-  }
+  // L'aperçu et ses boutons disparaissent : le focus va au titre de la section.
+  const reset = () =>
+    focusAfter(() => {
+      chosen.current = undefined
+      setFiles([])
+      setRead(undefined)
+    }, title)
 
   const runImport = () => {
     act(() => replaceDocument(imported!), 'Collection remplacée par celle du fichier.')
@@ -54,6 +62,7 @@ export function ImportSection() {
     <DataSection
       id="importer"
       title="Importer"
+      titleRef={title}
       description="Reprenez une collection exportée depuis ce Pokédex, ici ou dans un autre navigateur. Elle remplace votre collection actuelle, ainsi que vos achats si le fichier en contient."
     >
       <FileUpload
@@ -65,9 +74,9 @@ export function ImportSection() {
         onFilesChange={onFiles}
       />
 
-      {imported === null && (
+      {read?.problem && (
         <Alert tone="danger" title="Ce fichier ne peut pas être importé.">
-          Ce n’est pas un export de collection de ce Pokédex, ou il a été abîmé.
+          {sentence(read.problem)}
         </Alert>
       )}
 

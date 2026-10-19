@@ -1,6 +1,6 @@
 import { Badge, Button, EmptyState, Input, Popover, Select, Stack } from '@camply/ui'
 import { ListChecks, Search, SearchX, SlidersHorizontal } from '@camply/ui/icons'
-import { useDeferredValue, useMemo } from 'react'
+import { useDeferredValue, useMemo, useRef } from 'react'
 import { Link } from 'react-router'
 import { GENERATION_OPTIONS } from '@/config/pokedex'
 import { useFollowLinks } from '@/hooks/useFollowLinks'
@@ -12,6 +12,7 @@ import {
   type WishlistFilters,
   type WishlistSort,
 } from '@/lib/filters'
+import { focusAfter } from '@/lib/focus'
 import { plural, toOptions } from '@/lib/format'
 import { filterWishlist } from '@/lib/wishlist'
 import type { GenerationId } from '@/types'
@@ -51,6 +52,7 @@ export function WishlistPanel({
   const { limit, sentinel, more } = useGrowingList(shown.length, CARDS_STEP)
   // Sur téléphone, les listes passent dans un panneau « Filtres » : la liste commence plus haut.
   const compact = useMediaQuery('(max-width: 40rem)')
+  const searchField = useRef<HTMLInputElement>(null)
 
   if (rows.length === 0) {
     return (
@@ -95,6 +97,7 @@ export function WishlistPanel({
     <Stack gap={5} className={page.panel}>
       <div className={styles.toolbar}>
         <Input
+          ref={searchField}
           className={styles.search}
           type="search"
           aria-label="Rechercher dans la liste d’achats"
@@ -141,8 +144,11 @@ export function WishlistPanel({
           icon={<SearchX size={22} />}
           title="Aucune carte ne correspond à ces filtres"
           description="Essayez une autre recherche, ou élargissez les filtres."
+          // Le message et son bouton disparaissent : le focus va à la recherche.
           actions={
-            <Button onClick={() => set(DEFAULT_WISHLIST_FILTERS)}>Réinitialiser les filtres</Button>
+            <Button onClick={() => focusAfter(() => set(DEFAULT_WISHLIST_FILTERS), searchField)}>
+              Réinitialiser les filtres
+            </Button>
           }
         />
       ) : (

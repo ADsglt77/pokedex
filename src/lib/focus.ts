@@ -1,7 +1,7 @@
 /**
  * Le focus au clavier : où il va quand une action retire son propre bouton d'une liste
- * (`keepFocusInList`), quand un formulaire refuse un enregistrement (`focusFirstError`), et quand
- * un raccourci de la page ne s'applique pas (`shortcutBlocked`).
+ * (`keepFocusInList`) ou de la page (`focusAfter`), quand un formulaire refuse un enregistrement
+ * (`focusFirstError`), et quand un raccourci de la page ne s'applique pas (`shortcutBlocked`).
  */
 
 import type { RefObject } from 'react'
@@ -29,6 +29,18 @@ export function keepFocusInList(
     item?.querySelector<HTMLElement>('a[href]') ??
     fallback.current
   target?.focus()
+}
+
+/**
+ * Une action qui retire ou désactive son propre bouton (« Réinitialiser » les filtres, un aperçu
+ * retiré, « Effacer » une fois la collection vide) : le focus va ensuite à `target` (le champ de
+ * recherche, le titre du panneau), sans quoi il tombe au document et la touche Tab repart du haut
+ * de la page. L'action passe par `flushSync` : la page est déjà à jour. Après une confirmation
+ * aussi : la fenêtre rend le focus au bouton qui l'a ouverte, disparu ou désactivé entre-temps.
+ */
+export function focusAfter(action: () => void, target: RefObject<HTMLElement | null>) {
+  flushSync(action)
+  target.current?.focus()
 }
 
 /**

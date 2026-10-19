@@ -23,13 +23,13 @@ dist-ssr
 *.sln
 *.sw?
 
-# Anciens prix en fichiers, à reprendre dans la base : `bun run ingest legacy-prices ./prices`
-/prices
 # Les sauvegardes sorties du VPS (README) : le compte et la collection, jamais dans le dépôt.
 /sauvegardes
 
 # Bases SQLite et images du serveur en développement (`DATA_DIR`, sur le VPS : volumes Docker)
 /.data
 
-# Secrets du VPS (BETTER_AUTH_SECRET…), lus par docker compose
-.env
+# Secrets du VPS (BETTER_AUTH_SECRET…), lus par docker compose ; toutes leurs variantes
+# (`.env.production`…), sauf un exemple sans secret.
+.env*
+!.env.example

@@ -21,7 +21,6 @@ import type {
 export const emptyShopping = (): ShoppingData => ({
   schemaVersion: 1,
   updatedAt: null,
-  preferences: {},
   orders: [],
   budget: { ...DEFAULT_BUDGET },
 })
@@ -137,11 +136,20 @@ export function previousOf(cardId: string, stored: Order | null, collection: Col
  */
 export const canBePending = (stored: Order | null) => stored?.state !== 'received'
 
+/** La commande contient-elle la carte ? */
+const hasCard = (order: Order, cardId: string) => order.lines.some((line) => line.cardId === cardId)
+
 /** La commande de `orders` dans cet état qui contient la carte ; `undefined` s'il n'y en a pas. */
 const orderWith = (orders: readonly Order[], cardId: string, state: OrderState) =>
-  orders.find(
-    (order) => order.state === state && order.lines.some((line) => line.cardId === cardId),
-  )
+  orders.find((order) => order.state === state && hasCard(order, cardId))
+
+/**
+ * Une carte d'une commande (quel que soit son état) y reste : la retirer de la collection
+ * fausserait le registre. Seulement d'un de ses Pokémon (une TAG TEAM) : elle reste alors celle
+ * des autres (la fiche d'un Pokémon, la fiche d'une carte du catalogue).
+ */
+export const isInAnOrder = (orders: readonly Order[], cardId: string) =>
+  orders.some((order) => hasCard(order, cardId))
 
 /** Midi, heure locale, du jour donné : la date d'obtention d'une carte reçue. */
 const noonOf = (day: string) => new Date(`${day}T12:00:00`).toISOString()

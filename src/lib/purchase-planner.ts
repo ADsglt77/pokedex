@@ -28,12 +28,15 @@ export interface PlanOptions {
   skipped: ReadonlySet<string>
 }
 
+/** Une carte avec son prix : celles que le plan prend, laisse ou couvre en ont toutes un. */
+type Priced<T> = T & { price: number }
+
 interface Plan<T> {
-  picked: T[]
+  picked: Priced<T>[]
   /** Candidates qui ne tiennent pas dans le budget. */
-  left: T[]
+  left: Priced<T>[]
   /** Candidates d'un Pokémon que le plan prend déjà, avec une autre carte. */
-  covered: T[]
+  covered: Priced<T>[]
   unpriced: T[]
   skipped: T[]
   /** Prix des cartes prises. */
@@ -42,6 +45,8 @@ interface Plan<T> {
   total: number
   overBudget: boolean
 }
+
+const isPriced = <T extends PlannableCard>(row: T): row is Priced<T> => row.price !== null
 
 export function planPurchase<T extends PlannableCard>(
   cards: readonly T[],
@@ -58,11 +63,11 @@ export function planPurchase<T extends PlannableCard>(
     overBudget: false,
   }
 
-  const priced: (T & { price: number })[] = []
+  const priced: Priced<T>[] = []
   for (const row of cards) {
     if (options.skipped.has(row.card.id)) plan.skipped.push(row)
-    else if (row.price === null) plan.unpriced.push(row)
-    else priced.push(row as T & { price: number })
+    else if (isPriced(row)) priced.push(row)
+    else plan.unpriced.push(row)
   }
 
   priced.sort(

@@ -10,11 +10,17 @@ import { applyOrder, emptyShopping, previousOf, sortOrders } from '@/lib/orders'
 import { parseStored, readShopping } from '@/lib/transfer'
 import { useCollectionStore } from '@/store/collection'
 import type { BudgetSettings, Order, ShoppingData } from '@/types'
-import { persist, readStored } from './persist'
+import { persist, readStored, setAsideUnreadable } from './persist'
 
 const SHOPPING_KEY = 'pokedex-collection.shopping'
 
-const loadShopping = (text: string | null) => readShopping(parseStored(text)) ?? emptyShopping()
+/** Les achats enregistrés ; vides sans eux, ou illisibles (mis de côté, signalés). */
+function loadShopping(text: string | null) {
+  const shopping = readShopping(parseStored(text))
+  if (shopping) return shopping
+  if (text !== null) setAsideUnreadable(SHOPPING_KEY, text)
+  return emptyShopping()
+}
 
 interface ShoppingStore {
   shopping: ShoppingData

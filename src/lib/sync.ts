@@ -14,10 +14,15 @@ export interface SyncDocument {
   shopping: ShoppingData
 }
 
-/** Une version du document : son numéro chez le serveur et son empreinte. */
-interface SyncVersion {
+/**
+ * Une version du document : son numéro chez le serveur, l'empreinte de son document, et celle que
+ * lui donne le serveur (`tag`, d'après ce qu'il a enregistré) : après une restauration de sa
+ * base, un numéro peut revenir, pour un autre document.
+ */
+export interface SyncVersion {
   version: number
   hash: string
+  tag?: string
 }
 
 /**
@@ -71,17 +76,24 @@ export const isEmptyDocument = ({ collection, shopping }: SyncDocument) =>
 export function decide(
   local: { hash: string; empty: boolean },
   base: SyncVersion | null,
-  server: { version: number; hash: string | null; empty: boolean },
+  server: { version: number; hash: string | null; tag?: string; empty: boolean },
 ): SyncStep {
   // Le premier appareil connecté envoie la sienne.
   if (server.version === 0) return local.empty ? 'noop' : 'push'
   // Déjà la même : il suffit de noter la version.
-  if (local.hash === server.hash) return base?.version === server.version ? 'noop' : 'adopt'
+  if (local.hash === server.hash) {
+    return base?.version === server.version && base.tag === server.tag ? 'noop' : 'adopt'
+  }
   // Première connexion de cet appareil : il garde celle qui a quelque chose, ou il faut choisir.
   if (!base) return local.empty ? 'adopt' : server.empty ? 'push' : 'conflict'
   // Le serveur en est à une version plus ancienne que celle échangée (sa base restaurée d'une
-  // sauvegarde) : la reprendre perdrait sans rien dire ce qu'il avait reçu depuis.
+  // sauvegarde) : la reprendre perdrait sans rien dire ce qu'il avait reçu depuis. Même chose
+  // pour le même numéro, mais un autre document (la base restaurée, puis un autre appareil revenu
+  // à ce numéro) : l'envoyer écraserait ce que l'autre appareil y a mis.
   if (server.version < base.version) return 'conflict'
+  if (server.version === base.version && base.tag && server.tag && base.tag !== server.tag) {
+    return 'conflict'
+  }
   const changedHere = local.hash !== base.hash
   if (base.version === server.version) return changedHere ? 'push' : 'noop'
   return changedHere ? 'conflict' : 'adopt'

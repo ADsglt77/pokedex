@@ -7,7 +7,6 @@
 import { derived, getJson } from '@/lib/api'
 import { formatList } from '@/lib/format'
 import type {
-  CollectionData,
   PokemonCard,
   PokemonSpecies,
   PokemonSpeciesDetails,
@@ -34,10 +33,6 @@ export async function loadSpecies() {
 }
 
 export const getSpecies = (id: number): PokemonSpecies | null => speciesById.get(id) ?? null
-
-/** Une carte ajoutée par l'utilisateur ; `null` si elle n'existe pas (ou plus). */
-export const findCard = (id: string, collection: CollectionData): PokemonCard | null =>
-  collection.customCards[id] ?? null
 
 /** Les Pokémon d'une carte : plusieurs pour une carte TAG TEAM. */
 export const speciesOf = (card: PokemonCard): PokemonSpecies[] =>

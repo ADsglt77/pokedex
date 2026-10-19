@@ -1,21 +1,14 @@
 /**
  * L'historique des prix (`server/history.ts`) : irremplaçable, Cardmarket n'en garde pas. La tâche
- * `prices` y ajoute chaque jour le prix du jour (`withPrice`), la base le range par année
- * (`splitYears`), l'API le rend d'un seul tenant (`joinYears`, `historyReader`), pour une carte
- * comme pour toute la collection : aucun prix ne doit se perdre, changer de jour en route, ni
- * passer d'une carte à une autre.
+ * `prices` y ajoute chaque jour le prix du jour (`withPrice`), la base le range par année, l'API
+ * le rend d'un seul tenant (`joinYears`, `historyReader`), pour une carte comme pour toute la
+ * collection : aucun prix ne doit se perdre, changer de jour en route, ni passer d'une carte à
+ * une autre.
  */
 
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import {
-  historyReader,
-  joinYears,
-  splitYears,
-  withPrice,
-  yearDay,
-  type HistoryYear,
-} from '../server/history'
+import { historyReader, joinYears, withPrice, yearDay, type HistoryYear } from '../server/history'
 
 describe('jour de l’année', () => {
   test('le 1er janvier est le jour 0, les années bissextiles ont un jour de plus', () => {
@@ -58,29 +51,29 @@ describe('prix du jour ajouté à une année', () => {
 
 describe('historique rangé par année, puis relu', () => {
   test('à cheval sur deux années : chaque prix garde son jour', () => {
-    const history = { from: '2025-12-30', prices: [1, null, 2, 3] }
-    const years = splitYears(history)
-    expect(years).toEqual([
+    const years = [
       { year: 2025, first: 363, prices: [1] },
       { year: 2026, first: 0, prices: [2, 3] },
-    ])
-    expect(joinYears(years)).toEqual(history)
+    ]
+    expect(joinYears(years)).toEqual({ from: '2025-12-30', prices: [1, null, 2, 3] })
   })
 
   test('une année entière sans prix : les jours vides reviennent tels quels', () => {
-    const history = { from: '2024-12-31', prices: [1, ...Array<null>(365).fill(null), 2] }
-    const years = splitYears(history)
-    expect(years).toEqual([
+    const years = [
       { year: 2024, first: 365, prices: [1] },
       { year: 2026, first: 0, prices: [2] },
-    ])
-    expect(joinYears(years)).toEqual(history)
+    ]
+    expect(joinYears(years)).toEqual({
+      from: '2024-12-31',
+      prices: [1, ...Array<null>(365).fill(null), 2],
+    })
   })
 
-  test('les jours sans prix d’avant le premier prix ne sont pas gardés', () => {
-    const years = splitYears({ from: '2026-01-01', prices: [null, null, 5] })
-    expect(years).toEqual([{ year: 2026, first: 2, prices: [5] }])
-    expect(joinYears(years)).toEqual({ from: '2026-01-03', prices: [5] })
+  test('l’historique part du premier jour avec un prix', () => {
+    expect(joinYears([{ year: 2026, first: 2, prices: [5] }])).toEqual({
+      from: '2026-01-03',
+      prices: [5],
+    })
   })
 
   test('jour après jour, la tâche et la relecture s’accordent', () => {
@@ -101,7 +94,6 @@ describe('historique rangé par année, puis relu', () => {
 
   test('sans aucun prix : pas d’historique', () => {
     expect(joinYears([])).toBeNull()
-    expect(splitYears({ from: '2026-01-01', prices: [null, null] })).toEqual([])
   })
 })
 

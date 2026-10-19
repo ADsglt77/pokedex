@@ -10,6 +10,7 @@ import { useCollectionAction } from '@/hooks/useNotify'
 import { usePokedex } from '@/hooks/usePokedex'
 import { isCatalogCard, type SetCard } from '@/lib/card-catalog'
 import { newCardId } from '@/lib/collection'
+import { isInAnOrder } from '@/lib/orders'
 import { details, formatDate, formatDexNumber, formatList, statusLabel } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
 import { getSpecies, speciesNames } from '@/lib/species'
@@ -51,7 +52,7 @@ function useCollectionPlace(card: SetCard) {
     held.find(
       ({ view, speciesIds }) =>
         view.card.dexIds.every((id) => speciesIds.includes(id)) &&
-        orders.some((order) => order.lines.some((line) => line.cardId === view.card.id)),
+        isInAnOrder(orders, view.card.id),
     ) ?? null
   return { mine, held, locked }
 }

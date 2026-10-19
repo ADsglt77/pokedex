@@ -4,23 +4,31 @@
  * une extension du catalogue, les cartes d'un Pokémon, un id saisi), que la tâche d'ingestion
  * `prices` met à jour (`server/jobs/prices.ts`), et leur historique (`/api/prices/<id>` pour une
  * carte, `/api/histories` pour la collection). Les réponses s'ajoutent : une carte dont le prix est
- * connu n'est plus redemandée. Facultatifs : sans eux (serveur arrêté, base encore vide), `null`,
- * et l'app s'affiche sans prix.
+ * connu n'est plus redemandée, sauf au retour sur une page restée ouverte plus de 6 h
+ * (`refreshPrices`). Facultatifs : sans eux (serveur arrêté, base encore vide), `null`, et l'app
+ * s'affiche sans prix.
  */
 
 import { create } from 'zustand'
 import { forget, getJson } from '@/lib/api'
 import { historiesOf } from '@/lib/prices'
 import { settled } from '@/lib/settled'
+import { HOUR } from '@/lib/time'
 import { useCollectionStore } from '@/store/collection'
 import type { CardPriceHistory, CollectionData, PriceFile, PriceHistories } from '@/types'
 
 interface PriceState {
-  /** Les prix reçus, toutes demandes confondues ; `null` avant la première réponse. */
+  /**
+   * Les prix reçus, toutes demandes confondues (une clé par carte qui a eu sa réponse, `null` sans
+   * prix ce jour) ; `null` avant la première réponse.
+   */
   prices: PriceFile | null
-  /** Les ids dont une réponse est arrivée, avec ou sans prix ce jour. */
+  /** Les ids dont une réponse est arrivée depuis le dernier rafraîchissement, avec ou sans prix. */
   known: ReadonlySet<number>
-  /** Les ids dont la demande a échoué (serveur arrêté, prix jamais lus) : redemandés plus tard. */
+  /**
+   * Les ids dont la demande a échoué (serveur arrêté, prix jamais lus) ou est restée sans réponse
+   * (une copie du service worker faite pour d'autres cartes) : redemandés plus tard.
+   */
   failed: ReadonlySet<number>
 }
 
@@ -42,10 +50,18 @@ const followed = new WeakSet<Promise<PriceFile | null>>()
  */
 const requested = new WeakMap<readonly number[], ReadonlySet<number>>()
 
+/** Les adresses des prix déjà demandées : oubliées pour les redemander (`refreshPrices`). */
+const priceUrls = new Set<string>()
+
+/** L'heure de la dernière réponse des prix (ms). */
+let answeredAt = 0
+
 /**
  * Demande les prix des cartes `ids` qui ne sont pas encore connus, sous le chemin `list` (le service
  * worker garde une copie par chemin : celle de la collection n'est pas remplacée par celle d'une
- * extension). Redemandés après une panne passagère (`getJson`, une minute après au plus tôt).
+ * extension). Le serveur répond pour chaque carte (`null` sans prix) : une carte absente de la
+ * réponse vient d'une copie du service worker faite pour d'autres cartes, et compte comme une panne
+ * passagère. Redemandés après une panne (`getJson`, une minute après au plus tôt).
  */
 function requestPrices(list: 'collection' | 'selection', ids: readonly number[]) {
   const { known, failed } = usePriceStore.getState()
@@ -54,22 +70,50 @@ function requestPrices(list: 'collection' | 'selection', ids: readonly number[])
   requested.set(ids, known)
   const wanted = [...new Set(ids)].filter((id) => !known.has(id)).sort((a, b) => a - b)
   if (!wanted.length) return
-  const response = getJson<PriceFile>(`/api/prices/${list}?ids=${wanted.join()}`)
+  const url = `/api/prices/${list}?ids=${wanted.join()}`
+  priceUrls.add(url)
+  const response = getJson<PriceFile>(url)
   if (followed.has(response)) return
   followed.add(response)
-  response.then((file) =>
-    usePriceStore.setState((state) =>
-      // Une réponse d'une autre forme (un serveur pas encore à jour) compte comme pas de prix.
-      file?.cards
-        ? {
-            prices: { date: file.date, cards: { ...state.prices?.cards, ...file.cards } },
-            known: new Set([...state.known, ...wanted]),
-            failed: new Set([...state.failed].filter((id) => !wanted.includes(id))),
-          }
-        : { failed: new Set([...state.failed, ...wanted]) },
-    ),
-  )
+  response.then((file) => {
+    // Une réponse d'une autre forme (un serveur pas encore à jour) compte comme pas de prix.
+    const answered = file?.cards ? wanted.filter((id) => id in file.cards) : []
+    const missing = wanted.filter((id) => !answered.includes(id))
+    // Sans réponse pour certaines : redemandées une minute plus tard, même sans nouvel affichage.
+    if (file?.cards && missing.length) setTimeout(() => requestPrices(list, missing), 60_000)
+    if (answered.length) answeredAt = Date.now()
+    usePriceStore.setState((state) => ({
+      prices: file?.cards
+        ? { date: file.date, cards: { ...state.prices?.cards, ...file.cards } }
+        : state.prices,
+      known: new Set([...state.known, ...answered]),
+      failed: new Set([...[...state.failed].filter((id) => !answered.includes(id)), ...missing]),
+    }))
+  })
 }
+
+/**
+ * Redemande les prix de tout ce qui est affiché : la tâche des prix les met à jour toutes les 6 h,
+ * et une page (une app installée) reste ouverte des jours. Ceux déjà reçus restent affichés en
+ * attendant les nouveaux.
+ */
+function refreshPrices() {
+  for (const url of priceUrls) forget(url)
+  priceUrls.clear()
+  // Des prix neufs (les mêmes) : chaque montant affiché se redessine, et redemande les siens.
+  usePriceStore.setState((state) => ({
+    prices: state.prices && { ...state.prices },
+    known: new Set(),
+    failed: new Set(),
+  }))
+}
+
+// Au retour sur la page, après plus de 6 h sans réponse.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && answeredAt && Date.now() - answeredAt > 6 * HOUR) {
+    refreshPrices()
+  }
+})
 
 const idsOfCollection = new WeakMap<CollectionData, number[]>()
 
@@ -94,8 +138,11 @@ function check(state: PriceState, wanted: readonly number[]) {
   if (!byList) checked.set(state, (byList = new WeakMap()))
   let result = byList.get(wanted)
   if (!result) {
+    // Une carte déjà reçue (avant un rafraîchissement, `refreshPrices`) est prête : son prix
+    // reste affiché en attendant le nouveau.
+    const cards = state.prices?.cards ?? {}
     result = {
-      ready: wanted.every((id) => state.known.has(id)),
+      ready: wanted.every((id) => state.known.has(id) || id in cards),
       missing: wanted.some((id) => state.failed.has(id)),
     }
     byList.set(wanted, result)
@@ -103,11 +150,14 @@ function check(state: PriceState, wanted: readonly number[]) {
   return result
 }
 
-/** Les cartes dont on veut les prix : `ids`, sinon celles de la collection. */
+/**
+ * Les cartes dont on veut les prix : `ids`, sinon celles de la collection (suivie seulement dans
+ * ce cas : une extension du catalogue ne se redessine pas à chaque changement de la collection).
+ */
 function useWanted(ids?: readonly number[]) {
-  const collection = useCollectionStore((state) => state.collection)
+  const collection = useCollectionStore((state) => (ids ? null : state.collection))
   if (ids) return { list: 'selection' as const, wanted: ids }
-  return { list: 'collection' as const, wanted: collectionIds(collection) }
+  return { list: 'collection' as const, wanted: collectionIds(collection!) }
 }
 
 /**

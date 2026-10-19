@@ -158,10 +158,12 @@
   --camply-warn-border: rgba(163, 75, 7, 0.28);
   --camply-gradient-warn: linear-gradient(90deg, #843c06, var(--camply-warn));
 
-  --camply-success: #047857;
+  /* Succès : un vert assez foncé pour le petit texte d'un badge (« Reçue ») sur son fond teinté,
+     posé sur le fond de la page ou une surface (4,5:1 au moins). */
+  --camply-success: #036c4e;
   --camply-success-contrast: #ffffff;
-  --camply-success-soft: rgba(4, 120, 87, 0.1);
-  --camply-success-border: rgba(4, 120, 87, 0.28);
+  --camply-success-soft: rgba(3, 108, 78, 0.1);
+  --camply-success-border: rgba(3, 108, 78, 0.28);
 
   --camply-info: #6d4fc2;
   --camply-info-contrast: #ffffff;

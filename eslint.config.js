@@ -15,17 +15,29 @@ export default defineConfig([
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
     ],
-    languageOptions: {
-      globals: globals.browser,
-    },
     rules: {
       // `const { retiré, ...reste } = objet` : la façon idiomatique d'omettre une clé.
       '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
     },
   },
-  // Le serveur et les tests tournent sous Bun, pas dans le navigateur.
+  // L'app tourne dans le navigateur ; le serveur, les tests et la configuration de Vite sous Bun :
+  // chacun ses objets globaux (un `window` dans le serveur serait signalé).
   {
-    files: ['server/**/*.ts', 'tests/**/*.ts'],
+    files: ['src/**/*.{ts,tsx}'],
+    languageOptions: { globals: globals.browser },
+  },
+  {
+    files: ['server/**/*.ts', 'tests/**/*.ts', '*.ts'],
     languageOptions: { globals: globals.node },
+  },
+  // Les scripts de `public/` : le service worker (`sw.js`) et le thème (`theme.js`), tels quels
+  // dans le navigateur.
+  {
+    files: ['public/**/*.js'],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      sourceType: 'script',
+      globals: { ...globals.browser, ...globals.serviceworker },
+    },
   },
 ])

@@ -8,31 +8,67 @@ interface NotifyOptions {
   undo?: () => boolean
 }
 
-/** Toasts de l'app, avec une action « Annuler » facultative. */
+/** Le temps qu'un « Annuler » reste proposé. */
+const UNDO_DURATION = 12_000
+
+/**
+ * Le dernier « Annuler » encore affiché : Ctrl+Z (⌘Z sur Mac) le lance aussi, sans aller jusqu'au
+ * toast, rendu à la fin de la page (au clavier, il faudrait traverser toute la page en 12 s).
+ */
+let pendingUndo: { run: () => void; until: number } | null = null
+
+addEventListener('keydown', (event) => {
+  if (!pendingUndo || Date.now() > pendingUndo.until) return
+  if (event.key.toLowerCase() !== 'z' || !(event.ctrlKey || event.metaKey)) return
+  if (event.shiftKey || event.altKey || event.defaultPrevented) return
+  // Dans un champ, Ctrl+Z annule la saisie ; une fenêtre ouverte a ses propres actions.
+  const target = event.target instanceof HTMLElement ? event.target : null
+  if (target?.closest('input, textarea, select, [contenteditable]')) return
+  if (document.querySelector('[role=dialog]')) return
+  event.preventDefault()
+  const { run } = pendingUndo
+  pendingUndo = null
+  run()
+})
+
+/** Toasts de l'app, avec une action « Annuler » facultative (aussi Ctrl+Z, tant qu'il est affiché). */
 export function useNotify() {
-  const { toast } = useToast()
+  const { toast, dismiss } = useToast()
 
   return useCallback(
     (message: string, { tone = 'success', undo }: NotifyOptions = {}) => {
-      toast({
+      // Le toast se ferme après l'action : on annonce le résultat dans un nouveau.
+      const runUndo = (undo: () => boolean) => {
+        if (undo()) toast({ title: 'Modification annulée.', tone: 'info', duration: 3000 })
+        else
+          toast({
+            title: 'Impossible d’annuler : vos données ont changé depuis.',
+            tone: 'warn',
+          })
+      }
+      const id = toast({
         title: message,
         tone,
-        duration: undo ? 12_000 : 5_000,
+        duration: undo ? UNDO_DURATION : 5_000,
         action: undo && {
           label: 'Annuler',
-          // Le toast se ferme après l'action : on annonce le résultat dans un nouveau.
           onClick: () => {
-            if (undo()) toast({ title: 'Modification annulée.', tone: 'info', duration: 3000 })
-            else
-              toast({
-                title: 'Impossible d’annuler : vos données ont changé depuis.',
-                tone: 'warn',
-              })
+            pendingUndo = null
+            runUndo(undo)
           },
         },
       })
+      if (undo) {
+        pendingUndo = {
+          until: Date.now() + UNDO_DURATION,
+          run: () => {
+            dismiss(id)
+            runUndo(undo)
+          },
+        }
+      }
     },
-    [toast],
+    [toast, dismiss],
   )
 }
 

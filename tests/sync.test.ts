@@ -76,6 +76,31 @@ describe('decide', () => {
     ).toBe('adopt')
   })
 
+  test('le même numéro, mais un autre document (base restaurée, puis un autre appareil revenu à ce numéro) : conflit', () => {
+    const base = { version: 45, hash: 'a', tag: 'ta' }
+    // Modifiée ici : l'envoyer écraserait ce que l'autre appareil a mis dans cette version.
+    expect(decide(local('a2'), base, { version: 45, hash: 'b', tag: 'tb', empty: false })).toBe(
+      'conflict',
+    )
+    // Rien de modifié ici : reprendre celle du serveur perdrait ce qu'il avait reçu avant sa
+    // restauration, sans rien dire.
+    expect(decide(local('a'), base, { version: 45, hash: 'b', tag: 'tb', empty: false })).toBe(
+      'conflict',
+    )
+    // La même empreinte : la même version, rien de changé.
+    expect(decide(local('a'), base, { version: 45, hash: 'a', tag: 'ta', empty: false })).toBe(
+      'noop',
+    )
+    // Une version notée sans empreinte, au même contenu : il note celle du serveur.
+    expect(
+      decide(
+        local('a'),
+        { version: 45, hash: 'a' },
+        { version: 45, hash: 'a', tag: 'ta', empty: false },
+      ),
+    ).toBe('adopt')
+  })
+
   test('cet appareil vidé (« Effacer ») après la dernière synchronisation : il envoie', () => {
     expect(
       decide(

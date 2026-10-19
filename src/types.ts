@@ -70,8 +70,7 @@ export interface PokemonCard {
 
 /* Données de l'utilisateur : `localStorage` et fichier d'export */
 
-/** Commandée ou possédée ; une carte choisie sans statut est à débloquer (« souhaitée », d'une
- * ancienne version, se lit comme sans statut : `readCollection`). */
+/** Commandée ou possédée ; une carte choisie sans statut est à débloquer. */
 export type CardStatus = 'ordered' | 'owned'
 
 export interface CardOwnership {
@@ -154,13 +153,6 @@ export interface BudgetSettings {
 export interface ShoppingData {
   schemaVersion: 1
   updatedAt: string | null
-  /**
-   * Toujours vide. Une ancienne version y gardait sa liste d'achats (une carte à la fois, avec
-   * priorité, prix maximum et note), retirée en octobre 2026 : toute carte choisie pas encore
-   * obtenue est à acheter. Gardée vide pour qu'une ancienne version (un onglet resté ouvert)
-   * relise ces données sans les prendre pour abîmées.
-   */
-  preferences: Record<string, never>
   /** La plus récente d'abord. */
   orders: Order[]
   budget: BudgetSettings
@@ -269,7 +261,16 @@ export interface ServerStatus {
   pricesDate: string | null
 }
 
-/* Prix : `/api/prices`, mis à jour par la tâche d'ingestion `prices` (`server/jobs/prices.ts`) */
+/**
+ * `/api/status/errors` (le compte) : la cause du dernier échec de chaque tâche en échec. Clé : la
+ * tâche ; absente si son dernier passage a réussi.
+ */
+export type JobErrors = Partial<Record<string, string>>
+
+/*
+ * Prix : `/api/prices/collection` et `/api/prices/selection`, mis à jour par la tâche d'ingestion
+ * `prices` (`server/jobs/prices.ts`)
+ */
 
 export interface CardPrice {
   /** Prix du marché, en euros : la tendance Cardmarket, sinon sa moyenne sur 30 jours. */
@@ -283,14 +284,18 @@ export interface CardPrice {
 export type CardPriceRow = [price: number, low: number | null, avg30: number | null]
 
 /**
- * Les prix Cardmarket du jour (`/api/prices`, 404 tant que le guide n'a jamais été lu) : toutes les
- * cartes Pokémon à l'unité de Cardmarket.
+ * Les prix Cardmarket du jour des cartes demandées (`/api/prices/collection`, `/selection`, et ceux
+ * des cartes possédées de `/api/vitrine` ; 404 tant que le guide n'a jamais été lu).
  */
 export interface PriceFile {
   /** Jour du guide des prix (YYYY-MM-DD). */
   date: string
-  /** Clé : id Cardmarket (`idProduct`). */
-  cards: Record<string, CardPriceRow>
+  /**
+   * Clé : id Cardmarket (`idProduct`), une par carte demandée ; `null` : sans prix ce jour. Une
+   * carte absente n'a pas eu de réponse (une copie du service worker faite pour d'autres cartes) :
+   * elle sera redemandée.
+   */
+  cards: Record<string, CardPriceRow | null>
 }
 
 /* Le compte (`/api/account`) et la collection synchronisée (`/api/collection`), `server/` */
@@ -313,8 +318,8 @@ export interface AccountState {
 /**
  * `GET /api/collection` : le document du compte, numéroté (`version`, que l'appareil renvoie avec
  * ses modifications) ; `version` 0 et le reste `null` tant qu'aucun appareil n'a rien envoyé.
- * Enregistré tel que l'appareil l'a envoyé : une ancienne version de l'app a pu l'écrire (il se
- * relit comme le stockage du navigateur, `readCollection`, `readShopping`).
+ * Enregistré tel que l'appareil l'a envoyé ; relu comme le stockage du navigateur
+ * (`readCollection`, `readShopping`).
  */
 export interface CollectionResponse {
   version: number
@@ -322,9 +327,13 @@ export interface CollectionResponse {
   shopping: ShoppingData | null
 }
 
-/** `PUT /api/collection`, enregistré : la nouvelle version du document. */
+/**
+ * `PUT /api/collection`, enregistré : la nouvelle version du document, et son empreinte chez le
+ * serveur (celle de son ETag, `"v<version>-<tag>"`).
+ */
 export interface CollectionSaved {
   version: number
+  tag: string
 }
 
 /** Le Pokédex public (`/api/vitrine`, `server/vitrine.ts`). */

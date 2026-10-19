@@ -6,7 +6,9 @@
   let stored = null
   try {
     stored = localStorage.getItem('pokedex-collection.theme')
-  } catch {}
+  } catch {
+    // Stockage bloqué : le thème du système.
+  }
   const system = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
   const theme = stored === 'light' || stored === 'dark' ? stored : system
   if (theme === 'light') {

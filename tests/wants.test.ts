@@ -5,7 +5,10 @@
  */
 
 import { describe, expect, test } from 'bun:test'
+import { Elysia } from 'elysia'
 import { wantsLine, wantsVersion } from '@/lib/cardmarket'
+import { referenceRoutes } from '../server/reference'
+import { testData } from './server'
 
 const CHARMANDER = 'Charmander [Blazing Destruction | Steady Firebreathing]'
 const TOXTRICITY = 'Toxtricity VMAX [G-Max Riot]'
@@ -126,5 +129,50 @@ describe('wantsLine', () => {
         only('Vending Machine (Green)'),
       ),
     ).toBeNull()
+  })
+})
+
+describe('/api/wants : les lignes tirées de la base (produits, catalogue, extensions)', () => {
+  const data = testData()
+  const api = new Elysia().group('/api', (group) => group.use(referenceRoutes(data)))
+  const wants = async (ids: string) =>
+    (await api.handle(new Request(`http://localhost/api/wants?ids=${ids}`))).json()
+
+  /** Rebellion Crash, ses deux Toxtricity VMAX (037 et 107), et deux produits sans ligne sûre. */
+  function seed() {
+    data.run("DELETE FROM cards WHERE set_id = 'ZZS2'")
+    data.run("DELETE FROM sets WHERE id = 'ZZS2'")
+    data.run('DELETE FROM cardmarket_products WHERE id BETWEEN 464054 AND 464061')
+    data.run(
+      "INSERT INTO sets (id, name, released, read_at) VALUES ('ZZS2', 'Rebellion Crash', '2019-12-06', '2026-10-01')",
+    )
+    const card = data.query(
+      `INSERT INTO cards (id, set_id, number, sort, name, cardmarket, seen)
+       VALUES (?, 'ZZS2', ?, ?, 'Toxtricity VMAX', ?, '2026-10-01')`,
+    )
+    card.run(990037, '037', 37, 464059)
+    card.run(990107, '107', 107, 464054)
+    const product = data.query(
+      'INSERT INTO cardmarket_products (id, name, expansion, metacard) VALUES (?, ?, ?, ?)',
+    )
+    product.run(464059, TOXTRICITY, 2800, 77)
+    product.run(464054, TOXTRICITY, 2800, 77)
+    // Retiré de la liste des produits : plus d'extension.
+    product.run(464060, 'Scoop Up Net', null, null)
+    // Sans métacarte (une ligne d'avant sa colonne) : pas de version sûre.
+    product.run(464061, CHARMANDER, 2800, null)
+  }
+
+  test('la version dans l’ordre des numéros imprimés, l’extension d’après le catalogue', async () => {
+    seed()
+    expect(await wants('464059,464054')).toEqual({
+      '464059': '1x Toxtricity VMAX G-Max Riot (V.1) (Rebellion Crash)',
+      '464054': '1x Toxtricity VMAX G-Max Riot (V.2) (Rebellion Crash)',
+    })
+  })
+
+  test('un produit retiré, sans métacarte, ou inconnu : pas de ligne (jamais une autre carte)', async () => {
+    seed()
+    expect(await wants('464060,464061,1')).toEqual({ '464060': null, '464061': null, '1': null })
   })
 })

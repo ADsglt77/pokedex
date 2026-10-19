@@ -2,8 +2,11 @@
  * Les données de référence, publiques, que remplissent les tâches d'ingestion (`ingest.ts`) :
  * - `GET /api/status` : la dernière réussite et le dernier passage de chaque tâche, et le jour des
  *   prix en base (la page Données le montre) ;
+ * - `GET /api/status/errors`, réservé au compte : la cause du dernier échec de chaque tâche en
+ *   échec (elle peut nommer une source : pas publique) ;
  * - `GET /api/health` : pour une surveillance (UptimeRobot…), 200 si chaque tâche nécessaire a
- *   réussi récemment (deux intervalles au plus, `isOverdue`), 503 sinon, avec les tâches en retard ;
+ *   réussi récemment (deux intervalles au plus, `isOverdue`) et que les prix ne sont pas figés
+ *   (`pricesFrozen`), 503 sinon, avec les tâches en retard ;
  * - `GET /api/species`, `/api/species/details` : les espèces, et ce qu'en montre la fiche ;
  * - `GET /api/catalog/species/:id` : les cartes Pokémon japonaises d'un Pokémon (la fenêtre
  *   d'ajout) ; `GET /api/catalog/sets` : les séries du catalogue ; `GET /api/catalog/sets/:id` :
@@ -28,8 +31,9 @@ import { Elysia, t } from 'elysia'
 import { INGEST_JOB_NAMES, INGEST_JOBS } from '@/config/jobs'
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { wantsLine, type ExpansionName } from '@/lib/cardmarket'
-import { isOverdue } from '@/lib/jobs'
-import type { JobStatus, PriceHistories, ServerStatus, WantsLines } from '@/types'
+import { isOverdue, pricesFrozen } from '@/lib/jobs'
+import type { JobErrors, JobStatus, PriceHistories, ServerStatus, WantsLines } from '@/types'
+import type { accountRoutes } from './auth'
 import { readSource } from './db'
 import { historyReader } from './history'
 import { readPrices } from './jobs/prices'
@@ -45,6 +49,35 @@ const idsPattern = (max: number) => `^[1-9]\\d{0,8}(,[1-9]\\d{0,8}){0,${max - 1}
 const eachId = <T>(ids: string, read: (id: number) => T) =>
   Object.fromEntries([...new Set(ids.split(','))].map((id) => [id, read(Number(id))]))
 
+/** `/api/status/errors` : la cause du dernier échec de chaque tâche en échec, pour le compte. */
+export function jobErrorsRoutes(data: Database, account: ReturnType<typeof accountRoutes>) {
+  /** La cause du dernier passage de chaque tâche, quand il a échoué. */
+  const failures = data.query(
+    `SELECT job, message FROM runs
+     WHERE id IN (SELECT MAX(id) FROM runs WHERE finished_at IS NOT NULL GROUP BY job)
+       AND ok = 0 AND message IS NOT NULL`,
+  )
+  return new Elysia({ name: 'job-errors' })
+    .use(account)
+    .get(
+      '/status/errors',
+      (): JobErrors =>
+        Object.fromEntries(
+          (failures.all() as { job: string; message: string }[]).map(({ job, message }) => [
+            job,
+            message.slice(0, 500),
+          ]),
+        ),
+      {
+        auth: true,
+        detail: {
+          summary: 'La cause du dernier échec de chaque tâche en échec (le compte)',
+          tags: ['Référence'],
+        },
+      },
+    )
+}
+
 export function referenceRoutes(data: Database) {
   const runs = data.query(
     `SELECT job, MAX(CASE WHEN ok = 1 THEN finished_at END) AS lastSuccess,
@@ -57,9 +90,11 @@ export function referenceRoutes(data: Database) {
   // extension, lui compris, d'après le catalogue (`null` : absent du catalogue, ou plusieurs
   // numéros) ; les noms des séries du catalogue de son extension, chacun avec le nombre
   // d'extensions dont des cartes du catalogue portent ce nom (calculé une fois par nom : `GROUP BY`).
+  // Sans métacarte (un produit que Cardmarket ne range sous aucune) : pas de version sûre, donc
+  // pas de ligne.
   const product = data.query(
     `SELECT name, expansion, metacard FROM cardmarket_products
-     WHERE id = ? AND expansion IS NOT NULL`,
+     WHERE id = ? AND expansion IS NOT NULL AND metacard IS NOT NULL`,
   )
   const sameCard = data.query(
     `SELECT products.id,
@@ -109,11 +144,19 @@ export function referenceRoutes(data: Database) {
     const source = readSource(data, 'cardmarket')
     return source && `${source.stamp}|${source.date}|${what}`
   }
+  /**
+   * Une réponse tirée des prix et son ETag, lus dans une même transaction : la tâche `prices`
+   * écrivant entre les deux, des prix neufs partiraient sinon avec l'ancien ETag.
+   */
+  const pricesAnswer = (request: Request, what: string, read: () => unknown) =>
+    data.transaction(() => {
+      const tag = pricesTag(what)
+      return tag ? serveTagged(request, tag, read) : notFound()
+    })()
   /** Les prix du jour des cartes `ids`, avec leur ETag. */
   function pricesOf({ query, request }: { query: { ids: string }; request: Request }) {
     const ids = [...new Set(query.ids.split(','))]
-    const tag = pricesTag(`prices:${ids.join()}`)
-    return tag ? serveTagged(request, tag, () => readPrices(data, ids.map(Number))) : notFound()
+    return pricesAnswer(request, `prices:${ids.join()}`, () => readPrices(data, ids.map(Number)))
   }
   /** Une réponse calculée en fin de tâche. */
   const snapshot =
@@ -143,9 +186,14 @@ export function referenceRoutes(data: Database) {
         const rows = runs.all() as ({ job: string } & JobStatus)[]
         const successes = new Map(rows.map(({ job, lastSuccess }) => [job, lastSuccess]))
         const now = Date.now()
-        // Les images sont facultatives : le serveur copie à la demande celles affichées.
+        // Les images sont facultatives : le serveur copie à la demande celles affichées. Des prix
+        // figés (le guide inchangé depuis plus de deux jours) comptent comme une tâche en retard :
+        // chaque jour perdu manque pour toujours à l'historique.
+        const frozen = pricesFrozen(readSource(data, 'cardmarket')?.date ?? null, now)
         const late = INGEST_JOB_NAMES.filter(
-          (job) => !INGEST_JOBS[job].optional && isOverdue(job, successes.get(job) ?? null, now),
+          (job) =>
+            (!INGEST_JOBS[job].optional && isOverdue(job, successes.get(job) ?? null, now)) ||
+            (job === 'prices' && frozen),
         )
         if (late.length > 0) set.status = 503
         return { ok: late.length === 0, late }
@@ -188,11 +236,9 @@ export function referenceRoutes(data: Database) {
     })
     .get(
       '/prices/:id',
-      ({ params, request }) => {
-        // Pas de 404 retenu : la carte peut avoir un prix au prochain passage.
-        const tag = pricesTag(`history:${params.id}`)
-        return tag ? serveTagged(request, tag, () => readHistory(params.id)) : notFound()
-      },
+      // Pas de 404 retenu : la carte peut avoir un prix au prochain passage.
+      ({ params, request }) =>
+        pricesAnswer(request, `history:${params.id}`, () => readHistory(params.id)),
       {
         params: t.Object({ id: t.Integer({ minimum: 1, maximum: 999_999_999 }) }),
         ...doc('L’historique des prix d’une carte Cardmarket'),
@@ -200,12 +246,10 @@ export function referenceRoutes(data: Database) {
     )
     .get(
       '/histories',
-      ({ query, request }) => {
-        const tag = pricesTag(`histories:${query.ids}`)
-        return tag
-          ? serveTagged(request, tag, (): PriceHistories => eachId(query.ids, readHistory))
-          : notFound()
-      },
+      ({ query, request }) =>
+        pricesAnswer(request, `histories:${query.ids}`, (): PriceHistories =>
+          eachId(query.ids, readHistory),
+        ),
       {
         // Les historiques d'une collection : une carte par Pokémon au plus.
         query: t.Object({ ids: t.String({ pattern: idsPattern(TOTAL_SPECIES) }) }),
@@ -223,7 +267,8 @@ export function referenceRoutes(data: Database) {
         return eachId(query.ids, (id) => wantsLineOf(id, known))
       },
       {
-        query: t.Object({ ids: t.String({ pattern: idsPattern(2000) }) }),
+        // Les cartes d'une commande : une par Pokémon au plus (et une adresse que nginx accepte).
+        query: t.Object({ ids: t.String({ pattern: idsPattern(TOTAL_SPECIES) }) }),
         ...doc('Les lignes de cartes Cardmarket pour une liste de souhaits Cardmarket'),
       },
     )

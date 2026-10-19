@@ -4,14 +4,14 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
 
 - Une carte (`PokemonCard`) : id `manual:<uuid>`, ses Pokémon (`dexIds`), une référence (vide à la
   saisie : le nom de la carte chez Cardmarket, sinon le nom du Pokémon), son image (`image` :
-  celle de Pokécardex en deux tailles (ou de TCGplayer, d'une ancienne version), ou l'adresse
+  celle de Pokécardex en deux tailles, ou l'adresse
   collée, `small` = `large` ; `null` sans image),
   son id Cardmarket (`cardmarket`) et sa page chez Cardmarket (`page`), tous deux facultatifs ;
   sans page notée, le lien « Voir sur Cardmarket » se fait par l'id (`cardmarketPage`). Il
   ouvre les offres en japonais, Near Mint au moins (`?language=7&minCondition=2`).
   Une par Pokémon : on la corrige (« Modifier la carte », même id, son statut et ses achats la
   suivent) ou on la retire (« Retirer la carte » : avec son statut et son prix payé ; confirmation si elle est possédée ; impossible tant qu'une commande la contient) avant
-  d'en ajouter une autre. Si une ancienne version en a gardé plusieurs, la première compte.
+  d'en ajouter une autre. Si un fichier importé en a plusieurs, la première compte.
   Une carte de plusieurs Pokémon (TAG TEAM : `dexIds` en a plusieurs) est **une seule carte**,
   achetée une fois (décision de l'utilisateur, octobre 2026) : choisie dans le catalogue, elle va
   aussi à ceux de ses Pokémon qui n'ont pas de carte (`cardSpecies`, le Pokémon de la fiche en
@@ -53,7 +53,9 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   (le site a changé : on ne le sollicite pas davantage). Une série qui donne moins de la moitié
   des cartes qu'elle avait est refusée (format des pages changé : rien n'est gardé, c'est un échec).
   Une page sans cartes (série annoncée, ou
-  site changé) ne retire rien et n'est pas notée : elle est relue au passage suivant. Tant qu'aucune
+  site changé) ne retire rien et n'est pas notée : elle est relue au passage suivant ; plus de la
+  moitié des séries déjà connues relues rendues sans cartes, et la tâche échoue (le champ des
+  cartes renommé : sans quoi un catalogue figé, sans un mot ; la page Données en dit la cause). Tant qu'aucune
   carte n'a été lue, rien n'est publié : les réponses du catalogue répondent 404 (« pas disponible »).
   Une carte qu'une lecture de sa série ne voit plus est retirée (`seen`). Sans serveur, la fenêtre
   d'ajout et la page Catalogue le disent (« pas disponible pour le moment »).
@@ -156,16 +158,19 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   tâche échoue à la fin (à la 20e erreur, elle s'arrête : la source est sans doute en panne).
   Une image absente du volume (référence saisie hors du
   catalogue, image pas encore copiée) est copiée à la demande par le serveur (`serveImage` :
-  seulement les chemins plausibles, `plausible` : chez Pokécardex, une série du catalogue et un
-  numéro d'image jusqu'au plus grand des siens, le logo d'une série du catalogue, un type de
-  `CARD_TYPES`, une rareté connue ; un Pokémon de 1 à 1 025 ; jamais plus chez TCGplayer ; une absence retenue une semaine ; une source en panne :
+  seulement les chemins connus et plausibles, chacun avec son adresse d'origine dans une seule table,
+  `UPSTREAMS` de `server/images.ts` : chez Pokécardex, une série du catalogue et un numéro d'image
+  jusqu'au plus grand des siens, le logo d'une série du catalogue, un type de `CARD_TYPES`, une
+  rareté connue ; un Pokémon de 1 à 1 025 ; le chemin d'une image de
+  carte et son adresse d'origine sont ceux de `card-images.ts`, `SCAN_PATH` et `scanUrl`, que lit
+  aussi le navigateur : il ne construit jamais un chemin que le serveur refuserait, et une adresse
+  de Pokécardex d'une autre forme n'est jamais chargée depuis ses serveurs, pas d'image ; une
+  image écrite d'un coup, son fichier provisoire retiré si l'écriture échoue ; une absence retenue une semaine ; une source en panne :
   502, et « Image non copiée » au journal ; nginx laisse passer jusqu'à 60 copies d'un coup puis
   10 par seconde, sans faire attendre, `nodelay`, et le serveur en télécharge 4 à la fois, sans la
   pause de la tâche, 15 s au plus). Une image copiée est gardée un an par le navigateur, sans
-  redemande (`immutable` : `mirror` ne réécrit jamais un fichier qui existe). Les images de TCGplayer qu'une ancienne version a enregistrées
-  s'affichent encore si le volume en a la copie (jamais plus copiées) ;
-  Données › « Chercher les images » les remplace par celles de Pokécardex, comme il cherche celles
-  des cartes sans image. `findCardImage` (`lib/card-catalog.ts`) : l'image du catalogue pour
+  redemande (`immutable` : `mirror` ne réécrit jamais un fichier qui existe). Données › « Chercher
+  les images » cherche d'un coup celles des cartes sans image. `findCardImage` (`lib/card-catalog.ts`) : l'image du catalogue pour
   cette référence (lue dans sa série : `/api/catalog/sets`, puis `/api/catalog/sets/<code>`), sinon celle que la référence désigne, si elle se charge (sans réponse en 10 s :
   absente, pour ne pas bloquer l'enregistrement) ; la saisie le dit, sans nommer de source (aucun
   crédit dans l'app, à la demande de l'utilisateur, octobre 2026 : CLAUDE.md). Un échec

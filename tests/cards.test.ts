@@ -1,9 +1,14 @@
-/** Retirer la carte d'un Pokémon : une carte TAG TEAM, achetée une fois, reste aux autres. */
+/**
+ * Retirer la carte d'un Pokémon : une carte TAG TEAM, achetée une fois, reste aux autres. Et les
+ * règles de la collection et des commandes ne modifient jamais ce qu'elles reçoivent : « Annuler »
+ * remet l'état d'avant, qu'une règle qui le modifierait aurait déjà changé.
+ */
 
 import { describe, expect, test } from 'bun:test'
-import { removeCard } from '@/lib/collection'
+import { removeCard, saveCard, setCardStatus, setPaidPrice } from '@/lib/collection'
+import { applyOrder, isInAnOrder } from '@/lib/orders'
 import type { CollectionData } from '@/types'
-import { card, collectionWith, NOW, ownership } from './fixtures'
+import { card, collectionWith, line, NOW, order, ownership } from './fixtures'
 
 const withCard = (dexIds: number[]): CollectionData => ({
   ...collectionWith({ a: ownership('owned', { paidPrice: 42.5 }) }),
@@ -22,5 +27,27 @@ describe('retirer une carte', () => {
     const data = removeCard(withCard([25]), 'a', 25, NOW)
     expect(data.customCards.a).toBeUndefined()
     expect(data.cards.a).toBeUndefined()
+  })
+})
+
+describe('les règles ne modifient pas ce qu’elles reçoivent (« Annuler »)', () => {
+  test('statut, prix payé, carte enregistrée, retirée, commande reportée', () => {
+    const data = withCard([25, 644])
+    const before = structuredClone(data)
+    setCardStatus(data, data.customCards.a!, null, NOW)
+    setPaidPrice(data, data.customCards.a!, 10, NOW)
+    saveCard(data, card('b', [1]), NOW)
+    removeCard(data, 'a', 25, NOW)
+    const placed = order({ lines: [line('a', 12)] })
+    const placedBefore = structuredClone(placed)
+    applyOrder(data, null, placed, [], NOW)
+    expect(data).toEqual(before)
+    expect(placed).toEqual(placedBefore)
+  })
+
+  test('une carte d’une commande (en cours, reçue ou annulée) : retenue', () => {
+    const orders = [order({ lines: [line('a', 12)], state: 'cancelled' })]
+    expect(isInAnOrder(orders, 'a')).toBe(true)
+    expect(isInAnOrder(orders, 'b')).toBe(false)
   })
 })

@@ -40,17 +40,6 @@ export function withPrice(
   return { year, first, prices }
 }
 
-/** Les années d'un historique (`from`, un prix par jour) : sa forme en base. */
-export function splitYears({ from, prices }: Pick<CardPriceHistory, 'from' | 'prices'>) {
-  const years = new Map<number, HistoryYear>()
-  prices.forEach((price, index) => {
-    if (price === null) return
-    const [year, day] = yearDay(addDays(from, index))
-    years.set(year, withPrice(years.get(year), year, day, price))
-  })
-  return [...years.values()]
-}
-
 /**
  * Les années, dans l'ordre, mises bout à bout : un prix par jour, du premier au dernier prix ;
  * `null` si aucune n'en a.

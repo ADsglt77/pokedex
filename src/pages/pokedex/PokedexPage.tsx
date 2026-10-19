@@ -1,6 +1,6 @@
 import { Button, EmptyState } from '@camply/ui'
 import { Layers, SearchX } from '@camply/ui/icons'
-import { useDeferredValue, useMemo, useState } from 'react'
+import { useDeferredValue, useMemo, useRef, useState } from 'react'
 import { Link, useNavigationType } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { useFollowLinks } from '@/hooks/useFollowLinks'
@@ -13,9 +13,13 @@ import {
   POSSESSIONS,
   type PossessionFilter,
 } from '@/lib/filters'
+import { focusAfter } from '@/lib/focus'
 import { formatInteger, pageTitle, plural } from '@/lib/format'
 import { PokedexGrid } from '@/components/PokedexGrid'
 import { PokedexToolbar } from './PokedexToolbar'
+
+/** Où le routeur garde les positions de défilement (sa clé par défaut). */
+const SCROLL_POSITIONS = 'react-router-scroll-positions'
 
 /** Les pochettes du premier affichage : plus qu'un grand écran n'en montre. */
 const FIRST_TILES = 60
@@ -24,6 +28,19 @@ const FIRST_TILES = 60
  * Le classeur : les 1 025 Pokémon, filtrés par la barre d'outils (filtres dans l'adresse). Chaque
  * filtre rapide dit combien de Pokémon il montrerait, les autres filtres appliqués.
  */
+/**
+ * Le routeur garde-t-il une position de défilement pour cette adresse (`ScrollRestoration`, la
+ * coquille : sous l'adresse du Pokédex et ses filtres, dans le stockage de la session) ?
+ */
+function hasScrollPosition() {
+  try {
+    const positions = JSON.parse(sessionStorage.getItem(SCROLL_POSITIONS) ?? '{}') as object
+    return Object.hasOwn(positions, location.pathname + location.search)
+  } catch {
+    return false
+  }
+}
+
 export function PokedexPage() {
   const pokedex = usePokedex()
   const [filters, setFilters] = usePokedexFilters()
@@ -41,10 +58,11 @@ export function PokedexPage() {
   const shown = useMemo(() => new Set(visible.map((entry) => entry.species.id)), [visible])
   // Au premier affichage, les pochettes d'un écran d'abord, toutes les autres juste après, en
   // arrière-plan : la page paraît sans attendre les 1 025 (la coquille la garde ensuite en vie). Pas
-  // en revenant en arrière : le défilement retrouvé a besoin de toute la hauteur.
+  // en revenant en arrière, ni par un lien quand une position est gardée pour cette adresse (après
+  // un rechargement) : le défilement retrouvé a besoin de toute la hauteur.
   const navigationType = useNavigationType()
   const [firstEntries] = useState(() =>
-    navigationType === 'POP' ? ordered : ordered.slice(0, FIRST_TILES),
+    navigationType === 'POP' || hasScrollPosition() ? ordered : ordered.slice(0, FIRST_TILES),
   )
   const gridEntries = useDeferredValue(ordered, firstEntries)
   const counts = useMemo(
@@ -57,7 +75,13 @@ export function PokedexPage() {
       ) as Record<PossessionFilter, number>,
     [pokedex.entries, shownFilters],
   )
+  // Plusieurs générations montrées : leurs intertitres, dès le premier affichage (`PokedexGrid`).
+  const manyGenerations = useMemo(
+    () => new Set(visible.map((entry) => entry.species.generation)).size > 1,
+    [visible],
+  )
   const filtering = filters.search.trim() !== '' || activeFilterCount(filters) > 0
+  const search = useRef<HTMLInputElement>(null)
   const resetFilters = () => setFilters(DEFAULT_FILTERS)
   // Les pochettes sont de simples liens (`PokedexTile`), suivis par le routeur.
   const followTile = useFollowLinks()
@@ -85,11 +109,17 @@ export function PokedexPage() {
         counts={counts}
         resultCount={filtering ? visible.length : null}
         onReset={resetFilters}
+        search={search}
       />
 
       {/* Le clic se lit ici, une fois pour toute la grille (pas un gestionnaire par pochette). */}
       <div onClick={followTile} hidden={visible.length === 0}>
-        <PokedexGrid entries={gridEntries} shown={shown} generations={pokedex.generations} />
+        <PokedexGrid
+          entries={gridEntries}
+          shown={shown}
+          generations={pokedex.generations}
+          headings={manyGenerations}
+        />
       </div>
       {visible.length === 0 && (
         <EmptyState
@@ -97,7 +127,12 @@ export function PokedexPage() {
           icon={<SearchX size={22} />}
           title="Aucun Pokémon ne correspond à ces filtres"
           description="Essayez une autre recherche, ou élargissez les filtres."
-          actions={<Button onClick={resetFilters}>Réinitialiser les filtres</Button>}
+          // Le message et son bouton disparaissent : le focus va à la recherche.
+          actions={
+            <Button onClick={() => focusAfter(resetFilters, search)}>
+              Réinitialiser les filtres
+            </Button>
+          }
         />
       )}
     </div>

@@ -37,6 +37,15 @@ describe('shownCollection', () => {
     expect(shown.customCards.a).toEqual(card('a', [25], { cardmarket: 719445 }))
     expect(JSON.stringify(shown)).not.toContain('cardmarket.com')
   })
+
+  test('l’image : ses deux adresses seulement, rien de ce qu’un fichier y aurait glissé', () => {
+    const image = { small: 'https://exemple.fr/s.png', large: 'https://exemple.fr/l.png' }
+    const withExtra = {
+      ...collection,
+      customCards: { a: card('a', [25], { image: { ...image, note: 'payée 30 €' } as never }) },
+    }
+    expect(shownCollection(withExtra).customCards.a?.image).toEqual(image)
+  })
 })
 
 describe('vitrineSummary', () => {

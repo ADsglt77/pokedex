@@ -7,36 +7,41 @@
  * le Pokédex public (`account`, `router.tsx`).
  *
  * Cet appareil note la dernière version échangée (`pokedex-collection.sync`, partagée par ses
- * onglets) : sa collection a changé quand son empreinte n'est plus celle-là. Un seul onglet
- * synchronise à la fois (`navigator.locks`).
+ * onglets) : son numéro, l'empreinte que lui donne le serveur (un numéro peut revenir après une
+ * restauration de sa base), et l'empreinte de son document : sa collection a changé quand son
+ * empreinte n'est plus celle-là. Un seul onglet synchronise à la fois (`navigator.locks`).
  */
 
 import { create } from 'zustand'
 import { forget } from '@/lib/api'
 import { emptyCollection } from '@/lib/collection'
 import { emptyShopping } from '@/lib/orders'
-import { decide, documentHash, isEmptyDocument, type SyncDocument } from '@/lib/sync'
-import { parseStored, readCollection, readShopping } from '@/lib/transfer'
+import {
+  decide,
+  documentHash,
+  isEmptyDocument,
+  type SyncDocument,
+  type SyncVersion,
+} from '@/lib/sync'
+import { documentProblem, parseStored, readCollection, readShopping } from '@/lib/transfer'
 import { useCollectionStore } from '@/store/collection'
 import { currentDocument, replaceDocument, sameDocument } from '@/store/document'
 import { useShoppingStore } from '@/store/shopping'
 import type { AccountUser, CollectionResponse, CollectionSaved } from '@/types'
-import { readStored, writeStored } from './persist'
+import { readStored, useStorageFailure, writeStored } from './persist'
 
 /**
  * - `syncing`, `synced` ;
  * - `offline` : le serveur ne répond pas, la copie locale attend ;
  * - `expired` : la session a expiré, il faut se reconnecter ;
  * - `conflict` : les deux versions ont changé, l'utilisateur choisit (`conflict`) ;
- * - `refused` : le serveur refuse la collection (elle ne passe pas ses contrôles).
+ * - `refused` : le serveur refuse la collection (`refusal` dit pourquoi).
  */
 export type SyncStatus = 'syncing' | 'synced' | 'offline' | 'expired' | 'conflict' | 'refused'
 
 /** La version du serveur, telle qu'il l'envoie. */
-interface ServerDocument {
-  version: number
+interface ServerDocument extends SyncVersion {
   document: SyncDocument
-  hash: string
 }
 
 export const useSyncStore = create<{
@@ -51,7 +56,9 @@ export const useSyncStore = create<{
   conflict: ServerDocument | null
   /** Le conflit dont la question a été fermée (« Plus tard ») ; un nouveau la rouvre. */
   dismissed: ServerDocument | null
-}>(() => ({ account: null, status: 'syncing', conflict: null, dismissed: null }))
+  /** Pourquoi le serveur refuse la collection (statut `refused`) : à dire dans le menu du compte. */
+  refusal: string | null
+}>(() => ({ account: null, status: 'syncing', conflict: null, dismissed: null, refusal: null }))
 
 /**
  * Ferme la question du conflit en cours (`open` à faux) ou la rouvre. Gardé ici, pas dans le menu
@@ -65,24 +72,42 @@ const BASE_KEY = 'pokedex-collection.sync'
 /** Le compte connecté ; `null` : pas de synchronisation. */
 let user: string | null = null
 
-/** La dernière version échangée par cet appareil, si c'est avec ce compte. */
-function readBase() {
-  const base = parseStored(readStored(BASE_KEY)) as {
-    user?: unknown
-    version?: unknown
-    hash?: unknown
-  } | null
-  return base?.user === user && typeof base?.version === 'number' && typeof base.hash === 'string'
-    ? { version: base.version, hash: base.hash }
-    : null
+/** Ce que cet appareil garde de la dernière version échangée, tel qu'enregistré. */
+const readBaseRecord = () => parseStored(readStored(BASE_KEY)) as Record<string, unknown> | null
+
+/** La dernière fois (ms) que cet onglet a noté une version échangée. */
+let rebasedAt = 0
+
+/**
+ * La dernière version échangée par cet appareil, si c'est avec ce compte. Aucune tant qu'une
+ * collection illisible a été remplacée par une vide (`setAsideUnreadable`), jusqu'à la prochaine
+ * version échangée : ce vide serait sinon envoyé comme un effacement voulu (`decide` propose alors
+ * la version du serveur, ou la question).
+ */
+function readBase(): SyncVersion | null {
+  const { unreadableAt } = useStorageFailure.getState()
+  if (unreadableAt !== null && rebasedAt <= unreadableAt) return null
+  const base = readBaseRecord()
+  if (base?.user !== user || typeof base?.version !== 'number' || typeof base.hash !== 'string') {
+    return null
+  }
+  const tag = typeof base.tag === 'string' ? base.tag : undefined
+  return { version: base.version, hash: base.hash, tag }
 }
 
-function writeBase(version: number, hash: string) {
+function writeBase({ version, hash, tag }: SyncVersion) {
+  rebasedAt = Date.now()
   // L'e-mail et le pseudo aussi : hors ligne au démarrage, le menu du compte les montre encore.
   // Sans stockage, le bandeau d'échec le dit ; la version sera redemandée.
   const { email, name } = useSyncStore.getState().account ?? {}
-  writeStored(BASE_KEY, JSON.stringify({ user, email, name, version, hash }))
+  writeStored(BASE_KEY, JSON.stringify({ user, email, name, version, hash, tag }))
 }
+
+/** L'ETag d'une version (`server/collection.ts`) : `"v<numéro>-<empreinte>"`. */
+const etagOf = ({ version, tag }: SyncVersion) => (tag ? `"v${version}-${tag}"` : undefined)
+
+/** L'empreinte de version d'une réponse du serveur (son ETag) ; `undefined` sans elle. */
+const tagOf = (response: Response) => /"v\d+-(\w+)"/.exec(response.headers.get('ETag') ?? '')?.[1]
 
 const setStatus = (status: SyncStatus) => useSyncStore.setState({ status })
 
@@ -113,7 +138,7 @@ export function startSession(account: AccountUser | null | undefined) {
     if (account) signIn(account)
     return
   }
-  const base = parseStored(readStored(BASE_KEY)) as Record<string, unknown> | null
+  const base = readBaseRecord()
   const text = (value: unknown) => (typeof value === 'string' ? value : '')
   if (typeof base?.user === 'string') {
     signIn({ id: base.user, email: text(base.email), name: text(base.name) })
@@ -124,8 +149,14 @@ export function startSession(account: AccountUser | null | undefined) {
  * Ce navigateur a-t-il déjà été synchronisé avec le compte (et pas déconnecté depuis) ? Il peut
  * alors démarrer sans la réponse du serveur, comme hors ligne (`startSession`).
  */
-export const syncedBefore = () =>
-  typeof (parseStored(readStored(BASE_KEY)) as Record<string, unknown> | null)?.user === 'string'
+export const syncedBefore = () => typeof readBaseRecord()?.user === 'string'
+
+/**
+ * Le serveur vient de répondre « sans session » (401) à une action du compte (mot de passe,
+ * pseudo : une connexion sur un autre appareil a fermé celle-ci) : le menu du compte propose de
+ * se reconnecter.
+ */
+export const markExpired = () => setStatus('expired')
 
 /** Le pseudo vient de changer (Données › Mon compte). */
 export function renameAccount(name: string) {
@@ -143,6 +174,11 @@ function offline() {
   setStatus('offline')
   clearTimeout(retry)
   if (user) retry = setTimeout(() => void sync(), 30_000)
+}
+
+/** Refusée par le serveur : rien ne repart tout seul, le menu du compte dit pourquoi. */
+function refused(refusal: string) {
+  useSyncStore.setState({ status: 'refused', refusal })
 }
 
 /** Un appel à l'API ; `null` sans réponse (hors ligne, serveur arrêté). */
@@ -167,30 +203,66 @@ async function call(method: 'GET' | 'PUT', init: { body?: string; etag?: string 
 async function readServer(response: Response): Promise<ServerDocument | null> {
   const body = (await response.json()) as CollectionResponse
   if (!body.collection || !body.shopping) return null
-  // Lu comme le stockage du navigateur : un document d'une ancienne version (« souhaitée ») aussi.
+  // Lu comme le stockage du navigateur : seuls ses champs connus.
   const document = {
     collection: readCollection(body.collection)!,
     shopping: readShopping(body.shopping)!,
   }
-  return { version: body.version, document, hash: await documentHash(document) }
+  const hash = await documentHash(document)
+  return { version: body.version, hash, tag: tagOf(response), document }
 }
 
-/** Envoie le document : `true` s'il est enregistré, `false` si le serveur a changé depuis. */
-async function push(document: SyncDocument, hash: string, baseVersion: number) {
-  const response = await call('PUT', { body: JSON.stringify({ baseVersion, ...document }) })
-  if (!response) return offline()
-  if (response.status === 401) return setStatus('expired')
-  if (response.status === 409) return false
-  // Refusé : le document ne passe pas les contrôles du serveur. Toute autre erreur (502 pendant
-  // un redémarrage…) est une panne passagère : l'envoi repartira.
-  if (response.status === 400 || response.status === 422) return setStatus('refused')
-  if (!response.ok) return offline()
-  const body = (await response.json().catch(() => null)) as CollectionSaved | null
-  // Une réponse illisible (coupée en route) : l'envoi est peut-être passé, on comparera de nouveau.
-  if (!body) return offline()
-  writeBase(body.version, hash)
-  setStatus('synced')
-  return true
+/**
+ * Le dernier envoi resté sans réponse (coupé, délai dépassé) : il est peut-être enregistré. Si le
+ * serveur montre ensuite ce document à la version attendue, c'est celui de cet appareil : il
+ * devient la version échangée, sans fausse question de conflit.
+ */
+let sent: { version: number; hash: string } | null = null
+
+/**
+ * Envoie le document à partir de la version `base` : `saved` s'il est enregistré, `stale` si le
+ * serveur a changé depuis (on compare de nouveau), `stopped` sinon (hors ligne, session expirée,
+ * refusé : le statut le dit).
+ */
+async function push(
+  document: SyncDocument,
+  hash: string,
+  base: { version: number; tag?: string },
+): Promise<'saved' | 'stale' | 'stopped'> {
+  sent = { version: base.version + 1, hash }
+  const body = JSON.stringify({ baseVersion: base.version, baseTag: base.tag, ...document })
+  const response = await call('PUT', { body })
+  // Sans réponse, ou une réponse illisible (coupée en route), ou une panne passagère (502 pendant
+  // un redémarrage…) : l'envoi est peut-être passé (`sent`), il repartira.
+  const saved =
+    response?.ok && ((await response.json().catch(() => null)) as CollectionSaved | null)
+  if (saved) {
+    sent = null
+    writeBase({ version: saved.version, hash, tag: saved.tag })
+    setStatus('synced')
+    return 'saved'
+  }
+  if (!response || response.ok || response.status >= 500) {
+    offline()
+    return 'stopped'
+  }
+  sent = null
+  if (response.status === 409) return 'stale'
+  if (response.status === 401) {
+    setStatus('expired')
+    return 'stopped'
+  }
+  // Refusé, pour de bon : un document qui ne passe pas les contrôles du serveur (la règle en
+  // cause, relue ici avec le même code), trop gros, ou une origine refusée (l'adresse du site
+  // n'est pas celle que connaît le serveur).
+  refused(
+    response.status === 403
+      ? 'il refuse les envois depuis cette adresse, que son réglage BETTER_AUTH_URL ne nomme pas'
+      : response.status === 413
+        ? 'elle dépasse 5 Mo'
+        : (documentProblem(document) ?? 'elle ne passe pas ses contrôles'),
+  )
+  return 'stopped'
 }
 
 /** Une synchronisation à la fois, tous onglets confondus (sans `navigator.locks` : cet onglet). */
@@ -203,49 +275,69 @@ export function sync(): Promise<void> {
   return exclusive(async () => {
     try {
       await compare()
-    } catch {
+    } catch (error) {
       // Une réponse illisible (coupée, délai dépassé pendant sa lecture) : une panne passagère.
+      // Écrite en console : une erreur du code se lirait sinon comme « Hors ligne ».
+      console.error('Synchronisation interrompue', error)
       offline()
     }
   })
 }
+
+/** Le texte enregistré de la version échangée quand le conflit est apparu (`keepServer`). */
+let conflictBase: string | null = null
 
 /** Le tour de `sync`, sous le verrou. */
 async function compare() {
   // Un autre appareil peut écrire entre la lecture et l'envoi : on recommence alors.
   for (let attempt = 0; attempt < 3 && user; attempt++) {
     if (useSyncStore.getState().status !== 'synced') setStatus('syncing')
-    const base = readBase()
+    let base = readBase()
     const document = currentDocument()
     const hash = await documentHash(document)
-    const response = await call('GET', { etag: base ? `"v${base.version}"` : undefined })
+    const response = await call('GET', { etag: base ? etagOf(base) : undefined })
     // Déconnecté pendant l'échange : plus rien à synchroniser.
     if (!user) return
     if (!response) return offline()
     if (response.status === 401) return setStatus('expired')
-    if (response.status !== 304 && !response.ok) return offline()
-    // 304 : le serveur en est toujours à la version échangée.
-    const server = response.status === 304 ? null : await readServer(response)
-    const current =
-      response.status === 304
-        ? { ...base!, empty: false }
-        : {
-            version: server?.version ?? 0,
-            hash: server?.hash ?? null,
-            empty: !server || isEmptyDocument(server.document),
-          }
+
+    if (response.status === 304) {
+      // Le serveur en est toujours à la version échangée (un 304 ne répond qu'à elle).
+      const known = base!
+      if (hash === known.hash) return setStatus('synced')
+      if ((await push(document, hash, known)) !== 'stale') return
+      continue
+    }
+
+    if (!response.ok) return offline()
+    const server = await readServer(response)
+    // Le dernier envoi, resté sans réponse, était passé : il devient la version échangée.
+    if (server && sent && server.version === sent.version && server.hash === sent.hash) {
+      writeBase(server)
+      base = server
+      sent = null
+    }
+    const current = {
+      version: server?.version ?? 0,
+      hash: server?.hash ?? null,
+      tag: server?.tag,
+      empty: !server || isEmptyDocument(server.document),
+    }
     const step = decide({ hash, empty: isEmptyDocument(document) }, base, current)
     if (step === 'noop') return setStatus('synced')
     if (step === 'adopt') {
       // Modifiée pendant l'échange : reprendre celle du serveur l'effacerait, on compare de
       // nouveau.
       if (!sameDocument(currentDocument(), document)) continue
-      writeBase(server!.version, server!.hash)
+      writeBase(server!)
       if (server!.hash !== hash) replaceDocument(server!.document)
       return setStatus('synced')
     }
-    if (step === 'conflict') return useSyncStore.setState({ status: 'conflict', conflict: server })
-    if ((await push(document, hash, current.version)) !== false) return
+    if (step === 'conflict') {
+      conflictBase = readStored(BASE_KEY)
+      return useSyncStore.setState({ status: 'conflict', conflict: server })
+    }
+    if ((await push(document, hash, current)) !== 'stale') return
   }
   // Trois essais sans aboutir (le serveur ou cet appareil changeait à chaque fois) : on
   // recommencera plus tard, comme après une panne, plutôt que de rester « en cours ».
@@ -257,32 +349,51 @@ export async function keepThisDevice() {
   const { conflict } = useSyncStore.getState()
   if (!conflict) return
   useSyncStore.setState({ status: 'syncing', conflict: null })
-  await exclusive(async () => {
-    const document = currentDocument()
-    await push(document, await documentHash(document), conflict.version)
-  })
-  // Le serveur a encore changé depuis (409, le statut est resté « syncing ») : on compare de
-  // nouveau.
-  if (useSyncStore.getState().status === 'syncing') await sync()
+  try {
+    await exclusive(async () => {
+      const document = currentDocument()
+      await push(document, await documentHash(document), conflict)
+    })
+    // Le serveur a encore changé depuis (409, le statut est resté « syncing ») : on compare de
+    // nouveau.
+    if (useSyncStore.getState().status === 'syncing') await sync()
+  } catch (error) {
+    console.error('Envoi interrompu', error)
+    offline()
+  }
 }
 
-/** Conflit : reprend la version du serveur, à la place de celle de cet appareil. */
+/**
+ * Conflit : reprend la version du serveur, à la place de celle de cet appareil. Si la version
+ * échangée a changé depuis la question (le conflit réglé dans un autre onglet), rien n'est repris :
+ * on compare de nouveau.
+ */
 export function keepServer() {
   const { conflict } = useSyncStore.getState()
   if (!conflict) return
-  writeBase(conflict.version, conflict.hash)
+  if (readStored(BASE_KEY) !== conflictBase) {
+    useSyncStore.setState({ status: 'syncing', conflict: null })
+    void sync()
+    return
+  }
+  writeBase(conflict)
   replaceDocument(conflict.document)
   useSyncStore.setState({ status: 'synced', conflict: null })
 }
 
 /**
  * Les modifications de cet appareil pas encore envoyées (la dernière synchronisation a échoué) :
- * à dire avant de se déconnecter, qui les effacerait.
+ * à dire avant de se déconnecter, qui les effacerait. Dans le doute (une erreur), oui.
  */
 export async function hasUnsentChanges() {
-  await sync()
-  const document = currentDocument()
-  return !isEmptyDocument(document) && readBase()?.hash !== (await documentHash(document))
+  try {
+    await sync()
+    const document = currentDocument()
+    return !isEmptyDocument(document) && readBase()?.hash !== (await documentHash(document))
+  } catch (error) {
+    console.error('Comparaison impossible', error)
+    return true
+  }
 }
 
 /**
@@ -297,6 +408,7 @@ export async function signOut() {
     .catch(() => ({ error: true }))
   if (error) return false
   user = null
+  sent = null
   // Une synchronisation en cours finit d'abord (elle s'arrête, sans compte) : rien ne passe après
   // l'effacement.
   await exclusive(async () => {
@@ -324,4 +436,11 @@ window.addEventListener('focus', schedule)
 window.addEventListener('online', schedule)
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') schedule()
+})
+// Le conflit réglé dans un autre onglet (la version échangée a changé) : la question se ferme
+// ici aussi, et on compare de nouveau.
+window.addEventListener('storage', (event) => {
+  if (event.key !== BASE_KEY || useSyncStore.getState().status !== 'conflict') return
+  useSyncStore.setState({ status: 'syncing', conflict: null })
+  void sync()
 })

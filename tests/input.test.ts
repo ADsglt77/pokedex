@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import { cardmarketPage, readCardmarketId } from '@/lib/cardmarket'
-import { parseEuros } from '@/lib/format'
+import { parseEuros, parseQuantity } from '@/lib/format'
 
 describe('parseEuros', () => {
   test('virgule ou point, symbole et espaces des milliers, insécables compris', () => {
@@ -29,6 +29,22 @@ describe('parseEuros', () => {
     expect(parseEuros('1e3')).toBeNull()
     expect(parseEuros('abc')).toBeNull()
     expect(parseEuros('')).toBeNull()
+  })
+
+  test('une espace ailleurs qu’entre les milliers : null (« 12 50 » ne vaut pas 1 250 €)', () => {
+    expect(parseEuros('12 50')).toBeNull()
+    expect(parseEuros('1 2 3')).toBeNull()
+    expect(parseEuros('1 23,50')).toBeNull()
+    expect(parseEuros('12 345 678')).toBe(12345678)
+  })
+})
+
+describe('parseQuantity', () => {
+  test('des chiffres seulement : « 1e1 » ne vaut pas 10', () => {
+    expect(parseQuantity('3')).toBe(3)
+    expect(parseQuantity(' 2 ')).toBe(2)
+    for (const text of ['1e1', '0x2', '1.5', '-1', '', 'deux'])
+      expect(parseQuantity(text)).toBeNull()
   })
 })
 

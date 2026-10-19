@@ -14,6 +14,9 @@ import { join } from 'node:path'
 
 const dir = mkdtempSync(join(tmpdir(), 'pokedex-tests-'))
 process.env.DATA_DIR = dir
+// Les images et les sauvegardes aussi : jamais celles du `.env`.
+process.env.IMAGES_DIR = join(dir, 'images')
+process.env.BACKUP_DIR = join(dir, 'backups')
 process.env.BETTER_AUTH_URL = 'http://localhost:5173'
 process.env.BETTER_AUTH_SECRET = 'cle-d-essai-pour-les-tests-du-serveur-seulement'
 process.env.ACCOUNT_EMAIL = 'sacha@exemple.fr'

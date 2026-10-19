@@ -4,10 +4,10 @@
  */
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
-import { isToBuy } from '@/lib/collection'
+import { findCard, isToBuy } from '@/lib/collection'
 import { localDayOf } from '@/lib/format'
-import type { PricePoint } from '@/lib/prices'
-import { findCard, SPECIES } from '@/lib/species'
+import type { PricePoint } from '@/lib/chart'
+import { SPECIES } from '@/lib/species'
 import type { CardStatus, CollectionData, PokemonCard, PokemonSpecies } from '@/types'
 
 /** Une carte et ce que l'utilisateur en a fait : prête à afficher. */
@@ -91,7 +91,7 @@ export const isTaken = (entry: PokedexEntry) => entry.card !== null && !isToBuy(
  * même statut) en est reprise telle quelle, et les pochettes mémoïsées ne se redessinent pas.
  */
 export function buildPokedex(collection: CollectionData, previous?: Pokedex): Pokedex {
-  // Une carte par Pokémon : la première ajoutée, si une ancienne version en a gardé plusieurs.
+  // Une carte par Pokémon : la première ajoutée, si un fichier importé en a plusieurs.
   const cardBySpecies = new Map<number, PokemonCard>()
   for (const card of Object.values(collection.customCards)) {
     for (const id of card.dexIds) if (!cardBySpecies.has(id)) cardBySpecies.set(id, card)

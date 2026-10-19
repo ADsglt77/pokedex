@@ -32,6 +32,7 @@ import {
   runningTotal,
   weeksOf,
   type ChartPeriod,
+  type PricePoint,
 } from '@/lib/chart'
 import {
   collectionHistory,
@@ -41,7 +42,6 @@ import {
   tallyByStatus,
   tallyHint,
   trackedCards,
-  type PricePoint,
   type TrackedCard,
 } from '@/lib/prices'
 import { unlockEvents } from '@/lib/pokedex'

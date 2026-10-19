@@ -21,12 +21,20 @@ import {
   type ComponentType,
   type ReactNode,
 } from 'react'
-import { Link, matchPath, Outlet, ScrollRestoration, useLocation } from 'react-router'
+import {
+  Link,
+  matchPath,
+  Outlet,
+  ScrollRestoration,
+  useLocation,
+  useNavigation,
+} from 'react-router'
 import { Logo } from '@/components/Logo'
 import { SiteDisclaimer } from '@/components/SiteDisclaimer'
 import { shoppingUrl } from '@/lib/filters'
 import { AccountMenu } from '@/components/AccountMenu'
 import { AppSearch } from '@/components/AppSearch'
+import { returnedLink } from '@/hooks/useFollowLinks'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { usePokedex } from '@/hooks/usePokedex'
 import { cx } from '@/lib/cx'
@@ -132,6 +140,7 @@ export function AppShell({ pokedex }: { pokedex: ReactNode }) {
 
 const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pokedex: ReactNode }) {
   const storageFailed = useStorageFailure((state) => state.failed)
+  const storageUnreadable = useStorageFailure((state) => state.unreadableAt !== null)
   const main = useRef<HTMLElement>(null)
   const shownPath = useRef(pathname)
   const [searching, setSearching] = useCommandPalette()
@@ -139,11 +148,13 @@ const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pok
   // la barre latérale ou dans la barre du haut.
   const wide = useMediaQuery('(min-width: 64rem)')
 
-  // À chaque nouvelle page, le focus va au contenu (lecteurs d'écran, navigation au clavier).
+  // À chaque nouvelle page, le focus va au contenu (lecteurs d'écran, navigation au clavier) ; de
+  // retour sur la page d'un lien suivi (une pochette du Pokédex), à ce lien.
   useEffect(() => {
     if (shownPath.current === pathname) return
     shownPath.current = pathname
-    main.current?.focus({ preventScroll: true })
+    const target = main.current && (returnedLink(main.current, pathname) ?? main.current)
+    target?.focus({ preventScroll: true })
   }, [pathname])
 
   const search = () => setSearching(true)
@@ -165,6 +176,7 @@ const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pok
       <a href="#main" className={styles.skip}>
         Aller au contenu
       </a>
+      <NavigationProgress />
 
       <aside className={styles.sidebar} aria-label="Barre latérale">
         <Brand />
@@ -222,6 +234,16 @@ const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pok
             </Banner>
           </div>
         )}
+        {storageUnreadable && (
+          <div className={cx('container', styles.notice)}>
+            <Banner tone="warn">
+              Une partie des données enregistrées dans ce navigateur était illisible : elle a été
+              mise de côté, sans être effacée, et rien n’a été envoyé au serveur à sa place.
+              Connecté, la version du serveur vous est proposée ; sinon, importez votre dernier
+              export (page Données).
+            </Banner>
+          </div>
+        )}
 
         <main id="main" ref={main} tabIndex={-1} className={styles.main}>
           {keepPokedex && (
@@ -268,6 +290,17 @@ const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pok
     </div>
   )
 })
+
+/**
+ * Une page chargée à la demande (Achats, Valeur…), sur un réseau lent : une barre fine en haut,
+ * le temps que son code arrive (sans elle, rien ne bouge après le clic). À part de `Shell` : elle
+ * seule se redessine pendant la navigation.
+ */
+function NavigationProgress() {
+  const busy = useNavigation().state !== 'idle'
+  if (!busy) return null
+  return <div className={styles.navigating} role="progressbar" aria-label="Chargement de la page" />
+}
 
 /**
  * Les commandes en retard, sur le lien des achats (barre latérale et barre d'onglets) : rien

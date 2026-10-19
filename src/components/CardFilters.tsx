@@ -1,4 +1,5 @@
 import { Button, Toggle } from '@camply/ui'
+import { useRef } from 'react'
 import { CARD_TYPES } from '@/config/catalog'
 import {
   NO_FILTER,
@@ -7,6 +8,7 @@ import {
   type CatalogCard,
   type Rarity,
 } from '@/lib/card-catalog'
+import { focusAfter } from '@/lib/focus'
 import { formatInteger, plural } from '@/lib/format'
 import { RarityIcon, TypeIcon } from './CatalogIcons'
 import styles from './CardFilters.module.css'
@@ -31,6 +33,8 @@ export function CardFilters({
   value: CardFilter
   onChange: (value: CardFilter) => void
 }) {
+  // Le premier choix, où va le focus quand « Retirer les filtres » disparaît avec eux.
+  const first = useRef<HTMLButtonElement>(null)
   const rarityCounts = new Map<number, { rarity: Rarity; count: number }>()
   for (const card of cards) {
     if (!card.rarity || !passesFilter(card, { ...value, rarities: [] })) continue
@@ -53,9 +57,10 @@ export function CardFilters({
       {(rarities.length > 1 || value.rarities.length > 0) && (
         <fieldset className={styles.group}>
           <legend className={styles.legend}>Rareté</legend>
-          {rarities.map(({ rarity, count }) => (
+          {rarities.map(({ rarity, count }, index) => (
             <Toggle
               key={rarity.id}
+              ref={index === 0 ? first : undefined}
               size="sm"
               className={styles.chip}
               pressed={value.rarities.includes(rarity.id)}
@@ -74,9 +79,10 @@ export function CardFilters({
       {(types.length > 1 || value.types.length > 0) && (
         <fieldset className={styles.group}>
           <legend className={styles.legend}>Type</legend>
-          {types.map((type) => (
+          {types.map((type, index) => (
             <Toggle
               key={type}
+              ref={index === 0 && rarities.length < 2 ? first : undefined}
               size="sm"
               className={styles.chip}
               pressed={value.types.includes(type)}
@@ -91,7 +97,11 @@ export function CardFilters({
         </fieldset>
       )}
       {filtered && (
-        <Button variant="ghost" size="sm" onClick={() => onChange(NO_FILTER)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => focusAfter(() => onChange(NO_FILTER), first)}
+        >
           Retirer les filtres
         </Button>
       )}

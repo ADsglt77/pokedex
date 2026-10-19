@@ -6,7 +6,7 @@
 
 import { today } from '@/lib/format'
 import { cardCount, cents, orderSpent, supplierLabel } from '@/lib/orders'
-import type { PricePoint } from '@/lib/prices'
+import type { PricePoint } from '@/lib/chart'
 import type { BudgetSettings, Order, ShoppingData } from '@/types'
 
 /** `2026-10` */

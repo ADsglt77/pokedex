@@ -12,36 +12,34 @@ import type { CardImage } from '@/types'
 
 const SCANS = 'https://pokecardex-scans.b-cdn.net'
 
-/** Une ancienne image de TCGplayer (retiré) : encore affichée si le serveur en a la copie. */
-const TCGPLAYER_PRODUCTS = 'https://tcgplayer-cdn.tcgplayer.com/product/'
+/** Une image retrouvée chez Pokécardex, et non une adresse collée. */
+export const isFoundImage = (image: CardImage) => image.small.startsWith(SCANS)
 
-export const isTcgplayerImage = (image: CardImage) => image.small.startsWith(TCGPLAYER_PRODUCTS)
+/**
+ * Le chemin local de l'image d'une carte de Pokécardex (le code de sa série, son rang, sa taille),
+ * et son adresse d'origine (`scanUrl`) : les mêmes pour le navigateur (`localSrc`) et pour le
+ * serveur qui la copie (`server/images.ts`), sans quoi l'un construirait un chemin que l'autre
+ * refuse.
+ */
+export const SCAN_PATH = /^\/images\/cards\/pokecardex\/([A-Z0-9_-]+)\/(\d{1,4})-(md|hd)\.webp$/
 
-/** Une image retrouvée (Pokécardex, ou une ancienne de TCGplayer), et non une adresse collée. */
-export const isFoundImage = (image: CardImage) =>
-  image.small.startsWith(SCANS) || isTcgplayerImage(image)
+/** L'adresse d'origine d'une image de carte chez Pokécardex. */
+export const scanUrl = (set: string, number: string, size: string) =>
+  `${SCANS}/sets_jp/${set}/${number}.jpg?class=${size}`
 
-/** Les adresses d'origine dont le serveur a la copie, et le chemin de cette copie. */
-const MIRRORED: [RegExp, string][] = [
-  [
-    /^https:\/\/pokecardex-scans\.b-cdn\.net\/sets_jp\/([\w-]+)\/(\w+)\.jpg\?class=(md|hd)$/,
-    '/images/cards/pokecardex/$1/$2-$3.webp',
-  ],
-  [
-    /^https:\/\/tcgplayer-cdn\.tcgplayer\.com\/product\/(\d+)_(200w|in_1000x1000)\.jpg$/,
-    '/images/cards/tcgplayer/$1_$2.jpg',
-  ],
-]
+/** L'adresse d'origine d'une image de carte chez Pokécardex, dont le serveur a la copie. */
+const SCAN_URL =
+  /^https:\/\/pokecardex-scans\.b-cdn\.net\/sets_jp\/([A-Z0-9_-]+)\/(\d{1,4})\.jpg\?class=(md|hd)$/
 
 /**
  * Ce que charge le navigateur pour une image : la copie du serveur pour une image de Pokécardex
- * (`/images/…`, copiée à la demande si besoin) ; une adresse collée, telle quelle.
+ * (`/images/…`, copiée à la demande si besoin) ; une adresse collée, telle quelle. Une adresse de
+ * Pokécardex d'une autre forme n'est jamais chargée depuis ses serveurs (son accord) : `null`,
+ * pas d'image.
  */
-export function localSrc(url: string) {
-  for (const [pattern, path] of MIRRORED) {
-    if (pattern.test(url)) return url.replace(pattern, path)
-  }
-  return url
+export function localSrc(url: string): string | null {
+  if (SCAN_URL.test(url)) return url.replace(SCAN_URL, '/images/cards/pokecardex/$1/$2-$3.webp')
+  return url.startsWith(SCANS) ? null : url
 }
 
 /**

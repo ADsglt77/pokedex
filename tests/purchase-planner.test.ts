@@ -40,7 +40,7 @@ describe('prochaine commande', () => {
     expect(ids(plan.picked)).toEqual(['a', 'b'])
   })
 
-  test('une seule carte par Pokémon, la moins chère d’abord (cartes d’une ancienne version)', () => {
+  test('une seule carte par Pokémon, la moins chère d’abord (un fichier importé peut en avoir plusieurs)', () => {
     const plan = planPurchase([wish('other', [25], 30), wish('cheap', [25], 10)], options())
     expect(ids(plan.picked)).toEqual(['cheap'])
     // L'autre reste visible, avec les cartes mises de côté.

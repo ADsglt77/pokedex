@@ -21,11 +21,15 @@ import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
 import type { Database } from 'bun:sqlite'
 import { Elysia, type Context } from 'elysia'
+import { MINUTE } from '@/lib/time'
 import type { AccountState } from '@/types'
-import { journal, type JournalLevel } from './journal'
+import { journal, journalOnce, safeText, visitorOf, type JournalLevel } from './journal'
 
 /** Un jour, en secondes (Better Auth compte ses durées en secondes ; `@/lib/time` en ms). */
 const DAY_IN_SECONDS = 24 * 60 * 60
+
+/** L'adresse du compte (`ACCOUNT_EMAIL`) : aucune autre ne peut le créer. */
+const ACCOUNT_EMAIL = process.env.ACCOUNT_EMAIL?.trim().toLowerCase()
 
 /** La connexion, une fois créées les tables du compte qui manquent. */
 export async function createAuth(db: Database) {
@@ -35,17 +39,35 @@ export async function createAuth(db: Database) {
     secret: process.env.BETTER_AUTH_SECRET,
     emailAndPassword: { enabled: true },
     // Ses messages dans le journal de l'app, ses erreurs seulement : une connexion refusée y est
-    // déjà (« Invalid password » en plus serait du bruit). Leur cause (l'erreur, sa pile) suit,
-    // telle quelle.
+    // déjà (« Invalid password » en plus serait du bruit). Son message peut recopier ce qu'envoie
+    // un visiteur (« Invalid callbackURL: … ») : écrit en détail, échappé, une fois par minute au
+    // plus pour un même début. Leur cause (l'erreur, sa pile) suit.
     logger: {
       level: 'error',
       log: (_level, message, ...args) => {
-        journal({ topic: 'serveur', level: 'error', message: `Better Auth : ${message}` })
-        if (args.length > 0) console.error(...args)
+        const cause = String(message)
+        journalOnce(
+          `better-auth ${cause.slice(0, 60)}`,
+          { topic: 'serveur', level: 'error', message: 'Better Auth', details: { cause } },
+          undefined,
+          MINUTE,
+        )
+        if (args.length > 0) {
+          console.error(...args.map((arg) => (typeof arg === 'string' ? safeText(arg) : arg)))
+        }
       },
     },
     session: { expiresIn: 60 * DAY_IN_SECONDS, updateAge: DAY_IN_SECONDS },
     databaseHooks: {
+      user: {
+        create: {
+          // La garde de `/sign-up/email` (plus bas) lit la requête à sa façon ; celle-ci porte sur
+          // l'adresse que Better Auth enregistre vraiment : une requête qu'ils liraient chacun
+          // autrement ne crée pas le compte d'un autre.
+          before: async (user) =>
+            !ACCOUNT_EMAIL || user.email.trim().toLowerCase() === ACCOUNT_EMAIL,
+        },
+      },
       session: {
         create: {
           // Une seule session par compte : les autres appareils sont déconnectés (et, au changement
@@ -94,11 +116,8 @@ export async function createAuth(db: Database) {
 
 export type Accounts = Awaited<ReturnType<typeof createAuth>>
 
-/** L'adresse du compte (`ACCOUNT_EMAIL`) : aucune autre ne peut le créer. */
-const ACCOUNT_EMAIL = process.env.ACCOUNT_EMAIL?.trim().toLowerCase()
-
-/** L'e-mail et le pseudo d'une requête, pour le journal (jamais le mot de passe). */
-async function bodyOf(request: Request) {
+/** L'e-mail et le pseudo d'une requête (une copie), pour le journal (jamais le mot de passe). */
+async function bodyOf(request: { json: () => Promise<unknown> }) {
   const body = (await request.json().catch(() => null)) as {
     email?: unknown
     name?: unknown
@@ -107,10 +126,20 @@ async function bodyOf(request: Request) {
   return { email: text(body?.email), name: text(body?.name) }
 }
 
+/**
+ * Un e-mail pour le journal : tel quel s'il en a l'air (une arobase), sinon `?` : un mot de passe
+ * collé par erreur dans le champ de l'e-mail n'y est jamais écrit.
+ */
+const shownEmail = (email: string) => (email.includes('@') ? email : '?')
+
 /** Les actions du compte que note le journal, d'après leur chemin. */
 const WATCHED = /\/(sign-in\/email|sign-up\/email|sign-out|change-password|update-user)$/
 
-/** Pour le journal : connexion, création du compte, déconnexion, mot de passe, pseudo. */
+/**
+ * Pour le journal : connexion, création du compte, déconnexion, mot de passe, pseudo. Une
+ * connexion refusée ou bloquée, qu'un visiteur peut répéter à volonté : une ligne par visiteur et
+ * par minute au plus (`journalOnce`).
+ */
 function journalAuth(
   path: string,
   request: Request,
@@ -119,14 +148,23 @@ function journalAuth(
   name?: string,
 ) {
   const ok = response.ok
-  const log = (message: string, level: JournalLevel, pseudo?: string, raison?: string) =>
-    journal({ topic: 'compte', level, message, details: { email, pseudo, raison } }, request)
+  const details = (pseudo?: string, raison?: string) => ({ email, pseudo, raison })
+  const log = (message: string, level: JournalLevel, pseudo?: string) =>
+    journal({ topic: 'compte', level, message, details: details(pseudo) }, request)
+  const refused = (message: string, raison?: string) =>
+    journalOnce(
+      `${message} ${visitorOf(request)}`,
+      { topic: 'compte', level: 'error', message, details: details(undefined, raison) },
+      request,
+      MINUTE,
+    )
   if (path.endsWith('/sign-in/email')) {
     if (ok) log('Connexion', 'ok')
-    else if (response.status === 429) log('Connexion bloquée', 'error', undefined, 'trop d’essais')
-    else log('Connexion refusée', 'error')
+    else if (response.status === 429) refused('Connexion bloquée', 'trop d’essais')
+    else refused('Connexion refusée')
   } else if (path.endsWith('/sign-up/email')) {
-    log(ok ? 'Compte créé' : 'Création du compte refusée', ok ? 'ok' : 'error', name)
+    if (ok) log('Compte créé', 'ok', name)
+    else refused('Création du compte refusée')
   } else if (path.endsWith('/sign-out')) {
     if (ok) log('Déconnexion', 'info')
   } else if (path.endsWith('/change-password')) {
@@ -135,6 +173,34 @@ function journalAuth(
     log('Pseudo changé', 'info', name)
   }
 }
+
+/** Les créations refusées d'emblée de chaque visiteur, la dernière minute (leurs heures, en ms). */
+const refusals = new Map<string, number[]>()
+
+/**
+ * Une création refusée de plus pour ce visiteur : au-delà de 5 par minute, `true` (429), comme la
+ * limite de Better Auth pour une création qu'il traite. Un refus d'emblée ne passe pas par elle :
+ * on pourrait sinon essayer des adresses sans fin pour trouver celle du compte.
+ */
+function tooManyRefusals(visitor: string, now: number) {
+  const recent = (refusals.get(visitor) ?? []).filter((at) => now - at < MINUTE)
+  recent.push(now)
+  refusals.delete(visitor)
+  refusals.set(visitor, recent)
+  // Une liste bornée : les plus anciens visiteurs d'abord.
+  for (const oldest of refusals.keys()) {
+    if (refusals.size <= 10_000) break
+    refusals.delete(oldest)
+  }
+  return recent.length > 5
+}
+
+/**
+ * Une modification venue d'une autre origine (le cookie part avec toute requête vers le site) :
+ * refusée dès la lecture du corps, avant même de le lire (`parse` de la macro `auth`), puis
+ * répondue 403 par `app.ts`.
+ */
+export class ForeignOrigin extends Error {}
 
 /** L'origine publique du site, que doivent avoir les requêtes qui modifient des données. */
 export const appOrigin = (auth: Accounts['auth']) => new URL(auth.options.baseURL as string).origin
@@ -163,6 +229,32 @@ export function accountRoutes({ auth, account }: Accounts) {
     set.headers['set-cookie'] = headers.getSetCookie()
     return response
   }
+  /**
+   * Une modification venue d'une autre origine : notée au journal (une fois par minute et par
+   * visiteur), où elle dit un réglage à revoir (`BETTER_AUTH_URL` qui n'est pas l'adresse du site)
+   * ou une tentative depuis un autre site.
+   */
+  const foreign = (request: Request) => {
+    if (['GET', 'HEAD'].includes(request.method)) return false
+    const received = request.headers.get('origin')
+    if (received === origin) return false
+    journalOnce(
+      `Origine refusée ${visitorOf(request)}`,
+      {
+        topic: 'compte',
+        level: 'warn',
+        message: 'Modification refusée',
+        details: {
+          route: `${request.method} ${new URL(request.url).pathname}`,
+          origine: received ?? 'aucune',
+          raison: 'autre origine',
+        },
+      },
+      request,
+      MINUTE,
+    )
+    return true
+  }
   return new Elysia({ name: 'account' })
     .all(
       '/auth/*',
@@ -173,19 +265,24 @@ export function accountRoutes({ auth, account }: Accounts) {
         // l'e-mail de la session.
         const body = await bodyOf(request.clone())
         const email = /\/sign-(in|up)\/email$/.test(path)
-          ? (body.email ?? '?')
+          ? shownEmail(body.email ?? '?')
           : ((await auth.api.getSession({ headers: request.headers }))?.user.email ?? '?')
         // Une création refusée d'emblée (sans dire si une adresse est celle du compte, ni calculer
-        // un mot de passe pour rien) : le compte existe, ou ce n'est pas son adresse.
+        // un mot de passe pour rien) : le compte existe, ce n'est pas son adresse, ou la requête
+        // n'est pas en JSON (Better Auth lirait aussi un formulaire, autrement que cette garde).
         if (path.endsWith('/sign-up/email')) {
+          const json = /^application\/json\b/i.test(request.headers.get('content-type') ?? '')
           const refused =
             account() !== null
               ? 'un compte existe déjà'
-              : ACCOUNT_EMAIL && email.trim().toLowerCase() !== ACCOUNT_EMAIL
-                ? 'adresse non prévue'
-                : null
+              : !json
+                ? 'pas en JSON'
+                : ACCOUNT_EMAIL && (body.email ?? '').trim().toLowerCase() !== ACCOUNT_EMAIL
+                  ? 'adresse non prévue'
+                  : null
           if (refused) {
-            journal(
+            journalOnce(
+              `Création refusée ${visitorOf(request)}`,
               {
                 topic: 'compte',
                 level: 'error',
@@ -193,8 +290,9 @@ export function accountRoutes({ auth, account }: Accounts) {
                 details: { email, raison: refused },
               },
               request,
+              MINUTE,
             )
-            return status(403, null)
+            return status(tooManyRefusals(visitorOf(request), Date.now()) ? 429 : 403, null)
           }
         }
         const response = await auth.handler(request)
@@ -226,14 +324,14 @@ export function accountRoutes({ auth, account }: Accounts) {
     )
     .macro({
       auth: {
+        // Avant de lire le corps (jusqu'à 5 Mo) et de le valider : une autre origine est refusée
+        // d'emblée (`ForeignOrigin`, 403), sans un 422 qui renverrait ce qu'elle a envoyé.
+        parse({ request }) {
+          if (foreign(request)) throw new ForeignOrigin()
+        },
         async resolve({ request, set, status }) {
           set.headers['cache-control'] = 'no-store'
-          if (
-            !['GET', 'HEAD'].includes(request.method) &&
-            request.headers.get('origin') !== origin
-          ) {
-            return status(403, null)
-          }
+          if (foreign(request)) return status(403, null)
           const session = await sessionOf(request, set)
           return session ? { user: session.user } : status(401, null)
         },

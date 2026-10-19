@@ -1,14 +1,28 @@
 import { Button, Card, EmptyState, Input, Skeleton, Stack } from '@camply/ui'
 import { CloudOff, Funnel, Search } from '@camply/ui/icons'
-import { Suspense, use, useCallback, useDeferredValue, useMemo, useState } from 'react'
+import {
+  Suspense,
+  use,
+  useCallback,
+  useDeferredValue,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  useTransition,
+} from 'react'
+import { flushSync } from 'react-dom'
 import { useSearchParams } from 'react-router'
 import { CardFilters } from '@/components/CardFilters'
 import { CatalogGrid, CatalogGridSkeleton, CatalogTile } from '@/components/CatalogTile'
 import { PageHeader } from '@/components/PageHeader'
 import { ENERGY_TYPE, TRAINER_TYPES } from '@/config/catalog'
+import { forget } from '@/lib/api'
 import {
+  CATALOG_SETS,
   loadSetCards,
   loadSets,
+  setCardsUrl,
   NO_FILTER,
   passesFilter,
   type CardFilter,
@@ -18,6 +32,7 @@ import {
   type SetSummary,
 } from '@/lib/card-catalog'
 import { searchForm } from '@/lib/filters'
+import { focusAfter } from '@/lib/focus'
 import { details, formatDate, formatInteger, formatList, pageTitle, plural } from '@/lib/format'
 import { priceText } from '@/lib/prices'
 import { usePrices, usePricesMissing } from '@/store/prices'
@@ -72,18 +87,39 @@ function SetCardsSkeleton({ count }: { count: number }) {
   )
 }
 
-function CatalogContent() {
-  const catalog = use(loadSets())
-  return catalog ? <SetBrowser catalog={catalog} /> : <Unavailable />
+/**
+ * « Réessayer » une réponse de l'API qui manquait (`url`) : oubliée, puis redemandée ; le message
+ * reste, son bouton en chargement, jusqu'à la nouvelle réponse (une transition).
+ */
+function useRetry(url: string) {
+  const [, rerender] = useReducer((count: number) => count + 1, 0)
+  const [retrying, startRetry] = useTransition()
+  const onRetry = () =>
+    startRetry(() => {
+      forget(url)
+      rerender()
+    })
+  return { retrying, onRetry }
 }
 
-function Unavailable() {
+function CatalogContent() {
+  const retry = useRetry(CATALOG_SETS)
+  const catalog = use(loadSets())
+  return catalog ? <SetBrowser catalog={catalog} /> : <Unavailable {...retry} />
+}
+
+function Unavailable({ retrying, onRetry }: { retrying: boolean; onRetry: () => void }) {
   return (
     <EmptyState
       headingLevel={2}
       icon={<CloudOff size={22} />}
       title="Le catalogue n’est pas disponible pour le moment"
-      description="Réessayez dans quelques minutes."
+      description="Le serveur ne répond pas, ou ses données ne sont pas encore prêtes."
+      actions={
+        <Button loading={retrying} onClick={onRetry}>
+          Réessayer
+        </Button>
+      }
     />
   )
 }
@@ -129,8 +165,9 @@ function SetBrowser({ catalog }: { catalog: CatalogSets }) {
 }
 
 function SetCards({ set }: { set: SetSummary }) {
+  const retry = useRetry(setCardsUrl(set))
   const cards = use(loadSetCards(set))
-  return cards ? <CardBrowser cards={cards} /> : <Unavailable />
+  return cards ? <CardBrowser cards={cards} /> : <Unavailable {...retry} />
 }
 
 /** « 168 Pokémon, 37 dresseurs et 5 énergies · 45 secrètes » : ce que compte l'extension. */
@@ -188,15 +225,32 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
   const shown = useMemo(() => found.filter((card) => passesFilter(card, filter)), [found, filter])
   const isFiltered = shown.length < cards.length
   const index = open === null ? -1 : shown.findIndex((card) => card.key === open)
-  const clear = () => {
-    setQuery('')
-    setFilter(NO_FILTER)
+  const searchField = useRef<HTMLInputElement>(null)
+  const grid = useRef<HTMLDivElement>(null)
+  /**
+   * La fiche fermée : le focus va à la tuile de la carte montrée en dernier (parcourue avec ← et
+   * →), pas à celle ouverte au départ, à qui la fenêtre le rend en se fermant (un effet : une fois
+   * de plus après elle). Une tuile pas encore dessinée (loin dans la liste) : la fenêtre décide.
+   */
+  const closeCard = () => {
+    const tile = () =>
+      grid.current?.querySelectorAll('li')[index]?.querySelector<HTMLElement>('button')
+    flushSync(() => setOpen(null))
+    tile()?.focus()
+    requestAnimationFrame(() => tile()?.focus())
   }
+  // Le message et son bouton disparaissent : le focus va à la recherche.
+  const clear = () =>
+    focusAfter(() => {
+      setQuery('')
+      setFilter(NO_FILTER)
+    }, searchField)
 
   return (
     <Stack gap={4}>
       <div className={styles.tools}>
         <Input
+          ref={searchField}
           type="search"
           label="Rechercher une carte"
           placeholder="Nom, numéro ou illustrateur"
@@ -210,7 +264,7 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
         <CardFilters cards={found} value={filter} onChange={setFilter} />
       </div>
 
-      <p className="muted">
+      <p className="muted" aria-live="polite">
         {isFiltered
           ? `${plural(shown.length, 'carte', 'cartes')} sur ${formatInteger(cards.length)}`
           : details(plural(cards.length, 'carte', 'cartes'), composition(cards))}
@@ -223,28 +277,30 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
           actions={<Button onClick={clear}>Tout afficher</Button>}
         />
       ) : (
-        <CatalogGrid>
-          {shown.map((card) => (
-            <li key={card.key}>
-              <CatalogTile
-                card={card}
-                heading={card.number}
-                price={priceText(prices, missing, card)}
-                speciesId={card.dexIds[0]}
-                onPick={openCard}
-              >
-                {card.name}
-              </CatalogTile>
-            </li>
-          ))}
-        </CatalogGrid>
+        <div ref={grid}>
+          <CatalogGrid>
+            {shown.map((card) => (
+              <li key={card.key}>
+                <CatalogTile
+                  card={card}
+                  heading={card.number}
+                  price={priceText(prices, missing, card)}
+                  speciesId={card.dexIds[0]}
+                  onPick={openCard}
+                >
+                  {card.name}
+                </CatalogTile>
+              </li>
+            ))}
+          </CatalogGrid>
+        </div>
       )}
       {index >= 0 && (
         <CardDetails
           cards={shown}
           index={index}
           onIndex={(to) => setOpen(shown[to]!.key)}
-          onClose={() => setOpen(null)}
+          onClose={closeCard}
         />
       )}
     </Stack>

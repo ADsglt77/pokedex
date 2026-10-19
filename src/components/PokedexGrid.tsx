@@ -24,6 +24,12 @@ interface PokedexGridProps {
   linked?: boolean
   /** Le niveau des intertitres des générations : 3 sous un titre de section (Pokédex public). */
   headingLevel?: 2 | 3
+  /**
+   * Les intertitres des générations, si la liste montrée en couvre plusieurs : la page le sait
+   * (`PokedexPage`), même quand `entries` n'a encore que les premières pochettes (l'intertitre
+   * ajouté ensuite pousserait les pochettes déjà peintes). Sans : d'après `entries`.
+   */
+  headings?: boolean
 }
 
 /**
@@ -37,10 +43,11 @@ export const PokedexGrid = memo(function PokedexGrid({
   generations,
   linked,
   headingLevel = 2,
+  headings,
 }: PokedexGridProps) {
   const groups = groupByGeneration(entries)
   const isShown = (entry: PokedexEntry) => !shown || shown.has(entry.species.id)
-  const shownGroups = groups.filter((group) => group.entries.some(isShown)).length
+  const showHeadings = headings ?? groups.filter((group) => group.entries.some(isShown)).length > 1
   const Heading = headingLevel === 3 ? 'h3' : 'h2'
   let rank = 0
 
@@ -55,7 +62,7 @@ export const PokedexGrid = memo(function PokedexGrid({
         // Sa hauteur estimée tant qu'elle n'a pas été montrée (`PokedexGrid.module.css`).
         style={{ '--tiles': tiles } as CSSProperties}
       >
-        {shownGroups > 1 && (
+        {showHeadings && (
           <div className={styles.heading}>
             <Heading>
               {generation.region}{' '}

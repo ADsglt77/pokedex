@@ -7,8 +7,13 @@
 
 import { formatEuro, formatEuroChange, formatPercent } from '@/lib/format'
 import { cents } from '@/lib/orders'
-import type { PricePoint } from '@/lib/prices'
 import { addDays, daysBetween } from '@/lib/time'
+
+/** Un point d'une courbe : un jour (YYYY-MM-DD) et sa valeur. */
+export interface PricePoint {
+  date: string
+  value: number
+}
 
 export type ChartPeriod = 'week' | 'month' | 'year' | 'all'
 

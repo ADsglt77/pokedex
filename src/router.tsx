@@ -1,6 +1,6 @@
 import { createBrowserRouter, redirect, type LoaderFunctionArgs } from 'react-router'
 import { AppShell } from '@/components/AppShell'
-import { accountExists, loginPath } from '@/lib/auth-client'
+import { accountExists, loginPath } from '@/lib/account'
 import { ErrorPage } from '@/pages/ErrorPage'
 import { HomePage } from '@/pages/home/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'

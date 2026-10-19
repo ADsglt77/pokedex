@@ -1,29 +1,26 @@
 import { Button, Stack } from '@camply/ui'
 import { ImagePlus } from '@camply/ui/icons'
-import { useState } from 'react'
+import { useState, type RefObject } from 'react'
 import { useCollectionAction, useNotify } from '@/hooks/useNotify'
 import { findCardImage } from '@/lib/card-catalog'
-import { isTcgplayerImage } from '@/lib/card-images'
 import { referenceCode } from '@/lib/card-code'
+import { focusAfter } from '@/lib/focus'
 import { plural } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'
-import type { CardImage, PokemonCard } from '@/types'
-
-/** Une carte à qui chercher une image : sans image, ou avec celle de TCGplayer (retiré). */
-const lacksImage = (card: PokemonCard) => !card.image || isTcgplayerImage(card.image)
+import type { CardImage } from '@/types'
 
 /**
- * Les cartes sans image, ou avec une image de TCGplayer (d'une ancienne version), dont la
- * référence donne un code d'extension et un numéro : chercher leurs images d'un coup chez
- * Pokécardex (cartes ajoutées avant ces recherches, ou dont l'image manquait à l'époque).
+ * Les cartes sans image dont la référence donne un code d'extension et un numéro : chercher leurs
+ * images d'un coup chez Pokécardex (une image qui manquait à l'ajout de la carte). `title` : le
+ * titre de la section, où va le focus quand toutes sont trouvées (le bouton disparaît).
  */
-export function MissingImages() {
+export function MissingImages({ title }: { title: RefObject<HTMLElement | null> }) {
   const customCards = useCollectionStore((state) => state.collection.customCards)
   const act = useCollectionAction()
   const notify = useNotify()
   const [searching, setSearching] = useState(false)
   const candidates = Object.values(customCards).filter(
-    (card) => lacksImage(card) && referenceCode(card.reference) !== null,
+    (card) => !card.image && referenceCode(card.reference) !== null,
   )
   if (candidates.length === 0) return null
 
@@ -31,13 +28,19 @@ export function MissingImages() {
     setSearching(true)
     // Quatre à la fois : le serveur copie chaque image de Pokécardex à sa première demande.
     const images: (CardImage | null)[] = []
-    for (let start = 0; start < candidates.length; start += 4) {
-      const batch = candidates.slice(start, start + 4)
-      images.push(
-        ...(await Promise.all(batch.map((card) => findCardImage(card.reference, { retry: true })))),
-      )
+    try {
+      for (let start = 0; start < candidates.length; start += 4) {
+        const batch = candidates.slice(start, start + 4)
+        images.push(
+          ...(await Promise.all(
+            batch.map((card) => findCardImage(card.reference, { retry: true })),
+          )),
+        )
+      }
+    } finally {
+      // Même si une recherche échoue : le bouton ne reste pas en chargement.
+      setSearching(false)
     }
-    setSearching(false)
     const found = candidates.flatMap((card, index) => {
       const image = images[index]
       return image ? [{ id: card.id, image }] : []
@@ -50,18 +53,22 @@ export function MissingImages() {
       })
       return
     }
-    act(
-      () => {
-        // La carte telle qu'elle est maintenant : une modification faite pendant la recherche
-        // reste.
-        const { collection, saveCard } = useCollectionStore.getState()
-        for (const { id, image } of found) {
-          const card = collection.customCards[id]
-          if (card && lacksImage(card)) saveCard({ ...card, image })
-        }
-      },
-      `${plural(found.length, 'image retrouvée', 'images retrouvées')}${others}.`,
-    )
+    const apply = () =>
+      act(
+        () => {
+          // La carte telle qu'elle est maintenant : une modification faite pendant la recherche
+          // reste.
+          const { collection, saveCard } = useCollectionStore.getState()
+          for (const { id, image } of found) {
+            const card = collection.customCards[id]
+            if (card && !card.image) saveCard({ ...card, image })
+          }
+        },
+        `${plural(found.length, 'image retrouvée', 'images retrouvées')}${others}.`,
+      )
+    // Toutes trouvées, le bouton disparaît : le focus va au titre de la section.
+    if (missing === 0) focusAfter(apply, title)
+    else apply()
   }
 
   return (

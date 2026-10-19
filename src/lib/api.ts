@@ -6,7 +6,7 @@
  */
 
 import { settled } from '@/lib/settled'
-import type { ServerStatus, WantsLines } from '@/types'
+import type { JobErrors, ServerStatus, WantsLines } from '@/types'
 
 /**
  * Note dans le journal du serveur ce que le navigateur fait seul (`server/journal.ts`) : un export,
@@ -28,6 +28,9 @@ interface Request {
 
 const requests = new Map<string, Request>()
 
+/** Une réponse en panne passagère, redemandable : une minute après la panne. */
+const retryDue = ({ failedAt }: Request) => failedAt !== undefined && Date.now() - failedAt > 60_000
+
 /**
  * Une réponse de l'API, toujours la même promesse pour une adresse (lue par `use()`), tant qu'elle
  * n'est pas oubliée (`forget`) : `null` si elle manque (404). Une panne passagère (réseau, pas de
@@ -37,9 +40,8 @@ const requests = new Map<string, Request>()
  */
 export function getJson<T>(url: string, timeout?: number): Promise<T | null> {
   const known = requests.get(url)
-  if (known && !(known.failedAt && Date.now() - known.failedAt > 60_000)) {
-    return known.response as Promise<T | null>
-  }
+  if (known && !retryDue(known)) return known.response as Promise<T | null>
+
   const request: Request = {
     response: settled(
       fetch(url, { signal: timeout ? AbortSignal.timeout(timeout) : undefined })
@@ -65,7 +67,6 @@ export function getJson<T>(url: string, timeout?: number): Promise<T | null> {
 export function forget(url: string) {
   requests.delete(url)
 }
-
 /**
  * Une réponse demandée à chaque appel, jamais celle d'un cache (« Réessayer » la redemande aussitôt,
  * pas une minute après comme `getJson`) : `null` si le serveur ne répond pas en 10 s, ou par une
@@ -84,12 +85,18 @@ export const loadWantsLines = (ids: readonly number[]) =>
   settled(fetchFresh<WantsLines>(`/api/wants?ids=${ids.join()}`))
 
 /**
- * L'état des tâches du serveur (`/api/status`), demandé à chaque appel (`fetchFresh`) ; `null` s'il
- * ne répond pas, ou s'il n'est pas de la même version que le site (pas encore redémarré après une
+ * L'état des tâches du serveur (`/api/status`), avec la cause de leurs échecs
+ * (`/api/status/errors`, vide sans elle), demandés à chaque appel (`fetchFresh`) ; `null` s'il ne
+ * répond pas, ou s'il n'est pas de la même version que le site (pas encore redémarré après une
  * mise à jour). Lu par `use()`.
  */
 export const loadStatus = () =>
-  settled(fetchFresh<ServerStatus>('/api/status').then((status) => (status?.jobs ? status : null)))
+  settled(
+    Promise.all([
+      fetchFresh<ServerStatus>('/api/status'),
+      fetchFresh<JobErrors>('/api/status/errors'),
+    ]).then(([status, errors]) => (status?.jobs ? { ...status, errors: errors ?? {} } : null)),
+  )
 
 /**
  * Ce que l'app tire d'une réponse de l'API (le catalogue lu, les détails par espèce…), calculé

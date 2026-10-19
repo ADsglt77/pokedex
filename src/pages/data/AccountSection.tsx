@@ -2,10 +2,17 @@ import { Button, Input, Stack } from '@camply/ui'
 import { useRef, useState, type FormEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { useNotify } from '@/hooks/useNotify'
-import { authClient } from '@/lib/auth'
-import { TOO_MANY_ATTEMPTS } from '@/lib/auth-client'
+import { authCall, authClient } from '@/lib/auth'
+import { refusalMessage } from '@/lib/account'
 import { pokedexTitle } from '@/lib/format'
-import { renameAccount, useSyncStore } from '@/store/sync'
+import { markExpired, renameAccount, useSyncStore } from '@/store/sync'
+
+/**
+ * Sans session (401) : une connexion sur un autre appareil a fermé celle-ci (une seule à la
+ * fois) ; le menu du compte propose alors de se reconnecter.
+ */
+const EXPIRED =
+  'Session expirée (connexion sur un autre appareil ?) : reconnectez-vous depuis le menu du compte.'
 import { DataSection } from './DataSection'
 
 /**
@@ -41,11 +48,17 @@ function NameForm({ current }: { current: string }) {
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     setBusy(true)
-    const { error } = await authClient
-      .updateUser({ name: next })
-      .catch(() => ({ error: { status: 0 } }))
+    const { error } = await authCall(() => authClient.updateUser({ name: next }))
     setBusy(false)
-    if (error) return notify('Pseudo inchangé : réessayez plus tard.', { tone: 'danger' })
+    if (error?.status === 401) markExpired()
+    if (error) {
+      const message = refusalMessage(
+        { 401: EXPIRED },
+        error.status,
+        'Pseudo inchangé : réessayez plus tard.',
+      )
+      return notify(message, { tone: 'danger' })
+    }
     renameAccount(next)
     notify(`Pseudo changé : « ${pokedexTitle(next)} ».`)
   }
@@ -76,13 +89,17 @@ function NameForm({ current }: { current: string }) {
   )
 }
 
-/** Le message d'un refus, d'après la réponse du serveur. */
+/**
+ * Le message d'un refus, d'après la réponse du serveur : un mauvais mot de passe actuel (400), et
+ * non une session expirée (401), qui ferait croire le mot de passe perdu (pas de « mot de passe
+ * oublié »).
+ */
 const failure = (status: number) =>
-  status === 400 || status === 401
-    ? 'Mot de passe actuel incorrect.'
-    : status === 429
-      ? TOO_MANY_ATTEMPTS
-      : 'Changement impossible pour le moment : réessayez plus tard.'
+  refusalMessage(
+    { 400: 'Mot de passe actuel incorrect.', 401: EXPIRED },
+    status,
+    'Changement impossible pour le moment : réessayez plus tard.',
+  )
 
 function PasswordForm() {
   const notify = useNotify()
@@ -97,10 +114,15 @@ function PasswordForm() {
     setBusy(true)
     setError(null)
     // Toute autre session est fermée : un appareil qui aurait gardé l'ancienne ne peut plus rien.
-    const { error: refused } = await authClient
-      .changePassword({ currentPassword: current, newPassword: next, revokeOtherSessions: true })
-      .catch(() => ({ error: { status: 0 } }))
+    const { error: refused } = await authCall(() =>
+      authClient.changePassword({
+        currentPassword: current,
+        newPassword: next,
+        revokeOtherSessions: true,
+      }),
+    )
     setBusy(false)
+    if (refused?.status === 401) markExpired()
     if (refused) {
       // Le refus s'affiche sous le mot de passe actuel, qui reçoit le focus : il est lu avec lui.
       flushSync(() => setError(failure(refused.status)))

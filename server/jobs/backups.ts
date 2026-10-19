@@ -1,18 +1,19 @@
 /**
  * Tâche `backups` : chaque jour, une copie des deux bases dans `BACKUP_DIR` (le volume `backups`
  * sur le VPS, `.data/backups` en local), faite par SQLite pendant que le serveur tourne
- * (`VACUUM INTO` : une copie cohérente, compacte) :
+ * (`VACUUM INTO` : une copie cohérente, compacte), vérifiée (`PRAGMA quick_check`), puis mise à sa
+ * place d'un coup : une copie des sauvegardes hors du VPS (README) qui passerait pendant
+ * l'écriture n'emporte jamais un fichier à moitié écrit (ceux en cours commencent par `tmp-`).
  * - `app-AAAA-MM-JJ.db` : le compte et la collection synchronisée, irremplaçables ; 30 gardées ;
  * - `data-AAAA-MM-JJ.db.gz` : les données de référence (compressées), dont l'historique des prix,
  *   irremplaçable aussi ; 7 gardées.
  * Le volume est sur le même disque que les bases : en copier le contenu ailleurs (README).
- * Restaurer : arrêter `server` et `ingest`, remettre le fichier à la place de la base (sans ses
- * `-wal` et `-shm`), redémarrer.
+ * Restaurer : README, « Restaurer une sauvegarde ».
  */
 
 import { Database } from 'bun:sqlite'
 import { createReadStream, createWriteStream, existsSync } from 'node:fs'
-import { mkdir, readdir, rm } from 'node:fs/promises'
+import { mkdir, readdir, rename, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import { createGzip } from 'node:zlib'
@@ -20,7 +21,23 @@ import { DATA_DIR } from '../db'
 
 const BACKUP_DIR = process.env.BACKUP_DIR ?? join(DATA_DIR, 'backups')
 
-/** Copie une base, ouverte en lecture seule ; une copie du même jour est remplacée. */
+/** Le fichier d'une copie en cours d'écriture : jamais pris pour une sauvegarde. */
+const temporary = (name: string) => join(BACKUP_DIR, `tmp-${name}`)
+
+/** Une copie lisible et saine ; sinon une erreur (la tâche échoue, la page Données le dit). */
+function check(file: string) {
+  const db = new Database(file, { readonly: true })
+  try {
+    const { quick_check: result } = db.query('PRAGMA quick_check').get() as {
+      quick_check: string
+    }
+    if (result !== 'ok') throw new Error(`Copie abîmée (${file}) : ${result}`)
+  } finally {
+    db.close()
+  }
+}
+
+/** Copie une base, ouverte en lecture seule, dans `file` (temporaire), puis la vérifie. */
 async function copy(name: string, file: string) {
   await rm(file, { force: true })
   const db = new Database(join(DATA_DIR, name), { readonly: true })
@@ -29,6 +46,7 @@ async function copy(name: string, file: string) {
   } finally {
     db.close()
   }
+  check(file)
 }
 
 /** Ne garde que les `count` copies les plus récentes de ce préfixe (leur nom porte leur jour). */
@@ -40,18 +58,31 @@ async function prune(prefix: string, count: number) {
 export async function backups() {
   const day = new Date().toISOString().slice(0, 10)
   await mkdir(BACKUP_DIR, { recursive: true })
+  // Les restes d'une copie interrompue (redémarrage pendant l'écriture).
+  for (const file of await readdir(BACKUP_DIR)) {
+    if (file.startsWith('tmp-')) await rm(join(BACKUP_DIR, file), { force: true })
+  }
 
   // Sans `app.db`, le serveur n'a jamais démarré : rien à sauvegarder.
   if (existsSync(join(DATA_DIR, 'app.db'))) {
-    await copy('app.db', join(BACKUP_DIR, `app-${day}.db`))
+    const name = `app-${day}.db`
+    await copy('app.db', temporary(name))
+    // Remplace d'un coup la copie du même jour.
+    await rename(temporary(name), join(BACKUP_DIR, name))
     await prune('app-', 30)
   }
 
-  const plain = join(BACKUP_DIR, `data-${day}.db`)
-  await copy('data.db', plain)
-  // En flux : la base grossit avec l'historique, elle ne passe pas entière en mémoire.
-  await pipeline(createReadStream(plain), createGzip(), createWriteStream(`${plain}.gz`))
-  await rm(plain)
+  const name = `data-${day}.db`
+  const plain = temporary(name)
+  try {
+    await copy('data.db', plain)
+    // En flux : la base grossit avec l'historique, elle ne passe pas entière en mémoire.
+    await pipeline(createReadStream(plain), createGzip(), createWriteStream(`${plain}.gz`))
+    await rename(`${plain}.gz`, join(BACKUP_DIR, `${name}.gz`))
+  } finally {
+    await rm(plain, { force: true })
+    await rm(`${plain}.gz`, { force: true })
+  }
   await prune('data-', 7)
   console.log(`Sauvegardes du ${day} dans ${BACKUP_DIR}`)
 }

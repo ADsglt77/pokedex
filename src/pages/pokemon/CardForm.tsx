@@ -9,7 +9,7 @@ import {
   TabPanel,
   Tabs,
 } from '@camply/ui'
-import { Suspense, useRef, useState } from 'react'
+import { Suspense, useCallback, useRef, useState } from 'react'
 import { useCardDraft } from '@/hooks/useCardDraft'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { NO_FILTER, type CatalogCard } from '@/lib/card-catalog'
@@ -65,12 +65,17 @@ export function CardForm({
   const entryTab = useRef<HTMLButtonElement>(null)
 
   // La carte choisie s'ouvre dans la saisie, à vérifier ; le focus suit, la grille disparaissant.
-  const pick = (chosen: CatalogCard) => {
-    draft.fill(chosen)
-    setPicked(chosen)
-    setTab('saisie')
-    entryTab.current?.focus()
-  }
+  // La même fonction d'un rendu à l'autre : les tuiles du catalogue ne se redessinent pas.
+  const { fill } = draft
+  const pick = useCallback(
+    (chosen: CatalogCard) => {
+      fill(chosen)
+      setPicked(chosen)
+      setTab('saisie')
+      entryTab.current?.focus()
+    },
+    [fill],
+  )
 
   const save = () =>
     draft.save(receivers, species.names.fr, (saved) => {

@@ -118,7 +118,10 @@ export function CatalogPicker({
         onChange={(value) => change({ filter: value })}
       />
       <p className="muted">
-        {plural(shown.length, 'carte japonaise', 'cartes japonaises')}
+        {/* Annoncé à chaque filtre : un lecteur d'écran apprend ainsi le nombre de cartes. */}
+        <span aria-live="polite">
+          {plural(shown.length, 'carte japonaise', 'cartes japonaises')}
+        </span>
         {set && (
           <>
             {' '}
@@ -135,7 +138,7 @@ export function CatalogPicker({
               price={priceText(prices, missing, card)}
               speciesId={species.id}
               pressed={selected === card.key}
-              onPick={() => onPick(card)}
+              onPick={onPick}
             >
               {card.dexIds.length > 1 && `avec ${otherSpeciesNames(card.dexIds, species.id)}`}
             </CatalogTile>

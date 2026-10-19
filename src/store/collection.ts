@@ -7,12 +7,17 @@ import { create } from 'zustand'
 import * as rules from '@/lib/collection'
 import { parseStored, readCollection } from '@/lib/transfer'
 import type { AddAs, CardStatus, CollectionData, PokemonCard } from '@/types'
-import { persist, readStored } from './persist'
+import { persist, readStored, setAsideUnreadable } from './persist'
 
 const COLLECTION_KEY = 'pokedex-collection.collection'
 
-const loadCollection = (text: string | null) =>
-  readCollection(parseStored(text)) ?? rules.emptyCollection()
+/** La collection enregistrée ; vide sans elle, ou illisible (mise de côté, signalée). */
+function loadCollection(text: string | null) {
+  const collection = readCollection(parseStored(text))
+  if (collection) return collection
+  if (text !== null) setAsideUnreadable(COLLECTION_KEY, text)
+  return rules.emptyCollection()
+}
 
 interface CollectionStore {
   collection: CollectionData

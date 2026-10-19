@@ -17,8 +17,9 @@
  *   donnée (`images.ts`).
  * Pas les requêtes une à une : seulement ce qui se passe.
  * Au démarrage, une Poké Ball en pixel art (`banner`). Jamais un mot de passe ; l'adresse du
- * visiteur quand le tunnel la donne (`cf-connecting-ip`). Sans couleurs avec `NO_COLOR` (la
- * convention des terminaux).
+ * visiteur quand le tunnel la donne (`cf-connecting-ip`). Ce qu'un visiteur peut provoquer à
+ * volonté (une connexion refusée, une visite) : une ligne par visiteur et par minute au plus
+ * (`journalOnce`). Sans couleurs avec `NO_COLOR` (la convention des terminaux).
  */
 
 import { Elysia, t } from 'elysia'
@@ -85,21 +86,33 @@ const TIME = new Intl.DateTimeFormat('fr-FR', {
 /** La longueur d'une valeur écrite, au plus (un e-mail, une référence de carte y tiennent). */
 const MAX_VALUE = 200
 
+/** Coupé au-delà de `MAX_VALUE` caractères (« … » à la fin). */
+const cut = (text: string) => (text.length > MAX_VALUE ? `${text.slice(0, MAX_VALUE)}…` : text)
+
+/** Les caractères de contrôle (C0, DEL, C1 dont le CSI `\x9b`) en `\u00xx`. */
+const escapeControls = (text: string) =>
+  text.replace(/\p{Cc}/gu, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`)
+
+/**
+ * Un texte venu d'ailleurs (un message de Better Auth, qui peut recopier ce qu'envoie un
+ * visiteur), écrit tel quel mais sans danger : coupé et ses caractères de contrôle échappés (un
+ * retour à la ligne lui ferait écrire une fausse ligne du journal, un échappement ANSI piloter le
+ * terminal).
+ */
+export const safeText = (text: string) => escapeControls(cut(text))
+
 /**
  * `carte="Pikachu ex (SV8 033)"` : entre guillemets, échappée comme en JSON, dès qu'il y a une
  * espace, un guillemet, un `=` ou un caractère de contrôle. Une valeur peut venir d'un visiteur
  * (l'e-mail ou le pseudo d'une connexion refusée) : un retour à la ligne lui ferait écrire une
  * fausse ligne du journal, un échappement ANSI piloter le terminal. Ceux que JSON laisse passer
- * (DEL, les contrôles C1 dont le CSI `\x9b`) sont échappés aussi. Coupée au-delà de `MAX_VALUE`
- * caractères (« … » à la fin) : un e-mail de 2 Mo ferait une ligne de 2 Mo, et quelques-unes
- * suffiraient à faire tourner le journal de Docker (3 × 10 Mo) et à effacer les connexions.
+ * (DEL, les contrôles C1) sont échappés aussi. Coupée au-delà de `MAX_VALUE` caractères : un
+ * e-mail de 2 Mo ferait une ligne de 2 Mo, et quelques-unes suffiraient à faire tourner le journal
+ * de Docker (3 × 10 Mo) et à effacer les connexions.
  */
 const detail = (key: string, value: string | number) => {
-  const full = String(value)
-  const text = full.length > MAX_VALUE ? `${full.slice(0, MAX_VALUE)}…` : full
-  const shown = /[\s="\p{Cc}]/u.test(text)
-    ? JSON.stringify(text).replace(/\p{Cc}/gu, (char) => `\\u00${char.charCodeAt(0).toString(16)}`)
-    : text
+  const text = cut(String(value))
+  const shown = /[\s="\p{Cc}]/u.test(text) ? escapeControls(JSON.stringify(text)) : text
   return `${dim(`${key}=`)}${shown}`
 }
 
@@ -110,7 +123,11 @@ const WIDTH = 32
 const head = (symbol: string, topic: JournalTopic) =>
   `${dim(TIME.format(new Date()))}  ${symbol}  ${TOPICS[topic](topic.padEnd(10))}`
 
-/** Écrit une ligne du journal ; `request` : pour l'adresse du visiteur. */
+/**
+ * Écrit une ligne du journal ; `request` : pour l'adresse du visiteur. Le message aussi est
+ * rendu sans danger (`safeText`) : il n'est jamais censé venir d'un visiteur, mais un oubli ne
+ * doit pas permettre d'écrire une fausse ligne.
+ */
 export function journal(
   { topic, level = 'info', message, details = {} }: JournalEntry,
   request?: Request,
@@ -123,7 +140,58 @@ export function journal(
     .filter((entry): entry is [string, string | number] => entry[1] !== undefined)
     .map(([key, value]) => detail(key, value))
     .join(' ')
-  console.log(`${head(LEVELS[level], topic)}  ${message.padEnd(WIDTH)} ${rest}`.trimEnd())
+  console.log(`${head(LEVELS[level], topic)}  ${safeText(message).padEnd(WIDTH)} ${rest}`.trimEnd())
+}
+
+/**
+ * Le visiteur d'une requête, pour compter ses actions : son adresse (`cf-connecting-ip`), ramenée
+ * à son réseau /64 pour une IPv6 (un fournisseur en donne des milliards à chacun) ; `''` sans tunnel
+ * (en développement).
+ */
+export function visitorOf(request?: Request) {
+  const ip = request?.headers.get('cf-connecting-ip') ?? ''
+  if (!ip.includes(':')) return ip
+  const [head = '', tail = ''] = ip.split('::')
+  const left = head ? head.split(':') : []
+  const right = tail ? tail.split(':') : []
+  const groups = ip.includes('::')
+    ? [...left, ...Array<string>(Math.max(0, 8 - left.length - right.length)).fill('0'), ...right]
+    : left
+  return `${groups.slice(0, 4).join(':')}::/64`
+}
+
+/** Les lignes de `journalOnce` : leur clé, l'heure de la dernière écrite, celles tues depuis. */
+const noted = new Map<string, { at: number; silenced: number }>()
+
+/** Au-delà, les plus anciennes sont oubliées (pas toutes : on écrirait de nouveau pour chacun). */
+const MAX_NOTED = 10_000
+
+/**
+ * Écrit une ligne au plus par `key` (un visiteur et ce qu'il fait) et par `windowMs` : un afflux de
+ * requêtes (des connexions refusées, des visites) ne fait pas tourner le journal de Docker
+ * (3 × 10 Mo), ce qui effacerait les connexions. Les lignes tues sont comptées, et dites par la
+ * suivante (`tues=…`).
+ */
+export function journalOnce(
+  key: string,
+  entry: JournalEntry,
+  request: Request | undefined,
+  windowMs: number,
+) {
+  const now = Date.now()
+  const known = noted.get(key)
+  if (known && now - known.at < windowMs) {
+    known.silenced++
+    return
+  }
+  noted.delete(key)
+  noted.set(key, { at: now, silenced: 0 })
+  for (const oldest of noted.keys()) {
+    if (noted.size <= MAX_NOTED) break
+    noted.delete(oldest)
+  }
+  const tues = known?.silenced || undefined
+  journal({ ...entry, details: { ...entry.details, tues } }, request)
 }
 
 /*

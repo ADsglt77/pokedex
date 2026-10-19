@@ -9,6 +9,7 @@
 
 import type { Database } from 'bun:sqlite'
 import { brotliCompressSync, constants } from 'node:zlib'
+import { API_FORMAT } from '@/config/api'
 
 /**
  * Enregistre la réponse, avec son ETag, qui ne change qu'avec son contenu. Inchangée (même ETag,
@@ -47,10 +48,10 @@ export const matchesEtag = (request: Request, etag: string) =>
   request.headers.get('if-none-match')?.replace(/^W\//, '') === etag
 
 /**
- * La forme des réponses calculées à la demande : à changer avec elle, pour que leur ETag change et
- * qu'un navigateur ne garde pas une réponse de l'ancienne forme.
+ * La forme des réponses calculées à la demande (`API_FORMAT`) : changée avec elle, leur ETag change,
+ * et un navigateur ne garde pas une réponse de l'ancienne forme.
  */
-const TAGGED_FORMAT = 1
+const TAGGED_FORMAT = API_FORMAT
 
 /**
  * Une réponse JSON calculée à la demande (`read`), dont l'ETag se tire de ce dont elle dépend
@@ -68,25 +69,31 @@ export function serveTagged(request: Request, version: string, read: () => unkno
 /**
  * La réponse HTTP d'un instantané ; 404 tant que sa tâche n'est jamais passée. Le corps n'est lu
  * que pour une réponse 200 : en Brotli si le navigateur l'accepte (et que la ligne l'a), sinon en
- * gzip, sinon décompressé.
+ * gzip, sinon décompressé. L'ETag et le corps en une seule lecture : la tâche d'ingestion peut
+ * écrire entre deux, et un corps neuf partirait avec l'ancien ETag.
  */
 export function serveSnapshot(db: Database, name: string, request: Request) {
-  const tag = db.query('SELECT etag FROM snapshots WHERE name = ?').get(name) as {
+  const sent = request.headers.get('if-none-match')?.replace(/^W\//, '') ?? ''
+  const row = db
+    .query(
+      `SELECT etag, CASE WHEN etag = ?1 THEN NULL ELSE body END AS body,
+              CASE WHEN etag = ?1 THEN NULL ELSE brotli END AS brotli
+       FROM snapshots WHERE name = ?2`,
+    )
+    .get(sent, name) as {
     etag: string
+    body: Uint8Array<ArrayBuffer> | null
+    brotli: Uint8Array<ArrayBuffer> | null
   } | null
-  if (!tag) return notFound()
+  if (!row) return notFound()
   const headers = {
     'Content-Type': 'application/json',
     'Cache-Control': 'no-cache',
-    ETag: tag.etag,
+    ETag: row.etag,
     Vary: 'Accept-Encoding',
   }
-  if (matchesEtag(request, tag.etag)) return new Response(null, { status: 304, headers })
+  if (!row.body) return new Response(null, { status: 304, headers })
   const accepted = request.headers.get('accept-encoding') ?? ''
-  const row = db.query('SELECT body, brotli FROM snapshots WHERE name = ?').get(name) as {
-    body: Uint8Array<ArrayBuffer>
-    brotli: Uint8Array<ArrayBuffer> | null
-  }
   if (row.brotli && /\bbr\b/.test(accepted)) {
     return new Response(row.brotli, { headers: { ...headers, 'Content-Encoding': 'br' } })
   }

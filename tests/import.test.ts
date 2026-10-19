@@ -5,7 +5,15 @@
 
 import { describe, expect, test } from 'bun:test'
 import { applyOrder, emptyShopping } from '@/lib/orders'
-import { buildExportFile, isDay, parseImport, readDocument } from '@/lib/transfer'
+import {
+  buildExportFile,
+  documentProblem,
+  isDay,
+  parseImport,
+  readDocument,
+  readImport,
+  readSent,
+} from '@/lib/transfer'
 import type { CollectionData, ShoppingData } from '@/types'
 import { card, collectionWith, line, NOW, order, ownership } from './fixtures'
 
@@ -53,15 +61,9 @@ describe('import', () => {
     expect(reimport()).toEqual({ collection, shopping })
   })
 
-  test('« souhaitée », d’une ancienne version : la carte reste choisie, sans statut', () => {
-    const wanted = { status: 'wanted', updatedAt: NOW, acquiredAt: null }
-    expect(reimport(['collection', 'cards', 'c'], wanted)?.collection.cards).toEqual(
-      collection.cards,
-    )
-    // Annulée, la commande la rendrait à un statut qui n'existe plus : aucun, plutôt.
-    const read = reimport([...ORDER, 'lines', 0, 'previous'], wanted)
-    expect(read?.shopping?.orders[0]?.lines[0]?.previous).toBeNull()
-    expect(reimport(['collection', 'cards', 'c'], { ...wanted, status: 'lost' })).toBeNull()
+  test('un statut inconnu est refusé', () => {
+    const lost = { status: 'lost', updatedAt: NOW, acquiredAt: null }
+    expect(reimport(['collection', 'cards', 'c'], lost)).toBeNull()
   })
 
   test('un montant en texte est refusé : il fausserait le budget', () => {
@@ -157,12 +159,6 @@ describe('import', () => {
     expect(reimport([...ORDER, 'lines'], [line('a', 12), line('b', 3)])).not.toBeNull()
   })
 
-  test('la liste d’achats d’une ancienne version (priorité, prix maximum…) est ignorée', () => {
-    const old = { a: { decision: 'accepted', priority: 'urgente', maxPrice: '5', updatedAt: NOW } }
-    expect(reimport(['shopping', 'preferences'], old)).toEqual({ collection, shopping })
-    expect(reimport(['shopping', 'preferences'])).toEqual({ collection, shopping })
-  })
-
   test('un export d’avant le module d’achats garde les achats en place', () => {
     expect(reimport(['shopping'])?.shopping).toBeNull()
   })
@@ -197,5 +193,32 @@ describe('document envoyé au serveur', () => {
     const lines = [line('a', 12), line('a', 3)]
     const twice = { ...shopping, orders: [{ ...shopping.orders[0]!, lines }] }
     expect(received({ collection, shopping: twice })).toBeNull()
+  })
+
+  test('la règle en cause, dite en clair (le serveur la note, l’appareil la montre)', () => {
+    const broken = { ...shopping, orders: [{ ...shopping.orders[0]!, shipping: '5' }] }
+    expect(readSent(JSON.parse(JSON.stringify({ collection, shopping: broken })))).toEqual({
+      document: null,
+      problem: 'la commande « CM-1 » est abîmée',
+    })
+    expect(documentProblem({ collection, shopping })).toBeNull()
+  })
+})
+
+describe('quantité d’une ligne', () => {
+  // La quantité multiplie le montant : une quantité négative réduirait la dépense du mois, « 2 » en
+  // texte ferait « 02 » cartes.
+  test('nulle, négative, décimale ou en texte : refusée', () => {
+    for (const quantity of [0, -1, 1.5, '2']) {
+      expect(reimport([...ORDER, 'lines', 0, 'quantity'], quantity)).toBeNull()
+    }
+    expect(reimport([...ORDER, 'lines', 0, 'quantity'], 3)).not.toBeNull()
+  })
+
+  test('un fichier qui n’est pas du JSON, ou d’un autre genre : refusé, et dit pourquoi', () => {
+    expect(parseImport('pas du JSON')).toBeNull()
+    expect(readImport(JSON.stringify({ kind: 'autre chose' })).problem).toBe(
+      'ce n’est pas un export de collection de ce Pokédex',
+    )
   })
 })

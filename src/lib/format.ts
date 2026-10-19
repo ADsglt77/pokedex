@@ -96,11 +96,23 @@ const percentChangeFormat = new Intl.NumberFormat('fr-FR', {
 /** « −18 % », « +5 % » : une variation (−0,18 → « −18 % »). */
 export const formatPercent = (value: number) => spaced(percentChangeFormat.format(value))
 
-/** Un montant saisi (« 12,50 », « 12.5 € ») ; `null` s'il est illisible. */
+/**
+ * Un montant saisi (« 12,50 », « 12.5 € », « 1 234,50 ») ; `null` s'il est illisible. Une espace
+ * seulement entre les milliers : « 12 50 » (une virgule oubliée) serait sinon lu 1 250 €.
+ */
 export function parseEuros(text: string): number | null {
-  const input = text.replace(/[\s€]/g, '').replace(',', '.')
-  return /^\d+(\.\d{1,2})?$/.test(input) ? Number(input) : null
+  const input = text.replace(/€/g, '').trim().replace(/\s+/g, ' ').replace(',', '.')
+  return /^(\d{1,3}( \d{3})+|\d+)(\.\d{1,2})?$/.test(input)
+    ? Number(input.replaceAll(' ', ''))
+    : null
 }
+
+/**
+ * Une quantité saisie : un nombre entier, en chiffres seulement (« 1e1 » ou « 0x2 » ne valent pas
+ * 10 ni 2) ; `null` sinon. Elle multiplie le prix d'une ligne de commande.
+ */
+export const parseQuantity = (text: string) =>
+  /^\d{1,4}$/.test(text.trim()) ? Number(text.trim()) : null
 
 /** Une adresse web saisie ; `null` si ce n'en est pas une. */
 export function parseLink(text: string): URL | null {

@@ -3,13 +3,11 @@
  *
  *   bun server/ingest.ts <tâche>     une tâche, tout de suite (`bun run ingest catalog`)
  *   bun server/ingest.ts --loop      service `ingest` : chaque tâche à son rythme
- *   bun server/ingest.ts legacy-prices <dossier>   reprise des anciens fichiers de prix
  *
  * En boucle, au démarrage : les réponses calculées de l'API (`snapshots`) sont refaites (leur
  * forme a pu changer avec le code déployé) : le catalogue et les prix d'après leurs tables, les
  * espèces en repassant leur tâche (elle relit le cache disque de PokéAPI, sans requête s'il a moins
- * d'un mois). La reprise des anciens fichiers de prix (`LEGACY_PRICES`, `legacy-prices.ts`) passe
- * d'abord, si la base n'a pas encore d'historique : la tâche `prices` n'écrit qu'ensuite.
+ * d'un mois).
  * En boucle, une tâche repart quand sa dernière réussite a plus que son intervalle
  * (`INGEST_JOBS`) ; après un échec (source indisponible…), 10 min plus tard, puis 20, 40… jusqu'à
  * 6 h : une panne qui dure ne fait pas solliciter la source toutes les 10 min. Chaque passage est
@@ -17,8 +15,6 @@
  */
 
 import type { Database } from 'bun:sqlite'
-import { existsSync } from 'node:fs'
-import { join } from 'node:path'
 import { INGEST_JOB_NAMES, INGEST_JOBS, type IngestJob } from '@/config/jobs'
 import { HOUR } from '@/lib/time'
 import { openData } from './db'
@@ -27,7 +23,6 @@ import { catalog, saveCatalog } from './jobs/catalog'
 import { images } from './jobs/images'
 import { prices } from './jobs/prices'
 import { species } from './jobs/species'
-import { hasHistory, importLegacyPrices } from './legacy-prices'
 
 /** Chaque tâche, dans l'ordre d'`INGEST_JOBS` (leur rythme) : les images suivent le catalogue. */
 const RUNS: Record<IngestJob, (db: Database) => Promise<void>> = {
@@ -84,8 +79,7 @@ function isDue(db: Database, name: IngestJob) {
 }
 
 const db = openData()
-const [arg, dir] = process.argv.slice(2)
-const legacy = process.env.LEGACY_PRICES
+const [arg] = process.argv.slice(2)
 
 if (arg === '--loop') {
   // Un passage arrêté net (redémarrage) reste « en cours » : il ne l'est plus.
@@ -93,29 +87,17 @@ if (arg === '--loop') {
     "UPDATE runs SET finished_at = ?, ok = 0, message = 'interrompue' WHERE finished_at IS NULL",
   ).run(new Date().toISOString())
   saveCatalog(db)
-  // La reprise des anciens prix ratée (vérification en échec) : les autres tâches tournent, sauf
-  // celle des prix, qui écrirait un historique et empêcherait de la refaire.
-  let skipPrices = false
-  if (legacy && !hasHistory(db) && existsSync(join(legacy, 'latest.json'))) {
-    await importLegacyPrices(db, legacy).catch((error: unknown) => {
-      console.error('Reprise des anciens prix en échec : la tâche des prix attend.', error)
-      skipPrices = true
-    })
-  }
   // Les espèces sont enregistrées telles que les lit le code : repassées avec le code déployé.
   await runJob(db, 'species')
   for (;;) {
     for (const name of INGEST_JOB_NAMES) {
-      if (name === 'prices' && skipPrices) continue
       if (isDue(db, name)) await runJob(db, name)
     }
     await Bun.sleep(60_000)
   }
-} else if (arg === 'legacy-prices' && dir) {
-  await importLegacyPrices(db, dir)
 } else if (INGEST_JOB_NAMES.includes(arg as IngestJob)) {
   if (!(await runJob(db, arg as IngestJob))) process.exit(1)
 } else {
-  console.error(`Tâches : ${INGEST_JOB_NAMES.join(', ')} ; ou --loop, ou legacy-prices <dossier>`)
+  console.error(`Tâches : ${INGEST_JOB_NAMES.join(', ')} ; ou --loop`)
   process.exit(1)
 }

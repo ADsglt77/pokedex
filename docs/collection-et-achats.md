@@ -4,22 +4,17 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
 
 - Collection : les cartes choisies (`customCards`), un statut par carte (commandée, possédée ;
   sans statut, elle est à débloquer) et le prix payé (`paidPrice`) qui le suit. Clé
-  `pokedex-collection.collection` : ne pas changer son format. Ce qu'une ancienne version y gardait
-  en plus (`entries` des illustrations choisies, clé `.settings` des raretés suivies, statuts des
-  cartes `tcgdex:ja:…` de l'ancien index) est ignoré ; le statut « souhaitée » (retiré en octobre
-  2026 : choisir la carte dit déjà qu'on la veut) se lit comme sans statut, dans le stockage, un
-  import ou le document du serveur (`readCollection`), et comme état d'avant d'une ligne de
-  commande (`readShopping` : annulée, la carte revient sans statut). La page Valeur montre à sa
-  place ce que les commandes ont coûté en tout (« Dépensé en tout »).
+  `pokedex-collection.collection` : ne pas changer son format. Seuls ses champs connus sont gardés
+  à la lecture (`readCollection` : `schemaVersion`, `updatedAt`, `cards` et `customCards` ; de même
+  `readShopping` pour les achats). La page Valeur montre ce que les commandes ont coûté en tout
+  (« Dépensé en tout »).
 - Achats (`/achats`), clé `pokedex-collection.shopping` (`ShoppingData`, à part : la collection
   garde son format ; ceux d'un nouveau venu, aucune commande et le budget par défaut :
   `emptyShopping`, `lib/orders.ts`) :
   - la liste d'achats n'est pas enregistrée : c'est la carte de chaque Pokémon ni possédée ni
     commandée (`wishlistRows`, une TAG TEAM une fois), toutes voulues autant (décision de
     l'utilisateur, octobre 2026 : choisir la carte suffit ; plus de « À acheter » carte par carte, ni
-    priorité, ni prix maximum, ni note). L'ancienne liste (`preferences`) est ignorée à la lecture
-    (stockage, import, serveur : `readShopping`) et toujours écrite vide, pour qu'une ancienne
-    version (un onglet resté ouvert) relise les achats sans les croire abîmés. Le lien vers
+    priorité, ni prix maximum, ni note). Le lien vers
     Cardmarket est `cardmarketPage` : la page notée, sinon l'id. La prochaine commande
     (`planPurchase`, `purchase-planner`) ne lit qu'elle : elle y prend les moins chères d'abord,
     une par Pokémon, dans le budget, port réservé ; on peut en retirer ou en ajouter à la main.
@@ -80,15 +75,31 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     d'achats illisible : image, montant en texte, état de commande, date ou jour qui n'existe pas
     ou d'avant l'an 100, remboursé plus grand que la commande, commande sans id ou en double, carte
     d'un Pokémon hors du Pokédex ou sans clé `image` (« Modifier la carte » planterait), id Cardmarket
-    que la saisie refuserait (0, négatif, plus de 9 chiffres…), texte qui n'en est pas un, lien…)
-    est refusé (`lib/transfer.ts`), comme par le serveur à la synchronisation. « Effacer ma
+    que la saisie refuserait (0, négatif, plus de 9 chiffres…), quantité qui n'est pas un entier
+    de 1 ou plus, texte qui n'en est pas un, lien…) est refusé (`lib/transfer.ts`), comme par le
+    serveur à la synchronisation, et la règle en cause est dite (« La commande du 5 octobre 2026
+    est abîmée. », `documentProblem`, `readImport`). Les montants saisis (`parseEuros`) acceptent
+    une virgule ou un point, le symbole et une espace entre les milliers seulement (« 1 234,50 ») :
+    « 12 50 », une virgule oubliée, est refusé plutôt que lu 1 250 € ; une quantité (`parseQuantity`)
+    s'écrit en chiffres seulement (« 1e1 » ne vaut pas 10). Une carte d'une commande (en cours,
+    reçue ou annulée) ne se retire pas de la collection, sauf d'un seul de ses Pokémon (`isInAnOrder`,
+    `lib/orders.ts` : la fiche d'un Pokémon et celle d'une carte du catalogue) ; les règles de la
+    collection et des commandes ne modifient jamais ce qu'elles reçoivent (« Annuler » repose
+    dessus ; testé). « Effacer ma
     collection » efface les cartes, leurs statuts et leurs prix payés ; les commandes et le budget
     restent.
 - Deux onglets ouverts restent d'accord : chacun reprend ce que l'autre enregistre (évènement
-  `storage`, `store/persist.ts`, pour les deux clés), sans quoi il l'écraserait ; connectés, ils
+  `storage`, `store/persist.ts`, pour les deux clés), sans quoi il l'écraserait, et ne réécrit jamais
+  une valeur reprise (testé : un onglet qui traiterait d'affilée deux changements en attente
+  réécrirait le premier par-dessus le second, et les deux se renverraient ces valeurs jusqu'à
+  s'arrêter sur une ancienne) ; connectés, ils
   partagent aussi la dernière version échangée avec le serveur. Si le navigateur
   refuse de lire ou d'écrire (stockage plein ou bloqué ; toute lecture passe par `readStored`,
   toute écriture par `writeStored`, sauf le choix du thème), l'app continue en mémoire et un
-  bandeau (`useStorageFailure`, `AppShell`) invite à exporter.
+  bandeau (`useStorageFailure`, `AppShell`) invite à exporter. Une valeur enregistrée mais
+  illisible (abîmée, ou d'un format que ce code ne lit pas) est mise de côté (`<clé>.illisible`),
+  un bandeau le dit, et elle n'est jamais envoyée au serveur comme un effacement
+  (`setAsideUnreadable`, `docs/compte-et-synchronisation.md`). « Annuler » se lance aussi par
+  Ctrl+Z (⌘Z) tant que son toast est affiché.
 - « Annuler » (`useCollectionAction`) rétablit collection et achats d'avant, et refuse si quelque
   chose a changé depuis : une modification ultérieure n'est jamais effacée.

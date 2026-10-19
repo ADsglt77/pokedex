@@ -1,6 +1,7 @@
 /** Les durées en millisecondes, et le calcul des jours (YYYY-MM-DD, en temps universel). */
 
-export const HOUR = 3_600_000
+export const MINUTE = 60_000
+export const HOUR = 60 * MINUTE
 export const DAY = 24 * HOUR
 export const WEEK = 7 * DAY
 

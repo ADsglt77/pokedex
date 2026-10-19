@@ -71,15 +71,15 @@ navigateur ne parle qu'à lui. Des tâches d'ingestion lisent les sources et rem
   sprites et illustrations des Pokémon chez PokéAPI. Une image qui manque encore est copiée à la
   demande.
 
-Les espèces (PokéAPI) viennent aussi du serveur (tâche `species`, chaque mois). Seule une
+Les espèces (PokéAPI) viennent aussi du serveur (tâche `species`, chaque mois ; une espèce sans
+nom français ou anglais, ou d'un type inconnu, fait échouer la tâche : les espèces d'avant
+restent, l'app ne plante pas sur une nouvelle génération pas encore traduite). Seule une
 image à l'adresse collée se charge ailleurs ; pas celles de Cardmarket, qui ne s'affichent que sur
 son site.
 
 En développement : `bun run dev:server` (l'API, sur le port 3000) à côté de `bun dev`, qui lui
 renvoie `/api` et `/images` ; la base vit dans `.data/`. La remplir une fois :
-`bun run ingest species`, `bun run ingest catalog`, puis `bun run ingest prices` (pour reprendre un
-ancien dossier `prices/`, `bun run ingest legacy-prices ./prices` **avant** toute tâche `prices` :
-la reprise refuse une base qui a déjà un historique). Inutile de lancer `bun run ingest images` (1,5 Go) : le
+`bun run ingest species`, `bun run ingest catalog`, puis `bun run ingest prices`. Inutile de lancer `bun run ingest images` (1,5 Go) : le
 serveur copie à la demande les images affichées. Pour la connexion, un fichier `.env.local` (ignoré
 par git) :
 
@@ -107,12 +107,6 @@ déconnecte le précédent, qui garde ses modifications). Personne d'autre ne pe
 - [ ] Le clone en SSH, avec une clé de déploiement en lecture seule (étape 1 plus bas).
 - [ ] Le fichier `.env` : l'adresse publique en https, la clé des sessions et l'adresse de votre
       compte (étape 2).
-- [ ] L'ancien historique des prix : `docker volume ls | grep prices`. Si l'ancien service des prix
-      a tourné sur ce VPS, `ingest` reprend son historique tout seul au premier démarrage
-      (« Vérifié : … cartes » dans `docker compose logs ingest`) : les courbes commencent plus tôt.
-- [ ] Une installation d'avant les conteneurs sans droits d'administrateur : rendre une fois ses
-      volumes à l'utilisateur `bun`, sans quoi le serveur ne peut plus y écrire :
-      `docker compose run --rm --no-deps --user root ingest chown -R bun:bun /data /images /backups`.
 - [ ] `docker compose up -d --build`, puis le tunnel vers `http://localhost:8080` (étape 3).
 - [ ] Le compte (étape 4), puis l'import de l'export d'avant (Données › Importer) : connecté, la
       collection part sur le serveur.
@@ -157,13 +151,7 @@ docker compose start ingest
 ```
 
 Ne jamais lancer `docker compose down -v`, qui effacerait les volumes (`db` : le compte, la
-collection et l'historique des prix ; `backups` ; `images`). À son premier démarrage, `ingest`
-reprend l'historique de l'ancien service `prices` (des fichiers, dans le volume `prices`), vérifié
-avant d'être gardé. Une fois sûr que l'historique est repris (`docker compose logs ingest` :
-« Vérifié : … cartes »), l'ancien volume peut partir, dans cet ordre (Docker refuse de supprimer un volume qu'un conteneur utilise encore) :
-retirer de `compose.yaml` le volume `prices` (sa ligne et `LEGACY_PRICES` dans `ingest`, sa
-déclaration en bas), redéployer (`docker compose up -d`), puis `docker volume rm pokedex_prices`
-(le nom exact : `docker volume ls`).
+collection et l'historique des prix ; `backups` ; `images`).
 
 **Une fois, sur le VPS**
 
@@ -204,9 +192,11 @@ déclaration en bas), redéployer (`docker compose up -d`), puis `docker volume 
 
 **Ensuite, à chaque déploiement** (`.github/workflows/deploy.yml`, lancé à la main depuis l'onglet
 Actions tant que le domaine n'est pas prêt ; son en-tête dit comment le relancer à chaque push sur
-`main`) : GitHub se connecte au VPS en SSH, fait `git pull` et reconstruit le conteneur. La construction lance d'abord `bun test` et
-rafraîchit les images de base ; si elle échoue, test compris, l'ancienne version reste en ligne.
-Secrets à créer dans le dépôt (Settings › Secrets and variables › Actions) :
+`main`) : GitHub se connecte au VPS en SSH, fait `git pull` et reconstruit le conteneur. La
+construction lance d'abord `bun test`, `bun lint` et `nginx -t`, et rafraîchit les images de base ;
+si elle échoue, test compris, l'ancienne version reste en ligne. Une fois les conteneurs
+redémarrés, le workflow vérifie que le site et son API répondent (en rouge sinon). Secrets à créer
+dans le dépôt (Settings › Secrets and variables › Actions) :
 
 | Secret | Valeur |
 |---|---|
@@ -221,39 +211,70 @@ Le port SSH doit être joignable depuis GitHub. S'il ne passe que par le tunnel 
 Access), ce workflow ne peut pas s'y connecter : il faut alors un runner GitHub auto-hébergé sur
 le VPS.
 
+La clé de déploiement donne un shell à un membre du groupe `docker`, autant dire l'administration
+du VPS : réservez-la au déploiement, dans `~/.ssh/authorized_keys`, en tête de sa ligne (la même
+commande que le workflow, le dossier du clone à adapter) :
+`restrict,command="cd /home/moi/pokedex && git pull --ff-only && sh deploy/deploy.sh"`, et
+protégez le workflow par un « Environment » GitHub avec un relecteur obligatoire.
+
+**Revenir à la version d'avant** (un déploiement en rouge, une erreur vue après coup) : les images
+d'avant restent une semaine (`deploy/deploy.sh`), la reconstruction est donc rapide.
+
+```sh
+git log --oneline -5
+git checkout <commit d'avant>
+docker compose build && docker compose up -d
+```
+
+Puis, une fois `main` corrigé : `git checkout main` et un nouveau déploiement.
+
 ## Sauvegardes
 
 Chaque jour, le service `ingest` copie les deux bases dans le volume `backups` :
 `app-AAAA-MM-JJ.db` (votre compte et votre collection, 30 jours gardés) et
-`data-AAAA-MM-JJ.db.gz` (catalogue, prix et leur historique, 7 jours gardés). Ce volume est sur le
-même disque que les bases : copiez-le aussi ailleurs. Pour en sortir les fichiers (dans
-`./sauvegardes`, que git ignore ; `--user root` : les conteneurs tournent sans droits
-d'administrateur, ce dossier du VPS ne leur appartient pas) :
+`data-AAAA-MM-JJ.db.gz` (catalogue, prix et leur historique, 7 jours gardés). Chaque copie est
+vérifiée (`PRAGMA quick_check`) et écrite sous un nom provisoire (`tmp-…`) avant de prendre sa
+place : une copie en cours n'est jamais prise pour une sauvegarde. Ce volume est sur le même
+disque que les bases : copiez-le aussi ailleurs. Pour en sortir les fichiers (dans
+`./sauvegardes`, que git ignore, vidé d'abord : il ne garde que ce qu'a le volume ; `--user root` :
+les conteneurs tournent sans droits d'administrateur, ce dossier du VPS ne leur appartient pas) :
 
 ```sh
-mkdir -p sauvegardes
-docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/out" ingest sh -c 'cp /backups/* /out/'
+rm -rf sauvegardes && mkdir sauvegardes
+docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/out" ingest sh -c 'cp /backups/app-* /backups/data-* /out/'
 ```
 
 Chaque nuit, hors du VPS, avec `rclone` (configuré une fois, `rclone config`, vers un stockage à
 vous : Backblaze B2, Google Drive, un autre serveur…) : dans la crontab de l'utilisateur du
 déploiement (`crontab -e`), ici à 4 h 30, le dossier du clone à adapter. La sauvegarde n'a pas
 d'heure fixe (une par jour, à son rythme) : chaque copie emporte celles du volume, la plus récente
-datant de moins d'un jour :
+datant de moins d'un jour. Le stockage distant garde 90 jours (`rclone delete --min-age 90d`) :
 
 ```sh
-30 4 * * * cd /home/moi/pokedex && mkdir -p sauvegardes && docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/out" ingest sh -c 'cp /backups/* /out/' && rclone copy sauvegardes distant:pokedex-sauvegardes
+30 4 * * * cd /home/moi/pokedex && rm -rf sauvegardes && mkdir sauvegardes && docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/out" ingest sh -c 'cp /backups/app-* /backups/data-* /out/' && rclone copy sauvegardes distant:pokedex-sauvegardes && rclone delete --min-age 90d distant:pokedex-sauvegardes
 ```
 
-Restaurer une base : arrêter le serveur et les tâches, remettre la copie à la place de la base
-(décompressée pour `data.db`, avec `gunzip`), sans les fichiers `-wal` et `-shm` de l'ancienne,
-puis redémarrer :
+**Restaurer une sauvegarde** : arrêter le serveur et les tâches, remettre la copie à la place de
+la base, sans les fichiers `-wal` et `-shm` de l'ancienne, puis redémarrer. Le compte et la
+collection (`app.db`) :
 
 ```sh
 docker compose stop server ingest
 docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/app.db-wal /data/app.db-shm && cp /restore/app-AAAA-MM-JJ.db /data/app.db && chown bun:bun /data/app.db'
 docker compose up -d
 ```
+
+Les données de référence et l'historique des prix (`data.db`, compressée) :
+
+```sh
+docker compose stop server ingest
+docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/data.db-wal /data/data.db-shm && gunzip -c /restore/data-AAAA-MM-JJ.db.gz > /data/data.db && chown bun:bun /data/data.db'
+docker compose up -d
+```
+
+Après une restauration d'`app.db`, les appareils le voient : chaque version de la collection porte
+une empreinte tirée de son contenu (pas seulement son numéro, qui peut revenir), et un appareil qui
+avait une version plus récente demande laquelle garder.
 
 Le serveur garde aussi, dans `app.db`, une version remplacée de la collection par heure pendant
 30 jours (table `collection_versions`, compressée) : de quoi revenir en arrière après une erreur,

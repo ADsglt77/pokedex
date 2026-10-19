@@ -7,6 +7,7 @@
 import { GENERATIONS, type Generation } from '@/config/pokedex'
 import { details, formatEuro, formatInteger, plural } from '@/lib/format'
 import { cardsWithStatus, isTaken, type PokedexEntry } from '@/lib/pokedex'
+import type { PricePoint } from '@/lib/chart'
 import { addDays, daysBetween } from '@/lib/time'
 import type {
   CardPrice,
@@ -206,11 +207,6 @@ export const completionByGeneration = (
       prices,
     ),
   }))
-
-export interface PricePoint {
-  date: string
-  value: number
-}
 
 /** La courbe d'une carte : un point par jour où elle avait un prix. */
 export function cardHistory(history: CardPriceHistory | null): PricePoint[] {

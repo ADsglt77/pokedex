@@ -1,5 +1,6 @@
 import { Button, EmptyState, Progress } from '@camply/ui'
 import { Inbox } from '@camply/ui/icons'
+import { useRef } from 'react'
 import { Link } from 'react-router'
 import { usePokedex } from '@/hooks/usePokedex'
 import { summarize } from '@/lib/pokedex'
@@ -16,11 +17,13 @@ export function CollectionSection() {
   const { progress } = usePokedex()
   const summary = summarize(collection)
   const updatedAt = formatDateTime(collection.updatedAt)
+  const title = useRef<HTMLHeadingElement>(null)
 
   return (
     <DataSection
       id="collection"
       title="Ma collection"
+      titleRef={title}
       description="Synchronisée avec votre compte : la même sur tous vos appareils, et sauvegardée sur le serveur."
     >
       {summary.cards === 0 ? (
@@ -55,7 +58,7 @@ export function CollectionSection() {
             />
           </div>
           <SummaryLedger summary={summary} />
-          <MissingImages />
+          <MissingImages title={title} />
         </>
       )}
       {updatedAt && <p className="hint">Dernière modification le {updatedAt}.</p>}

@@ -6,8 +6,14 @@
  */
 
 import type { Database } from 'bun:sqlite'
-import { GENERATIONS, SPECIES_IDS, TOTAL_SPECIES } from '@/config/pokedex'
-import type { PokemonSpecies, PokemonSpeciesDetails, PokemonTypeId } from '@/types'
+import { GENERATIONS, POKEMON_TYPES, SPECIES_IDS, TOTAL_SPECIES } from '@/config/pokedex'
+import type {
+  PokemonSpecies,
+  PokemonSpeciesDetails,
+  PokemonTypeId,
+  SpeciesDetailsFile,
+  SpeciesFile,
+} from '@/types'
 import { fetchJson, mapPool } from '../lib/net'
 import { saveSnapshot } from '../snapshots'
 
@@ -56,22 +62,30 @@ const cleanFlavorText = (text: string) =>
 /** Dixièmes d'unité → unités. Aucun Pokémon ne mesure 0 : cela veut dire « inconnu ». */
 const fromTenths = (value: number | null) => (value && value > 0 ? value / 10 : null)
 
+/** Un type de PokéAPI que l'app connaît (`POKEMON_TYPES`). */
+const isKnownType = (type: string): type is PokemonTypeId => Object.hasOwn(POKEMON_TYPES, type)
+
+/**
+ * L'espèce telle que la lit l'app. Sans nom français ou anglais, ou d'un type inconnu (une nouvelle
+ * génération que PokéAPI n'a pas encore toute traduite) : une erreur, la tâche échoue et les
+ * espèces d'avant restent (l'app planterait sur un nom absent, partout).
+ */
 function normalize(species: RawSpecies, pokemon: RawPokemon) {
   const generation = GENERATIONS.find((row) => species.id >= row.first && species.id <= row.last)!
   const genus = inLanguage(species.genera, 'fr')
     .map((entry) => entry.genus.trim())
     .find(Boolean)
+  const fr = firstName(species, 'fr')
+  const en = firstName(species, 'en')
+  if (!fr || !en) throw new Error(`Espèce ${species.id} : pas de nom français ou anglais`)
+  const types = [...pokemon.types].sort((a, b) => a.slot - b.slot).map(({ type }) => type.name)
+  const unknown = types.find((type) => !isKnownType(type))
+  if (unknown) throw new Error(`Espèce ${species.id} : type inconnu (${unknown})`)
 
   const entry: PokemonSpecies = {
     id: species.id,
-    names: {
-      fr: firstName(species, 'fr')!,
-      en: firstName(species, 'en')!,
-      ja: firstName(species, 'ja-hrkt') ?? firstName(species, 'ja'),
-    },
-    types: [...pokemon.types]
-      .sort((a, b) => a.slot - b.slot)
-      .map(({ type }) => type.name as PokemonTypeId),
+    names: { fr, en, ja: firstName(species, 'ja-hrkt') ?? firstName(species, 'ja') },
+    types: types.filter(isKnownType),
     generation: generation.id,
   }
   const details: PokemonSpeciesDetails = {
@@ -102,10 +116,15 @@ export async function species(db: Database) {
     return normalize(raw, pokemon)
   })
 
-  // Ensemble : la liste et les détails restent d'accord.
+  // Ensemble : la liste et les détails restent d'accord. Dans la forme que lit l'app (`satisfies`) :
+  // une clé renommée ne passerait pas la compilation.
   db.transaction(() => {
-    saveSnapshot(db, 'species', { species: rows.map(({ entry }) => entry) })
-    saveSnapshot(db, 'species-details', { details: rows.map(({ details }) => details) })
+    saveSnapshot(db, 'species', {
+      species: rows.map(({ entry }) => entry),
+    } satisfies SpeciesFile)
+    saveSnapshot(db, 'species-details', {
+      details: rows.map(({ details }) => details),
+    } satisfies SpeciesDetailsFile)
   })()
   console.log(`${rows.length} espèces enregistrées`)
 }

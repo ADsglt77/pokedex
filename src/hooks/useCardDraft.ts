@@ -1,4 +1,4 @@
-import { useRef, useState, type RefObject } from 'react'
+import { useCallback, useRef, useState, type RefObject } from 'react'
 import { findCardImage, type CatalogCard } from '@/lib/card-catalog'
 import { isFoundImage } from '@/lib/card-images'
 import { referenceCode } from '@/lib/card-code'
@@ -60,7 +60,7 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
   // et numéro.
   const lookup = image.trim() || !referenceCode(searched) ? null : searched
   // L'image déjà retrouvée reste, pour la même référence : si elle ne répond pas cette fois, ou si
-  // la référence n'a pas de code où la chercher (une image d'une ancienne version).
+  // la référence n'a pas de code où la chercher.
   const kept =
     card && reference.trim() === card.reference && hasFoundImage(card) ? card.image : null
 
@@ -102,6 +102,20 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
   }
 
   /**
+   * Reprend une carte choisie dans le catalogue : sa référence (d'où son image) et son id
+   * Cardmarket. Une adresse d'image ou une page collées pour une autre carte ne lui vont plus. La
+   * même fonction d'un rendu à l'autre : les tuiles du catalogue (mémoïsées) ne se redessinent pas.
+   */
+  const fill = useCallback((chosen: Pick<CatalogCard, 'reference' | 'cardmarket'>) => {
+    setReference(chosen.reference)
+    setSearched(chosen.reference)
+    setCardmarketText(String(chosen.cardmarket ?? ''))
+    setChecked(chosen.cardmarket ?? null)
+    setImage('')
+    setPage('')
+  }, [])
+
+  /**
    * Lit la carte saisie et la passe à `done` (l'enregistrer, fermer…). Une seule fois à la fois :
    * pendant la lecture (prix, image), `saving` est vrai et un second appel ne fait rien.
    */
@@ -135,18 +149,7 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
     reference,
     setReference,
     searchImage: () => setSearched(reference),
-    /**
-     * Reprend une carte choisie dans le catalogue : sa référence (d'où son image) et son id
-     * Cardmarket. Une adresse d'image ou une page collées pour une autre carte ne lui vont plus.
-     */
-    fill: (chosen: Pick<CatalogCard, 'reference' | 'cardmarket'>) => {
-      setReference(chosen.reference)
-      setSearched(chosen.reference)
-      setCardmarketText(String(chosen.cardmarket ?? ''))
-      setChecked(chosen.cardmarket ?? null)
-      setImage('')
-      setPage('')
-    },
+    fill,
     page,
     setPage,
     // L'id se signale tout de suite ; l'image et la page, à l'enregistrement.

@@ -1,10 +1,15 @@
-/** Export et import de la collection, et sa relecture depuis le stockage du navigateur. */
+/**
+ * Export et import de la collection, sa relecture depuis le stockage du navigateur, et les règles
+ * d'un document (un fichier importé, la collection synchronisée) : ce qui le fait refuser, dit en
+ * clair.
+ */
 
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
-import { parseLink, today } from '@/lib/format'
+import { formatDate, parseLink } from '@/lib/format'
 import { refundFits } from '@/lib/orders'
+import type { SyncDocument } from '@/lib/sync'
 import type {
   BudgetSettings,
   CollectionData,
@@ -27,20 +32,6 @@ export function buildExportFile(
   }
 }
 
-/** Télécharge le fichier d'export, daté du jour de l'utilisateur ; rend son nom. */
-export function downloadExport(file: CollectionExportFile): string {
-  const name = `pokedex-collection-${today()}.json`
-  const json = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(json)
-  // Firefox ne télécharge que par un lien présent dans la page, et lit le fichier après le clic.
-  const link = Object.assign(document.createElement('a'), { href: url, download: name })
-  document.body.append(link)
-  link.click()
-  link.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 30_000)
-  return name
-}
-
 /** Le JSON d'une valeur enregistrée ou d'un fichier ; `null` s'il est absent ou illisible. */
 export function parseStored(text: string | null): unknown {
   try {
@@ -54,40 +45,32 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
 
 /**
- * « Souhaitée », un statut d'une ancienne version : la carte choisie suffit à dire qu'on la veut,
- * elle se lit comme sans statut.
- */
-const isWanted = (ownership: unknown) => isRecord(ownership) && ownership.status === 'wanted'
-
-/**
- * Une collection, telle qu'enregistrée ; `null` si ce n'en est pas une (mauvais fichier). Ce
- * qu'une ancienne version y gardait en plus (illustrations choisies, statut « souhaitée ») est
- * ignoré.
+ * Une collection, telle qu'enregistrée ; `null` si ce n'en est pas une (mauvais fichier). Seuls
+ * ses champs connus sont gardés. Une relecture de sa forme seulement : ses statuts et ses cartes ne
+ * sont contrôlés qu'à l'import et par le serveur (`documentProblem`).
  */
 export function readCollection(value: unknown): CollectionData | null {
   if (!isRecord(value) || !isRecord(value.cards) || !isRecord(value.customCards)) return null
-  const cards = Object.entries(value.cards).filter(([, ownership]) => !isWanted(ownership))
-  return { ...value, cards: Object.fromEntries(cards) } as unknown as CollectionData
+  return {
+    schemaVersion: 1,
+    updatedAt: value.updatedAt ?? null,
+    cards: value.cards,
+    customCards: value.customCards,
+  } as CollectionData
 }
 
 /**
- * Les achats (commandes, budget) ; `null` si ce n'en sont pas. La liste d'achats d'une ancienne
- * version (`preferences`) est ignorée, et une ligne qui notait « souhaitée » comme état d'avant
- * y revient sans statut.
+ * Les achats (commandes, budget) ; `null` si ce n'en sont pas. Seuls leurs champs connus sont
+ * gardés. Une relecture de leur forme seulement, comme `readCollection`.
  */
 export function readShopping(value: unknown): ShoppingData | null {
   if (!isRecord(value) || !Array.isArray(value.orders) || !isRecord(value.budget)) return null
-  const orders = value.orders.map((order: unknown) =>
-    isRecord(order) && Array.isArray(order.lines)
-      ? {
-          ...order,
-          lines: order.lines.map((line: unknown) =>
-            isRecord(line) && isWanted(line.previous) ? { ...line, previous: null } : line,
-          ),
-        }
-      : order,
-  )
-  return { ...value, preferences: {}, orders } as unknown as ShoppingData
+  return {
+    schemaVersion: 1,
+    updatedAt: value.updatedAt ?? null,
+    orders: value.orders,
+    budget: value.budget,
+  } as unknown as ShoppingData
 }
 
 /** Chaque valeur d'un dictionnaire (ou d'une liste) est un objet qui passe `ok` (avec sa clé). */
@@ -181,45 +164,97 @@ const isBudget = (budget: BudgetSettings) =>
 /** Une date de dernière modification : absente ou `null` avant la première. */
 const isUpdatedAt = (value: unknown) => value == null || isText(value)
 
-/**
- * Les enregistrements d'un fichier, là où l'app les lit sans garde : un fichier retouché à la main
- * ne doit ni faire planter les pages une fois importé (puis enregistré), ni fausser le budget
- * (un montant en texte, une commande en double), ni glisser un lien qui ne serait pas une
- * adresse web.
- */
-const readable = (collection: CollectionData, shopping: ShoppingData | null) =>
-  isUpdatedAt(collection.updatedAt) &&
-  all(collection.cards, isOwnership) &&
-  all(collection.customCards, isCard) &&
-  (!shopping ||
-    (isUpdatedAt(shopping.updatedAt) &&
-      all(shopping.orders, isOrder) &&
-      // Une commande est retrouvée par son id : deux du même id se confondraient.
-      distinct(shopping.orders.map((order) => order.id)) &&
-      isBudget(shopping.budget)))
+/** La première entrée d'un dictionnaire (ou d'une liste) qui ne passe pas `ok`. */
+const firstBad = (values: object, ok: (value: Record<string, unknown>, key: string) => boolean) =>
+  Object.entries(values).find(([key, value]) => !(isRecord(value) && ok(value, key)))
+
+/** Une carte, pour l'utilisateur : sa référence, sinon son id. */
+const cardName = (card: unknown, key: string) =>
+  isRecord(card) && isText(card.reference) && card.reference !== '' ? card.reference : key
+
+/** Une commande, pour l'utilisateur : sa référence, sinon son jour. */
+function orderName(order: unknown) {
+  if (!isRecord(order)) return 'sans date'
+  if (isText(order.reference) && order.reference !== '') return `« ${order.reference as string} »`
+  return isDay(order.date) ? `du ${formatDate(order.date as string)}` : 'sans date'
+}
 
 /**
- * Le contenu d'un fichier d'export ; `null` si ce n'en est pas un, ou s'il est abîmé. `shopping`
- * est `null` pour un export fait avant le module d'achats (sans bloc `shopping`).
+ * La première règle que ne passe pas un document, dite en clair (« la carte « SV2a 165 » est
+ * abîmée ») ; `null` s'il les passe toutes. Ses enregistrements, là où l'app les lit sans garde :
+ * un fichier retouché à la main ne doit ni faire planter les pages une fois importé (puis
+ * enregistré), ni fausser le budget (un montant en texte, une commande en double), ni glisser un
+ * lien qui ne serait pas une adresse web. Les mêmes règles pour un fichier importé et pour la
+ * collection synchronisée (le serveur), relues par cet appareil quand le serveur la refuse.
  */
-export function parseImport(text: string) {
+export function documentProblem({
+  collection,
+  shopping,
+}: {
+  collection: CollectionData
+  shopping: ShoppingData | null
+}): string | null {
+  if (!isUpdatedAt(collection.updatedAt)) return 'la date de la collection est illisible'
+  const ownership = firstBad(collection.cards, isOwnership)
+  if (ownership) return `le statut de la carte ${ownership[0]} est abîmé`
+  const card = firstBad(collection.customCards, isCard)
+  if (card) return `la carte « ${cardName(card[1], card[0])} » est abîmée`
+  if (!shopping) return null
+  if (!isUpdatedAt(shopping.updatedAt)) return 'la date des achats est illisible'
+  const order = firstBad(shopping.orders, isOrder)
+  if (order) return `la commande ${orderName(order[1])} est abîmée`
+  // Une commande est retrouvée par son id : deux du même id se confondraient.
+  if (!distinct(shopping.orders.map((order) => order.id))) return 'deux commandes ont le même id'
+  if (!isBudget(shopping.budget)) return 'le budget est abîmé'
+  return null
+}
+
+/** Ce qu'on lit d'un fichier ou d'un envoi : son contenu, ou la raison de son refus. */
+type Read<T> = { document: T; problem: null } | { document: null; problem: string }
+
+const refusal = (problem: string) => ({ document: null, problem })
+
+/** La collection et ses achats, lus et contrôlés ; les achats peuvent manquer (`optional`). */
+function readParts(
+  collectionValue: unknown,
+  shoppingValue: unknown,
+  optional: boolean,
+): Read<{ collection: CollectionData; shopping: ShoppingData | null }> {
+  const collection = readCollection(collectionValue)
+  if (!collection) return refusal('ce n’est pas une collection')
+  const shopping = readShopping(shoppingValue)
+  if (!shopping && !(optional && shoppingValue === undefined)) {
+    return refusal('ses achats sont illisibles')
+  }
+  const problem = documentProblem({ collection, shopping })
+  return problem ? refusal(problem) : { document: { collection, shopping }, problem: null }
+}
+
+/**
+ * Le contenu d'un fichier d'export, ou la raison de son refus (pas un export, ou abîmé).
+ * `shopping` est `null` pour un export fait avant le module d'achats (sans bloc `shopping`).
+ */
+export function readImport(text: string) {
   const file = parseStored(text)
-  if (!isRecord(file) || file.kind !== 'collection-export') return null
-  const collection = readCollection(file.collection)
-  const shopping = readShopping(file.shopping)
-  if (!collection || (file.shopping !== undefined && !shopping)) return null
-  return readable(collection, shopping) ? { collection, shopping } : null
+  if (!isRecord(file) || file.kind !== 'collection-export') {
+    return refusal('ce n’est pas un export de collection de ce Pokédex')
+  }
+  return readParts(file.collection, file.shopping, true)
 }
 
-export type ImportedFile = NonNullable<ReturnType<typeof parseImport>>
+/** Le contenu d'un fichier d'export ; `null` si ce n'en est pas un, ou s'il est abîmé. */
+export const parseImport = (text: string) => readImport(text).document
 
 /**
- * La collection et les achats qu'un navigateur envoie au serveur (synchronisation) ; `null` s'ils
- * sont abîmés : le serveur les refuse, aux mêmes règles qu'un fichier importé.
+ * La collection et les achats qu'un navigateur envoie au serveur (synchronisation), ou la raison
+ * de leur refus : le serveur les contrôle aux mêmes règles qu'un fichier importé.
  */
-export function readDocument(value: unknown) {
-  if (!isRecord(value)) return null
-  const collection = readCollection(value.collection)
-  const shopping = readShopping(value.shopping)
-  return collection && shopping && readable(collection, shopping) ? { collection, shopping } : null
+export function readSent(value: unknown): Read<SyncDocument> {
+  if (!isRecord(value)) return refusal('ce n’est pas une collection')
+  const { document, problem } = readParts(value.collection, value.shopping, false)
+  if (!document) return refusal(problem)
+  return { document: { collection: document.collection, shopping: document.shopping! }, problem }
 }
+
+/** La collection et les achats envoyés au serveur ; `null` s'ils sont abîmés (`readSent`). */
+export const readDocument = (value: unknown) => readSent(value).document

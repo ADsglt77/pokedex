@@ -1,6 +1,6 @@
 import type { ChartWindow } from '@/lib/chart'
 import { formatDate, formatEuro, formatShortDate } from '@/lib/format'
-import type { PricePoint } from '@/lib/prices'
+import type { PricePoint } from '@/lib/chart'
 import styles from './PriceChart.module.css'
 
 // Repère du tracé : étiré à la largeur du conteneur, le trait garde son épaisseur.

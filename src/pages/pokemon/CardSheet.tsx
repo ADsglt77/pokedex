@@ -1,4 +1,4 @@
-import { Button } from '@camply/ui'
+import { Button, Spinner } from '@camply/ui'
 import { Plus } from '@camply/ui/icons'
 import { lazy, Suspense, useEffect, useState, type Ref } from 'react'
 import { Panel } from '@/components/Panel'
@@ -89,7 +89,7 @@ export function EmptySheet({
         </Button>
       </div>
       {adding && (
-        <Suspense>
+        <Suspense fallback={<Spinner size={16} label="Ouverture de la fenêtre…" />}>
           <CardForm species={species} card={null} onClose={() => setAdding(false)} />
         </Suspense>
       )}

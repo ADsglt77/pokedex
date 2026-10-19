@@ -2,9 +2,9 @@ import { Badge, DescriptionList, SkeletonText, type BadgeTone } from '@camply/ui
 import { Suspense, use, useState, type ReactNode } from 'react'
 import { INGEST_JOB_NAMES, INGEST_JOBS, type IngestJob } from '@/config/jobs'
 import { loadStatus } from '@/lib/api'
-import { isOverdue } from '@/lib/jobs'
+import { isOverdue, pricesFrozen } from '@/lib/jobs'
 import { details, formatDate, formatDateTime } from '@/lib/format'
-import type { JobStatus, ServerStatus } from '@/types'
+import type { JobErrors, JobStatus, ServerStatus } from '@/types'
 import { DataSection } from './DataSection'
 import styles from './DataPage.module.css'
 
@@ -38,10 +38,15 @@ export function ReferenceSection() {
   )
 }
 
-/** Où en est une tâche : un badge et une phrase. `now` : en ms. */
+/**
+ * Où en est une tâche : un badge et une phrase. `error` : la cause de son dernier échec ;
+ * `pricesDate` : le jour des prix en base (pour la tâche `prices`). `now` : en ms.
+ */
 function describeJob(
   job: IngestJob,
   status: JobStatus | undefined,
+  error: string | undefined,
+  pricesDate: string | null,
   now: number,
 ): { tone: BadgeTone; badge: string; text: ReactNode } {
   const { optional } = INGEST_JOBS[job]
@@ -71,16 +76,28 @@ function describeJob(
       text: details(
         `Dernier essai le ${formatDateTime(status.lastRun)}`,
         since || 'aucune réussite',
+        error && `cause : ${error}`,
       ),
     }
   }
   if (isOverdue(job, success, now)) {
     return { tone: 'warn', badge: 'En retard', text: since }
   }
+  if (job === 'prices' && pricesFrozen(pricesDate, now)) {
+    return {
+      tone: 'warn',
+      badge: 'Figés',
+      text: details(since, 'le guide de Cardmarket n’a pas changé depuis plus de deux jours'),
+    }
+  }
   return { tone: 'success', badge: 'À jour', text: since }
 }
 
-function JobsStatus({ status }: { status: Promise<ServerStatus | null> }) {
+function JobsStatus({
+  status,
+}: {
+  status: Promise<(ServerStatus & { errors: JobErrors }) | null>
+}) {
   const current = use(status)
   const [now] = useState(() => Date.now())
   if (!current) {
@@ -96,7 +113,13 @@ function JobsStatus({ status }: { status: Promise<ServerStatus | null> }) {
       className={styles.jobs}
       divided
       items={INGEST_JOB_NAMES.map((job) => {
-        const { tone, badge, text } = describeJob(job, current.jobs[job], now)
+        const { tone, badge, text } = describeJob(
+          job,
+          current.jobs[job],
+          current.errors[job],
+          current.pricesDate,
+          now,
+        )
         // Le jour des prix, qui peut précéder celui de leur relevé.
         const pricesDate =
           job === 'prices' && current.pricesDate && `Prix du ${formatDate(current.pricesDate)}. `

@@ -1,27 +1,32 @@
 # Bun figé sur sa version mineure, comme nginx : `build --pull` prend ses correctifs, jamais une
 # nouvelle version de `bun:sqlite`, de `Bun.serve` ou du format de `bun.lock` sans prévenir.
 
-# 1. Tests de la logique d'argent, puis construction du site statique (dist/) avec Bun : un test en
-#    échec arrête la construction, et l'ancien conteneur reste en ligne.
+# 1. Tests de la logique d'argent, lint et code mort (ESLint, knip), puis construction du site
+#    statique (dist/) avec Bun : un échec arrête la construction, et l'ancien conteneur reste en
+#    ligne.
 FROM oven/bun:1.3-alpine AS build
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 COPY . .
-RUN bun test && bun run build
+RUN bun test && bun lint && bun run build
 
 # 2. Le serveur (API) et les tâches d'ingestion (services `server` et `ingest`) : Bun lance le code
 #    tel quel ; `tsconfig.json` lui donne l'alias `@/` vers `src/`, dont il lit les règles et les
-#    données. Les bases vivent dans le volume `db` (`DATA_DIR`), les images dans `images`.
+#    données. Les bases vivent dans le volume `db` (`DATA_DIR`), les images dans `images`. Son
+#    `package.json` vient de l'étape 1 : elle passe donc d'abord, et un test en échec arrête aussi
+#    cette image (un `docker compose run ingest` ne lancerait pas du code non testé).
 FROM oven/bun:1.3-alpine AS server
 WORKDIR /app
-COPY package.json bun.lock ./
+COPY --from=build /app/package.json /app/bun.lock ./
 RUN bun install --frozen-lockfile --production
 COPY tsconfig.json ./
 COPY server server
 COPY src src
 # `production` : cookies de session sécurisés et limite de tentatives de connexion (Better Auth).
-ENV NODE_ENV=production DATA_DIR=/data IMAGES_DIR=/images BACKUP_DIR=/backups
+# `HOST` : le serveur écoute toutes les adresses de son conteneur, pour nginx (hors Docker, la
+# machine seulement).
+ENV NODE_ENV=production HOST=0.0.0.0 DATA_DIR=/data IMAGES_DIR=/images BACKUP_DIR=/backups
 # Sans droits d'administrateur (l'utilisateur `bun` de l'image) : une faille du serveur ne donnerait
 # pas la main sur le conteneur. Les points de montage lui appartiennent, et un volume neuf en hérite
 # (un volume créé avant, par un conteneur administrateur : voir le README).
@@ -34,4 +39,7 @@ CMD ["bun", "server/index.ts"]
 FROM nginx:1.28-alpine AS web
 COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
 COPY deploy/security-headers.conf /etc/nginx/security-headers.conf
+# Une faute dans la configuration arrête la construction : l'ancien conteneur reste en ligne, au
+# lieu d'un nginx qui redémarrerait en boucle.
+RUN nginx -t
 COPY --from=build /app/dist /usr/share/nginx/html

@@ -9,10 +9,11 @@
  */
 
 import type { Database } from 'bun:sqlite'
-import { mkdir, rename, writeFile } from 'node:fs/promises'
+import { mkdir, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { CARD_TYPES } from '@/config/catalog'
 import { TOTAL_SPECIES } from '@/config/pokedex'
+import { SCAN_PATH, scanUrl } from '@/lib/card-images'
 import { WEEK } from '@/lib/time'
 import { DATA_DIR } from './db'
 import { journal } from './journal'
@@ -25,43 +26,76 @@ const SPRITES = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprite
 /** Les images du site de Pokécardex, en WebP (`class`) : logos, icônes. */
 const ASSETS = 'https://pokecardex.b-cdn.net/assets/images'
 
-/** Les chemins locaux connus, et l'adresse d'origine de chacun. */
-const UPSTREAMS: [RegExp, (...parts: string[]) => string][] = [
-  [
-    /^\/images\/cards\/pokecardex\/([A-Z0-9_-]+)\/(\d{1,4})-(md|hd)\.webp$/,
-    (set, number, size) =>
-      `https://pokecardex-scans.b-cdn.net/sets_jp/${set}/${number}.jpg?class=${size}`,
-  ],
-  [
-    /^\/images\/sets\/([A-Z0-9_-]+)-(md|hd)\.webp$/,
-    (set, size) => `${ASSETS}/logos_jp/${set}.png?class=${size}`,
-  ],
-  [/^\/images\/types\/(\d{1,2})\.webp$/, (type) => `${ASSETS}/types/type_${type}.png?class=md`],
-  [
-    /^\/images\/rarities\/(\d{1,3})\.webp$/,
-    (rarity) => `${ASSETS}/rarete/ids/rarete_${rarity}.png?class=md`,
-  ],
-  [/^\/images\/species\/(\d{1,4})\.png$/, (id) => `${SPRITES}/${id}.png`],
-  [
-    /^\/images\/species\/artwork\/(\d{1,4})\.png$/,
-    (id) => `${SPRITES}/other/official-artwork/${id}.png`,
-  ],
+/** Un nombre lu dans un chemin. */
+const within = (value: string, min: number, max: number) =>
+  Number(value) >= min && Number(value) <= max
+
+/**
+ * Les chemins locaux connus : l'adresse d'origine de chacun, et s'il est plausible (une série du
+ * catalogue et un numéro d'image jusqu'au plus grand des siens, le logo d'une série du catalogue,
+ * un type de carte, une rareté connue, un Pokémon du Pokédex) : des chemins inventés ne font pas
+ * solliciter les sources. Celui des cartes vient de `card-images.ts`, que lit aussi le navigateur.
+ */
+const UPSTREAMS: {
+  path: RegExp
+  url: (...parts: string[]) => string
+  plausible: (data: Database, ...parts: string[]) => boolean
+}[] = [
+  {
+    path: SCAN_PATH,
+    url: scanUrl,
+    plausible: (data, set, number) => {
+      const { max } = data
+        .query('SELECT MAX(sort) AS max FROM cards WHERE set_id = ?')
+        .get(set!) as {
+        max: number | null
+      }
+      return max !== null && within(number!, 1, max)
+    },
+  },
+  {
+    path: /^\/images\/sets\/([A-Z0-9_-]+)-(md|hd)\.webp$/,
+    url: (set, size) => `${ASSETS}/logos_jp/${set}.png?class=${size}`,
+    plausible: (data, set) => data.query('SELECT 1 FROM sets WHERE id = ?').get(set!) !== null,
+  },
+  {
+    path: /^\/images\/types\/(\d{1,2})\.webp$/,
+    url: (type) => `${ASSETS}/types/type_${type}.png?class=md`,
+    plausible: (_data, type) => CARD_TYPES.has(Number(type)),
+  },
+  {
+    path: /^\/images\/rarities\/(\d{1,3})\.webp$/,
+    url: (rarity) => `${ASSETS}/rarete/ids/rarete_${rarity}.png?class=md`,
+    plausible: (data, rarity) =>
+      data.query('SELECT 1 FROM rarities WHERE id = ?').get(rarity!) !== null,
+  },
+  {
+    path: /^\/images\/species\/(\d{1,4})\.png$/,
+    url: (id) => `${SPRITES}/${id}.png`,
+    plausible: (_data, id) => within(id!, 1, TOTAL_SPECIES),
+  },
+  {
+    path: /^\/images\/species\/artwork\/(\d{1,4})\.png$/,
+    url: (id) => `${SPRITES}/other/official-artwork/${id}.png`,
+    plausible: (_data, id) => within(id!, 1, TOTAL_SPECIES),
+  },
 ]
 
-/** L'adresse d'origine d'un chemin local (`/images/…`) ; `null` s'il n'en est pas un. */
-function upstreamUrl(path: string) {
-  for (const [pattern, url] of UPSTREAMS) {
-    const match = pattern.exec(path)
-    if (match) return url(...match.slice(1))
+/** Le chemin local connu (`/images/…`) et ses parties ; `null` s'il n'en est pas un. */
+function upstreamOf(path: string) {
+  for (const upstream of UPSTREAMS) {
+    const match = upstream.path.exec(path)
+    if (match) return { upstream, parts: match.slice(1) }
   }
   return null
 }
 
-/**
- * Les images de TCGplayer qu'une ancienne version a copiées (TCGplayer est retiré) : servies si le
- * volume les a, jamais plus copiées.
- */
-const LEGACY = /^\/images\/cards\/tcgplayer\/\d{1,9}_(200w|in_1000x1000)\.jpg$/
+/** L'adresse d'origine d'un chemin local ; une erreur s'il n'en est pas un (un appelant à revoir). */
+function upstreamUrl(path: string) {
+  const known = upstreamOf(path)
+  if (!known) throw new Error(`Chemin d’image inconnu : ${path}`)
+  return known.upstream.url(...known.parts)
+}
 
 /** Le fichier d'un chemin local (`/images/cards/…` → `IMAGES_DIR/cards/…`). */
 const imageFile = (path: string) => join(IMAGES_DIR, path.slice('/images/'.length))
@@ -76,7 +110,7 @@ const imageFile = (path: string) => join(IMAGES_DIR, path.slice('/images/'.lengt
 export async function mirror(path: string, { quick = false } = {}): Promise<boolean> {
   const file = imageFile(path)
   if (await Bun.file(file).exists()) return true
-  const url = upstreamUrl(path)!
+  const url = upstreamUrl(path)
   const response = quick ? await quickFetch(url) : await politeFetch(url)
   if (response.status === 404) return false
   if (!response.ok) throw new Error(`HTTP ${response.status} pour ${url}`)
@@ -84,10 +118,15 @@ export async function mirror(path: string, { quick = false } = {}): Promise<bool
     throw new Error(`Pas une image : ${url}`)
   }
   // Un nom à part : le serveur et la tâche `images` peuvent copier la même image en même temps.
+  // Retiré si l'écriture échoue (disque plein) : un reste l'aggraverait.
   const temporary = `${file}.${crypto.randomUUID()}.tmp`
   await mkdir(dirname(file), { recursive: true })
-  await writeFile(temporary, new Uint8Array(await response.arrayBuffer()))
-  await rename(temporary, file)
+  try {
+    await writeFile(temporary, new Uint8Array(await response.arrayBuffer()))
+    await rename(temporary, file)
+  } finally {
+    await rm(temporary, { force: true })
+  }
   return true
 }
 
@@ -103,59 +142,37 @@ const copies = new Map<string, Promise<boolean>>()
 
 /**
  * Les copies à la demande menées en même temps, au plus : nginx les laisse toutes passer d'un coup
- * (`nodelay`), le serveur n'en télécharge que 4 à la fois ; les autres attendent leur tour.
+ * (`nodelay`), le serveur n'en télécharge que 4 à la fois ; les autres attendent leur tour. Une
+ * place libérée passe directement à la suivante qui attend : une nouvelle demande ne peut pas la
+ * prendre entre-temps (on en mènerait 5).
  */
 const MAX_COPIES = 4
 let copying = 0
 const queued: (() => void)[] = []
 
 async function inTurn<T>(task: () => Promise<T>) {
-  if (copying >= MAX_COPIES) await new Promise<void>((resolve) => queued.push(resolve))
-  copying++
+  if (copying < MAX_COPIES) copying++
+  else await new Promise<void>((resolve) => queued.push(resolve))
   try {
     return await task()
   } finally {
-    copying--
-    queued.shift()?.()
+    const next = queued.shift()
+    if (next) next()
+    else copying--
   }
-}
-
-/**
- * Un chemin plausible : chez Pokécardex, une série du catalogue et un numéro d'image jusqu'au plus
- * grand des siens, le logo d'une série du catalogue, un type de carte, une rareté connue ; un
- * Pokémon du Pokédex. Des chemins inventés ne font pas solliciter les sources.
- */
-function plausible(data: Database, path: string) {
-  const logo = /^\/images\/sets\/([^/]+)-/.exec(path)
-  if (logo) return data.query('SELECT 1 FROM sets WHERE id = ?').get(logo[1]!) !== null
-  const type = /^\/images\/types\/(\d+)\./.exec(path)
-  if (type) return CARD_TYPES.has(Number(type[1]))
-  const rarity = /^\/images\/rarities\/(\d+)\./.exec(path)
-  if (rarity) return data.query('SELECT 1 FROM rarities WHERE id = ?').get(rarity[1]!) !== null
-  const card = /^\/images\/cards\/pokecardex\/([^/]+)\/(\d+)-/.exec(path)
-  if (card) {
-    const { max } = data
-      .query('SELECT MAX(sort) AS max FROM cards WHERE set_id = ?')
-      .get(card[1]!) as { max: number | null }
-    return max !== null && Number(card[2]) >= 1 && Number(card[2]) <= max
-  }
-  const species = /^\/images\/species\/(?:artwork\/)?(\d+)\.png$/.exec(path)
-  return !species || (Number(species[1]) >= 1 && Number(species[1]) <= TOTAL_SPECIES)
 }
 
 /**
  * `/images/…` : la copie de l'image (en développement ; sur le VPS, nginx la sert lui-même), sinon
  * copiée à la demande — une référence saisie hors du catalogue, une image que la tâche `images`
- * n'a pas encore copiée. Seulement un chemin plausible (`plausible`).
+ * n'a pas encore copiée. Seulement un chemin plausible (`UPSTREAMS`).
  */
 export async function serveImage(data: Database, request: Request) {
   const path = new URL(request.url).pathname
-  const upstream = upstreamUrl(path)
-  if (!upstream && !LEGACY.test(path)) return notFound()
-  if (!plausible(data, path)) return notFound()
+  const known = upstreamOf(path)
+  if (!known || !known.upstream.plausible(data, ...known.parts)) return notFound()
   const file = Bun.file(imageFile(path))
   if (await file.exists()) return new Response(file, { headers: IMAGE_HEADERS })
-  if (!upstream) return notFound()
   if (Date.now() - (misses.get(path) ?? 0) < WEEK) return notFound()
 
   let copy = copies.get(path)

@@ -11,10 +11,10 @@
 import { openapi } from '@elysiajs/openapi'
 import type { Database } from 'bun:sqlite'
 import { Elysia } from 'elysia'
-import { accountRoutes, appOrigin, type Accounts } from './auth'
+import { accountRoutes, appOrigin, ForeignOrigin, type Accounts } from './auth'
 import { collectionRoutes } from './collection'
 import { serveImage } from './images'
-import { referenceRoutes } from './reference'
+import { jobErrorsRoutes, referenceRoutes } from './reference'
 import { journal, journalRoutes } from './journal'
 import { vitrineRoutes } from './vitrine'
 import { notFound } from './snapshots'
@@ -50,6 +50,10 @@ export function createApp({ data, app, accounts }: AppContext) {
       // (rien de ses détails, une requête SQL par exemple, ne part vers le site).
       .onError(({ code, error, request }) => {
         if (code === 'NOT_FOUND') return notFound()
+        // Une modification d'une autre origine, arrêtée avant la lecture de son corps (`auth.ts`).
+        if (code === 'PARSE' && error.cause instanceof ForeignOrigin) {
+          return new Response(null, { status: 403, headers: { 'Cache-Control': 'no-store' } })
+        }
         if (code === 'VALIDATION' || code === 'PARSE' || typeof code === 'number') return
         const { pathname } = new URL(request.url)
         journal({
@@ -65,6 +69,7 @@ export function createApp({ data, app, accounts }: AppContext) {
         api
           .use(account)
           .use(referenceRoutes(data))
+          .use(jobErrorsRoutes(data, account))
           .use(collectionRoutes(app, account))
           .use(journalRoutes(account))
           .use(vitrineRoutes(app, data, appOrigin(accounts.auth))),

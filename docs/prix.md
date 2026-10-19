@@ -6,13 +6,17 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
   liste des produits (`products_singles_6.json`), seulement les cartes à l'unité (catégorie 51),
   dans `data.db` : chaque produit (`cardmarket_products` : son nom, son extension `expansion` =
   `idExpansion` et sa carte `metacard` = `idMetacard`, indexées ensemble, pour la liste de
-  souhaits ; vides pour une ligne de l'ancienne reprise ou un produit sorti de la liste), le prix
+  souhaits ; vides pour un produit sorti de la liste), le prix
   du jour de chaque carte (`cardmarket_prices` : prix, plus bas, moyenne 30 jours, par id
   Cardmarket) et son historique (`cardmarket_history` : Cardmarket n'en garde pas ;
   une ligne par carte et par année, à partir de son premier jour avec un prix, `server/history.ts` ;
   relancée le même jour, la tâche remplace le prix du jour ; moins de la moitié des prix d'avant :
-  format du guide changé, rien n'est écrit, la tâche échoue). Rien n'est retéléchargé (29 Mo) tant
-  que le guide n'a pas changé (`sources` : son `Last-Modified`) ; une base d'avant les colonnes
+  format du guide changé, rien n'est écrit, la tâche échoue ; l'écriture, séparée du
+  téléchargement, `savePriceGuide`, est testée sur une base temporaire : année gardée et jour
+  ajouté, relance du même jour, repli sur la moyenne, `0` sans prix, scellé ignoré, garde, produit
+  sorti de la liste). Rien n'est retéléchargé (29 Mo) tant que le guide n'a pas changé (`sources` :
+  son `Last-Modified`, ou l'heure du guide quand l'en-tête manque : deux guides d'un même jour n'ont
+  jamais le même tampon) ; une base d'avant les colonnes
   `expansion` et `metacard` les remplit au passage suivant (l'étape du schéma qui les ajoute,
   `db.ts`, oublie ce `Last-Modified` : le guide et la liste sont relus). La liste des produits met
   à jour un nom, une extension ou une carte qui a changé. Plus de fichier de tous les prix
@@ -20,18 +24,26 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
   octobre 2026, l'étape du schéma efface sa réponse) : l'app demande les prix des seules cartes
   qu'elle affiche (`GET /api/prices/collection?ids=…` pour celles de la collection,
   `GET /api/prices/selection?ids=…` pour les autres : une extension du catalogue, les cartes d'un
-  Pokémon, un id saisi ; la même réponse, `readPrices` : jour et cartes, une carte sans prix ce
-  jour absente ; deux chemins car le service worker garde une copie par chemin ; ids validés comme
-  ceux de `/api/histories`, 1 025 au plus ; 404 tant que le guide n'a jamais été lu ; testé :
-  jamais le prix d'une carte non demandée). Pour l'accueil, ≈ 24 Ko au lieu de 1,6 Mo. Ces
-  réponses, l'historique d'une carte et ceux de la collection ont un ETag tiré du passage de la
-  tâche (`pricesTag`, `server/reference.ts` : son `Last-Modified` et le jour, que la tâche note
-  dans la même transaction que les prix et l'historique, et ce qui est demandé ; `serveTagged`,
-  `server/snapshots.ts`) : 304 sans rien lire tant que les prix n'ont pas changé. Côté navigateur
+  Pokémon, un id saisi ; la même réponse, `readPrices` : le jour, et une clé par carte demandée,
+  son prix ou `null` sans prix ce jour ; deux chemins car le service worker garde une copie par
+  chemin ; ids validés comme ceux de `/api/histories`, 1 025 au plus ; 404 tant que le guide n'a
+  jamais été lu ; testé : jamais le prix d'une carte non demandée, `null` pour une carte sans
+  prix). Pour l'accueil, ≈ 24 Ko au lieu de 1,6 Mo. Ces réponses, l'historique d'une carte et ceux
+  de la collection ont un ETag tiré du passage de la tâche (`pricesTag`, `server/reference.ts` :
+  son tampon et le jour, que la tâche note dans la même transaction que les prix et l'historique,
+  et ce qui est demandé ; `serveTagged`, `server/snapshots.ts`, avec la forme des réponses,
+  `API_FORMAT` de `src/config/api.ts`) : 304 sans rien lire tant que les prix n'ont pas changé.
+  L'ETag et la réponse sont lus dans une même transaction de la base : la tâche écrivant entre
+  les deux, des prix neufs ne partent jamais avec l'ancien ETag. Côté navigateur
   (`store/prices.ts`), les réponses s'ajoutent : `usePrices()` rend les prix de la collection,
   `usePrices(ids)` ceux d'autres cartes, `null` tant que la réponse de ces cartes n'est pas
   arrivée ; une carte dont le prix est connu n'est pas redemandée (une carte ajoutée : une demande
-  pour elle seule). L'historique d'une carte se charge à la demande
+  pour elle seule), sauf au retour sur une page restée ouverte plus de 6 h, où tout ce qui est
+  affiché est redemandé (`refreshPrices` : les prix d'avant restent affichés en attendant). Une
+  carte sans clé dans la réponse n'a pas eu la sienne : c'est la copie du service worker, faite
+  pour d'autres cartes (sans réseau, ou sans réponse en 4 s) ; elle compte comme une panne
+  passagère (« — », jamais « Sans prix ») et elle est redemandée une minute plus tard.
+  L'historique d'une carte se charge à la demande
   (`/api/prices/<id>`, 404 sans historique) : la courbe de sa fiche, le nom affiché dans le
   formulaire pour vérifier l'id saisi (au départ du champ) ; ceux de la collection, en une fois
   (`/api/histories`, plus bas). `/api/vitrine` donne les prix des seules cartes possédées du
@@ -43,16 +55,15 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
   de la liste de souhaits, demandés à chaque fois : `fetchFresh` ; le compte et la collection ont
   leurs propres lectures). Une carte sans id Cardmarket, ou dont
   l'id n'a pas de prix ce jour, n'a pas de prix (aucun n'est inventé ; Pokécardex donne l'id de presque toutes).
-  L'ancien historique (les fichiers du volume `prices`,
-  un par carte) est repris au premier démarrage d'`ingest` (`legacy-prices.ts`), vérifié avant
-  d'être gardé : nombre de cartes, somme des prix, échantillon relu tel que l'API le sert.
 - Historiques de la collection (`GET /api/histories?ids=719621,719654`, `server/reference.ts`) :
   la courbe de la valeur (Valeur › Évolution) demande ceux de toutes ses cartes possédées en une
   fois, et non une demande par carte. Une clé par id demandé, son historique ou `null` ; `ids`
   validés comme ceux de `/api/wants` (des entiers de 1 à 9 chiffres, sans zéro devant, séparés par
-  des virgules ; 422 sinon), 1 025 au plus (une carte par Pokémon : avec les ids de 6 chiffres
-  d'aujourd'hui, l'adresse d'une collection complète fait ≈ 7 Ko, sous les 8 Ko de la ligne de
-  requête que nginx accepte par défaut) ; chaque id lu une fois, requête préparée une fois
+  des virgules ; 422 sinon), 1 025 au plus (une carte par Pokémon : avec les ids de 6 et 7
+  chiffres, l'adresse d'une collection complète fait de 7 à 8 Ko, sous les 16 Ko de la ligne de
+  requête que nginx accepte, `large_client_header_buffers`) ; 2 demandes par seconde et par
+  visiteur, 10 d'un coup au plus (nginx : jusqu'à une seconde de calcul sur la seule boucle du
+  serveur pour une collection complète, sans session) ; chaque id lu une fois, requête préparée une fois
   (`historyReader`, `server/history.ts`, la même pour `/api/prices/<id>`) ;
   `Cache-Control: no-cache` avec un ETag (plus haut) : une visite suivante de Valeur reçoit un 304
   tant que les prix n'ont pas changé. L'app y met chaque id une fois (`loadPriceHistories`,
@@ -73,9 +84,9 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
   règles, pures : `wantsLine` et sa version `wantsVersion`, de `lib/cardmarket.ts`, testées dans
   `tests/wants.test.ts`, une mauvaise version achèterait une autre carte ; le serveur ne fait qu'en
   réunir les données en SQL : le nom du produit, les numéros imprimés de son groupe, les noms de
-  séries de son extension et, pour chacun, le nombre d'extensions qui le portent ; deux choix de ce
-  SQL ne sont pas testés : un seul numéro par produit, sinon aucun, `sameCard`, et les noms de
-  séries comparés sans les espaces des bords, `TRIM`) : pour chaque id
+  séries de son extension et, pour chacun, le nombre d'extensions qui le portent ; ce SQL est
+  testé aussi, sur la base temporaire : les versions d'après les numéros imprimés, un produit sorti
+  de la liste ou sans métacarte sans ligne) : pour chaque id
   Cardmarket demandé, sa ligne pour « Ajouter une deck
   list » de la liste de souhaits de Cardmarket (`WantsLines`), ou `null` quand aucune ne
   désignerait sûrement cette carte-là. L'app n'envoie rien à Cardmarket : l'utilisateur copie les
@@ -120,24 +131,30 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
     réparti sur sept extensions, seul nom de l'une d'elles. Une extension écrite sans parenthèses,
     ou que Cardmarket ne connaît pas, donne un souhait « toutes versions » (avec un message bleu
     « Informations ») : l'app n'en écrit jamais en connaissance de cause.
-  - Pas de ligne non plus pour un produit inconnu, un produit sans extension (`expansion` vide), ni
-    pour une parenthèse dans le nom ou l'extension (l'analyseur de Cardmarket la lirait mal : deux
-    cartes « Imakuni? » en ont).
+  - Pas de ligne non plus pour un produit inconnu, un produit sans extension (`expansion` vide) ou
+    sans métacarte (`metacard` vide : une ligne d'avant sa colonne, jusqu'au passage suivant des
+    prix ; sans elle, pas de version sûre), ni pour une parenthèse dans le nom ou l'extension
+    (l'analyseur de Cardmarket la lirait mal : deux cartes « Imakuni? » en ont).
   - Ni la langue ni l'état ne tiennent dans une ligne : après le collage, l'utilisateur les règle
     pour toutes avec « Modification en masse » de Cardmarket (japonais, Near Mint).
-  - `ids` : des entiers positifs (1 à 9 chiffres) séparés par des virgules, 2 000 au plus, validés
-    par le schéma de la route (422 sinon) ; une clé par id demandé. Calculée à chaque demande (pas
-    un `snapshot`), sur la base des données de référence, requêtes préparées une fois ; chaque id
-    une fois (répété, il n'est pas recalculé) et les noms de chaque extension lus une fois par
-    demande : un plan coûte environ 15 ms, 2 000 ids 0,15 à 0,2 s au pire (mesuré, octobre 2026),
-    la route n'ayant ni session ni limite de rythme. `Cache-Control: no-cache`. L'app la demande à
+  - `ids` : des entiers positifs (1 à 9 chiffres) séparés par des virgules, 1 025 au plus (les
+    cartes d'une commande : une par Pokémon), validés par le schéma de la route (422 sinon) ; une
+    clé par id demandé. Calculée à chaque demande (pas un `snapshot`), sur la base des données de
+    référence, requêtes préparées une fois ; chaque id une fois (répété, il n'est pas recalculé) et
+    les noms de chaque extension lus une fois par demande : un plan coûte environ 15 ms, 1 025 ids
+    moins de 0,1 s (mesuré, octobre 2026). Sans session : 2 demandes par seconde et par visiteur au
+    plus (nginx, comme `/api/histories`). `Cache-Control: no-cache`. L'app la demande à
     chaque ouverture de la fenêtre (`loadWantsLines`, par `fetchFresh` : sans cache, 10 s au plus) ;
     sans réponse du serveur, elle propose de réessayer.
 - État des données (page Données › Données du serveur, `ReferenceSection`) : où en est chaque
   tâche d'ingestion, d'après son journal (`/api/status` : dernière réussite, dernier passage, et le
   jour des prix en base), demandé à chaque ouverture de la page (`loadStatus`, `lib/api.ts`). À jour ; en retard (deux
   intervalles sans réussite, `INGEST_JOBS` de `config/jobs.ts`, que suit aussi `ingest.ts`) ; en
-  échec (le dernier passage) ; à lancer (jamais passée : la commande est donnée), sauf les images,
-  facultatives (le serveur copie à la demande celles affichées). Sans réponse : « l'état des
+  échec (le dernier passage), avec sa cause (`GET /api/status/errors`, réservée au compte : une
+  cause peut nommer une source) ; prix figés (le guide de Cardmarket inchangé depuis plus de deux jours : la
+  tâche réussit, mais chaque jour sans prix est un trou dans l'historique, `pricesFrozen` de
+  `lib/jobs.ts`) ; à lancer (jamais passée : la commande est donnée), sauf les images,
+  facultatives (le serveur copie à la demande celles affichées). `/api/health` (la surveillance)
+  compte aussi des prix figés comme une tâche en retard (503). Sans réponse : « l'état des
   données est inconnu ». Dans le formulaire d'une carte, un id Cardmarket n'est pas mis en doute
   tant que les prix manquent tous.

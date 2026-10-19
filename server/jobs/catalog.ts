@@ -296,15 +296,11 @@ function dueSeries(db: Database, codes: string[], now: number) {
   })
 }
 
-export async function catalog(db: Database) {
-  // La réponse d'après les tables, tout de suite : une forme changée avec le code (ou retirée par
-  // une étape du schéma) est refaite sans attendre la lecture des séries (une vingtaine de minutes
-  // quand toutes sont à relire).
-  saveCatalog(db)
-  const codes = await japaneseSeries()
-  const due = dueSeries(db, codes, Date.now())
-  console.log(`Pokécardex : ${codes.length} séries japonaises, ${due.length} à relire`)
-
+/**
+ * L'écriture de ce que donnent les pages de Pokécardex, requêtes préparées une fois : une série et
+ * ses cartes, les raretés, le bloc de chaque série.
+ */
+function seriesWriter(db: Database) {
   const writeSet = db.query(
     `INSERT INTO sets (id, name, released, read_at) VALUES (?, ?, ?, ?)
      ON CONFLICT (id) DO UPDATE SET name = excluded.name, released = excluded.released,
@@ -334,9 +330,12 @@ export async function catalog(db: Database) {
   const writeSpecies = db.query('INSERT INTO card_species (card, rank, dex_id) VALUES (?, ?, ?)')
   const countCards = db.query('SELECT COUNT(*) AS count FROM cards WHERE set_id = ?')
   const forget = db.query('DELETE FROM cards WHERE set_id = ? AND seen != ?')
+  /** Le nombre de cartes de la série déjà en base. */
+  const known = (code: string) => (countCards.get(code) as { count: number }).count
 
+  /** La page d'une série, enregistrée d'un coup : son nombre de cartes. */
   const save = db.transaction((code: string, page: PokecardexSeries, readAt: string) => {
-    const known = (countCards.get(code) as { count: number }).count
+    const before = known(code)
     const { fullName, releaseDateFR } = page.currentSeries
     writeSet.run(code, fullName, releaseDateFR?.slice(0, 10) ?? '', readAt)
     // Le numéro imprimé, sinon le rang. Si deux cartes de la série se confondraient (deux
@@ -375,17 +374,72 @@ export async function catalog(db: Database) {
     // Moins de la moitié des cartes d'avant : le format des pages a changé (un champ renommé),
     // pas l'extension. Rien n'est gardé de cette lecture (la transaction est annulée) : elle
     // compte comme un échec.
-    if (saved < known / 2) {
-      throw new Error(`${code} : ${saved} cartes retenues sur ${known} (format des pages changé ?)`)
+    if (saved < before / 2) {
+      throw new Error(
+        `${code} : ${saved} cartes retenues sur ${before} (format des pages changé ?)`,
+      )
     }
     forget.run(code, readAt)
     return saved
   })
 
+  return {
+    known,
+    save,
+    /** Les raretés, que chaque page donne toutes. */
+    rarities(page: PokecardexSeries) {
+      for (const rarity of page.raretes ?? []) {
+        writeRarity.run(rarity.id_rarete, rarity.nom_rarete, rarity.order_rarete)
+      }
+    },
+    /** Le bloc de chaque série, d'après le menu : ses séries en boosters, puis ses decks. */
+    blocks(menu: PokecardexSeries) {
+      for (const [rank, block] of menuBlocks(menu).entries()) {
+        for (const series of block.series) writeBlock.run(block.name, rank, 0, series.shortName)
+        for (const deck of block.decks ?? []) writeBlock.run(block.name, rank, 1, deck.shortName)
+      }
+    },
+    /** Une série retirée, avec ses cartes. */
+    remove(code: string) {
+      db.query('DELETE FROM cards WHERE set_id = ?').run(code)
+      db.query('DELETE FROM sets WHERE id = ?').run(code)
+    },
+  }
+}
+
+/** Ce que ce passage a relu, et ce que compte le catalogue en tout. */
+function logTotals(db: Database, read: number, cards: number) {
+  const totals = db
+    .query(
+      `SELECT COUNT(*) AS cards, SUM(cardmarket = 0) AS withoutCardmarket,
+              SUM(number != '' AND CAST(number AS INTEGER) != sort) AS otherNumber
+       FROM cards`,
+    )
+    .get() as { cards: number; withoutCardmarket: number | null; otherNumber: number | null }
+  console.log(
+    `Catalogue : ${read} séries relues (${cards} cartes) ; ` +
+      `${totals.cards} cartes en tout, ${totals.withoutCardmarket ?? 0} sans id Cardmarket, ` +
+      `${totals.otherNumber ?? 0} dont le numéro imprimé n’est pas le rang de l’image`,
+  )
+}
+
+export async function catalog(db: Database) {
+  // La réponse d'après les tables, tout de suite : une forme changée avec le code (ou retirée par
+  // une étape du schéma) est refaite sans attendre la lecture des séries (une vingtaine de minutes
+  // quand toutes sont à relire).
+  saveCatalog(db)
+  const codes = await japaneseSeries()
+  const due = dueSeries(db, codes, Date.now())
+  console.log(`Pokécardex : ${codes.length} séries japonaises, ${due.length} à relire`)
+
+  const writer = seriesWriter(db)
   const failed: string[] = []
   let inARow = 0
   let cards = 0
   let read = 0
+  // Les séries qui avaient déjà des cartes, relues, et celles d'entre elles rendues sans cartes.
+  let knownRead = 0
+  let knownEmpty = 0
   // Les exclusivités d'autres pays d'Asie et les blocs, d'après le menu de la première page lue, et
   // les raretés, que chaque page donne toutes.
   let asian = new Set<string>()
@@ -397,19 +451,21 @@ export async function catalog(db: Database) {
       if (!menu) {
         menu = page
         asian = asiaExclusive(page)
-        for (const rarity of page.raretes ?? []) {
-          writeRarity.run(rarity.id_rarete, rarity.nom_rarete, rarity.order_rarete)
-        }
+        writer.rarities(page)
       }
       if (asian.has(code)) continue
-      const known = (countCards.get(code) as { count: number }).count
+      const known = writer.known(code)
+      if (known) knownRead++
       // Une page sans cartes : une série annoncée mais pas encore remplie, ou le site a changé (on
       // garde alors celles d'avant). Rien n'est noté : elle est relue au passage suivant.
       if (!page.cartes?.length) {
-        if (known) console.warn(`  ${code} : page sans cartes, les ${known} d’avant restent`)
+        if (known) {
+          knownEmpty++
+          console.warn(`  ${code} : page sans cartes, les ${known} d’avant restent`)
+        }
         continue
       }
-      cards += save(code, page, new Date().toISOString())
+      cards += writer.save(code, page, new Date().toISOString())
       read++
       inARow = 0
     } catch (error) {
@@ -423,33 +479,21 @@ export async function catalog(db: Database) {
     if ((index + 1) % 50 === 0) console.log(`  ${index + 1} / ${due.length} séries`)
   }
   // Celles qu'un passage d'avant aurait gardées : retirées.
-  for (const code of asian) {
-    db.query('DELETE FROM cards WHERE set_id = ?').run(code)
-    db.query('DELETE FROM sets WHERE id = ?').run(code)
-  }
-  // Le bloc de chaque série (les nouvelles comprises, enregistrées depuis) : ses séries en
-  // boosters, puis ses decks.
-  if (menu) {
-    for (const [rank, block] of menuBlocks(menu).entries()) {
-      for (const series of block.series) writeBlock.run(block.name, rank, 0, series.shortName)
-      for (const deck of block.decks ?? []) writeBlock.run(block.name, rank, 1, deck.shortName)
-    }
-  }
+  for (const code of asian) writer.remove(code)
+  // Le bloc de chaque série, les nouvelles comprises (enregistrées depuis).
+  if (menu) writer.blocks(menu)
 
-  const totals = db
-    .query(
-      `SELECT COUNT(*) AS cards, SUM(cardmarket = 0) AS withoutCardmarket,
-              SUM(number != '' AND CAST(number AS INTEGER) != sort) AS otherNumber
-       FROM cards`,
-    )
-    .get() as { cards: number; withoutCardmarket: number | null; otherNumber: number | null }
-  console.log(
-    `Catalogue : ${read} séries relues (${cards} cartes) ; ` +
-      `${totals.cards} cartes en tout, ${totals.withoutCardmarket ?? 0} sans id Cardmarket, ` +
-      `${totals.otherNumber ?? 0} dont le numéro imprimé n’est pas le rang de l’image`,
-  )
+  logTotals(db, read, cards)
   saveCatalog(db)
   if (failed.length) {
     throw new Error(`${failed.length} séries illisibles (${failed.slice(0, 10).join(', ')})`)
+  }
+  // Plus de la moitié des séries déjà connues rendues sans cartes : le format des pages a changé
+  // (le champ des cartes renommé), pas les séries. Leurs cartes d'avant restent ; la tâche échoue,
+  // pour que la page Données et la surveillance le disent (sinon, un catalogue figé sans un mot).
+  if (knownEmpty > 0 && knownEmpty * 2 > knownRead) {
+    throw new Error(
+      `${knownEmpty} séries sur ${knownRead} déjà connues rendues sans cartes (format des pages changé ?)`,
+    )
   }
 }

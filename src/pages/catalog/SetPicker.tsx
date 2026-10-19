@@ -141,6 +141,10 @@ function SetList({
           onChange={(next) => startTransition(() => onOrder(next))}
         />
         <p className="hint">{ORDER_HINTS[order]}</p>
+        {/* Le nombre d'extensions trouvées, annoncé à chaque frappe (présent dès le premier rendu). */}
+        <p className="visually-hidden" aria-live="polite">
+          {plural(found.length, 'extension trouvée', 'extensions trouvées')}
+        </p>
       </div>
       {found.length === 0 ? (
         <EmptyState

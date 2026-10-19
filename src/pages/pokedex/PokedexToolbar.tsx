@@ -11,7 +11,7 @@ import {
   Toggle,
 } from '@camply/ui'
 import { ArrowDown01, ArrowDown10, Search, SlidersHorizontal, X } from '@camply/ui/icons'
-import { useEffect, useRef } from 'react'
+import { useEffect, type RefObject } from 'react'
 import { ProgressRuler } from '@/components/ProgressRuler'
 import {
   GENERATION_OPTIONS,
@@ -20,7 +20,7 @@ import {
   POKEMON_TYPES,
 } from '@/config/pokedex'
 import { cx } from '@/lib/cx'
-import { shortcutBlocked } from '@/lib/focus'
+import { focusAfter, shortcutBlocked } from '@/lib/focus'
 import type { CardFilter, PokedexFilters, PossessionFilter } from '@/lib/filters'
 import { formatInteger, plural, toOptions } from '@/lib/format'
 import type { GenerationProgress } from '@/lib/pokedex'
@@ -66,6 +66,8 @@ interface PokedexToolbarProps {
   /** Nombre de résultats, `null` quand rien ne filtre. */
   resultCount: number | null
   onReset: () => void
+  /** Le champ de recherche (la page y mène aussi le focus, `PokedexPage`). */
+  search: RefObject<HTMLInputElement | null>
 }
 
 /**
@@ -80,9 +82,8 @@ export function PokedexToolbar({
   counts,
   resultCount,
   onReset,
+  search,
 }: PokedexToolbarProps) {
-  const search = useRef<HTMLInputElement>(null)
-
   // « / » place le curseur dans la recherche, sauf quand on tape déjà dans un champ.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -92,7 +93,7 @@ export function PokedexToolbar({
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  }, [search])
 
   const clearSearch = () => {
     setFilters({ search: '' })
@@ -241,7 +242,12 @@ export function PokedexToolbar({
       <div className={styles.status}>
         <span className={styles.tags}>
           {tags.map((tag) => (
-            <Tag key={tag.key} onRemove={tag.remove} removeLabel={`Retirer le filtre ${tag.label}`}>
+            <Tag
+              key={tag.key}
+              // L'étiquette disparaît : le focus va à la recherche, au lieu de tomber au document.
+              onRemove={() => focusAfter(tag.remove, search)}
+              removeLabel={`Retirer le filtre ${tag.label}`}
+            >
               {tag.label}
             </Tag>
           ))}
@@ -252,7 +258,7 @@ export function PokedexToolbar({
             {resultCount !== null && `${formatInteger(resultCount)} Pokémon`}
           </span>
           {resultCount !== null && (
-            <Button size="sm" variant="ghost" onClick={onReset}>
+            <Button size="sm" variant="ghost" onClick={() => focusAfter(onReset, search)}>
               Réinitialiser
             </Button>
           )}

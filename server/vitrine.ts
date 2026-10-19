@@ -5,12 +5,12 @@
  *   Cardmarket pour la valeur au prix du jour ; pas leur page) et, pour celles possédées, la date
  *   d'obtention (pas le prix payé). Rien des achats : ni commandes, ni budget, ni statut
  *   « commandée ». Une collection vide tant qu'aucun appareil n'a rien envoyé. Avec elle, les prix
- *   du jour de ses seules cartes possédées, dans la forme de `/api/prices` (`null` sans guide des
- *   prix) : la page n'en montre que la valeur, sans charger ceux de toutes les cartes.
+ *   du jour de ses seules cartes possédées, dans la forme de `/api/prices/collection` (`null` sans
+ *   guide des prix) : la page n'en montre que la valeur, sans charger ceux de toutes les cartes.
  * - `GET /api/vitrine/apercu` : la page que lisent les robots d'aperçu (Discord, WhatsApp…) quand
  *   on partage le lien : « Le Pokédex de … » et sa progression (ils ne lancent pas le JavaScript
  *   de l'app). nginx les y envoie (`deploy/nginx.conf`).
- * Chacune au journal, une fois par heure au plus par visiteur (`journalVisit`).
+ * Chacune au journal, une fois par heure au plus par visiteur (`journalOnce`).
  */
 
 import type { Database } from 'bun:sqlite'
@@ -23,16 +23,26 @@ import { HOUR } from '@/lib/time'
 import type { CardOwnership, CollectionData, PokemonCard, VitrineData } from '@/types'
 import { readSource } from './db'
 import { readPrices } from './jobs/prices'
-import { journal } from './journal'
+import { journalOnce, visitorOf } from './journal'
 import { serveTagged } from './snapshots'
 
-/** La collection telle que la voit un visiteur (testé : jamais un prix payé ni un achat). */
+/**
+ * La collection telle que la voit un visiteur (testé : jamais un prix payé ni un achat). Chaque
+ * champ est recopié un à un, l'image comprise : ce qu'un fichier importé y aurait glissé en plus
+ * ne devient pas public.
+ */
 export function shownCollection(collection: CollectionData): CollectionData {
   const customCards: Record<string, PokemonCard> = {}
   for (const [id, { dexIds, reference, image, cardmarket }] of Object.entries(
     collection.customCards,
   )) {
-    customCards[id] = { id, dexIds, reference, image, ...(cardmarket && { cardmarket }) }
+    customCards[id] = {
+      id,
+      dexIds,
+      reference,
+      image: image && { small: image.small, large: image.large },
+      ...(cardmarket && { cardmarket }),
+    }
   }
   const cards: Record<string, CardOwnership> = {}
   for (const [id, { status, updatedAt, acquiredAt }] of Object.entries(collection.cards)) {
@@ -58,22 +68,13 @@ const escape = (text: string) =>
 const PREVIEW_BOTS =
   /discordbot|whatsapp|facebookexternalhit|twitterbot|slackbot|telegrambot|linkedinbot|skypeuripreview|redditbot|embedly/i
 
-/** La dernière ligne écrite au journal pour chaque visiteur et chaque message, et quand. */
-const noted = new Map<string, number>()
-
 /**
- * Une visite au journal, une fois par heure au plus par visiteur (`cf-connecting-ip`) et par
- * message : des visites répétées (un rechargement sans fin, un robot) ne font pas tourner le
- * journal de Docker, qui effacerait les connexions.
+ * Une visite au journal, une fois par heure au plus par visiteur et par message : des visites
+ * répétées (un rechargement sans fin, un robot) ne font pas tourner le journal de Docker, qui
+ * effacerait les connexions.
  */
-function journalVisit(entry: Parameters<typeof journal>[0], request: Request) {
-  const key = `${entry.message} ${request.headers.get('cf-connecting-ip') ?? ''}`
-  if (Date.now() - (noted.get(key) ?? 0) < HOUR) return
-  // Une liste bornée : des adresses sans fin ne la font pas grossir sans fin.
-  if (noted.size > 10_000) noted.clear()
-  noted.set(key, Date.now())
-  journal(entry, request)
-}
+const journalVisit = (entry: Parameters<typeof journalOnce>[1], request: Request) =>
+  journalOnce(`${entry.message} ${visitorOf(request)}`, entry, request, HOUR)
 
 /**
  * `app` : le compte et sa collection ; `data` : les prix ; `origin` : l'adresse publique du site
@@ -86,7 +87,7 @@ export function vitrineRoutes(app: Database, data: Database, origin: string) {
   const readOwner = app.query('SELECT name FROM "user" LIMIT 1')
   const shown = () => {
     const row = readShown.get() as { collection: string } | null
-    return row ? shownCollection(JSON.parse(row.collection)) : emptyCollection()
+    return row ? shownCollection(JSON.parse(row.collection) as CollectionData) : emptyCollection()
   }
   const owner = () => (readOwner.get() as { name: string } | null)?.name || null
 
@@ -96,20 +97,25 @@ export function vitrineRoutes(app: Database, data: Database, origin: string) {
       ({ request }) => {
         journalVisit({ topic: 'vitrine', message: 'Pokédex public consulté' }, request)
         // Ce dont la réponse dépend : la collection (sa version), le pseudo, les prix du jour. Un
-        // visiteur qui revient reçoit un 304, sans que la collection soit relue.
-        const version = (readVersion.get() as { version: number } | null)?.version ?? 0
-        const prices = readSource(data, 'cardmarket')
-        return serveTagged(
-          request,
-          `${version}|${owner() ?? ''}|${prices?.stamp ?? ''}|${prices?.date ?? ''}`,
-          (): VitrineData => {
-            const collection = shown()
-            const owned = Object.values(collection.customCards).flatMap(({ id, cardmarket }) =>
-              cardmarket && collection.cards[id] ? [cardmarket] : [],
-            )
-            return { owner: owner(), collection, prices: readPrices(data, owned) }
-          },
-        )
+        // visiteur qui revient reçoit un 304, sans que la collection soit relue. Lus dans une même
+        // transaction de chaque base : la version et la collection, le jour des prix et les prix
+        // sont ceux d'un même instant (une écriture entre deux partirait avec l'ancien ETag).
+        const serve = () => {
+          const version = (readVersion.get() as { version: number } | null)?.version ?? 0
+          const prices = readSource(data, 'cardmarket')
+          return serveTagged(
+            request,
+            `${version}|${owner() ?? ''}|${prices?.stamp ?? ''}|${prices?.date ?? ''}`,
+            (): VitrineData => {
+              const collection = shown()
+              const owned = Object.values(collection.customCards).flatMap(({ id, cardmarket }) =>
+                cardmarket && collection.cards[id] ? [cardmarket] : [],
+              )
+              return { owner: owner(), collection, prices: readPrices(data, owned) }
+            },
+          )
+        }
+        return app.transaction(() => data.transaction(serve)())()
       },
       { detail: { summary: 'Le Pokédex public' } },
     )

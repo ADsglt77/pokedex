@@ -151,9 +151,12 @@ export interface CatalogSets {
   blocks: string[]
 }
 
+/** L'adresse des séries du catalogue (oubliée pour « Réessayer », `CatalogPage`). */
+export const CATALOG_SETS = '/api/catalog/sets'
+
 /** Les séries de la page Catalogue ; `null` si elles ne sont pas disponibles (comme `loadCatalog`). */
 export const loadSets = derived<CatalogSetsFile, CatalogSets | null>(
-  '/api/catalog/sets',
+  CATALOG_SETS,
   (file) =>
     file && {
       blocks: file.blocks,
@@ -216,11 +219,14 @@ const setLoaders = new Map<string, () => Promise<SetCard[] | null>>()
  * Toutes les cartes d'une série, dans son ordre ; `null` si elles ne sont pas disponibles. Chaque
  * série est lue une fois : la même promesse, lue par `use()`.
  */
+/** L'adresse des cartes d'une série (oubliée pour « Réessayer », `CatalogPage`). */
+export const setCardsUrl = (set: SetSummary) => `/api/catalog/sets/${encodeURIComponent(set.id)}`
+
 export function loadSetCards(set: SetSummary) {
   let load = setLoaders.get(set.id)
   if (!load) {
     load = derived<CatalogSetFile, SetCard[] | null>(
-      `/api/catalog/sets/${encodeURIComponent(set.id)}`,
+      setCardsUrl(set),
       (file) => file && readSet(set, file),
     )
     setLoaders.set(set.id, load)
@@ -274,9 +280,11 @@ export const passesFilter = (card: CatalogCard, { rarities, types }: CardFilter)
 const found = new Map<string, Promise<CardImage | null>>()
 const missing = new Set<string>()
 
-/** `true` si l'image se charge (sa copie chez nous) ; `false` sans réponse en 10 s. */
+/** `true` si l'image se charge (sa copie chez nous) ; `false` sans réponse en 10 s, ou sans copie. */
 const loads = (image: CardImage) =>
   new Promise<boolean>((resolve) => {
+    const src = localSrc(image.small)
+    if (src === null) return resolve(false)
     const probe = new Image()
     const timer = setTimeout(() => {
       probe.onload = probe.onerror = null
@@ -290,7 +298,7 @@ const loads = (image: CardImage) =>
       clearTimeout(timer)
       resolve(false)
     }
-    probe.src = localSrc(image.small)
+    probe.src = src
   })
 
 /**

@@ -91,8 +91,11 @@ export async function images(db: Database) {
     let found = 0
     let done = 0
     await mapPool(cards, 2, async ({ id, set, sort }) => {
-      const { small, large } = pokecardexImage(set, sort)
-      const copied = (await copy(localSrc(small))) && (await copy(localSrc(large)))
+      const image = pokecardexImage(set, sort)
+      const small = localSrc(image.small)
+      const large = localSrc(image.large)
+      // Un code de série d'une autre forme que celles que copie le serveur : pas d'image possible.
+      const copied = small && large ? (await copy(small)) && (await copy(large)) : false
       // Noté carte par carte : un premier passage interrompu reprend où il en était. En erreur,
       // rien n'est noté : la carte est cherchée de nouveau au prochain passage.
       if (copied !== null) write.run(copied ? 'pokecardex' : 'none', new Date().toISOString(), id)

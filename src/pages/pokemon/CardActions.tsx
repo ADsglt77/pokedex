@@ -1,10 +1,11 @@
-import { Button, ButtonGroup, Stack, Toggle } from '@camply/ui'
+import { Button, ButtonGroup, Spinner, Stack, Toggle } from '@camply/ui'
 import { Pencil, Trash2 } from '@camply/ui/icons'
 import { lazy, Suspense, useState } from 'react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { isToBuy } from '@/lib/collection'
+import { isInAnOrder } from '@/lib/orders'
 import { cx } from '@/lib/cx'
 import { otherSpeciesNames, speciesNames } from '@/lib/species'
 import { statusLabel } from '@/lib/format'
@@ -19,7 +20,8 @@ import styles from './CardActions.module.css'
  * La fenêtre d'ajout ou de correction, chargée à sa première ouverture (avec le choix dans le
  * catalogue et la saisie) : elle n'alourdit pas le premier chargement.
  */
-const CardForm = lazy(() => import('./CardForm').then(({ CardForm }) => ({ default: CardForm })))
+const loadCardForm = () => import('./CardForm')
+const CardForm = lazy(() => loadCardForm().then(({ CardForm }) => ({ default: CardForm })))
 
 const STATUS_BUTTONS: { status: CardStatus; label: string }[] = [
   { status: 'owned', label: 'Je possède cette carte' },
@@ -48,11 +50,8 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
   // Les autres Pokémon de la carte (TAG TEAM) : la retirer d'ici la leur laisse.
   const shared = card.dexIds.length > 1
   const otherNames = otherSpeciesNames(card.dexIds, species.id)
-  // Une carte d'une commande y reste : la retirer fausserait le registre (sauf d'un seul de ses
-  // Pokémon : elle reste alors celle des autres).
-  const inAnOrder = useShoppingStore((state) =>
-    state.shopping.orders.some((order) => order.lines.some((line) => line.cardId === card.id)),
-  )
+  // Une carte d'une commande y reste (sauf d'un seul de ses Pokémon : `isInAnOrder`).
+  const inAnOrder = useShoppingStore((state) => isInAnOrder(state.shopping.orders, card.id))
 
   const applyStatus = (next: CardStatus | null) =>
     act(
@@ -114,6 +113,10 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
             variant="secondary"
             size="sm"
             leftIcon={<Pencil size={15} />}
+            // La fenêtre préparée dès que le pointeur ou le focus arrive sur le bouton : elle
+            // s'ouvre sans attendre son chargement.
+            onPointerEnter={() => void loadCardForm()}
+            onFocus={() => void loadCardForm()}
             onClick={() => setEditing(true)}
           >
             Modifier la carte
@@ -139,7 +142,7 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
       </Stack>
 
       {editing && (
-        <Suspense>
+        <Suspense fallback={<Spinner size={16} label="Ouverture de la fenêtre…" />}>
           <CardForm species={species} card={card} onClose={() => setEditing(false)} />
         </Suspense>
       )}

@@ -1105,3 +1105,96 @@ Chaque lot se termine par `bunx tsc -b`, `bun lint`, `bun test` (une fois P3-Q1 
 - `CLAUDE-SECURITY-20261019-084618/CLAUDE-SECURITY-RESULTS.md`, `.jsonl` et `.sarif` ;
 - le tampon de révision `CLAUDE-SECURITY-REVISION-041e4d5bf62a.json` (statut `verified`) ;
 - les valeurs sensibles ont été remplacées par `[REDACTED]`. Le dossier n'est pas suivi par git.
+
+---
+
+## 13. Suivi des correctifs (19 octobre 2026)
+
+Tous les correctifs ont été appliqués dans une même passe, après l'audit, puis vérifiés :
+- **vérifications** : `tsc -b`, ESLint, knip, Prettier, `bun test` (160 tests, dont 28 nouveaux), `bun run build` ;
+- **navigateur** : l'instance d'essai isolée (copie de `data.db`, compte d'essai, jamais `.data`) a été ouverte dans le Chromium intégré.
+
+Légende :
+- ✅ : corrigé ;
+- ◐ : en partie, ce qui reste est dit ;
+- — : pas fait, la raison est dite.
+
+| Problème | Statut | Ce qui a été fait |
+|---|---|---|
+| P1-01 | ✅ | `persist` ne réécrit plus une valeur reprise (`restoring`). Testé (`tests/persist.test.ts`, qui échoue sur l'ancien code) et revérifié dans Chromium |
+| P2-01 | ✅ | Les prix rendent une clé par carte demandée (`null` sans prix). Une carte sans clé est redemandée une minute plus tard, jamais comptée « sans prix ». `API_FORMAT` = 2 |
+| P2-02 | ✅ | Message du journal échappé (`safeText`) et texte de Better Auth passé en détail. `journalOnce` (une ligne par visiteur /64 et par minute) pour les refus, les blocages et la vitrine |
+| P2-03 | ◐ | `limit_req` nginx par `cf-connecting-ip` sur `/api/histories`, `/api/wants` et `/api/auth/`. Pas de cache mémoire du dernier corps : la limite suffit, l'ajout reste possible |
+| P2-04 | ✅ | Une valeur illisible est mise de côté (`<clé>.illisible`), avec un bandeau. La version échangée est ignorée : la version du serveur est reprise, ou la question posée. Vérifié dans le navigateur (aucun envoi) |
+| P2-05 | ✅ | `pricesFrozen` : 503 dans `/api/health` et « Figés » sur la page Données |
+| P2-06 | ✅ | Empreinte de chaque étape (`schema_steps`, une étape l'apporte aux bases existantes). Le serveur refuse de démarrer sur une étape modifiée ou une base plus avancée. Testé |
+| P2-07 | ✅ | Empreinte de version (`tag`), ETag `"v<n>-<tag>"`, garde `baseTag` (409), règle de `decide`, README (restauration). Testé (serveur et règle) |
+| P2-08 | ✅ | 403, 413, 400 et 422 donnent « Envoi refusé » avec sa raison (`documentProblem`). Erreurs en console, rejets attrapés, 403 de la macro au journal |
+| P2-09 | ✅ | `parseEuros` : une espace seulement entre les milliers. Testé |
+| P2-10 | ✅ | `savePriceGuide` séparé du téléchargement, et testé : année gardée, relance du même jour, repli, `0`, scellé, garde, produit retiré |
+| P2-11 | ✅ | Tests de la mise à jour de la collection (v→v+1, 409 dépassée, en avance, autre empreinte, 400, version gardée), du SQL de `/wants`, de la route `/vitrine` et des quantités importées |
+| P2-12 | ✅ | `API_FORMAT` (`src/config/api.ts`) nomme le cache `donnees-<n>` et entre dans l'ETag des réponses calculées. Les anciens caches sont oubliés à l'activation |
+| P2-13 | ✅ | `cache.put` sans attente (`keep`), tri des images à l'activation et toutes les 100 copies |
+| P2-14 | ✅ | `nginx -t` au build, `command_timeout: 30m`, `deploy/deploy.sh` (contrôle de la page et de l'API après le démarrage), images d'avant gardées une semaine, retour arrière au README |
+| P2-15 | ✅ | Sauvegardes en `tmp-…` vérifiées (`quick_check`) puis renommées. README : crontab qui vide le dossier, rétention de 90 jours, restauration de `data.db` |
+| P2-16 | ✅ | `focusAfter` à 8 endroits (Pokédex, catalogue, filtres, liste d'achats, import, effacement, images). Vérifié dans le navigateur |
+| P3-S1 | ◐ | Création en JSON seulement, adresse revérifiée par Better Auth (`databaseHooks.user.create.before`), 429 au-delà de 5 refus par minute. Jeton de mise en service non ajouté : un code avait été retiré à votre demande, ce choix vous revient |
+| P3-S2 | ✅ | Origine contrôlée dans le `parse` de la macro (`ForeignOrigin` → 403 avant la lecture du corps). Testé |
+| P3-S3 | ✅ | Réponse partagée au démarrage indexée par client |
+| P3-S4 | ✅ | `image` recopiée champ par champ. Testé |
+| P3-S5 | ✅ | `listen` sur `HOST` (127.0.0.1 par défaut, `0.0.0.0` dans le Dockerfile) |
+| P3-S6 | ✅ | E-mail écrit au journal seulement s'il contient une arobase. Clé contrôlée au démarrage en production (32 caractères au moins), plutôt que d'ouvrir le journal aux avertissements de Better Auth |
+| P3-S7 | ✅ | HSTS dans `security-headers.conf` |
+| P3-S8 | ◐ | `no-new-privileges`, `cap_drop: [ALL]` pour Bun, `healthcheck` du serveur, clé SSH restreinte (README). Non faits : `read_only`, `mem_limit`, `nginx-unprivileged` (impossibles à éprouver sans Docker ici ; la mémoire du VPS est inconnue) |
+| P3-S9 | ✅ | `.env*` ignoré (sauf `.env.example`) par git et par Docker |
+| P3-A1 | ✅ | `metacard IS NOT NULL`. Testé |
+| P3-A2 | ✅ | `large_client_header_buffers 4 16k`, limite de `/wants` à 1 025, commentaire des tampons corrigé |
+| P3-A3 | ✅ | Instantané lu en une requête, vitrine et réponses des prix lues en transaction, tampon `stamp \|\| createdAt` |
+| P3-A4 | ✅ | `inTurn` transmet la place sans la rendre |
+| P3-A5 | ✅ | Le catalogue échoue si plus de la moitié des séries connues reviennent sans cartes |
+| P3-A6 | ✅ | `/api/status/errors` (réservé au compte) et la cause sur la page Données. Une reprise ratée des anciens prix est notée dans `runs` |
+| P3-A7 | ✅ | `.tmp` d'une image retiré en cas d'échec. Règle en cause d'un 400 au journal |
+| P3-A8 | ✅ | `normalize` lève une erreur sans nom français ou anglais, ou sur un type inconnu |
+| P3-C1 | ✅ | Envoi resté sans réponse retenu (`sent`) : plus de faux conflit |
+| P3-C2 | ✅ | Question fermée quand la version échangée change dans un autre onglet. `keepServer` vérifie la base |
+| P3-C3 | ✅ | 401 → « Session expirée », et le menu propose de se reconnecter (`markExpired`) |
+| P3-C4 | ◐ | Prix redemandés au retour sur une page ouverte depuis plus de 6 h (`refreshPrices`, adresses oubliées). Pas de LRU pour les petites réponses du catalogue (quelques Ko chacune) |
+| P3-C5 | ✅ | Toutes les pochettes dès le départ quand une position de défilement est gardée pour l'adresse |
+| P3-C6 | ✅ | Relecture du stockage limitée aux champs connus. Règle en cause dite (refus de synchronisation, import, journal du serveur) |
+| P3-R1 | ✅ | Focus rendu au lien suivi (`returnedLink`) et à la dernière tuile montrée du catalogue. Vérifié dans le navigateur |
+| P3-R2 | ✅ | Tampon joué une fois (`onAnimationEnd`) |
+| P3-R3 | ✅ | Intertitres calculés depuis la liste montrée. Vérifié dans le navigateur |
+| P3-R4 | ✅ | `aria-live` dans le catalogue, la fenêtre d'ajout et celle des extensions |
+| P3-R5 | ✅ | `fill` et `pick` stables ; abonnement à la collection seulement sans `ids` |
+| P3-R6 | ✅ | `--camply-success: #036c4e` en thème clair |
+| P3-R7 | ✅ | Barre de navigation ; `CardForm` préparé au survol et au focus, avec une roue d'attente ; « Déconnexion… » ; « Réessayer » dans le catalogue |
+| P3-R8 | ✅ | Ctrl+Z (⌘Z) tant qu'un « Annuler » est affiché |
+| P3-R9 | ✅ | Échec retenu par icône |
+| P3-B1 | ✅ | Installation refusée sans `/index.html`, rechargement sur `vite:preloadError`, `id` du manifeste, avertissement à l'enregistrement |
+| P3-B2 | ✅ | `resolve`, marqueur présent une fois exactement, remplacement par une fonction, ESLint pour `public/` |
+| P3-B3 | ✅ | Tableau des variables (`docs/deploiement.md`), `https:` exigé en production, commentaire de compose corrigé |
+| P3-B4 | ✅ | `bun lint` dans le Dockerfile, entrées knip marquées `!` |
+| P3-B5 | ✅ | Dépendances de l'app en `devDependencies` (graphe du serveur vérifié par `bun build --packages=external`) |
+| P3-B6 | ◐ | better-auth 1.7.11. TypeScript 7 attend typescript-eslint |
+| P3-B7 | ✅ | L'image `server` prend son `package.json` de l'étape testée |
+| P3-T1 | ✅ | `satisfies SpeciesFile` et `SpeciesDetailsFile` |
+| P3-T2 | ✅ | `Priced<T>` et prédicat ; `WantsDialog` reçoit des cartes reliées |
+| P3-T3 | ◐ | `push` rend `'saved' \| 'stale' \| 'stopped'`, le 304 a sa branche. Le lien entre statut et conflit n'est pas inscrit dans le type (facultatif) |
+| P3-T4 | ◐ | `JSON.parse(…) as CollectionData` explicite. Les génériques de `db.query` ne sont pas appliqués (facultatif) |
+| P3-M1 | ◐ | `downloadExport` dans le hook, `findCard` dans `lib/collection`, `tsconfig.server.json` sans DOM (les tests dans `tsconfig.tests.json`), objets globaux d'ESLint par dossier. `pokedex.ts` lit encore `SPECIES` : le serveur charge ce module, sans conséquence aujourd'hui |
+| P3-M2 | ✅ | `SCAN_PATH` et `scanUrl` partagés ; une table `UPSTREAMS` (adresse et plausibilité) ; erreur explicite à la place du `!` ; une adresse de Pokécardex d'une autre forme jamais chargée chez lui |
+| P3-M3 | ✅ | Commentaires de `/api/prices` mis à jour |
+| P3-M4 | ✅ | Code de compatibilité retiré, rien n'étant encore déployé : reprise des anciens prix (`legacy-prices.ts`, volume `prices`), images de TCGplayer, statut « souhaitée » et liste `preferences`, ETag d'avant les empreintes |
+| P3-M5 | ◐ | `auth-client.ts` → `account.ts`, `better-auth/client`, `PricePoint` → `lib/chart`, formulation de CLAUDE.md. `wantsLine` et `wantsVersion` restent dans `lib/cardmarket` (choix documenté) |
+| P3-M6 | ✅ | `catalog()` découpé sans changer son comportement (l'écriture dans `seriesWriter`, le bilan dans `logTotals` : 74 lignes au lieu de 170) ; la table d'architecture de CLAUDE.md réduite au rôle de chaque dossier (31,5 Ko → 17,5 Ko), le détail restant dans l'en-tête des modules et dans `docs/` |
+| P3-M7 | ◐ | Faits : `authCall` et `refusalMessage`, `readBaseRecord`, `compare`, `cacheFirst`, `retryDue`, `readParts`, plausibilité dans `UPSTREAMS`, `finally`. Non faits : `usePriceState` (deux sélecteurs évitent des rendus) et la table de `journalAuth` (chaque branche a ses règles) |
+| P3-Q1 | ✅ | Chaque test des prix pose son état |
+| P3-Q2 | ✅ | `isInAnOrder` dans `lib/orders`, `parseQuantity`, tests de non-mutation |
+| P3-Q3 | ✅ | `tests/server.ts` (une seule garde) ; `setup.ts` fixe `IMAGES_DIR` et `BACKUP_DIR` |
+| P3-Q4 | ✅ | `tests/schema.test.ts` : une base remplie à une étape ancienne garde ses lignes |
+
+**À savoir pour le prochain déploiement :**
+- chaque base reçoit une étape de schéma de plus (un verrou d'écriture, une fois, au premier démarrage) ;
+- le cache `donnees` du service worker est oublié au profit de `donnees-2` ;
+- le service `server` a un `healthcheck` ;
+- `BETTER_AUTH_SECRET` doit faire au moins 32 caractères en production (celle du README, `openssl rand -base64 32`, en fait 44).

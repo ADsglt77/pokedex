@@ -10,6 +10,9 @@ import type { PokemonCard, WantsLines } from '@/types'
 import { CardLine } from './CardLine'
 import page from './ShoppingPage.module.css'
 
+/** Une carte reliée à Cardmarket : son id, d'où sa ligne. */
+type Linked = PokemonCard & { cardmarket: number }
+
 /**
  * « Copier pour Cardmarket » : les cartes de la prochaine commande en lignes pour « Ajouter une
  * deck list » d'une liste de souhaits Cardmarket (`/api/wants`, `wantsLine`), que l'utilisateur
@@ -21,10 +24,10 @@ export function WantsDialog({
   onClose,
 }: {
   /** Les cartes du plan : chacune a un prix, donc un id Cardmarket (`priceOf`). */
-  cards: readonly PokemonCard[]
+  cards: readonly Linked[]
   onClose: () => void
 }) {
-  const ids = cards.map((card) => card.cardmarket!)
+  const ids = cards.map((card) => card.cardmarket)
   // Créée ici, hors de la partie qui attend : elle ne serait sinon jamais la même promesse.
   const [lines, setLines] = useState(() => loadWantsLines(ids))
   const [retried, setRetried] = useState(false)
@@ -67,7 +70,7 @@ function WantsContent({
   retried,
   onRetry,
 }: {
-  cards: readonly PokemonCard[]
+  cards: readonly Linked[]
   request: Promise<WantsLines | null>
   retrying: boolean
   /**
@@ -101,7 +104,7 @@ function WantsContent({
     )
   }
 
-  const lineOf = (card: PokemonCard) => lines[card.cardmarket!] ?? null
+  const lineOf = (card: Linked) => lines[card.cardmarket] ?? null
   const ready = cards.flatMap((card) => lineOf(card) ?? [])
   const others = cards.filter((card) => lineOf(card) === null)
   const text = ready.join('\n')

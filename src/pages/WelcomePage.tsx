@@ -2,8 +2,8 @@ import { Alert, Button, Input, Stack } from '@camply/ui'
 import { UserPlus } from '@camply/ui/icons'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { authClient } from '@/lib/auth'
-import { accountCreated, TOO_MANY_ATTEMPTS } from '@/lib/auth-client'
+import { authCall, authClient } from '@/lib/auth'
+import { accountCreated, refusalMessage } from '@/lib/account'
 import { pageTitle } from '@/lib/format'
 import { signIn } from '@/store/sync'
 import { AuthCard } from '@/components/AuthCard'
@@ -11,13 +11,16 @@ import styles from './AuthPage.module.css'
 
 /** Le message d'un refus, d'après la réponse du serveur. */
 const failure = (status: number) =>
-  status === 403
-    ? 'Création refusée : ce site attend une autre adresse, ou son compte vient d’être créé (rechargez alors la page pour vous connecter).'
-    : status === 400
-      ? 'Vérifiez l’e-mail et le mot de passe (8 caractères au moins).'
-      : status === 429
-        ? TOO_MANY_ATTEMPTS
-        : 'Création impossible pour le moment : réessayez plus tard.'
+  refusalMessage(
+    {
+      403: 'Création refusée : ce site attend une autre adresse, ou son compte vient d’être créé (rechargez alors la page pour vous connecter).',
+      400: 'Vérifiez l’e-mail et le mot de passe (8 caractères au moins).',
+      // Better Auth refuse de créer le compte d'une autre adresse que celle prévue.
+      422: 'Création refusée : ce site attend une autre adresse.',
+    },
+    status,
+    'Création impossible pour le moment : réessayez plus tard.',
+  )
 
 /**
  * `/bienvenue` : la première visite, tant que le site n'a pas de compte (le routeur y mène toute
@@ -36,9 +39,9 @@ export function WelcomePage() {
     event.preventDefault()
     setBusy(true)
     setError(null)
-    const { data, error: refused } = await authClient.signUp
-      .email({ name: name.trim(), email: email.trim(), password })
-      .catch(() => ({ data: null, error: { status: 0 } }))
+    const { data, error: refused } = await authCall(() =>
+      authClient.signUp.email({ name: name.trim(), email: email.trim(), password }),
+    )
     setBusy(false)
     if (refused || !data) return setError(failure(refused?.status ?? 0))
     accountCreated()

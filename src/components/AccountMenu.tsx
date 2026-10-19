@@ -6,7 +6,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExportCollectionButton } from '@/components/ExportCollectionButton'
 import { SyncConflictDialog } from '@/components/SyncConflictDialog'
 import { useNotify } from '@/hooks/useNotify'
-import { loginPath } from '@/lib/auth-client'
+import { loginPath } from '@/lib/account'
 import { cx } from '@/lib/cx'
 import { details } from '@/lib/format'
 import {
@@ -49,9 +49,15 @@ const STATUS: Record<SyncStatus, { label: string; icon: typeof CloudCheck; text:
   refused: {
     label: 'Envoi refusé',
     icon: CloudAlert,
-    text: 'Le serveur refuse cette collection (abîmée ?) : exportez-la depuis la page Données.',
+    text: 'Le serveur refuse cette collection : vos modifications restent sur cet appareil. Exportez-la depuis la page Données pour la garder.',
   },
 }
+
+/** La phrase d'un refus, avec sa raison (`refusal`) : « … : la carte « SV2a 165 » est abîmée. » */
+const refusedText = (refusal: string | null) =>
+  refusal
+    ? `Le serveur refuse cette collection : ${refusal}. Vos modifications restent sur cet appareil ; exportez-la depuis la page Données pour la garder.`
+    : STATUS.refused.text
 
 /**
  * Le compte connecté (la coquille ne s'ouvre que connecté) : l'état de la synchronisation et un
@@ -67,17 +73,32 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const navigate = useNavigate()
   const notify = useNotify()
   const dismissed = useSyncStore((state) => state.dismissed)
+  const refusal = useSyncStore((state) => state.refusal)
   const [confirmingSignOut, setConfirmingSignOut] = useState(false)
+  // La déconnexion attend une dernière synchronisation, puis le serveur (15 s au plus) : le
+  // bouton du compte le dit pendant ce temps.
+  const [leaving, setLeaving] = useState(false)
   if (!account) return null
 
-  const { label, icon: Icon, text } = STATUS[status]
+  const { label, icon: Icon } = STATUS[status]
+  const text = status === 'refused' ? refusedText(refusal) : STATUS[status].text
   const leave = async () => {
-    if (await signOut()) {
+    setLeaving(true)
+    const done = await signOut()
+    setLeaving(false)
+    if (done) {
       notify('Vous êtes déconnecté : votre collection reste sur le serveur.', { tone: 'info' })
       navigate('/vitrine', { replace: true })
     } else {
       notify('Déconnexion impossible : le serveur ne répond pas.', { tone: 'danger' })
     }
+  }
+  const askToLeave = async () => {
+    setLeaving(true)
+    const unsent = await hasUnsentChanges()
+    setLeaving(false)
+    if (unsent) setConfirmingSignOut(true)
+    else await leave()
   }
 
   return (
@@ -89,12 +110,15 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
             size="sm"
             variant="ghost"
             leftIcon={<Icon size={16} />}
+            loading={leaving}
             className={cx(
               !compact && styles.wide,
               status !== 'synced' && status !== 'syncing' && styles.alert,
             )}
           >
-            <span className={cx(compact && 'visually-hidden')}>{label}</span>
+            <span className={cx(compact && 'visually-hidden')}>
+              {leaving ? 'Déconnexion…' : label}
+            </span>
           </Button>
         }
       >
@@ -122,13 +146,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
             Synchroniser maintenant
           </MenuItem>
         )}
-        <MenuItem
-          icon={<LogOut size={16} />}
-          onSelect={async () => {
-            if (await hasUnsentChanges()) setConfirmingSignOut(true)
-            else await leave()
-          }}
-        >
+        <MenuItem icon={<LogOut size={16} />} onSelect={() => void askToLeave()}>
           Se déconnecter
         </MenuItem>
       </DropdownMenu>

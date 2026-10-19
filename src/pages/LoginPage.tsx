@@ -2,8 +2,8 @@ import { Alert, Button, Input, Stack } from '@camply/ui'
 import { LogIn } from '@camply/ui/icons'
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
-import { authClient } from '@/lib/auth'
-import { TOO_MANY_ATTEMPTS } from '@/lib/auth-client'
+import { authCall, authClient } from '@/lib/auth'
+import { refusalMessage } from '@/lib/account'
 import { pageTitle } from '@/lib/format'
 import { signIn } from '@/store/sync'
 import { AuthCard } from '@/components/AuthCard'
@@ -18,11 +18,11 @@ const returnPath = (path: string | null) =>
 
 /** Le message d'un échec de connexion, d'après la réponse du serveur. */
 const failure = (status: number) =>
-  status === 401
-    ? 'E-mail ou mot de passe incorrect.'
-    : status === 429
-      ? TOO_MANY_ATTEMPTS
-      : 'Connexion impossible pour le moment : réessayez plus tard.'
+  refusalMessage(
+    { 401: 'E-mail ou mot de passe incorrect.' },
+    status,
+    'Connexion impossible pour le moment : réessayez plus tard.',
+  )
 
 /**
  * `/connexion` : se connecter pour ouvrir son Pokédex, hors de la coquille (elle ne s'ouvre que
@@ -42,9 +42,9 @@ export function LoginPage() {
     event.preventDefault()
     setBusy(true)
     setError(null)
-    const { data, error: refused } = await authClient.signIn
-      .email({ email: email.trim(), password })
-      .catch(() => ({ data: null, error: { status: 0 } }))
+    const { data, error: refused } = await authCall(() =>
+      authClient.signIn.email({ email: email.trim(), password }),
+    )
     setBusy(false)
     if (refused || !data) return setError(failure(refused?.status ?? 0))
     signIn(data.user)

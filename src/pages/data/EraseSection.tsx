@@ -1,10 +1,11 @@
 import { Button } from '@camply/ui'
 import { Trash2 } from '@camply/ui/icons'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExportCollectionButton } from '@/components/ExportCollectionButton'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { emptyCollection } from '@/lib/collection'
+import { focusAfter } from '@/lib/focus'
 import { summarize } from '@/lib/pokedex'
 import { useCollectionStore } from '@/store/collection'
 import { DataSection } from './DataSection'
@@ -16,11 +17,13 @@ export function EraseSection() {
   const collection = useCollectionStore((state) => state.collection)
   const [confirming, setConfirming] = useState(false)
   const summary = summarize(collection)
+  const title = useRef<HTMLHeadingElement>(null)
 
   return (
     <DataSection
       id="effacer"
       title="Effacer ma collection"
+      titleRef={title}
       danger
       description="Supprime de votre compte, sur tous vos appareils, vos cartes ajoutées, leurs statuts et leurs prix payés. Les commandes et le budget sont conservés : ils gardent ce que vous avez dépensé."
     >
@@ -41,11 +44,17 @@ export function EraseSection() {
         title="Effacer votre collection ?"
         confirmLabel="Effacer"
         onClose={() => setConfirming(false)}
+        // Le bouton « Effacer », désactivé une fois la collection vide, ne peut plus garder le
+        // focus : il va au titre de la section.
         onConfirm={() =>
-          act(
-            () => useCollectionStore.getState().replaceCollection(emptyCollection()),
-            'Collection effacée.',
-            'info',
+          focusAfter(
+            () =>
+              act(
+                () => useCollectionStore.getState().replaceCollection(emptyCollection()),
+                'Collection effacée.',
+                'info',
+              ),
+            title,
           )
         }
       >

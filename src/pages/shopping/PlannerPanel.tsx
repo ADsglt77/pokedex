@@ -311,7 +311,10 @@ export function PlannerPanel({
 
       {wantsOpen && (
         <WantsDialog
-          cards={plan.picked.map((row) => row.card)}
+          // Une carte prise a un prix, donc un id Cardmarket.
+          cards={plan.picked.flatMap(({ card }) =>
+            card.cardmarket ? [{ ...card, cardmarket: card.cardmarket }] : [],
+          )}
           onClose={() => setWantsOpen(false)}
         />
       )}
@@ -331,13 +334,13 @@ export function PlannerPanel({
 }
 
 /** Une commande à compléter : les cartes du plan au prix du marché, le port réservé. */
-const planOrder = (rows: readonly WishRow[], shipping: number) =>
+const planOrder = (rows: readonly (WishRow & { price: number })[], shipping: number) =>
   newOrder(
     today(),
     rows.map((row) => ({
       cardId: row.card.id,
       quantity: 1,
-      unitPrice: row.price!,
+      unitPrice: row.price,
       previous: null,
     })),
     shipping,

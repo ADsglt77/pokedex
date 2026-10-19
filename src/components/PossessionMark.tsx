@@ -8,7 +8,9 @@ import styles from './PossessionMark.module.css'
  * pochette d'un Pokémon à débloquer se reconnaît déjà, grisée). L'icône est dessinée en CSS (un
  * masque), pas en SVG : le Pokédex en affiche jusqu'à 1 025. Elle s'anime quand le statut change
  * sous les yeux, pas à l'affichage : les pages se remontent à chaque visite, le Pokédex rejouerait
- * toutes ses marques.
+ * toutes ses marques. Une fois, l'animation finie : une marque cachée puis remontrée (le Pokédex
+ * gardé en vie, un filtre) la rejouerait sinon (le navigateur relance les animations d'un élément
+ * qui réapparaît).
  */
 export function PossessionMark({ status }: { status: CardStatus | null }) {
   // Le statut affiché, et s'il a changé depuis le premier rendu.
@@ -20,6 +22,7 @@ export function PossessionMark({ status }: { status: CardStatus | null }) {
     <span
       key={status}
       className={cx(styles.mark, styles[status], shown.changed && styles.stamp)}
+      onAnimationEnd={() => setShown({ status, changed: false })}
       aria-hidden="true"
     />
   )
