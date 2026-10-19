@@ -27,7 +27,7 @@ import { progressPercent, unlockEvents } from '@/lib/pokedex'
 import { HOUR, MINUTE } from '@/lib/time'
 import type { CardOwnership, CollectionData, PokemonCard, PriceFile, VitrineData } from '@/types'
 import { journalOnce, visitorOf } from './journal'
-import { notFound, serveTagged } from './responses'
+import { notFound, serveJson } from './responses'
 
 /**
  * La collection telle que la voit un visiteur (testé : jamais un prix payé ni un achat). Chaque
@@ -97,7 +97,7 @@ const journalVisit = (entry: Parameters<typeof journalOnce>[1], request: Request
  */
 async function dataPrices(ids: number[]): Promise<PriceFile | null> {
   if (!ids.length) return null
-  const url = `${process.env.DATA_API_URL ?? 'http://127.0.0.1:3001'}/v1/prices/collection?ids=${[...new Set(ids)].join()}`
+  const url = `${process.env.DATA_API_URL ?? 'http://127.0.0.1:3001'}/v1/prices?ids=${[...new Set(ids)].join()}`
   try {
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${process.env.DATA_API_TOKEN ?? ''}` },
@@ -123,12 +123,11 @@ async function dataPrices(ids: number[]): Promise<PriceFile | null> {
   }
 }
 
-/** Le compte d'un pseudo, et la version de sa collection (`null` tant qu'il n'a rien envoyé). */
+/** Le compte d'un pseudo. */
 interface Owner {
   id: string
   name: string
   username: string
-  version: number | null
 }
 
 /**
@@ -137,11 +136,7 @@ interface Owner {
  */
 export function vitrineRoutes(app: Database, origin: string) {
   // `username` : le pseudo en minuscules (`server/auth.ts`).
-  const readOwner = app.query(
-    `SELECT u.id, u.name, u.username, c.version
-     FROM "user" AS u LEFT JOIN collections AS c ON c.user_id = u.id
-     WHERE u.username = ?`,
-  )
+  const readOwner = app.query('SELECT id, name, username FROM "user" WHERE username = ?')
   const readShown = app.query('SELECT collection FROM collections WHERE user_id = ?')
   // Seulement un pseudo possible : jamais une adresse du site (`RESERVED_PSEUDOS`), même portée par
   // un compte créé avant qu'elle ne le devienne.
@@ -156,14 +151,9 @@ export function vitrineRoutes(app: Database, origin: string) {
     .get(
       '/vitrine/:pseudo',
       async ({ params, request }) => {
-        // Le compte et sa collection, lus dans une même transaction : la version et la collection
-        // d'un même instant.
-        const found = app.transaction(() => {
-          const owner = ownerOf(params.pseudo)
-          return owner && { owner, collection: shown(owner) }
-        })()
-        if (!found) return notFound()
-        const { owner, collection } = found
+        const owner = ownerOf(params.pseudo)
+        if (!owner) return notFound()
+        const collection = shown(owner)
         journalVisit(
           {
             topic: 'vitrine',
@@ -175,14 +165,13 @@ export function vitrineRoutes(app: Database, origin: string) {
         const owned = Object.values(collection.customCards).flatMap(({ id, cardmarket }) =>
           cardmarket && collection.cards[id] ? [cardmarket] : [],
         )
-        const prices = await dataPrices(owned)
-        // Ce dont la réponse dépend : le compte, la version de sa collection, son pseudo, les prix
-        // rendus. Un visiteur qui revient reçoit un 304.
-        return serveTagged(
-          request,
-          `${owner.id}|${owner.version ?? 0}|${owner.name}|${JSON.stringify(prices)}`,
-          (): VitrineData => ({ owner: owner.name, collection, prices }),
-        )
+        const vitrine: VitrineData = {
+          owner: owner.name,
+          collection,
+          prices: await dataPrices(owned),
+        }
+        // Un visiteur qui revient sur un Pokédex inchangé reçoit un 304.
+        return serveJson(request, vitrine)
       },
       { detail: { summary: 'Le Pokédex public d’un compte' } },
     )

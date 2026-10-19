@@ -28,8 +28,7 @@ import { Elysia, t } from 'elysia'
 import { ORDER_STATE_LABELS } from '@/config/shopping'
 import { formatEuro, formatInteger } from '@/lib/format'
 import { cardCount, orderSpent, supplierLabel } from '@/lib/orders'
-import type { SyncDocument } from '@/lib/sync'
-import type { CollectionData, Order, ShoppingData } from '@/types'
+import type { CollectionData, CollectionDocument, Order, ShoppingData } from '@/types'
 import type { accountRoutes } from './auth'
 
 type JournalTopic = 'compte' | 'collection' | 'achats' | 'données' | 'vitrine' | 'serveur'
@@ -271,7 +270,10 @@ export function banner({ api, site, accounts }: { api: string; site: string; acc
 const MAX_LINES = 20
 
 /** Ce qui a changé d'une version du document à l'autre ; `before` : `null` au premier envoi. */
-export function documentChanges(before: SyncDocument | null, after: SyncDocument): JournalEntry[] {
+export function documentChanges(
+  before: CollectionDocument | null,
+  after: CollectionDocument,
+): JournalEntry[] {
   if (!before) {
     const cartes = Object.keys(after.collection.customCards).length
     const commandes = after.shopping.orders.length

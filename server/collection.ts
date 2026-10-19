@@ -1,16 +1,12 @@
 /**
- * `/api/collection` : la collection et les achats du compte, que ses appareils partagent
- * (`src/store/sync.ts`). Un seul document, numéroté (`version`), et son empreinte (`tag`, tirée de
- * ce qui est enregistré : après une restauration de la base, un numéro peut revenir pour un autre
- * document) :
+ * `/api/collection` : la collection et les achats du compte, gardés par le serveur seul
+ * (`src/store/account.ts`). Un seul document, numéroté (`version`) :
  * - `GET` : `{ version, collection, shopping }` (`CollectionResponse` ; `version` 0 et rien d'autre
- *   tant qu'aucun appareil n'a rien envoyé), ETag `"v<version>-<tag>"` ; 304 si l'appareil a déjà
- *   cette version (`If-None-Match`).
- * - `PUT` `{ baseVersion, baseTag?, collection, shopping }` : enregistré seulement si `baseVersion`
- *   (et `baseTag`, s'il est donné) sont ceux du serveur, et rend `{ version, tag }`
- *   (`CollectionSaved`) ; sinon 409 : l'appareil relit la version du serveur, qu'il n'écrase
- *   jamais sans le demander. Le document est contrôlé aux règles d'un fichier importé (`readSent` ;
- *   400 sinon, la règle en cause au journal).
+ *   tant que rien n'a été enregistré) ;
+ * - `PUT` `{ baseVersion, collection, shopping }` : enregistré seulement si `baseVersion` est celle
+ *   du serveur, et rend `{ version }` (`CollectionSaved`) ; sinon 409 : l'appareil relit la version
+ *   du serveur, qu'il n'écrase jamais. Le document est contrôlé aux règles d'un fichier importé
+ *   (`readSent` ; 400 sinon, la règle en cause au journal).
  * Sans session : 401 ; jamais gardé en cache (`no-store`), ni par le navigateur ni par Cloudflare
  * (macro `auth`, `auth.ts`).
  */
@@ -22,7 +18,6 @@ import { readSent } from '@/lib/transfer'
 import type { CollectionData, CollectionSaved, ShoppingData } from '@/types'
 import type { accountRoutes } from './auth'
 import { documentChanges, journal } from './journal'
-import { matchesEtag } from './responses'
 
 interface Row {
   version: number
@@ -30,8 +25,8 @@ interface Row {
   shopping: string
 }
 
-const json = (text: string, status = 200, headers: Record<string, string> = {}) =>
-  new Response(text, { status, headers: { 'Content-Type': 'application/json', ...headers } })
+const json = (text: string, status = 200) =>
+  new Response(text, { status, headers: { 'Content-Type': 'application/json' } })
 
 /**
  * Le document tel que le lit l'appareil (`CollectionResponse`), écrit sans le relire : il est
@@ -39,10 +34,6 @@ const json = (text: string, status = 200, headers: Record<string, string> = {}) 
  */
 const documentText = (row: Row | null) =>
   `{"version":${row?.version ?? 0},"collection":${row?.collection ?? 'null'},"shopping":${row?.shopping ?? 'null'}}`
-
-/** L'empreinte d'une version : de ce qui est enregistré, pas de son seul numéro. */
-const tagOf = (collection: string, shopping: string) =>
-  Bun.hash(`${collection}\n${shopping}`).toString(36)
 
 export function collectionRoutes(app: Database, account: ReturnType<typeof accountRoutes>) {
   const read = app.query('SELECT version, collection, shopping FROM collections WHERE user_id = ?')
@@ -65,18 +56,10 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
 
   return new Elysia({ name: 'collection' })
     .use(account)
-    .get(
-      '/collection',
-      ({ user, request }) => {
-        const row = read.get(user.id) as Row | null
-        const etag = row ? `"v${row.version}-${tagOf(row.collection, row.shopping)}"` : '"v0"'
-        if (matchesEtag(request, etag)) {
-          return new Response(null, { status: 304, headers: { ETag: etag } })
-        }
-        return json(documentText(row), 200, { ETag: etag })
-      },
-      { auth: true, detail: { summary: 'La collection du compte' } },
-    )
+    .get('/collection', ({ user }) => json(documentText(read.get(user.id) as Row | null)), {
+      auth: true,
+      detail: { summary: 'La collection du compte' },
+    })
     .put(
       '/collection',
       ({ user, body }) => {
@@ -90,15 +73,12 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
           })
           return json('null', 400)
         }
-        const { baseVersion, baseTag } = body
+        const { baseVersion } = body
 
         const now = new Date()
         const saved = app.transaction(() => {
           const row = read.get(user.id) as Row | null
           if ((row?.version ?? 0) !== baseVersion) return null
-          if (row && baseTag !== undefined && tagOf(row.collection, row.shopping) !== baseTag) {
-            return null
-          }
           // Enregistré après ses contrôles : relu tel quel.
           const previous = row && {
             collection: JSON.parse(row.collection) as CollectionData,
@@ -120,7 +100,7 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
               )
               .run(user.id, version, ...values, now.toISOString())
           }
-          return { version, tag: tagOf(values[0]!, values[1]!), previous }
+          return { version, previous }
         })
         // `immediate` : la version lue est encore celle du serveur au moment d'écrire.
         const result = saved.immediate()
@@ -139,14 +119,13 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
         for (const change of documentChanges(result.previous ?? null, document)) {
           journal({ ...change, details: { compte: user.username ?? undefined, ...change.details } })
         }
-        const answer: CollectionSaved = { version: result.version, tag: result.tag }
+        const answer: CollectionSaved = { version: result.version }
         return json(JSON.stringify(answer))
       },
       {
         auth: true,
         body: t.Object({
           baseVersion: t.Integer({ minimum: 0 }),
-          baseTag: t.Optional(t.String({ pattern: '^[0-9a-z]{1,16}$' })),
           collection: t.Unknown(),
           shopping: t.Unknown(),
         }),

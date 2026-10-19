@@ -5,26 +5,21 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
 - Le chemin : le navigateur demande `/api/prices/…`, `/api/histories`, `/api/wants`, `/api/status`
   au site ; nginx (Vite en développement) les renvoie à l'API des données, sous `/v1`, avec le
   token du site (`deploy/nginx.conf.template`, `vite.config.ts`). Les mêmes adresses
-  qu'auparavant : le code, le préchargement et le service worker n'en savent rien. Les réponses
+  qu'auparavant : le code et le préchargement n'en savent rien. Les réponses
   portent leur ETag (304 tant que les prix n'ont pas changé) ; leur forme est celle de
-  `src/types.ts`, copie du contrat de l'API (`contract.ts`), avec la même `API_FORMAT`.
-- Prix du jour : l'app demande ceux des seules cartes qu'elle affiche
-  (`GET /api/prices/collection?ids=…` pour celles de la collection,
-  `GET /api/prices/selection?ids=…` pour les autres : une extension du catalogue, les cartes d'un
-  Pokémon, un id saisi ; la même réponse : le jour, et une clé par carte demandée,
-  `[prix, plus bas, prix d'il y a 30 jours]` ou `null` sans prix ce jour ; deux chemins car le
-  service worker garde une copie par chemin ; 1 025 ids au plus ; 404 tant que le guide n'a jamais
-  été lu). Le prix suivi est la règle de Pokécardex (la tendance pour une série de moins de
+  `src/types.ts`, copie du contrat de l'API (`contract.ts`).
+- Prix du jour : l'app demande ceux des seules cartes qu'elle affiche (`GET /api/prices?ids=…` :
+  celles de la collection, d'une extension du catalogue, d'un Pokémon, un id saisi ; le jour, et
+  une clé par carte demandée, `[prix, plus bas, prix d'il y a 30 jours]` ou `null` sans prix ce
+  jour ; 1 025 ids au plus ; 404 tant que le guide n'a jamais été lu). Le prix suivi est la règle de Pokécardex (la tendance pour une série de moins de
   31 jours, la moyenne sur 30 jours ensuite) ; « Ce qui bouge » (Valeur) et la fiche comparent au
   prix d'il y a 30 jours (`priceChange`, `lib/prices.ts`). Côté navigateur (`store/prices.ts`), les
   réponses s'ajoutent : `usePrices()` rend les prix de la collection, `usePrices(ids)` ceux d'autres
   cartes, `null` tant que la réponse de ces cartes n'est pas arrivée ; une carte dont le prix est
   connu n'est pas redemandée (une carte ajoutée : une demande pour elle seule), sauf au retour sur
   une page restée ouverte plus de 6 h, où tout ce qui est affiché est redemandé (`refreshPrices` :
-  les prix d'avant restent affichés en attendant). Une carte sans clé dans la réponse n'a pas eu la
-  sienne : c'est la copie du service worker, faite pour d'autres cartes (sans réseau, ou sans
-  réponse en 4 s) ; elle compte comme une panne passagère (« — », jamais « Sans prix ») et elle est
-  redemandée une minute plus tard. L'historique d'une carte se charge à la demande
+  les prix d'avant restent affichés en attendant). Une demande en panne compte comme une panne
+  passagère (« — », jamais « Sans prix »). L'historique d'une carte se charge à la demande
   (`/api/prices/<id>`, 404 sans historique) : la courbe de sa fiche, le nom affiché dans le
   formulaire pour vérifier l'id saisi (au départ du champ). Le Pokédex public d'un compte reçoit
   les prix de ses seules cartes possédées avec sa réponse (`server/vitrine.ts`, qui les demande à
@@ -45,12 +40,7 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   carte Cardmarket possédée pour deux Pokémon compte deux fois, comme dans la valeur du jour (une
   TAG TEAM, une seule carte, une fois) ; une carte sans id ou sans historique ne pèse pas sur la
   courbe. Seule la réponse de la dernière liste reste en mémoire (`forget`, `lib/api.ts`). Sans
-  réponse : « L'historique des prix n'est pas disponible pour le moment ». Sans réseau, ou sans
-  réponse en 4 s, le service worker sert la dernière réponse, gardée sous une seule clé quels que
-  soient les ids (`docs/interface.md`) : une carte ajoutée depuis n'y est pas. L'API répondant pour
-  chaque id, une clé absente le révèle : la page compte ces cartes et le dit sous la courbe
-  (« Courbe d'une copie gardée sur cet appareil (réseau lent ou absent), sans 2 cartes ajoutées
-  depuis »), jusqu'au rechargement de la page.
+  réponse : « L'historique des prix n'est pas disponible pour le moment ».
 - Liste de souhaits Cardmarket (`GET /api/wants?ids=…`) : pour chaque id Cardmarket demandé, sa
   ligne pour « Ajouter une deck list » de la liste de souhaits de Cardmarket (`WantsLines`), ou
   `null` quand aucune ne désignerait sûrement cette carte-là (les règles, testées, et le format

@@ -68,7 +68,7 @@ export interface PokemonCard {
   page?: string
 }
 
-/* Données de l'utilisateur : `localStorage` et fichier d'export */
+/* Données de l'utilisateur : gardées par le serveur (`/api/collection`) et fichier d'export */
 
 /** Commandée ou possédée ; une carte choisie sans statut est à débloquer. */
 export type CardStatus = 'ordered' | 'owned'
@@ -91,6 +91,12 @@ export interface CollectionData {
   customCards: Record<string, PokemonCard>
 }
 
+/** Le document d'un compte : la collection et les achats, gardés ensemble par le serveur. */
+export interface CollectionDocument {
+  collection: CollectionData
+  shopping: ShoppingData
+}
+
 export interface CollectionExportFile {
   app: 'pokedex-collection'
   kind: 'collection-export'
@@ -101,7 +107,7 @@ export interface CollectionExportFile {
   shopping: ShoppingData
 }
 
-/* Achats : `localStorage` (`pokedex-collection.shopping`) et fichier d'export */
+/* Achats : gardés avec la collection, et fichier d'export */
 
 /** Ce qu'on fait d'une carte en l'ajoutant : rien (elle est à acheter), ou possédée. */
 export type AddAs = 'none' | 'owned'
@@ -294,21 +300,19 @@ export interface CardPrice {
 type CardPriceRow = [price: number, low: number | null, monthAgo: number | null]
 
 /**
- * Les prix Cardmarket du jour des cartes demandées (`/api/prices/collection`, `/selection`, et ceux
- * des cartes possédées de `/api/vitrine/<pseudo>` ; 404 tant que le guide n'a jamais été lu).
+ * Les prix Cardmarket du jour des cartes demandées (`/api/prices?ids=…`, et ceux des cartes
+ * possédées de `/api/vitrine/<pseudo>` ; 404 tant que le guide n'a jamais été lu).
  */
 export interface PriceFile {
   /** Jour du guide des prix (YYYY-MM-DD). */
   date: string
   /**
-   * Clé : id Cardmarket (`idProduct`), une par carte demandée ; `null` : sans prix ce jour. Une
-   * carte absente n'a pas eu de réponse (une copie du service worker faite pour d'autres cartes) :
-   * elle sera redemandée.
+   * Clé : id Cardmarket (`idProduct`), une par carte demandée ; `null` : sans prix ce jour.
    */
   cards: Record<string, CardPriceRow | null>
 }
 
-/* Le compte (`/api/account`) et la collection synchronisée (`/api/collection`), `server/` */
+/* Le compte (`/api/account`) et sa collection (`/api/collection`), `server/` */
 
 /**
  * Le compte connecté : son id et son pseudo, tel que tapé (« Le Pokédex de Sacha ») ; en
@@ -327,9 +331,9 @@ export interface AccountState {
 
 /**
  * `GET /api/collection` : le document du compte, numéroté (`version`, que l'appareil renvoie avec
- * ses modifications) ; `version` 0 et le reste `null` tant qu'aucun appareil n'a rien envoyé.
- * Enregistré tel que l'appareil l'a envoyé ; relu comme le stockage du navigateur
- * (`readCollection`, `readShopping`).
+ * ses modifications) ; `version` 0 et le reste `null` tant que rien n'a été enregistré.
+ * Enregistré tel que l'appareil l'a envoyé ; relu comme un fichier importé (`readCollection`,
+ * `readShopping`).
  */
 export interface CollectionResponse {
   version: number
@@ -337,13 +341,9 @@ export interface CollectionResponse {
   shopping: ShoppingData | null
 }
 
-/**
- * `PUT /api/collection`, enregistré : la nouvelle version du document, et son empreinte chez le
- * serveur (celle de son ETag, `"v<version>-<tag>"`).
- */
+/** `PUT /api/collection`, enregistré : la nouvelle version du document. */
 export interface CollectionSaved {
   version: number
-  tag: string
 }
 
 /** Le Pokédex public d'un compte (`/api/vitrine/<pseudo>`, `server/vitrine.ts`). */

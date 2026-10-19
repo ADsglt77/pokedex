@@ -1,9 +1,8 @@
 /**
- * Les prix Cardmarket : ceux du jour, demandés pour les seules cartes affichées (l'API du site,
- * `/api/prices/collection` pour celles de la collection, `/api/prices/selection` pour les autres :
- * une extension du catalogue, les cartes d'un Pokémon, un id saisi), que l'API des données met à
- * jour (sa tâche `prices`), et leur historique (`/api/prices/<id>` pour une
- * carte, `/api/histories` pour la collection). Les réponses s'ajoutent : une carte dont le prix est
+ * Les prix Cardmarket : ceux du jour, demandés pour les seules cartes affichées (`/api/prices` :
+ * celles de la collection, d'une extension du catalogue, d'un Pokémon, un id saisi), que l'API des
+ * données met à jour (sa tâche `prices`), et leur historique (`/api/prices/<id>` pour une carte,
+ * `/api/histories` pour la collection). Les réponses s'ajoutent : une carte dont le prix est
  * connu n'est plus redemandée, sauf au retour sur une page restée ouverte plus de 6 h
  * (`refreshPrices`). Facultatifs : sans eux (serveur arrêté, base encore vide), `null`, et l'app
  * s'affiche sans prix.
@@ -25,10 +24,7 @@ interface PriceState {
   prices: PriceFile | null
   /** Les ids dont une réponse est arrivée depuis le dernier rafraîchissement, avec ou sans prix. */
   known: ReadonlySet<number>
-  /**
-   * Les ids dont la demande a échoué (serveur arrêté, prix jamais lus) ou est restée sans réponse
-   * (une copie du service worker faite pour d'autres cartes) : redemandés plus tard.
-   */
+  /** Les ids dont la demande a échoué (serveur arrêté, prix jamais lus) : redemandés plus tard. */
   failed: ReadonlySet<number>
 }
 
@@ -57,38 +53,33 @@ const priceUrls = new Set<string>()
 let answeredAt = 0
 
 /**
- * Demande les prix des cartes `ids` qui ne sont pas encore connus, sous le chemin `list` (le service
- * worker garde une copie par chemin : celle de la collection n'est pas remplacée par celle d'une
- * extension). Le serveur répond pour chaque carte (`null` sans prix) : une carte absente de la
- * réponse vient d'une copie du service worker faite pour d'autres cartes, et compte comme une panne
- * passagère. Redemandés après une panne (`getJson`, une minute après au plus tôt).
+ * Demande les prix des cartes `ids` qui ne sont pas encore connus ; le serveur répond pour chaque
+ * carte (`null` sans prix). Redemandés après une panne (`getJson`, une minute après au plus tôt).
  */
-function requestPrices(list: 'collection' | 'selection', ids: readonly number[]) {
+function requestPrices(ids: readonly number[]) {
   const { known, failed } = usePriceStore.getState()
   // Une panne : redemandée (`getJson` attend une minute) à chaque rendu, comme avant.
   if (requested.get(ids) === known && (!failed.size || !ids.some((id) => failed.has(id)))) return
   requested.set(ids, known)
   const wanted = [...new Set(ids)].filter((id) => !known.has(id)).sort((a, b) => a - b)
   if (!wanted.length) return
-  const url = `/api/prices/${list}?ids=${wanted.join()}`
+  const url = `/api/prices?ids=${wanted.join()}`
   priceUrls.add(url)
   const response = getJson<PriceFile>(url)
   if (followed.has(response)) return
   followed.add(response)
   response.then((file) => {
-    // Une réponse d'une autre forme (un serveur pas encore à jour) compte comme pas de prix.
-    const answered = file?.cards ? wanted.filter((id) => id in file.cards) : []
-    const missing = wanted.filter((id) => !answered.includes(id))
-    // Sans réponse pour certaines : redemandées une minute plus tard, même sans nouvel affichage.
-    if (file?.cards && missing.length) setTimeout(() => requestPrices(list, missing), 60_000)
-    if (answered.length) answeredAt = Date.now()
-    usePriceStore.setState((state) => ({
-      prices: file?.cards
-        ? { date: file.date, cards: { ...state.prices?.cards, ...file.cards } }
-        : state.prices,
-      known: new Set([...state.known, ...answered]),
-      failed: new Set([...[...state.failed].filter((id) => !answered.includes(id)), ...missing]),
-    }))
+    // Une réponse d'une autre forme (un serveur pas encore à jour) compte comme une panne.
+    if (file?.cards) answeredAt = Date.now()
+    usePriceStore.setState((state) =>
+      file?.cards
+        ? {
+            prices: { date: file.date, cards: { ...state.prices?.cards, ...file.cards } },
+            known: new Set([...state.known, ...wanted]),
+            failed: new Set([...state.failed].filter((id) => !wanted.includes(id))),
+          }
+        : { failed: new Set([...state.failed, ...wanted]) },
+    )
   })
 }
 
@@ -156,8 +147,7 @@ function check(state: PriceState, wanted: readonly number[]) {
  */
 function useWanted(ids?: readonly number[]) {
   const collection = useCollectionStore((state) => (ids ? null : state.collection))
-  if (ids) return { list: 'selection' as const, wanted: ids }
-  return { list: 'collection' as const, wanted: collectionIds(collection!) }
+  return ids ?? collectionIds(collection!)
 }
 
 /**
@@ -166,8 +156,8 @@ function useWanted(ids?: readonly number[]) {
  * peuvent aussi en contenir d'autres : `priceOf` lit celui de chaque carte, par son id.
  */
 export function usePrices(ids?: readonly number[]) {
-  const { list, wanted } = useWanted(ids)
-  requestPrices(list, wanted)
+  const wanted = useWanted(ids)
+  requestPrices(wanted)
   return usePriceStore((state) => (check(state, wanted).ready ? (state.prices ?? NO_CARDS) : null))
 }
 
@@ -176,8 +166,8 @@ export function usePrices(ids?: readonly number[]) {
  * on peut le dire (pas en chargement).
  */
 export function usePricesMissing(ids?: readonly number[]) {
-  const { list, wanted } = useWanted(ids)
-  requestPrices(list, wanted)
+  const wanted = useWanted(ids)
+  requestPrices(wanted)
   return usePriceStore((state) => check(state, wanted).missing)
 }
 
@@ -190,13 +180,6 @@ export function usePricesMissing(ids?: readonly number[]) {
 export const loadPriceHistory = (cardmarket: number) =>
   getJson<CardPriceHistory>(`/api/prices/${cardmarket}`, 10_000)
 
-/** Les historiques d'une collection (`loadPriceHistories`). */
-interface CollectionHistories {
-  histories: CardPriceHistory[]
-  /** Les cartes absentes de la réponse : celle gardée par le service worker, d'avant elles. */
-  missing: number
-}
-
 /**
  * La dernière liste demandée, seule gardée : une liste d'avant (la collection a changé depuis) ne
  * revient pas, et sa réponse (les historiques de toute la collection) pèse plusieurs Mo.
@@ -205,16 +188,14 @@ let last: {
   url: string
   key: string
   response: Promise<PriceHistories | null>
-  histories: Promise<CollectionHistories | null>
+  histories: Promise<CardPriceHistory[] | null>
 } | null = null
 
 /**
  * Les historiques des cartes `cardmarkets` (au moins une), ceux que le serveur connaît, en une
  * demande (`/api/histories`, chaque id une fois) relue dans l'ordre de la liste (`historiesOf`) ;
- * `null` si le serveur ne répond pas. Le serveur répond pour chaque id (`null` sans historique) : un
- * id absent vient d'une copie du service worker demandée avec d'autres ids (sans réseau, ou sans
- * réponse en 4 s), comptée dans `missing`. La même promesse pour la même liste, lue par `use()`,
- * refaite quand la réponse est redemandée après une panne (`getJson`).
+ * `null` si le serveur ne répond pas. La même promesse pour la même liste, lue par `use()`, refaite
+ * quand la réponse est redemandée après une panne (`getJson`).
  */
 export function loadPriceHistories(cardmarkets: readonly number[]) {
   const key = cardmarkets.join()
@@ -222,15 +203,7 @@ export function loadPriceHistories(cardmarkets: readonly number[]) {
   if (last && last.url !== url) forget(last.url)
   const response = getJson<PriceHistories>(url)
   if (last?.key === key && last.response === response) return last.histories
-  const histories = settled(
-    response.then(
-      (found) =>
-        found && {
-          histories: historiesOf(found, cardmarkets),
-          missing: cardmarkets.filter((id) => !(id in found)).length,
-        },
-    ),
-  )
+  const histories = settled(response.then((found) => found && historiesOf(found, cardmarkets)))
   last = { url, key, response, histories }
   return histories
 }

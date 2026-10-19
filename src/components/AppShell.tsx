@@ -1,4 +1,4 @@
-import { Badge, Banner, Button, IconButton, Kbd, Progress, useCommandPalette } from '@camply/ui'
+import { Badge, IconButton, Kbd, Progress, useCommandPalette } from '@camply/ui'
 import {
   ChartLine,
   Database,
@@ -40,7 +40,6 @@ import { usePokedex } from '@/hooks/usePokedex'
 import { cx } from '@/lib/cx'
 import { formatInteger, formatShare, today, unlockedOf } from '@/lib/format'
 import { latePendingOrders } from '@/lib/orders'
-import { useStorageFailure } from '@/store/persist'
 import { useShoppingStore } from '@/store/shopping'
 import { toggleTheme, useThemeStore } from '@/store/theme'
 import styles from './AppShell.module.css'
@@ -81,13 +80,6 @@ const isCurrent = (to: string, path: string) =>
 
 /** Ctrl K, ou ⌘ K sur un Mac. */
 const SEARCH_KEYS = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘ K' : 'Ctrl K'
-
-/** L'action de l'avertissement du stockage : la section Exporter des Données. */
-const exportAction = (
-  <Button asChild size="sm" variant="soft">
-    <Link to="/donnees#exporter">Exporter</Link>
-  </Button>
-)
 
 /**
  * Passer à l'autre thème (sombre, clair) : une ligne de la barre latérale, ou l'icône seule dans
@@ -139,13 +131,10 @@ export function AppShell({ pokedex }: { pokedex: ReactNode }) {
 }
 
 const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pokedex: ReactNode }) {
-  const storageFailed = useStorageFailure((state) => state.failed)
-  const storageUnreadable = useStorageFailure((state) => state.unreadableAt !== null)
   const main = useRef<HTMLElement>(null)
   const shownPath = useRef(pathname)
   const [searching, setSearching] = useCommandPalette()
-  // Le compte n'existe qu'une fois (il suit la session et ouvre la question d'un conflit) : dans
-  // la barre latérale ou dans la barre du haut.
+  // Le menu du compte n'existe qu'une fois : dans la barre latérale ou dans la barre du haut.
   const wide = useMediaQuery('(min-width: 64rem)')
 
   // À chaque nouvelle page, le focus va au contenu (lecteurs d'écran, navigation au clavier) ; de
@@ -225,25 +214,6 @@ const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pok
             {!wide && <AccountMenu compact />}
           </div>
         </header>
-
-        {storageFailed && (
-          <div className={cx('container', styles.notice)}>
-            <Banner tone="warn" action={exportAction}>
-              Le navigateur n’enregistre plus vos modifications (stockage plein ou bloqué) : elles
-              seront perdues en fermant la page. Exportez votre collection pour les garder.
-            </Banner>
-          </div>
-        )}
-        {storageUnreadable && (
-          <div className={cx('container', styles.notice)}>
-            <Banner tone="warn">
-              Une partie des données enregistrées dans ce navigateur était illisible : elle a été
-              mise de côté, sans être effacée, et rien n’a été envoyé au serveur à sa place.
-              Connecté, la version du serveur vous est proposée ; sinon, importez votre dernier
-              export (page Données).
-            </Banner>
-          </div>
-        )}
 
         <main id="main" ref={main} tabIndex={-1} className={styles.main}>
           {keepPokedex && (

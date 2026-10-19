@@ -1,7 +1,7 @@
 /**
- * Export et import de la collection, sa relecture depuis le stockage du navigateur, et les règles
- * d'un document (un fichier importé, la collection synchronisée) : ce qui le fait refuser, dit en
- * clair.
+ * Export et import de la collection, sa relecture (celle du serveur, celle d'un fichier : seuls ses
+ * champs connus), et les règles d'un document (un fichier importé, la collection envoyée au
+ * serveur) : ce qui le fait refuser, dit en clair.
  */
 
 import { TOTAL_SPECIES } from '@/config/pokedex'
@@ -9,10 +9,10 @@ import { ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
 import { formatDate, parseLink } from '@/lib/format'
 import { refundFits } from '@/lib/orders'
-import type { SyncDocument } from '@/lib/sync'
 import type {
   BudgetSettings,
   CollectionData,
+  CollectionDocument,
   CollectionExportFile,
   Order,
   ShoppingData,
@@ -32,10 +32,10 @@ export function buildExportFile(
   }
 }
 
-/** Le JSON d'une valeur enregistrée ou d'un fichier ; `null` s'il est absent ou illisible. */
-export function parseStored(text: string | null): unknown {
+/** Le JSON d'un fichier ; `null` s'il est illisible. */
+function parseFile(text: string): unknown {
   try {
-    return JSON.parse(text ?? 'null')
+    return JSON.parse(text)
   } catch {
     return null
   }
@@ -94,7 +94,7 @@ const isText = (value: unknown) => typeof value === 'string'
  * Un jour qui existe (YYYY-MM-DD, pas `2026-13-45`) : le budget en tire le mois, la réception la
  * date d'obtention. Pas d'avant l'an 100 : `Date.UTC` lit les années 0 à 99 comme 1900 à 1999 (une
  * année tapée en deux chiffres, « 05/10/26 », donne l'an 26). Le formulaire de commande refuse les
- * mêmes jours, sans quoi le serveur refuserait le document synchronisé.
+ * mêmes jours, sans quoi le serveur refuserait le document.
  */
 export function isDay(value: unknown) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
@@ -185,7 +185,7 @@ function orderName(order: unknown) {
  * un fichier retouché à la main ne doit ni faire planter les pages une fois importé (puis
  * enregistré), ni fausser le budget (un montant en texte, une commande en double), ni glisser un
  * lien qui ne serait pas une adresse web. Les mêmes règles pour un fichier importé et pour la
- * collection synchronisée (le serveur), relues par cet appareil quand le serveur la refuse.
+ * collection envoyée au serveur, relues par le navigateur quand le serveur la refuse.
  */
 export function documentProblem({
   collection,
@@ -235,7 +235,7 @@ function readParts(
  * `shopping` est `null` pour un export fait avant le module d'achats (sans bloc `shopping`).
  */
 export function readImport(text: string) {
-  const file = parseStored(text)
+  const file = parseFile(text)
   if (!isRecord(file) || file.kind !== 'collection-export') {
     return refusal('ce n’est pas un export de collection de ce Pokédex')
   }
@@ -246,10 +246,10 @@ export function readImport(text: string) {
 export const parseImport = (text: string) => readImport(text).document
 
 /**
- * La collection et les achats qu'un navigateur envoie au serveur (synchronisation), ou la raison
+ * La collection et les achats qu'un navigateur envoie au serveur, ou la raison
  * de leur refus : le serveur les contrôle aux mêmes règles qu'un fichier importé.
  */
-export function readSent(value: unknown): Read<SyncDocument> {
+export function readSent(value: unknown): Read<CollectionDocument> {
   if (!isRecord(value)) return refusal('ce n’est pas une collection')
   const { document, problem } = readParts(value.collection, value.shopping, false)
   if (!document) return refusal(problem)

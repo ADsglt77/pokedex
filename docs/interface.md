@@ -2,6 +2,26 @@
 
 Le système de design, la navigation, les pages, les courbes, les filtres et ce qui tient la grille de 1 025 pochettes. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
+- Thèmes (`styles/theme.css`, à la demande de l'utilisateur, octobre 2026 ; pas de bleu) :
+  **sombre** par défaut, gris foncé neutre et accent jaune ; **clair**
+  (`data-camply-theme="light"` sur `<html>`), blanc pastel chaud et accent rouge. Les tons restent
+  distincts de l'accent (sombre : danger corail, avertissement orange ; clair : danger cramoisi),
+  l'information est violette. La jauge du budget est `info` tant qu'on est dans le budget, et une
+  hausse (`Stat` `delta`) est verte (le ton `success` de camply) : l'accent y passerait pour une
+  alerte. Le choix (bouton « Thème clair / sombre » de la barre, `store/theme.ts`) est gardé dans ce
+  navigateur (`pokedex-collection.theme`, une préférence, pas synchronisée) ; sans choix, celui du
+  système, posé avant le premier affichage par `public/theme.js` (même règle ; un fichier et pas un
+  script dans la page : la politique de sécurité n'accepte que les scripts du site). Les couleurs se
+  changent dans `theme.css`, jamais dans un composant (le fond, `--camply-bg`, est aussi la couleur
+  de la barre du navigateur, lue par `store/theme.ts` ; ses copies figées, `index.html`, manifeste,
+  `public/theme.js`, y sont nommées) ; ce qui diffère d'un thème à l'autre hors camply y a aussi
+  son jeton (`--empty-sprite-opacity` : le sprite grisé d'un Pokémon sans carte ;
+  `--dark-icon-filter` : les icônes de rareté noires, inversées en sombre ; `--link` et
+  `--chart-*` : en clair, liens et courbes à l'encre, liens soulignés de rouge, pour que le rouge
+  reste la marque et l'action principale, pas une alerte ; le choix d'un `SegmentedControl` y est un
+  bouton blanc en relief). Le logo est une Poké Ball plate (`Logo`, `AppShell` ; couleurs
+  `--brand-*`, les mêmes dans les deux thèmes), la même que l'icône de l'onglet
+  (`public/favicon.svg`).
 - Filtres du Pokédex dans l'adresse : `q` (raccourci « / »), `generation`, `type`, `possession` (`owned` : débloqués,
   `missing` : à débloquer, `ordered`), `card` (`with` : avec carte, `without` : sans ;
   à compléter : `no-image`, `no-cardmarket`, `no-paid` : possédée sans prix payé), `order=desc` ;
@@ -92,49 +112,12 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   données, et des 180 jours d'avant repris de Pokécardex (sa tâche `history`), au même prix suivi. Les
   nombres formatés gardent une espace insécable visible (`spaced`, `lib/format.ts` : l'espace fine
   de `Intl` manque à certaines polices ; une part : `formatShare`, « 12,5 % »).
-- Installation et hors ligne : le site s'installe sur téléphone et ordinateur
-  (`public/manifest.webmanifest`, icônes de `public/icons` et `public/apple-touch-icon.png`,
-  dessinées d'après `favicon.svg`) et démarre hors ligne. Le service worker (`public/sw.js`, en
-  production seulement, enregistré une fois la page chargée, `main.tsx` : à la première visite, ce
-  qu'il garde ne se télécharge pas en même temps que les données du premier affichage) garde à son
-  installation l'app : `/index.html`, ses scripts,
-  styles et polices (`.woff2` seulement : les `.woff` ne servent qu'aux navigateurs qui n'ont pas
-  `.woff2`) et ce que la page demande de `public/` au démarrage (thème, manifeste, icône). La liste
-  est écrite à chaque construction par le plugin `precache` de `vite.config.ts` (`/index.html` à la
-  main : ce plugin passe avant celui de Vite qui l'ajoute ; chacun de ses marqueurs doit y être
-  une fois exactement, sinon la construction échoue, plutôt qu'un service worker qui ne garderait
-  rien sans le dire) : un nouveau service worker à chaque version. Sans `/index.html`, son
-  installation échoue (elle sera retentée) : jamais un service worker installé sans démarrage hors
-  ligne. Une page restée ouverte pendant un déploiement, qui charge une page à la demande dont le
-  fichier n'existe plus, se recharge avec la nouvelle version (`vite:preloadError`, `main.tsx` ; une
-  fois par minute au plus). Une page : le réseau, sinon l'app gardée (aucune autre réponse ne prend sa place, pas
-  même une page d'erreur de nginx ou de Cloudflare : plus bas). Les fichiers de `public/`, dont le
-  nom ne change pas : la copie gardée tout de suite, rafraîchie pour la fois suivante (`theme.js`
-  bloque le premier affichage : sur un réseau faible, il attendait jusqu'à 4 s). Les données de
-  référence (espèces, catalogue, prix, historiques) : le réseau d'abord, la dernière réponse gardée
-  sans lui, dans un cache nommé d'après la forme des réponses (`donnees-<API_FORMAT>`,
-  `src/config/api.ts` : changer une forme, c'est augmenter ce nombre ; l'ancien cache est oublié,
-  et une copie d'une ancienne forme n'est jamais lue par le nouveau code) ; inchangée (le même
-  ETag), elle n'est pas réécrite (plusieurs Mo à chaque ouverture sinon). Les demandes du démarrage qu'`index.html` précharge (les espèces, le compte : derrière un
-  service worker, le navigateur ne réutilise pas toujours le préchargement et l'app les redemande
-  aussitôt) : la réponse du réseau sert aussi à la demande suivante de la même adresse par la
-  même page, une fois, dans les 10 s (`startup` ; le compte, seulement sa demande marquée
-  `?demarrage`, celle du démarrage ; une page rechargée juste après une connexion ou une
-  déconnexion ne reçoit pas la réponse d'avant). Les données de référence sont gardées par leur chemin, sans les paramètres : une seule copie des historiques de la
-  collection (`/api/histories?ids=…`), quels que soient les ids, au lieu d'une de plus à chaque
-  carte possédée. Une copie d'autres ids sert encore : chaque id y a sa clé, la page Valeur y prend
-  ceux de ses cartes ; une carte qui n'y est pas (ajoutée depuis) ne pèse pas sur la courbe, et la
-  page le dit sous elle (`docs/prix.md`). « Le réseau d'abord » attend les en-têtes 4 s au plus (un réseau faible) quand une
-  version est gardée, aussi longtemps qu'il faut sinon, et jamais la fin d'un long téléchargement
-  (les historiques d'une collection) ; la réponse du réseau est gardée dès qu'elle arrive, même si
-  la version gardée a déjà été servie. Une copie qui ne peut pas être gardée (le stockage du
-  téléphone plein) n'empêche jamais la page de recevoir la réponse du réseau. Une erreur du serveur (5xx : le 502 de nginx pendant le redémarrage d'un déploiement
-  ou le serveur arrêté, la page d'erreur de Cloudflare sans le site) vaut une absence de réseau :
-  la version gardée s'il y en a une (sinon cette erreur), jamais gardée elle-même : sans quoi
-  l'écran « Le Pokédex ne peut pas s’afficher » viendrait alors que les espèces sont gardées. Les
-  images affichées : gardées dès leur premier affichage, 3 000 au plus (le tri, toutes les 100
-  images gardées et à chaque nouvelle version du service worker). Jamais le compte ni la
-  collection, qui viennent du stockage du navigateur.
+- Installation : le site s'installe sur téléphone et ordinateur (`public/manifest.webmanifest`,
+  icônes de `public/icons` et `public/apple-touch-icon.png`, dessinées d'après `favicon.svg`). Pas
+  de service worker ni d'usage hors ligne (décision de l'utilisateur, octobre 2026 : la collection
+  n'est gardée que par le serveur). Une page restée ouverte pendant un déploiement, qui charge une
+  page à la demande dont le fichier n'existe plus, se recharge avec la nouvelle version
+  (`vite:preloadError`, `main.tsx` ; une fois par minute au plus).
 - Performance (mesurer en production, `bun run build` puis `bun run preview` : `bun dev` est 3 à 4
   fois plus lent ; mesuré en octobre 2026 sur une collection de 1 025 cartes, avant → après) : le
   Pokédex affiche 1 025 pochettes. Seules celles à l'écran sont dessinées (`content-visibility`, de
@@ -161,14 +144,14 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   soixantaine de millisecondes au démarrage), puis mémoïsée ; la palette de camply rendant toutes
   ses commandes, ses lignes ont un `content-visibility` (classe interne, `global.css`). `buildPokedex`
   reprend les entrées inchangées du Pokédex d'avant (la même carte au même statut) : après une
-  annulation, une synchronisation ou un autre onglet, seules les pochettes changées se redessinent.
+  annulation ou la collection relue du serveur, seules les pochettes changées se redessinent.
   Le tableau des cartes de Valeur (trié par lui, le tri du tableau contrôlé) et la liste d'achats
   sont dessinés au fur et à mesure (`useGrowingList` : Valeur 151 ms → 60 à l'ouverture, Achats 254
   → 53). Un montant au prix du jour (`PricedValue`, des centaines par page) lit la réponse des prix
   de la collection une fois par état (`store/prices.ts`). Le plan de la prochaine commande suit le
   curseur du budget en différé (`useDeferredValue`) ; la liste des cartes à ajouter à une commande
-  est triée une fois. Le stockage du navigateur est écrit une fois par action (`persist`), et
-  l'empreinte du document synchronisé calculée une fois par document (`documentHash`). La carte
+  est triée une fois. La collection est envoyée au serveur une fois pour les modifications
+  d'une demi-seconde (`store/account.ts`). La carte
   d'une fiche ne suit la souris qu'une fois par image (`CardStage`). Les animations ne se rejouent
   pas à chaque visite (les pages se remontent) : la marque de possession seulement quand le statut
   change sous les yeux, une fois (une marque cachée puis remontrée, le Pokédex gardé en vie ou un

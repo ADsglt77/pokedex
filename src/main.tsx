@@ -3,8 +3,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router/dom'
 // Le jeu latin seul : il couvre le français (œ, €, ’, « », l'espace fine insécable) ; les autres
-// (cyrillique, grec, vietnamien, latin étendu) alourdiraient le CSS qui bloque l'affichage et ce
-// que garde le service worker.
+// (cyrillique, grec, vietnamien, latin étendu) alourdiraient le CSS qui bloque l'affichage.
 import '@fontsource/manrope/latin-400.css'
 import '@fontsource/manrope/latin-500.css'
 import '@fontsource/manrope/latin-600.css'
@@ -18,21 +17,7 @@ import './styles/global.css'
 import { loadAccount } from './lib/account'
 import { loadSpecies } from './lib/species'
 import { createRouter } from './router'
-import { requestPersistentStorage } from './store/persist'
-import { startSession, syncedBefore } from './store/sync'
-
-requestPersistentStorage()
-
-// Hors développement : le service worker garde l'app, pour qu'elle démarre hors ligne (`public/sw.js`).
-// Enregistré une fois la page chargée : à la première visite, ce qu'il garde (polices, pages pas
-// encore ouvertes) ne se télécharge pas en même temps que les données du premier affichage.
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/sw.js')
-      .catch((error: unknown) => console.warn('Service worker non enregistré', error))
-  })
-}
+import { signIn } from './store/account'
 
 // Un déploiement a remplacé les fichiers de l'app pendant que cette page était ouverte : une page
 // chargée à la demande n'existe plus (404). La page se recharge, avec la nouvelle version ; une
@@ -52,31 +37,28 @@ addEventListener('vite:preloadError', (event) => {
 const root = createRoot(document.getElementById('root')!)
 
 // Point d'entrée : polices, styles camply, le thème (ses couleurs redéfinies), puis ceux de l'app.
-// Les espèces viennent du serveur avant tout affichage (toutes les pages en ont besoin), avec
-// l'existence du compte (sans lui, la première visite) et qui est connecté (personne : le Pokédex
-// public), en une requête ; puis notifications et routeur. D'ici là, `#root` montre le logo
-// (`index.html`, qui demande aussi les espèces et le compte avant ce script). Un navigateur déjà
-// synchronisé n'attend pas le compte plus de 4 s (un réseau faible) : il démarre comme hors ligne.
-Promise.all([loadSpecies(), loadAccount(syncedBefore() ? 4_000 : 15_000)]).then(
-  ([loaded, account]) => {
-    startSession(account)
-    root.render(
-      <StrictMode>
-        {loaded ? (
-          <ToastProvider position="bottom-left">
-            <RouterProvider router={createRouter()} />
-          </ToastProvider>
-        ) : (
-          <main className="container">
-            <EmptyState
-              title="Le Pokédex ne peut pas s’afficher"
-              description="Le serveur ne répond pas, ou ses données ne sont pas encore prêtes (premier démarrage). Réessayez dans un instant."
-              headingLevel={2}
-              actions={<Button onClick={() => location.reload()}>Réessayer</Button>}
-            />
-          </main>
-        )}
-      </StrictMode>,
-    )
-  },
-)
+// Les espèces viennent du serveur avant tout affichage (toutes les pages en ont besoin), avec qui
+// est connecté (personne : la connexion, ou le Pokédex public), puis sa collection ; puis
+// notifications et routeur. D'ici là, `#root` montre le logo (`index.html`, qui demande aussi les
+// espèces et le compte avant ce script).
+Promise.all([loadSpecies(), loadAccount()]).then(async ([species, account]) => {
+  const loaded = species && account !== undefined && (!account || (await signIn(account)))
+  root.render(
+    <StrictMode>
+      {loaded ? (
+        <ToastProvider position="bottom-left">
+          <RouterProvider router={createRouter()} />
+        </ToastProvider>
+      ) : (
+        <main className="container">
+          <EmptyState
+            title="Le Pokédex ne peut pas s’afficher"
+            description="Le serveur ne répond pas, ou ses données ne sont pas encore prêtes (premier démarrage). Réessayez dans un instant."
+            headingLevel={2}
+            actions={<Button onClick={() => location.reload()}>Réessayer</Button>}
+          />
+        </main>
+      )}
+    </StrictMode>,
+  )
+})

@@ -1,4 +1,4 @@
-/* Un état à regarder (hors ligne, session expirée, conflit) : en couleur d'avertissement. */
+/* Un état à regarder (hors ligne, session expirée, collection rechargée) : en couleur d'avertissement. */
 .alert {
   color: var(--camply-warn);
 }

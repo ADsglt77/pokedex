@@ -1,20 +1,19 @@
 /**
- * Le document de cet appareil : la collection et les achats, ensemble (une commande modifie les
- * deux). Ce que synchronise `store/sync.ts`, ce que rétablit « Annuler », ce que remplace un import.
+ * Le document du compte : la collection et les achats, ensemble (une commande modifie les deux).
+ * Ce qu'envoie `store/account.ts`, ce que rétablit « Annuler », ce que remplace un import.
  */
 
-import type { SyncDocument } from '@/lib/sync'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
-import type { CollectionData, ShoppingData } from '@/types'
+import type { CollectionData, CollectionDocument, ShoppingData } from '@/types'
 
-export const currentDocument = (): SyncDocument => ({
+export const currentDocument = (): CollectionDocument => ({
   collection: useCollectionStore.getState().collection,
   shopping: useShoppingStore.getState().shopping,
 })
 
 /** Rien n'a changé de l'un à l'autre : les stores remplacent leurs données, sans les modifier. */
-export const sameDocument = (a: SyncDocument, b: SyncDocument) =>
+export const sameDocument = (a: CollectionDocument, b: CollectionDocument) =>
   a.collection === b.collection && a.shopping === b.shopping
 
 /** Remplace la collection et les achats ; sans achats (un export d'avant eux), ils restent. */

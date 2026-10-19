@@ -38,7 +38,7 @@ import {
 } from '@/lib/format'
 import { buildPokedex, unlockEvents, type PokedexEntry } from '@/lib/pokedex'
 import { tallyByStatus, trackedCards } from '@/lib/prices'
-import { useSyncStore } from '@/store/sync'
+import { useAccountStore } from '@/store/account'
 import type { VitrineData } from '@/types'
 import styles from './VitrinePage.module.css'
 import { useStatSize } from '@/hooks/useStatSize'
@@ -52,7 +52,7 @@ import { useStatSize } from '@/hooks/useStatSize'
  * introuvable. Pas proposé aux moteurs de recherche.
  */
 export function VitrinePage() {
-  const signedIn = useSyncStore((state) => state.account !== null)
+  const signedIn = useAccountStore((state) => state.account !== null)
   const pseudo = vitrinePseudo(useParams().pseudo!)
   return (
     <div className={cx('container', styles.page)}>

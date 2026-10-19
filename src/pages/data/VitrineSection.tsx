@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 import { useNotify } from '@/hooks/useNotify'
 import { copyText } from '@/lib/clipboard'
 import { vitrinePath } from '@/lib/filters'
-import { useSyncStore } from '@/store/sync'
+import { useAccountStore } from '@/store/account'
 import { DataSection } from './DataSection'
 
 /**
@@ -13,7 +13,7 @@ import { DataSection } from './DataSection'
  */
 export function VitrineSection() {
   const notify = useNotify()
-  const name = useSyncStore((state) => state.account?.name ?? '')
+  const name = useAccountStore((state) => state.account?.name ?? '')
   const path = vitrinePath(name)
   const address = `${location.origin}${path}`
 

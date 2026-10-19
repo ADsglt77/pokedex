@@ -11,7 +11,7 @@ import { authCall, authClient } from '@/lib/auth'
 import { PSEUDO_RESERVED, PSEUDO_TAKEN, refusalMessage, reservedPseudo } from '@/lib/account'
 import { vitrinePath } from '@/lib/filters'
 import { pokedexTitle } from '@/lib/format'
-import { accountDeleted, markExpired, renameAccount, useSyncStore } from '@/store/sync'
+import { accountDeleted, markExpired, renameAccount, useAccountStore } from '@/store/account'
 import { DataSection } from './DataSection'
 
 /**
@@ -27,7 +27,7 @@ const EXPIRED =
  * change ici en donnant l'actuel.
  */
 export function AccountSection() {
-  const name = useSyncStore((state) => state.account?.name ?? '')
+  const name = useAccountStore((state) => state.account?.name ?? '')
   return (
     <DataSection
       id="compte"

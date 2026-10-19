@@ -82,9 +82,10 @@ et mot de passe se changent ensuite dans Données › Mon compte, où le compte 
 documentation de l'API (Elysia, OpenAPI) est à `http://localhost:5173/api/docs`, en développement
 seulement.
 
-Votre collection : le site ne s'ouvre que connecté ; elle est gardée sur le serveur et vous suit
-d'un appareil à l'autre : un seul connecté à la fois (se connecter ailleurs déconnecte le
-précédent, qui garde ses modifications).
+Votre collection : le site ne s'ouvre que connecté ; elle n'est gardée que sur le serveur (rien
+dans le navigateur, pas d'usage hors ligne) et vous suit d'un appareil à l'autre : un seul
+connecté à la fois (se connecter ailleurs déconnecte le précédent). Chaque modification part
+aussitôt ; si le serveur ne répond pas, le menu du compte le dit et elle repart à son retour.
 
 ## Déploiement (VPS + tunnel Cloudflare)
 
@@ -107,9 +108,8 @@ précédent, qui garde ses modifications).
 - [ ] La surveillance : un service gratuit (UptimeRobot, Healthchecks…) qui demande
       `https://votre-domaine/api/health` toutes les 5 minutes et vous écrit s'il ne répond plus
       200 (voir plus bas).
-- [ ] Sur téléphone, « Ajouter à l'écran d'accueil » : le site s'ouvre comme une application, même
-      sans réseau (après une première ouverture en ligne) ; les modifications partent au retour du
-      réseau.
+- [ ] Sur téléphone, « Ajouter à l'écran d'accueil » : le site s'ouvre comme une application
+      (il demande le réseau).
 
 **La surveillance** : `/api/health` est celui de l'API des données (nginx le lui renvoie) : 200
 quand chaque tâche à rythme a réussi récemment (les prix en 12 h, les sauvegardes en 2 jours, les

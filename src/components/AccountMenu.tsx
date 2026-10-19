@@ -4,78 +4,66 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExportCollectionButton } from '@/components/ExportCollectionButton'
-import { SyncConflictDialog } from '@/components/SyncConflictDialog'
 import { useNotify } from '@/hooks/useNotify'
 import { loginPath } from '@/lib/account'
 import { cx } from '@/lib/cx'
-import {
-  hasUnsentChanges,
-  setConflictQuestion,
-  signOut,
-  sync,
-  useSyncStore,
-  type SyncStatus,
-} from '@/store/sync'
+import { hasUnsavedChanges, save, signOut, useAccountStore, type SaveStatus } from '@/store/account'
 import styles from './AccountMenu.module.css'
 
-/** Où en est la synchronisation : le bouton du compte, et sa phrase dans le menu. */
-const STATUS: Record<SyncStatus, { label: string; icon: typeof CloudCheck; text: string }> = {
-  syncing: {
-    label: 'Synchronisation…',
-    icon: RefreshCw,
-    text: 'Envoi ou réception de votre collection en cours.',
-  },
-  synced: {
-    label: 'Synchronisée',
+/** Où en est l'enregistrement de la collection : le bouton du compte, et sa phrase dans le menu. */
+const STATUS: Record<SaveStatus, { label: string; icon: typeof CloudCheck; text: string }> = {
+  saved: {
+    label: 'Enregistrée',
     icon: CloudCheck,
-    text: 'Votre collection est la même sur tous vos appareils.',
+    text: 'Votre collection est enregistrée sur le serveur, la même sur tous vos appareils.',
+  },
+  saving: {
+    label: 'Enregistrement…',
+    icon: RefreshCw,
+    text: 'Envoi de votre dernière modification.',
   },
   offline: {
     label: 'Hors ligne',
     icon: CloudOff,
-    text: 'Le serveur ne répond pas : vos modifications restent sur cet appareil et partiront à son retour.',
+    text: 'Le serveur ne répond pas : votre dernière modification n’est pas encore enregistrée. Elle repartira à son retour ; ne fermez pas la page d’ici là.',
   },
   expired: {
     label: 'Reconnectez-vous',
     icon: CloudAlert,
-    text: 'Vous êtes déconnecté (session expirée, ou connexion sur un autre appareil : un seul à la fois) : vos modifications restent sur cet appareil.',
+    text: 'Vous êtes déconnecté (session expirée, ou connexion sur un autre appareil : un seul à la fois) : vos modifications ne s’enregistrent plus.',
   },
-  conflict: {
-    label: 'À choisir',
+  reloaded: {
+    label: 'Rechargée',
     icon: CloudAlert,
-    text: 'Cet appareil et le serveur ont chacun modifié la collection : choisissez celle à garder.',
+    text: 'Votre collection avait changé ailleurs (un autre onglet, un autre appareil) : elle a été rechargée, et votre dernière modification n’a pas été enregistrée.',
   },
   refused: {
     label: 'Envoi refusé',
     icon: CloudAlert,
-    text: 'Le serveur refuse cette collection : vos modifications restent sur cet appareil. Exportez-la depuis la page Données pour la garder.',
+    text: 'Le serveur refuse cette collection. Exportez-la depuis la page Données pour la garder.',
   },
 }
 
 /** La phrase d'un refus, avec sa raison (`refusal`) : « … : la carte « SV2a 165 » est abîmée. » */
 const refusedText = (refusal: string | null) =>
   refusal
-    ? `Le serveur refuse cette collection : ${refusal}. Vos modifications restent sur cet appareil ; exportez-la depuis la page Données pour la garder.`
+    ? `Le serveur refuse cette collection : ${refusal}. Exportez-la depuis la page Données pour la garder.`
     : STATUS.refused.text
 
 /**
- * Le compte connecté (la coquille ne s'ouvre que connecté) : l'état de la synchronisation et un
- * menu, d'après le compte que suit le store (`signIn`) : une entrée selon l'état (choisir la
- * version à garder, se reconnecter, ou synchroniser), puis se déconnecter. Ouvre la question d'un
- * conflit : un seul dans la page. En bas de la barre latérale, de sa largeur ; `compact` (barre du
- * haut), son icône seule (le texte reste lu).
+ * Le compte connecté (la coquille ne s'ouvre que connecté) : où en est l'enregistrement de la
+ * collection, et un menu : se reconnecter (session fermée) ou renvoyer, puis se déconnecter. En
+ * bas de la barre latérale, de sa largeur ; `compact` (barre du haut), son icône seule (le texte
+ * reste lu).
  */
 export function AccountMenu({ compact = false }: { compact?: boolean }) {
-  const account = useSyncStore((state) => state.account)
-  const status = useSyncStore((state) => state.status)
-  const conflict = useSyncStore((state) => state.conflict)
+  const account = useAccountStore((state) => state.account)
+  const status = useAccountStore((state) => state.status)
+  const refusal = useAccountStore((state) => state.refusal)
   const navigate = useNavigate()
   const notify = useNotify()
-  const dismissed = useSyncStore((state) => state.dismissed)
-  const refusal = useSyncStore((state) => state.refusal)
   const [confirmingSignOut, setConfirmingSignOut] = useState(false)
-  // La déconnexion attend une dernière synchronisation, puis le serveur (15 s au plus) : le
-  // bouton du compte le dit pendant ce temps.
+  // La déconnexion attend le serveur (15 s au plus) : le bouton du compte le dit pendant ce temps.
   const [leaving, setLeaving] = useState(false)
   if (!account) return null
 
@@ -92,13 +80,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
       notify('Déconnexion impossible : le serveur ne répond pas.', { tone: 'danger' })
     }
   }
-  const askToLeave = async () => {
-    setLeaving(true)
-    const unsent = await hasUnsentChanges()
-    setLeaving(false)
-    if (unsent) setConfirmingSignOut(true)
-    else await leave()
-  }
+  const askToLeave = () => (hasUnsavedChanges() ? setConfirmingSignOut(true) : void leave())
 
   return (
     <>
@@ -112,7 +94,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
             loading={leaving}
             className={cx(
               !compact && styles.wide,
-              status !== 'synced' && status !== 'syncing' && styles.alert,
+              status !== 'saved' && status !== 'saving' && styles.alert,
             )}
           >
             <span className={cx(compact && 'visually-hidden')}>
@@ -128,12 +110,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
           {text}
         </MenuLabel>
         <MenuSeparator />
-        {/* Pendant un conflit, la synchronisation attend le choix ; expirée, la session. */}
-        {status === 'conflict' ? (
-          <MenuItem icon={<CloudAlert size={16} />} onSelect={() => setConflictQuestion(true)}>
-            Choisir la version à garder
-          </MenuItem>
-        ) : status === 'expired' ? (
+        {status === 'expired' ? (
           <MenuItem
             icon={<LogIn size={16} />}
             onSelect={() => navigate(loginPath(location.pathname + location.search))}
@@ -141,19 +118,17 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
             Se reconnecter
           </MenuItem>
         ) : (
-          <MenuItem icon={<RefreshCw size={16} />} onSelect={() => void sync()}>
-            Synchroniser maintenant
-          </MenuItem>
+          status === 'offline' && (
+            <MenuItem icon={<RefreshCw size={16} />} onSelect={save}>
+              Réessayer maintenant
+            </MenuItem>
+          )
         )}
-        <MenuItem icon={<LogOut size={16} />} onSelect={() => void askToLeave()}>
+        <MenuItem icon={<LogOut size={16} />} onSelect={askToLeave}>
           Se déconnecter
         </MenuItem>
       </DropdownMenu>
 
-      <SyncConflictDialog
-        open={status === 'conflict' && conflict !== dismissed}
-        onClose={() => setConflictQuestion(false)}
-      />
       <ConfirmDialog
         open={confirmingSignOut}
         title="Se déconnecter quand même ?"
@@ -162,9 +137,8 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
         onConfirm={() => void leave()}
       >
         <p>
-          Les dernières modifications de cet appareil n’ont pas pu être envoyées au serveur : en
-          vous déconnectant, elles quittent ce navigateur et seront perdues. Exportez d’abord votre
-          collection pour les garder.
+          Votre dernière modification n’est pas encore enregistrée sur le serveur : en vous
+          déconnectant, elle sera perdue. Exportez d’abord votre collection pour la garder.
         </p>
         <ExportCollectionButton>Exporter ma collection</ExportCollectionButton>
       </ConfirmDialog>

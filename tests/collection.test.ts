@@ -1,7 +1,7 @@
 /**
  * La garde du serveur contre l'écrasement (`server/collection.ts`) : un appareil qui envoie une
- * collection partie d'une version dépassée, ou d'un autre document au même numéro (la base
- * restaurée), est refusé (409), et la version du serveur reste telle quelle ; sans session, ou d'un
+ * collection partie d'une version dépassée (un autre onglet, un autre appareil l'a changée), ou en
+ * avance (la base restaurée), est refusé (409), et la version du serveur reste telle quelle ; sans session, ou d'un
  * autre site, rien ne passe ; un document abîmé est refusé (400). Une erreur ici écraserait les
  * commandes d'un autre appareil. Chaque compte ne touche qu'à sa collection, et la sienne part avec
  * lui. Et ce que montre le Pokédex public d'un compte (`/api/vitrine/<pseudo>`) : ce qu'il
@@ -12,8 +12,7 @@
 
 import { afterAll, describe, expect, spyOn, test } from 'bun:test'
 import { emptyShopping } from '@/lib/orders'
-import type { SyncDocument } from '@/lib/sync'
-import type { CollectionResponse, CollectionSaved, VitrineData } from '@/types'
+import type { CollectionDocument, CollectionResponse, CollectionSaved, VitrineData } from '@/types'
 import { createApp } from '../server/app'
 import { createAuth } from '../server/auth'
 import { card, collectionWith, order, ownership } from './fixtures'
@@ -71,22 +70,17 @@ const collection = (method: 'GET' | 'PUT', body?: unknown, headers: Record<strin
     }),
   )
 
-/** La version enregistrée sur le serveur, et son ETag (`"v<version>-<empreinte>"`). */
+/** La version enregistrée sur le serveur. */
 async function stored() {
   const response = await collection('GET')
-  const etag = response.headers.get('ETag')!
-  return {
-    body: (await response.json()) as CollectionResponse,
-    etag,
-    tag: etag.split('-')[1]!.slice(0, -1),
-  }
+  return { body: (await response.json()) as CollectionResponse }
 }
 
 /**
  * Le document d'un appareil : une carte possédée, payée 30 €, reliée à Cardmarket ; une autre
  * choisie, pas encore achetée.
  */
-const first: SyncDocument = {
+const first: CollectionDocument = {
   collection: {
     ...collectionWith({ a: ownership('owned', { paidPrice: 30 }) }),
     customCards: {
@@ -98,7 +92,7 @@ const first: SyncDocument = {
 }
 
 /** Celui d'un autre appareil, parti de la même version : une commande. */
-const second: SyncDocument = {
+const second: CollectionDocument = {
   collection: collectionWith(),
   shopping: { ...emptyShopping(), orders: [order()] },
 }
@@ -109,12 +103,11 @@ const savedBody = (await saved.json()) as CollectionSaved
 const afterFirst = await stored()
 
 describe('/api/collection : jamais une version écrasée', () => {
-  test('le compte créé, parti de la version 0 : enregistré, version 1, avec son empreinte', () => {
+  test('le compte créé, parti de la version 0 : enregistré, version 1', () => {
     expect(signUp.response.status).toBe(200)
     expect(saved.status).toBe(200)
-    expect(savedBody).toEqual({ version: 1, tag: afterFirst.tag })
+    expect(savedBody).toEqual({ version: 1 })
     expect(afterFirst.body).toEqual({ version: 1, ...first } satisfies CollectionResponse)
-    expect(afterFirst.etag).toBe(`"v1-${afterFirst.tag}"`)
   })
 
   test('un autre appareil, parti de la version 0 : 409, la version du serveur reste', async () => {
@@ -124,27 +117,18 @@ describe('/api/collection : jamais une version écrasée', () => {
     expect(await stored()).toEqual(before)
   })
 
-  test('un appareil qui a déjà la version : 304, sans corps', async () => {
-    const { etag } = await stored()
-    const response = await collection('GET', undefined, { 'If-None-Match': etag })
-    expect(response.status).toBe(304)
-    expect(await response.text()).toBe('')
-  })
-
   test('une mise à jour partie de la version du serveur : enregistrée, la suivante partie d’avant refusée', async () => {
     const before = await stored()
-    const next: SyncDocument = { ...first, shopping: { ...emptyShopping(), orders: [order()] } }
-    const response = await collection('PUT', {
-      baseVersion: before.body.version,
-      baseTag: before.tag,
-      ...next,
-    })
+    const next: CollectionDocument = {
+      ...first,
+      shopping: { ...emptyShopping(), orders: [order()] },
+    }
+    const response = await collection('PUT', { baseVersion: before.body.version, ...next })
     expect(response.status).toBe(200)
     const after = await stored()
     expect(after.body).toEqual({ version: before.body.version + 1, ...next })
     expect((await response.json()) as CollectionSaved).toEqual({
       version: before.body.version + 1,
-      tag: after.tag,
     })
     // Un appareil encore à la version d'avant : 409, la nouvelle reste.
     const stale = await collection('PUT', { baseVersion: before.body.version, ...second })
@@ -156,17 +140,6 @@ describe('/api/collection : jamais une version écrasée', () => {
       .get(signUp.user!.id) as { version: number | null }
     expect(kept.version).not.toBeNull()
     expect(kept.version!).toBeLessThan(after.body.version)
-  })
-
-  test('le même numéro, mais un autre document (la base restaurée) : 409', async () => {
-    const before = await stored()
-    const response = await collection('PUT', {
-      baseVersion: before.body.version,
-      baseTag: 'autre',
-      ...second,
-    })
-    expect(response.status).toBe(409)
-    expect(await stored()).toEqual(before)
   })
 
   test('une version en avance sur le serveur (une base restaurée plus ancienne) : 409', async () => {
@@ -380,7 +353,7 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
         date: '2026-10-19',
         cards: { '719445': [6.87, 5, 7.2] },
       })
-      expect(asked).toEqual(['Bearer token-d-essai /v1/prices/collection?ids=719445'])
+      expect(asked).toEqual(['Bearer token-d-essai /v1/prices?ids=719445'])
     } finally {
       await api.stop(true)
       process.env.DATA_API_URL = before

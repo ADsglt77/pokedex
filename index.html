@@ -27,8 +27,7 @@
          (`lib/api.ts` : mode cors, cookies du site seulement), sinon le navigateur la referait. -->
     <link rel="preload" href="/api/species" as="fetch" crossorigin />
     <!-- Le compte (qui est connecté), que l'app attend aussi (`loadAccount`) : demandé dès
-         maintenant. `?demarrage` : cette demande-là seulement, que le service worker partage avec
-         celle de l'app, une fois (`public/sw.js`). -->
+         maintenant. -->
     <link rel="preload" href="/api/account?demarrage" as="fetch" crossorigin />
     <!-- Les polices du texte et des titres, que le navigateur ne découvrirait qu'au premier
          affichage (le texte changerait alors de police sous les yeux). -->

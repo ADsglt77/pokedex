@@ -5,7 +5,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { authCall, authClient } from '@/lib/auth'
 import { accountOf, refusalMessage } from '@/lib/account'
 import { pageTitle } from '@/lib/format'
-import { signIn } from '@/store/sync'
+import { signIn } from '@/store/account'
 import { AuthCard } from '@/components/AuthCard'
 import styles from './AuthPage.module.css'
 
@@ -45,9 +45,13 @@ export function LoginPage() {
     const { data, error: refused } = await authCall(() =>
       authClient.signIn.username({ username: pseudo.trim(), password }),
     )
+    const loaded = !refused && data && (await signIn(accountOf(data.user)))
     setBusy(false)
     if (refused || !data) return setError(failure(refused?.status ?? 0))
-    signIn(accountOf(data.user))
+    if (!loaded)
+      return setError(
+        'Connecté, mais votre collection n’a pas pu être lue : réessayez dans un instant.',
+      )
     navigate(back, { replace: true })
   }
 

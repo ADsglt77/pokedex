@@ -1,23 +1,11 @@
 /**
- * La collection : un store Zustand, enregistré dans le navigateur (`localStorage`) à chaque
- * changement. La clé est celle des versions précédentes : les données suivent.
+ * La collection : un store Zustand, en mémoire ; lue sur le serveur à la connexion, et chaque
+ * changement y est envoyé (`store/account.ts`).
  */
 
 import { create } from 'zustand'
 import * as rules from '@/lib/collection'
-import { parseStored, readCollection } from '@/lib/transfer'
 import type { AddAs, CardStatus, CollectionData, PokemonCard } from '@/types'
-import { persist, readStored, setAsideUnreadable } from './persist'
-
-const COLLECTION_KEY = 'pokedex-collection.collection'
-
-/** La collection enregistrée ; vide sans elle, ou illisible (mise de côté, signalée). */
-function loadCollection(text: string | null) {
-  const collection = readCollection(parseStored(text))
-  if (collection) return collection
-  if (text !== null) setAsideUnreadable(COLLECTION_KEY, text)
-  return rules.emptyCollection()
-}
 
 interface CollectionStore {
   collection: CollectionData
@@ -26,7 +14,7 @@ interface CollectionStore {
   saveCard: (card: PokemonCard) => void
   /** Retire la carte de ce Pokémon (une carte de plusieurs Pokémon reste celle des autres). */
   removeCard: (cardId: string, speciesId: number) => void
-  /** Remplace toute la collection : import, effacement. */
+  /** Remplace toute la collection : lue sur le serveur, import, effacement. */
   replaceCollection: (collection: CollectionData) => void
 }
 
@@ -35,7 +23,7 @@ export const useCollectionStore = create<CollectionStore>()((set, get) => {
     set({ collection: change(get().collection, new Date().toISOString()) })
 
   return {
-    collection: loadCollection(readStored(COLLECTION_KEY)),
+    collection: rules.emptyCollection(),
 
     setCardStatus: (card, status) =>
       update((collection, now) => rules.setCardStatus(collection, card, status, now)),
@@ -47,13 +35,6 @@ export const useCollectionStore = create<CollectionStore>()((set, get) => {
     replaceCollection: (collection) => set({ collection }),
   }
 })
-
-persist(
-  useCollectionStore,
-  COLLECTION_KEY,
-  (state) => state.collection,
-  (text) => ({ collection: loadCollection(text) }),
-)
 
 /** Enregistre une carte ajoutée, possédée si `addAs` le dit (sinon, elle est à acheter). */
 export function addCard(card: PokemonCard, addAs: AddAs) {

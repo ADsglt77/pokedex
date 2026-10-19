@@ -3,7 +3,7 @@
  * pseudo et suppression du compte, par le serveur du site (`/api/auth`, `server/auth.ts`). À part
  * de `account.ts`, que lit le premier affichage : seules les pages qui s'en servent le chargent
  * (connexion, inscription, Données › Mon compte), et la déconnexion à la demande
- * (`store/sync.ts`). Le client simple : l'app ne se sert d'aucun de ses hooks React.
+ * (`store/account.ts`). Le client simple : l'app ne se sert d'aucun de ses hooks React.
  */
 
 import { createAuthClient } from 'better-auth/client'

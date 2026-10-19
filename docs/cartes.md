@@ -38,7 +38,7 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
   nombre de cartes, rang de son bloc dans `blocks` (-1 : aucun), 1 pour un deck]`, et les blocs
   dans l'ordre du menu ; `/api/catalog/sets/<code>`, toutes les cartes d'une série dans son ordre,
   chacune `{ number, printed, name, en, de, dexIds, cardmarket, image, rarity, type, illustrator,
-  versions }`, et leurs raretés ; gardées hors ligne par le service worker une fois vues. Les types
+  versions }`, et leurs raretés. Les types
   sont numérotés sans être nommés par la source : leurs noms sont dans `CARD_TYPES`
   (`src/config/catalog.ts` : 1 Plante, 2 Eau, 3 Feu, 4 Électrique, 5 Psy, 6 Obscurité, 7 Métal,
   8 Combat, 9 Dragon, 10 Incolore, 11 Fée ; les catégories des dresseurs, 12 Stade, 13 Dresseur

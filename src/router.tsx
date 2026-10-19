@@ -8,14 +8,14 @@ import { HomePage } from '@/pages/home/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PokedexPage } from '@/pages/pokedex/PokedexPage'
 import { PokemonPage } from '@/pages/pokemon/PokemonPage'
-import { useSyncStore } from '@/store/sync'
+import { useAccountStore } from '@/store/account'
 
 /**
  * Les pages de l'app : connecté seulement. Un visiteur arrive sur la connexion ; une autre page (un
  * lien gardé, une session expirée) y mène aussi, et elle y ramène.
  */
 function appLoader({ request }: LoaderFunctionArgs) {
-  if (useSyncStore.getState().account) return null
+  if (useAccountStore.getState().account) return null
   const { pathname, search } = new URL(request.url)
   return redirect(pathname === '/' ? '/connexion' : loginPath(pathname + search))
 }

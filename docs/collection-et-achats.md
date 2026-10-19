@@ -1,15 +1,15 @@
 # Collection et achats
 
-La collection (statuts, prix payés), la liste d'achats, les commandes et le budget, dans le navigateur. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
+La collection (statuts, prix payés), la liste d'achats, les commandes et le budget : un document par compte, gardé par le serveur (`docs/compte-et-synchronisation.md`). Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
 - Collection : les cartes choisies (`customCards`), un statut par carte (commandée, possédée ;
-  sans statut, elle est à débloquer) et le prix payé (`paidPrice`) qui le suit. Clé
-  `pokedex-collection.collection` : ne pas changer son format. Seuls ses champs connus sont gardés
+  sans statut, elle est à débloquer) et le prix payé (`paidPrice`) qui le suit. Son format est
+  celui des exports et des documents gardés par le serveur : ne pas le changer. Seuls ses champs connus sont gardés
   à la lecture (`readCollection` : `schemaVersion`, `updatedAt`, `cards` et `customCards` ; de même
   `readShopping` pour les achats). La page Valeur montre ce que les commandes ont coûté en tout
   (« Dépensé en tout »).
-- Achats (`/achats`), clé `pokedex-collection.shopping` (`ShoppingData`, à part : la collection
-  garde son format ; ceux d'un nouveau venu, aucune commande et le budget par défaut :
+- Achats (`/achats`, `ShoppingData`, à part de la collection dans le document : elle garde son
+  format ; ceux d'un nouveau venu, aucune commande et le budget par défaut :
   `emptyShopping`, `lib/orders.ts`) :
   - la liste d'achats n'est pas enregistrée : c'est la carte de chaque Pokémon ni possédée ni
     commandée (`wishlistRows`, une TAG TEAM une fois), toutes voulues autant (décision de
@@ -77,7 +77,7 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     d'un Pokémon hors du Pokédex ou sans clé `image` (« Modifier la carte » planterait), id Cardmarket
     que la saisie refuserait (0, négatif, plus de 9 chiffres…), quantité qui n'est pas un entier
     de 1 ou plus, texte qui n'en est pas un, lien…) est refusé (`lib/transfer.ts`), comme par le
-    serveur à la synchronisation, et la règle en cause est dite (« La commande du 5 octobre 2026
+    serveur à l'enregistrement, et la règle en cause est dite (« La commande du 5 octobre 2026
     est abîmée. », `documentProblem`, `readImport`). Les montants saisis (`parseEuros`) acceptent
     une virgule ou un point, le symbole et une espace entre les milliers seulement (« 1 234,50 ») :
     « 12 50 », une virgule oubliée, est refusé plutôt que lu 1 250 € ; une quantité (`parseQuantity`)
@@ -88,18 +88,8 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     dessus ; testé). « Effacer ma
     collection » efface les cartes, leurs statuts et leurs prix payés ; les commandes et le budget
     restent.
-- Deux onglets ouverts restent d'accord : chacun reprend ce que l'autre enregistre (évènement
-  `storage`, `store/persist.ts`, pour les deux clés), sans quoi il l'écraserait, et ne réécrit jamais
-  une valeur reprise (testé : un onglet qui traiterait d'affilée deux changements en attente
-  réécrirait le premier par-dessus le second, et les deux se renverraient ces valeurs jusqu'à
-  s'arrêter sur une ancienne) ; connectés, ils
-  partagent aussi la dernière version échangée avec le serveur. Si le navigateur
-  refuse de lire ou d'écrire (stockage plein ou bloqué ; toute lecture passe par `readStored`,
-  toute écriture par `writeStored`, sauf le choix du thème), l'app continue en mémoire et un
-  bandeau (`useStorageFailure`, `AppShell`) invite à exporter. Une valeur enregistrée mais
-  illisible (abîmée, ou d'un format que ce code ne lit pas) est mise de côté (`<clé>.illisible`),
-  un bandeau le dit, et elle n'est jamais envoyée au serveur comme un effacement
-  (`setAsideUnreadable`, `docs/compte-et-synchronisation.md`). « Annuler » se lance aussi par
-  Ctrl+Z (⌘Z) tant que son toast est affiché.
+- Deux onglets ouverts : chacun envoie ses modifications à partir de la version qu'il a lue ;
+  celle d'un onglet en retard est refusée (409) et il relit celle du serveur, sans rien écraser
+  (`store/account.ts`). « Annuler » se lance aussi par Ctrl+Z (⌘Z) tant que son toast est affiché.
 - « Annuler » (`useCollectionAction`) rétablit collection et achats d'avant, et refuse si quelque
   chose a changé depuis : une modification ultérieure n'est jamais effacée.

@@ -121,8 +121,8 @@ export function LegalPage() {
           <h3>Cookies et stockage du navigateur</h3>
           <p>
             Un seul cookie, celui de votre session, nécessaire à la connexion : pas de bandeau à
-            accepter. Votre navigateur garde aussi une copie de votre collection et votre choix de
-            thème, pour que le site marche hors ligne ; se déconnecter efface la copie.
+            accepter. Votre navigateur garde aussi votre choix de thème ; votre collection, elle,
+            n’est gardée que sur le serveur.
           </p>
         </section>
       </main>

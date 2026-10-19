@@ -1,26 +1,14 @@
 /**
- * Les achats : commandes et budget. Un store Zustand à part, enregistré sous sa propre clé : la
- * collection garde son format. Une commande met aussi à jour
- * les statuts de ses cartes dans la collection (voir `applyOrder`).
+ * Les achats : commandes et budget. Un store Zustand à part, en mémoire, envoyé au serveur avec la
+ * collection (`store/account.ts`). Une commande met aussi à jour les statuts de ses cartes dans la
+ * collection (voir `applyOrder`).
  */
 
 import { create } from 'zustand'
 import { updateBudget } from '@/lib/budget'
 import { applyOrder, emptyShopping, previousOf, sortOrders } from '@/lib/orders'
-import { parseStored, readShopping } from '@/lib/transfer'
 import { useCollectionStore } from '@/store/collection'
 import type { BudgetSettings, Order, ShoppingData } from '@/types'
-import { persist, readStored, setAsideUnreadable } from './persist'
-
-const SHOPPING_KEY = 'pokedex-collection.shopping'
-
-/** Les achats enregistrés ; vides sans eux, ou illisibles (mis de côté, signalés). */
-function loadShopping(text: string | null) {
-  const shopping = readShopping(parseStored(text))
-  if (shopping) return shopping
-  if (text !== null) setAsideUnreadable(SHOPPING_KEY, text)
-  return emptyShopping()
-}
 
 interface ShoppingStore {
   shopping: ShoppingData
@@ -29,7 +17,7 @@ interface ShoppingStore {
   saveOrder: (order: Order) => void
   /** Retire une commande ; ses cartes encore « commandée » retrouvent leur état d'avant. */
   deleteOrder: (orderId: string) => void
-  /** Remplace tous les achats : import. */
+  /** Remplace tous les achats : lus sur le serveur, import. */
   replaceShopping: (shopping: ShoppingData) => void
 }
 
@@ -61,7 +49,7 @@ export const useShoppingStore = create<ShoppingStore>()((set, get) => {
   }
 
   return {
-    shopping: loadShopping(readStored(SHOPPING_KEY)),
+    shopping: emptyShopping(),
 
     setBudget: (change) => update((shopping, now) => updateBudget(shopping, change, now)),
     saveOrder: (order) => replaceOrder(order.id, order),
@@ -69,10 +57,3 @@ export const useShoppingStore = create<ShoppingStore>()((set, get) => {
     replaceShopping: (shopping) => set({ shopping }),
   }
 })
-
-persist(
-  useShoppingStore,
-  SHOPPING_KEY,
-  (state) => state.shopping,
-  (text) => ({ shopping: loadShopping(text) }),
-)

@@ -220,9 +220,8 @@ export function cardHistory(history: CardPriceHistory | null): PricePoint[] {
 /**
  * Les historiques des cartes `ids`, dans leur ordre, d'après la réponse groupée du serveur
  * (`/api/histories`, une clé par id) : un id qui revient (la même carte Cardmarket possédée pour
- * deux Pokémon) compte autant de fois, comme dans la valeur du jour. Un id sans historique, ou
- * absent de la réponse (une copie du service worker, d'avant cette carte : la page le dit,
- * `loadPriceHistories`), ne compte pas.
+ * deux Pokémon) compte autant de fois, comme dans la valeur du jour. Un id sans historique ne
+ * compte pas.
  */
 export const historiesOf = (histories: PriceHistories, ids: readonly number[]) =>
   ids.flatMap((id) => histories[id] ?? [])

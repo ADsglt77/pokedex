@@ -1,6 +1,6 @@
-# Compte, synchronisation et Pokédex public
+# Compte, collection et Pokédex public
 
-Les comptes, la collection synchronisée entre les appareils, le Pokédex public de chaque compte. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
+Les comptes, la collection de chaque compte (gardée par le serveur, la même sur tous ses appareils), le Pokédex public de chaque compte. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
 - Comptes (`server/auth.ts`, `config/account.ts`) : Better Auth, **un compte par personne**, que
   chacun crée (décision de l'utilisateur, octobre 2026 : l'app est ouverte à tous ; avant, un seul
@@ -42,11 +42,10 @@ Les comptes, la collection synchronisée entre les appareils, le Pokédex public
   Better Auth passent par `authCall` (`lib/auth.ts` : sans réponse du serveur, un refus de statut
   0) et leurs messages par `refusalMessage` (`lib/account.ts`).
   **Une seule session par compte** : se connecter sur un appareil déconnecte ses autres (crochet
-  `session.create.after`) ; l'appareil déconnecté garde ses modifications et affiche
-  « Reconnectez-vous ». Sessions de 60 jours, renouvelées chaque jour d'usage, dans un cookie
+  `session.create.after`) ; l'appareil déconnecté affiche « Reconnectez-vous ». Sessions de 60 jours, renouvelées chaque jour d'usage, dans un cookie
   (`__Secure-` en https, SameSite Lax) : le cookie renouvelé repart avec la réponse de
   `GET /api/account` et des routes du compte (`sessionOf`, dans la macro `auth` aussi, sans quoi la
-  synchronisation au retour de la page consommerait le renouvellement du jour ; sans lui, le
+  relecture de la collection au retour de la page consommerait le renouvellement du jour ; sans lui, le
   navigateur garderait l'ancien cookie et il faudrait se reconnecter au bout de 60 jours). Les
   réponses de ces routes ne sont jamais gardées en cache (`no-store`, macro `auth`). Une
   modification venue d'une autre origine est refusée (403), sur `/api/auth/*` aussi : un autre site
@@ -65,17 +64,12 @@ Les comptes, la collection synchronisée entre les appareils, le Pokédex public
   callbackURL: … »), qui écrirait sinon de fausses lignes ou des codes de terminal.
 - **L'app ne s'ouvre que connecté** (décision de l'utilisateur, octobre 2026 : plus de collection
   « dans ce navigateur » sans compte, ni de rappel de sauvegarde) : le compte connecté du store
-  (`account` : son id et son pseudo ; `null` : personne, `store/sync.ts`), fixé au démarrage avant
-  le routeur (`loadAccount` lit `GET /api/account?demarrage`, qui dit qui est connecté ;
-  `index.html` le précharge, avec les espèces, sans attendre le script ; et `main.tsx` passe ce
-  compte à `startSession` ; sans réponse du serveur, en 15 s, ou en 4 s pour un appareil déjà
-  synchronisé (`syncedBefore` : un réseau faible ne le fait pas attendre), un appareil déjà
-  synchronisé et pas déconnecté l'est encore, pour marcher hors ligne, avec le pseudo gardé dans
-  `pokedex-collection.sync`), puis à la connexion et à la création du compte (`signIn`, d'après la
-  réponse de Better Auth, qui lance la synchronisation, une seule fois : elle commence, ou reprend
-  après une session expirée ; la collection d'un autre compte restée sur ce navigateur, sa session
-  expirée sans déconnexion, le quitte d'abord : elle partirait sinon sur ce compte-ci) et à la
-  déconnexion. Plus de `useSession` de Better Auth (il redemandait la session à chaque montage) :
+  (`account` : son id et son pseudo ; `null` : personne, `store/account.ts`), fixé au démarrage
+  avant le routeur (`loadAccount` lit `GET /api/account?demarrage`, qui dit qui est connecté ;
+  `index.html` le précharge, avec les espèces, sans attendre le script ; et `main.tsx` lit alors
+  sa collection, `signIn` ; sans réponse du serveur en 15 s, « Le Pokédex ne peut pas
+  s'afficher »), puis à la connexion et à la création du compte (`signIn`, d'après la réponse de
+  Better Auth : la page attend la collection avant d'ouvrir l'app) et à la déconnexion. Plus de `useSession` de Better Auth (il redemandait la session à chaque montage) :
   le routeur, le menu du compte et le Pokédex public lisent le store (`account`). Pas connecté, `/`
   mène à `/connexion` et toute autre page de la coquille à `/connexion?retour=…` (`appLoader`,
   `router.tsx`) ; `/connexion` et `/inscription` sont hors de la coquille et mènent l'une à
@@ -97,8 +91,7 @@ Les comptes, la collection synchronisée entre les appareils, le Pokédex public
   `DATA_API_URL` et `DATA_API_TOKEN`, 5 s au plus ; testé avec une fausse API : seulement les ids
   de ces cartes, avec le token), `null` sans carte possédée, sans guide des prix ou l'API muette
   (la valeur est alors « — », et une ligne au journal par minute au plus) ; un ETag tiré du compte,
-  de la version de sa collection, de son pseudo et des prix rendus (`serveTagged`) : un visiteur
-  qui revient reçoit un 304.
+  de son contenu (`serveJson`) : un visiteur qui revient sur un Pokédex inchangé reçoit un 304.
   Données › Pokédex public en donne l'adresse (`vitrinePath`). Un lien partagé (Discord,
   WhatsApp…) a son aperçu : nginx envoie les robots d'aperçu (`map $vitrine_preview` sur
   toute adresse d'un seul segment, `deploy/nginx.conf.template`) à `/api/vitrine/<pseudo>/apercu`, une page
@@ -114,71 +107,43 @@ Les comptes, la collection synchronisée entre les appareils, le Pokédex public
   le statut « commandée » ; une collection vide tant qu'aucun appareil n'a rien envoyé. Il montre
   la version que le serveur a reçue. La page la lit une fois (`getJson`, gardée pour la vie de la
   page) ; celle du compte est relue après une connexion, une déconnexion ou un changement de pseudo
-  (`forget`, `store/sync.ts`). Au journal, une visite (« Pokédex public consulté ») ou un aperçu
+  (`forget`, `store/account.ts`). Au journal, une visite (« Pokédex public consulté ») ou un aperçu
   (« Lien partagé lu ») une fois par visiteur, par Pokédex et par heure au plus (`journalOnce`, son
-  réseau /64 en IPv6). La version de la collection et la collection, le jour des prix et les prix
-  sont lus dans une même transaction de chaque base (une écriture entre deux partirait avec
-  l'ancien ETag) ; l'image d'une carte n'y passe que par ses deux adresses (`small`, `large` : ce
+  réseau /64 en IPv6). L'image d'une carte n'y passe que par ses deux adresses (`small`, `large` : ce
   qu'un fichier importé y aurait glissé en plus ne devient pas public, testé). La route elle-même
   est testée sur le serveur entier (`tests/collection.test.ts`) : le pseudo sans tenir compte des
   majuscules, 404 pour un pseudo qui n'est à personne ou un compte supprimé, sans session jamais
   un prix payé, une commande ni un statut « commandée », et les prix des seules cartes possédées.
-- Synchronisation (`server/collection.ts`, `lib/sync.ts`, `store/sync.ts`) : connecté, la
-  collection et les achats forment un seul document par compte (une commande modifie les deux),
+- La collection (`server/collection.ts`, `store/account.ts`) : la collection et les achats
+  forment un seul document par compte (une commande modifie les deux), gardé par le serveur seul,
   dans `app.db` ; chaque compte ne lit et n'écrit que le sien (testé : un second compte ne voit ni
-  ne touche celui du premier). Il est numéroté par le serveur, avec une empreinte tirée de ce qu'il
-  a enregistré (`tag` : après une restauration de la base, un numéro peut revenir pour un autre
-  document ; ETag `"v<version>-<tag>"`).
-  `/api/collection` : `PUT` refusé, 409, corps `null`, si l'appareil part d'une version dépassée,
-  en avance, ou d'un autre document au même numéro (`baseTag`), testé sur le serveur entier avec
-  304, 401, 403, une mise à jour, la version remplacée gardée et un document refusé (400),
-  `tests/collection.test.ts` : il relit alors la version du serveur et compare de nouveau ;
-  accepté, la réponse donne `{ version, tag }` ; le document passe les contrôles d'un import
-  (`readSent` : refusé, la règle en cause au journal). Une modification d'une autre origine est
-  refusée (403) avant même la lecture de son corps (`parse` de la macro `auth`, `ForeignOrigin` :
-  pas de 422 qui renverrait ce qui a été envoyé), et notée au journal (une fois par minute) : elle
-  dit un réglage à revoir (`BETTER_AUTH_URL`) ou une tentative depuis un autre site. Le navigateur
-  garde sa copie (hors ligne, l'app marche ; l'envoi part au retour du réseau) et note la dernière
-  version échangée (`pokedex-collection.sync` : version, empreinte du serveur et empreinte SHA-256
-  du document ; les deux autres clés gardent leur format) : il synchronise une seconde après une
-  modification, au retour de la page et du réseau, et 30 s après une panne passagère (hors ligne,
-  502 pendant un redémarrage, réponse illisible) ou trois échanges sans aboutir (l'appareil ou le
-  serveur changeait à chaque fois), un onglet à la fois (`navigator.locks`). Un envoi resté sans
-  réponse (coupé, délai dépassé) est retenu : si le serveur montre ensuite ce document à la version
-  attendue, c'est celui de cet appareil, qui devient la version échangée, sans fausse question de
-  conflit. Un refus pour de bon (400 et 422 : un document qui ne passe pas les contrôles ; 413 :
-  plus de 5 Mo ; 403 : une origine refusée) donne « Envoi refusé », avec sa raison (la règle en
-  cause, relue par l'appareil avec le même code, `documentProblem`) ; rien ne repart tout seul.
-  Une erreur imprévue pendant l'échange est écrite en console (elle se lirait sinon « Hors
-  ligne »). La règle (`decide`, testée) : seul cet appareil a changé, il envoie ; seul le serveur,
-  il reprend ; les deux, une fenêtre fait choisir la version à garder (`SyncConflictDialog`, avec
-  un export de celle de l'appareil ; jamais de fusion, comme à l'import) ; de même si le serveur en
-  est à une version plus ancienne que celle échangée (sa base restaurée d'une sauvegarde), ou au
-  même numéro avec une autre empreinte (la base restaurée, puis un autre appareil revenu à ce
-  numéro). Le conflit réglé dans un autre onglet (la version échangée a changé) ferme la question
-  ici aussi ; « Garder celle du serveur » ne reprend rien si la version échangée a changé depuis la
-  question. Une collection ou des achats illisibles dans ce navigateur (abîmés, d'un format que ce
-  code ne lit pas) sont mis de côté (`<clé>.illisible`) et signalés (un bandeau) ; la version
-  échangée est alors ignorée jusqu'à la prochaine (`setAsideUnreadable`, `store/persist.ts`) : le
-  vide qui les remplace n'est jamais envoyé comme un effacement voulu, la version du serveur est
-  reprise, ou la question posée. Entre deux onglets, une valeur reprise de l'autre n'est jamais
-  réécrite (`persist`, testé : deux changements en attente, traités d'affilée, feraient se renvoyer
-  ces valeurs jusqu'à s'arrêter sur une ancienne, les dernières modifications perdues). Un budget
-  réglé compte comme un contenu (`isEmptyDocument`). Lire, comparer et remplacer le document
-  (collection et achats ensemble) : `store/document.ts`. Avec une seule session, ce cas ne vient
-  plus que d'un appareil déconnecté avec des modifications pas encore envoyées, qui se reconnecte :
-  la fenêtre reste le filet de sécurité. À la première connexion d'un appareil, celui qui a quelque
-  chose l'envoie (ou le reçoit). Le serveur garde une version remplacée par heure, 30 jours
-  (`collection_versions`, à reprendre à la main). Se déconnecter vide la copie de ce navigateur
-  (appareil partagé) ; si un envoi a échoué, la confirmation le dit et porte un bouton d'export
-  (`ExportCollectionButton`). « Annuler », l'import, « Effacer » sont des modifications comme les
-  autres : connecté, elles valent pour tous les appareils (les textes de la page Données le
-  disent). Le compte (`AccountMenu`, en pied de la barre latérale, ou en icône dans la barre du
-  haut sur petit écran ; seulement connecté) montre son pseudo et l'état : synchronisation,
-  synchronisée, hors ligne, reconnectez-vous, à choisir, envoi refusé (avec sa raison) ;
-  « Déconnexion… » pendant une déconnexion, qui attend une dernière synchronisation puis le
-  serveur ; son menu a une seule action selon l'état (« Choisir la version à garder » pendant un
-  conflit, où la synchronisation attend le choix ; « Se reconnecter » après une session expirée ;
-  sinon « Synchroniser maintenant »), puis « Se déconnecter ». La question d'un conflit fermée
-  (« Plus tard ») est gardée dans le store (`setConflictQuestion`) : le menu change de place quand
-  l'écran tourne.
+  ne touche celui du premier). Rien n'est gardé dans le navigateur (seul le choix du thème) : pas
+  d'usage hors ligne, pas de copie à synchroniser (décision de l'utilisateur, octobre 2026). Le
+  navigateur lit le document à la connexion (ou au démarrage, avant le premier affichage : sans
+  lui, « Le Pokédex ne peut pas s'afficher »), le garde en mémoire, et envoie chaque modification
+  une demi-seconde après, un échange à la fois. Le document est numéroté par le serveur :
+  `PUT /api/collection` `{ baseVersion, collection, shopping }` est refusé, 409, corps `null`, si
+  le navigateur part d'une autre version que celle du serveur (changée entre-temps par un autre
+  onglet ou un autre appareil ; en avance, la base restaurée d'une sauvegarde) ; testé sur le
+  serveur entier avec 401, 403, une mise à jour, la version remplacée gardée et un document refusé
+  (400), `tests/collection.test.ts`. Après un 409, le navigateur relit la version du serveur, à la
+  place de la sienne : rien n'est écrasé, sa dernière modification est perdue, et le menu du compte
+  le dit (« Rechargée »). Accepté, la réponse donne `{ version }` ; le document passe les contrôles
+  d'un import (`readSent` : refusé, la règle en cause au journal). Une modification d'une autre
+  origine est refusée (403) avant même la lecture de son corps (`parse` de la macro `auth`,
+  `ForeignOrigin` : pas de 422 qui renverrait ce qui a été envoyé), et notée au journal (une fois
+  par minute) : elle dit un réglage à revoir (`BETTER_AUTH_URL`) ou une tentative depuis un autre
+  site. Sans réponse, ou une panne passagère (502 pendant un redémarrage), la modification attend
+  (« Hors ligne ») : elle repart 30 s plus tard, au retour du réseau ou de la page, et quitter la
+  page le demande d'abord (`beforeunload`). Un refus pour de bon (400 et 422 : un document qui ne
+  passe pas les contrôles ; 413 : plus de 5 Mo ; 403 : une origine refusée) donne « Envoi refusé »,
+  avec sa raison (la règle en cause, relue par le navigateur avec le même code,
+  `documentProblem`) ; rien ne repart tout seul. Au retour sur la page, le document est relu (changé
+  sur un autre appareil), si rien n'attend d'être envoyé. Le serveur garde une version remplacée par
+  heure, 30 jours (`collection_versions`, à reprendre à la main). « Annuler », l'import, « Effacer »
+  sont des modifications comme les autres. Le compte (`AccountMenu`, en pied de la barre latérale,
+  ou en icône dans la barre du haut sur petit écran ; seulement connecté) montre son pseudo et
+  l'état : enregistrée, enregistrement, hors ligne (« Réessayer maintenant »), reconnectez-vous
+  (« Se reconnecter »), rechargée, envoi refusé (avec sa raison) ; puis « Se déconnecter » ; une
+  modification pas encore enregistrée, la déconnexion le demande d'abord, avec un bouton d'export
+  (`ExportCollectionButton`). Se déconnecter vide la mémoire de la page.

@@ -8,7 +8,6 @@
  */
 
 import { create } from 'zustand'
-import { readStored } from './persist'
 
 type Theme = 'dark' | 'light'
 
@@ -18,8 +17,12 @@ const prefersLight = matchMedia('(prefers-color-scheme: light)')
 
 /** Le thème choisi dans ce navigateur ; `null` sans choix, valeur inconnue ou stockage bloqué. */
 function storedTheme(): Theme | null {
-  const value = readStored(KEY)
-  return value === 'light' || value === 'dark' ? value : null
+  try {
+    const value = localStorage.getItem(KEY)
+    return value === 'light' || value === 'dark' ? value : null
+  } catch {
+    return null
+  }
 }
 
 const systemTheme = (): Theme => (prefersLight.matches ? 'light' : 'dark')

@@ -114,7 +114,7 @@ function readDraft(draft: Draft, base: Order, stored: Order | null, collection: 
     }
   })
   // Les jours que l'import et le serveur acceptent (`isDay`) : « 05/10/26 » donnerait l'an 26, un
-  // document que la synchronisation refuserait, compté au budget d'« octobre 26 ».
+  // document que le serveur refuserait, compté au budget d'« octobre 26 ».
   if (!isDay(draft.date)) errors.date = draft.date ? DAY_ERROR : 'Indiquez la date d’achat.'
   if (draft.state === 'received' && draft.receivedAt && !isDay(draft.receivedAt)) {
     errors.receivedAt = DAY_ERROR

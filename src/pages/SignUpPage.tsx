@@ -12,7 +12,7 @@ import {
   reservedPseudo,
 } from '@/lib/account'
 import { pageTitle } from '@/lib/format'
-import { signIn } from '@/store/sync'
+import { signIn } from '@/store/account'
 import { AuthCard } from '@/components/AuthCard'
 import styles from './AuthPage.module.css'
 
@@ -47,9 +47,13 @@ export function SignUpPage() {
     const { data, error: refused } = await authCall(() =>
       authClient.signUp.email({ name: pseudo, username: pseudo, email: '', password }),
     )
+    const loaded = !refused && data && (await signIn(accountOf(data.user)))
     setBusy(false)
     if (refused || !data) return setError(failure(refused?.status ?? 0, refused?.code))
-    signIn(accountOf(data.user))
+    if (!loaded)
+      return setError(
+        'Connecté, mais votre collection n’a pas pu être lue : réessayez dans un instant.',
+      )
     navigate('/', { replace: true })
   }
 
