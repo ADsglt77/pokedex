@@ -7,7 +7,6 @@ import {
   loadSpeciesCards,
   NO_FILTER,
   passesFilter,
-  setOption,
   type CardFilter,
   type CatalogCard,
 } from '@/lib/card-catalog'
@@ -67,8 +66,7 @@ export function CatalogPicker({
       </p>
     )
   }
-  const cards = listed
-  if (cards.length === 0) {
+  if (listed.length === 0) {
     return (
       <p className="muted">
         Aucune carte japonaise de {species.names.fr} dans le catalogue : saisissez-la à la main.
@@ -77,9 +75,16 @@ export function CatalogPicker({
   }
 
   // Les extensions de ses cartes, dans l'ordre du catalogue (des plus récentes).
-  const sets = [...new Map(cards.map((card) => [card.set.id, card.set])).values()]
-  const setOptions = [{ value: '', label: 'Toutes les extensions' }, ...sets.map(setOption)]
-  const candidates = cards
+  const sets = [...new Map(listed.map((card) => [card.set.id, card.set])).values()]
+  // « SV2A · Pokémon Card 151 (2023) »
+  const setOptions = [
+    { value: '', label: 'Toutes les extensions' },
+    ...sets.map(({ id, name, year }) => ({
+      value: id,
+      label: `${id} · ${name}${year ? ` (${year})` : ''}`,
+    })),
+  ]
+  const candidates = listed
     .map((card) => ({ card, price: priceOf(prices, card) }))
     .filter(({ card, price }) => (!set || card.set.id === set) && (!pricedOnly || price !== null))
   const filtered = candidates.filter(({ card }) => passesFilter(card, filter))

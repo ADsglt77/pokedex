@@ -7,6 +7,5 @@ import { usePrices } from '@/store/prices'
 export function useWishlist() {
   const prices = usePrices()
   const { entries } = usePokedex()
-  const rows = useMemo(() => wishlistRows(entries, prices), [entries, prices])
-  return { rows }
+  return useMemo(() => wishlistRows(entries, prices), [entries, prices])
 }

@@ -71,7 +71,7 @@
   white-space: nowrap;
 }
 
-/* L'ébauche du prix, tant que les prix arrivent (`PricedValue`) : pas plus large que la tuile. */
+/* L'ébauche du prix, tant que les prix arrivent : pas plus large que la tuile. */
 .price > * {
   max-width: 100%;
 }

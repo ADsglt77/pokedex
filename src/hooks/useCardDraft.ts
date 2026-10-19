@@ -146,7 +146,7 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
     cardmarketText,
     setCardmarketText,
     /** L'id à vérifier chez Cardmarket, une fois le champ quitté ; `null` sinon. */
-    checkedId: typeof cardmarket === 'number' && cardmarket === checked ? cardmarket : null,
+    checkedId: cardmarket === checked ? cardmarket : null,
     check: () => setChecked(cardmarket ?? null),
     reference,
     setReference,

@@ -12,10 +12,13 @@ import type { BudgetSettings, Order, ShoppingData } from '@/types'
 /** `2026-10` */
 export const monthOf = (day: string) => day.slice(0, 7)
 
+/** Les commandes qui comptent : pas les annulées. */
+const counted = (orders: readonly Order[]) => orders.filter((order) => order.state !== 'cancelled')
+
 /** Ce qu'ont coûté des commandes : leur nombre (annulées exclues), leurs cartes, port et frais. */
 export function spentOn(orders: readonly Order[]) {
   const spending = { orders: 0, cards: 0, shipping: 0, spent: 0 }
-  for (const order of orders.filter((order) => order.state !== 'cancelled')) {
+  for (const order of counted(orders)) {
     spending.orders++
     spending.cards += cardCount(order.lines)
     spending.shipping = cents(spending.shipping + order.shipping + order.fees)
@@ -38,7 +41,7 @@ export const budgetLevel = (spent: number, budget: BudgetSettings) =>
 /** Un total par mois, ou par fournisseur… (`key`), sans les commandes annulées. */
 function spendingBy(orders: readonly Order[], keyOf: (order: Order) => string) {
   const groups = new Map<string, Order[]>()
-  for (const order of orders.filter((order) => order.state !== 'cancelled')) {
+  for (const order of counted(orders)) {
     const key = keyOf(order)
     groups.set(key, [...(groups.get(key) ?? []), order])
   }
@@ -51,9 +54,7 @@ export const spendingByMonth = (orders: readonly Order[]) =>
 
 /** Ce que coûte chaque commande, au jour de son achat (à cumuler, `runningTotal`). */
 export const spendingEvents = (orders: readonly Order[]): PricePoint[] =>
-  orders
-    .filter((order) => order.state !== 'cancelled')
-    .map((order) => ({ date: order.date, value: orderSpent(order) }))
+  counted(orders).map((order) => ({ date: order.date, value: orderSpent(order) }))
 
 /** Un total par fournisseur (`key` : son nom), le plus gros d'abord. */
 export const spendingBySupplier = (orders: readonly Order[]) =>
@@ -65,9 +66,7 @@ export const spendingBySupplier = (orders: readonly Order[]) =>
  */
 export function costPerSpecies(orders: readonly Order[], speciesOf: (cardId: string) => number[]) {
   const species = new Set(
-    orders
-      .filter((order) => order.state !== 'cancelled')
-      .flatMap((order) => order.lines.flatMap((line) => speciesOf(line.cardId))),
+    counted(orders).flatMap((order) => order.lines.flatMap((line) => speciesOf(line.cardId))),
   )
   const { spent } = spentOn(orders)
   return { species: species.size, average: species.size ? cents(spent / species.size) : null }

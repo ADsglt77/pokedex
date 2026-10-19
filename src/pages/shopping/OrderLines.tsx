@@ -95,53 +95,42 @@ export function OrderLines({
                 () => onChange(lines.filter((_, i) => i !== index)),
                 cardsTitle,
               )
-            if (!card) {
-              return (
-                <li key={line.cardId}>
-                  <CardLine card={null}>
-                    <IconButton
-                      label="Retirer cette carte de la commande"
-                      size="sm"
-                      variant="ghost"
-                      onClick={remove}
-                    >
-                      <X size={15} />
-                    </IconButton>
-                  </CardLine>
-                </li>
-              )
-            }
             return (
               <li key={line.cardId}>
                 <CardLine
                   card={card}
                   detail={
-                    duplicate ? (
+                    card &&
+                    (duplicate ? (
                       <span className={styles.warn}>{duplicate}</span>
                     ) : (
-                      !unreadable && `revient à ${formatEuro(costs[index] ?? 0)}`
-                    )
+                      !unreadable && `revient à ${formatEuro(costs[index]!)}`
+                    ))
                   }
                 >
-                  <Input
-                    className={styles.quantity}
-                    size="sm"
-                    aria-label={`Quantité, ${card.reference}`}
-                    inputMode="numeric"
-                    value={line.quantity}
-                    error={errors[`quantity-${line.cardId}`]}
-                    onChange={(event) => setLine(index, { quantity: event.target.value })}
-                  />
-                  <EuroField
-                    className={styles.price}
-                    size="sm"
-                    aria-label={`Prix d’une carte, ${card.reference}`}
-                    value={line.unitPrice}
-                    error={errors[`price-${line.cardId}`]}
-                    onChange={(event) => setLine(index, { unitPrice: event.target.value })}
-                  />
+                  {card && (
+                    <>
+                      <Input
+                        className={styles.quantity}
+                        size="sm"
+                        aria-label={`Quantité, ${card.reference}`}
+                        inputMode="numeric"
+                        value={line.quantity}
+                        error={errors[`quantity-${line.cardId}`]}
+                        onChange={(event) => setLine(index, { quantity: event.target.value })}
+                      />
+                      <EuroField
+                        className={styles.price}
+                        size="sm"
+                        aria-label={`Prix d’une carte, ${card.reference}`}
+                        value={line.unitPrice}
+                        error={errors[`price-${line.cardId}`]}
+                        onChange={(event) => setLine(index, { unitPrice: event.target.value })}
+                      />
+                    </>
+                  )}
                   <IconButton
-                    label={`Retirer ${card.reference} de la commande`}
+                    label={`Retirer ${card ? card.reference : 'cette carte'} de la commande`}
                     size="sm"
                     variant="ghost"
                     onClick={remove}

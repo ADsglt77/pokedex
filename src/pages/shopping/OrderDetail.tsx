@@ -1,8 +1,7 @@
-import { Badge, Button, Modal, Stack } from '@camply/ui'
+import { Alert, Badge, Button, Modal, Stack } from '@camply/ui'
 import { PackageCheck, Pencil, Trash2 } from '@camply/ui/icons'
 import { useRef } from 'react'
 import { ExternalLink } from '@/components/ExternalLink'
-import { LateOrdersAlert } from './LateOrdersAlert'
 import { ORDER_STATE_LABELS } from '@/config/shopping'
 import { details, formatDate, formatEuro, formatInteger, today } from '@/lib/format'
 import { LATE_AFTER_DAYS, latePendingOrders, supplierLabel, unitCosts } from '@/lib/orders'
@@ -14,6 +13,16 @@ import { OrderTotals } from './OrderTotals'
 import page from './ShoppingPage.module.css'
 
 const STATE_TONES = { pending: 'info', received: 'success', cancelled: 'neutral' } as const
+
+/** Des commandes en cours depuis trop longtemps (`latePendingOrders`) : que faire. */
+export function LateOrdersAlert({ title }: { title: string }) {
+  return (
+    <Alert tone="warn" title={title}>
+      Si rien n’est arrivé, contactez le vendeur ; sur Cardmarket, ouvrez un litige depuis la page
+      de la commande.
+    </Alert>
+  )
+}
 
 /** L'état d'une commande : en cours, reçue, annulée. */
 export function OrderStateBadge({ state }: { state: OrderState }) {

@@ -154,7 +154,7 @@ export interface CatalogSets {
 /** L'adresse des séries du catalogue (oubliée pour « Réessayer », `CatalogPage`). */
 export const CATALOG_SETS = '/api/catalog/sets'
 
-/** Les séries de la page Catalogue ; `null` si elles ne sont pas disponibles (comme `loadCatalog`). */
+/** Les séries de la page Catalogue ; `null` si elles ne sont pas disponibles. */
 export const loadSets = derived<CatalogSetsFile, CatalogSets | null>(
   CATALOG_SETS,
   (file) =>
@@ -215,13 +215,13 @@ function readSet(set: SetSummary, file: CatalogSetFile): SetCard[] {
 
 const setLoaders = new Map<string, () => Promise<SetCard[] | null>>()
 
+/** L'adresse des cartes d'une série (oubliée pour « Réessayer », `CatalogPage`). */
+export const setCardsUrl = (set: SetSummary) => `/api/catalog/sets/${encodeURIComponent(set.id)}`
+
 /**
  * Toutes les cartes d'une série, dans son ordre ; `null` si elles ne sont pas disponibles. Chaque
  * série est lue une fois : la même promesse, lue par `use()`.
  */
-/** L'adresse des cartes d'une série (oubliée pour « Réessayer », `CatalogPage`). */
-export const setCardsUrl = (set: SetSummary) => `/api/catalog/sets/${encodeURIComponent(set.id)}`
-
 export function loadSetCards(set: SetSummary) {
   let load = setLoaders.get(set.id)
   if (!load) {
@@ -233,12 +233,6 @@ export function loadSetCards(set: SetSummary) {
   }
   return load()
 }
-
-/** Une série dans une liste de choix : « SV2A · Pokémon Card 151 (2023) ». */
-export const setOption = ({ id, name, year }: CatalogSet) => ({
-  value: id,
-  label: `${id} · ${name}${year ? ` (${year})` : ''}`,
-})
 
 /**
  * La carte du catalogue d'une référence (« Herbizarre (OR1 2) »), lue dans sa série ; `null` si le

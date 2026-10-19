@@ -49,7 +49,7 @@ export function ShoppingPage() {
       },
     )
   const openView = (next: ShoppingView) => update({ view: next })
-  const { rows } = useWishlist()
+  const rows = useWishlist()
   const [planner, setPlanner] = useState<PlannerSettings>({})
   // Une commande enregistrée depuis le plan ouvre « Commandes » : le focus va à son onglet, le
   // bouton du plan disparaissant avec le sien.
@@ -105,12 +105,14 @@ export function ShoppingPage() {
         </TabList>
         <TabPanel value="liste">
           <WishlistPanel
+            rows={rows}
             filters={filters}
             onFiltersChange={(patch) => update({ filters: patch })}
           />
         </TabPanel>
         <TabPanel value="prochaine-commande">
           <PlannerPanel
+            rows={rows}
             settings={planner}
             onSettingsChange={setPlanner}
             onOrderSaved={() => {

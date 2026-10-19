@@ -226,7 +226,7 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
   const isFiltered = shown.length < cards.length
   const index = open === null ? -1 : shown.findIndex((card) => card.key === open)
   const searchField = useRef<HTMLInputElement>(null)
-  const grid = useRef<HTMLDivElement>(null)
+  const grid = useRef<HTMLUListElement>(null)
   /**
    * La fiche fermée : le focus va à la tuile de la carte montrée en dernier (parcourue avec ← et
    * →), pas à celle ouverte au départ, à qui la fenêtre le rend en se fermant (un effet : une fois
@@ -277,23 +277,21 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
           actions={<Button onClick={clear}>Tout afficher</Button>}
         />
       ) : (
-        <div ref={grid}>
-          <CatalogGrid>
-            {shown.map((card) => (
-              <li key={card.key}>
-                <CatalogTile
-                  card={card}
-                  heading={card.number}
-                  price={priceText(prices, missing, card)}
-                  speciesId={card.dexIds[0]}
-                  onPick={openCard}
-                >
-                  {card.name}
-                </CatalogTile>
-              </li>
-            ))}
-          </CatalogGrid>
-        </div>
+        <CatalogGrid ref={grid}>
+          {shown.map((card) => (
+            <li key={card.key}>
+              <CatalogTile
+                card={card}
+                heading={card.number}
+                price={priceText(prices, missing, card)}
+                speciesId={card.dexIds[0]}
+                onPick={openCard}
+              >
+                {card.name}
+              </CatalogTile>
+            </li>
+          ))}
+        </CatalogGrid>
       )}
       {index >= 0 && (
         <CardDetails

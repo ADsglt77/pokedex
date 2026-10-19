@@ -14,9 +14,8 @@ import {
 } from '@/lib/filters'
 import { focusAfter } from '@/lib/focus'
 import { plural, toOptions } from '@/lib/format'
-import { filterWishlist } from '@/lib/wishlist'
+import { filterWishlist, type WishRow } from '@/lib/wishlist'
 import type { GenerationId } from '@/types'
-import { useWishlist } from '@/hooks/useWishlist'
 import { WishCard } from './WishCard'
 import page from './ShoppingPage.module.css'
 import styles from './WishlistPanel.module.css'
@@ -28,22 +27,23 @@ const SORT_LABELS: Record<WishlistSort, string> = {
   dex: 'Par numéro de Pokédex',
 }
 
-/**
- * La liste d'achats : la carte de chaque Pokémon, ni possédée ni commandée ; chercher, filtrer,
- * trier. Ses filtres sont dans l'adresse, lus et changés par la page (`ShoppingPage`) : ils
- * survivent à l'ouverture d'une fiche et au retour.
- */
 /** Les cartes dessinées d'un coup : plus qu'un grand écran n'en montre. */
 const CARDS_STEP = 40
 
+/**
+ * La liste d'achats (`rows`, celle de la page : `useWishlist`) : la carte de chaque Pokémon, ni
+ * possédée ni commandée ; chercher, filtrer, trier. Ses filtres sont dans l'adresse, lus et changés
+ * par la page (`ShoppingPage`) : ils survivent à l'ouverture d'une fiche et au retour.
+ */
 export function WishlistPanel({
+  rows,
   filters,
   onFiltersChange: set,
 }: {
+  rows: WishRow[]
   filters: WishlistFilters
   onFiltersChange: (change: Partial<WishlistFilters>) => void
 }) {
-  const { rows } = useWishlist()
   const followLinks = useFollowLinks()
   // La liste suit la saisie dès que le navigateur a le temps : la frappe reste fluide.
   const shownFilters = useDeferredValue(filters)

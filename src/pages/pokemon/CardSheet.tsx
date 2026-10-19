@@ -1,6 +1,6 @@
-import { Button, Spinner } from '@camply/ui'
+import { Button } from '@camply/ui'
 import { Plus } from '@camply/ui/icons'
-import { lazy, Suspense, useEffect, useState, type Ref } from 'react'
+import { useEffect, useState, type Ref } from 'react'
 import { Panel } from '@/components/Panel'
 import { PricePanel } from '@/components/PricePanel'
 import { loadSpeciesCards } from '@/lib/card-catalog'
@@ -8,14 +8,8 @@ import { details, statusCaption } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
 import { otherSpeciesNames } from '@/lib/species'
 import type { PokemonSpecies } from '@/types'
-import { CardActions } from './CardActions'
+import { CardActions, CardFormWindow } from './CardActions'
 import styles from './CardSheet.module.css'
-
-/**
- * La fenêtre d'ajout ou de correction, chargée à sa première ouverture (avec le choix dans le
- * catalogue et la saisie) : elle n'alourdit pas le premier chargement.
- */
-const CardForm = lazy(() => import('./CardForm').then(({ CardForm }) => ({ default: CardForm })))
 
 /**
  * La fiche de la carte du Pokémon, en deux panneaux : ce que l'utilisateur en fait (statut, prix
@@ -88,11 +82,7 @@ export function EmptySheet({
           Ajouter une carte
         </Button>
       </div>
-      {adding && (
-        <Suspense fallback={<Spinner size={16} label="Ouverture de la fenêtre…" />}>
-          <CardForm species={species} card={null} onClose={() => setAdding(false)} />
-        </Suspense>
-      )}
+      {adding && <CardFormWindow species={species} card={null} onClose={() => setAdding(false)} />}
     </Panel>
   )
 }

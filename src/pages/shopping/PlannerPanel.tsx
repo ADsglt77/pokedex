@@ -11,15 +11,7 @@ import {
   Stack,
 } from '@camply/ui'
 import { Copy, Receipt, Sparkles } from '@camply/ui/icons'
-import {
-  useDeferredValue,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-  type RefObject,
-} from 'react'
+import { useDeferredValue, useId, useMemo, useRef, useState, type RefObject } from 'react'
 import { spentThisMonth } from '@/lib/budget'
 import { keepFocusInList } from '@/lib/focus'
 import { formatEuro, plural, today } from '@/lib/format'
@@ -32,7 +24,6 @@ import { BudgetField } from './BudgetField'
 import { CardLine } from './CardLine'
 import { OrderForm } from './OrderForm'
 import { WantsDialog } from './WantsDialog'
-import { useWishlist } from '@/hooks/useWishlist'
 import page from './ShoppingPage.module.css'
 import styles from './PlannerPanel.module.css'
 
@@ -68,15 +59,16 @@ export interface PlannerSettings {
  * une liste de souhaits : `WantsDialog`), puis on enregistre.
  */
 export function PlannerPanel({
+  rows,
   settings,
   onSettingsChange,
   onOrderSaved,
 }: {
+  rows: WishRow[]
   settings: PlannerSettings
   onSettingsChange: (settings: PlannerSettings) => void
   onOrderSaved: () => void
 }) {
-  const { rows } = useWishlist()
   const { orders, budget } = useShoppingStore((state) => state.shopping)
   const spent = spentThisMonth(orders)
   const {
@@ -95,7 +87,6 @@ export function PlannerPanel({
   const [openGroups, setOpenGroups] = useState<string[]>([])
   const planTitle = useId()
   const heading = useRef<HTMLHeadingElement>(null)
-  const pickedList = useRef<HTMLUListElement>(null)
 
   // Le curseur suit la souris ; le plan suit dès que le navigateur a le temps (des centaines de
   // cartes à reclasser à chaque pas).
@@ -187,7 +178,21 @@ export function PlannerPanel({
               </Button>
               <Button
                 leftIcon={<Receipt size={16} />}
-                onClick={() => setDraft(planOrder(plan.picked, budget.shippingReserve))}
+                onClick={() =>
+                  // Les cartes du plan au prix du marché, le port réservé : une commande à compléter.
+                  setDraft(
+                    newOrder(
+                      today(),
+                      plan.picked.map((row) => ({
+                        cardId: row.card.id,
+                        quantity: 1,
+                        unitPrice: row.price,
+                        previous: null,
+                      })),
+                      budget.shippingReserve,
+                    ),
+                  )
+                }
               >
                 Enregistrer comme commande…
               </Button>
@@ -208,28 +213,12 @@ export function PlannerPanel({
         )}
 
         {plan.picked.length > 0 ? (
-          <ul ref={pickedList} className={page.lines}>
-            {plan.picked.map((row, index) => (
-              <li key={row.card.id}>
-                <PlanLine row={row}>
-                  {forced.has(row.card.id) && (
-                    <Badge size="sm" tone="info">
-                      Ajoutée à la main
-                    </Badge>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() =>
-                      keepFocusInList(pickedList, index, () => skip(row, true), heading)
-                    }
-                  >
-                    Retirer
-                  </Button>
-                </PlanLine>
-              </li>
-            ))}
-          </ul>
+          <PlanList
+            rows={plan.picked}
+            fallback={heading}
+            forced={forced}
+            action={{ label: 'Retirer', run: (row) => skip(row, true) }}
+          />
         ) : (
           <p className="muted">
             {plan.left.length > 0
@@ -249,43 +238,44 @@ export function PlannerPanel({
           value={openGroups}
           onChange={(value) => setOpenGroups(value as string[])}
         >
-          <PlanGroup
-            value="left"
-            open={openGroups.includes('left')}
-            fallback={heading}
-            title="Hors budget"
-            rows={plan.left}
-            empty="Toutes les cartes possibles tiennent dans le budget."
-            action={addAnyway}
-          />
-          <PlanGroup
-            value="covered"
-            open={openGroups.includes('covered')}
-            fallback={heading}
-            title="Pokémon déjà prévu"
-            rows={plan.covered}
-            empty="Aucune carte d’un Pokémon déjà dans le plan."
-            hint="Une seule carte par Pokémon : celle du plan a été préférée (ajoutée à la main, sinon la moins chère)."
-            action={addAnyway}
-          />
-          <PlanGroup
-            value="unpriced"
-            open={openGroups.includes('unpriced')}
-            fallback={heading}
-            title="Sans prix"
-            rows={plan.unpriced}
-            empty="Toutes les cartes possibles ont un prix."
-            hint="Aucun prix n’est inventé : regardez vous-même les annonces des vendeurs."
-          />
-          <PlanGroup
-            value="skipped"
-            open={openGroups.includes('skipped')}
-            fallback={heading}
-            title="Retirées à la main"
-            rows={plan.skipped}
-            empty="Aucune carte retirée."
-            action={{ label: 'Remettre', run: (row) => skip(row, false) }}
-          />
+          {[
+            {
+              value: 'left',
+              title: 'Hors budget',
+              rows: plan.left,
+              empty: 'Toutes les cartes possibles tiennent dans le budget.',
+              action: addAnyway,
+            },
+            {
+              value: 'covered',
+              title: 'Pokémon déjà prévu',
+              rows: plan.covered,
+              empty: 'Aucune carte d’un Pokémon déjà dans le plan.',
+              hint: 'Une seule carte par Pokémon : celle du plan a été préférée (ajoutée à la main, sinon la moins chère).',
+              action: addAnyway,
+            },
+            {
+              value: 'unpriced',
+              title: 'Sans prix',
+              rows: plan.unpriced,
+              empty: 'Toutes les cartes possibles ont un prix.',
+              hint: 'Aucun prix n’est inventé : regardez vous-même les annonces des vendeurs.',
+            },
+            {
+              value: 'skipped',
+              title: 'Retirées à la main',
+              rows: plan.skipped,
+              empty: 'Aucune carte retirée.',
+              action: { label: 'Remettre', run: (row: WishRow) => skip(row, false) },
+            },
+          ].map((group) => (
+            <PlanGroup
+              key={group.value}
+              {...group}
+              open={openGroups.includes(group.value)}
+              fallback={heading}
+            />
+          ))}
           <AccordionItem value="how" title="Comment le plan est construit" headingLevel={3}>
             <Stack gap={3}>
               <ol className={page.steps}>
@@ -333,34 +323,57 @@ export function PlannerPanel({
   )
 }
 
-/** Une commande à compléter : les cartes du plan au prix du marché, le port réservé. */
-const planOrder = (rows: readonly (WishRow & { price: number })[], shipping: number) =>
-  newOrder(
-    today(),
-    rows.map((row) => ({
-      cardId: row.card.id,
-      quantity: 1,
-      unitPrice: row.price,
-      previous: null,
-    })),
-    shipping,
-  )
-
-function PlanLine({ row, children }: { row: WishRow; children?: ReactNode }) {
-  return (
-    <CardLine card={row.card} detail={row.price === null ? 'sans prix' : formatEuro(row.price)}>
-      {children}
-    </CardLine>
-  )
-}
-
 /**
- * L'action d'une carte d'un groupe, qui l'envoie dans un autre : le focus va alors à la carte
- * suivante du groupe, au titre du plan (`fallback`) s'il se vide.
+ * L'action d'une carte, qui l'envoie dans un autre groupe : le focus va alors à la carte suivante
+ * de la liste, au titre du plan (`fallback`) si elle se vide.
  */
 interface PlanAction {
   label: string
   run: (row: WishRow) => void
+}
+
+/** Des cartes du plan, chacune avec son prix et son action ; `forced` : ajoutées à la main. */
+function PlanList({
+  rows,
+  fallback,
+  action,
+  forced,
+}: {
+  rows: WishRow[]
+  fallback: RefObject<HTMLElement | null>
+  action?: PlanAction
+  forced?: ReadonlySet<string>
+}) {
+  const list = useRef<HTMLUListElement>(null)
+  return (
+    <ul ref={list} className={page.lines}>
+      {rows.map((row, index) => (
+        <li key={row.card.id}>
+          <CardLine
+            card={row.card}
+            detail={row.price === null ? 'sans prix' : formatEuro(row.price)}
+          >
+            {action && (
+              <>
+                {forced?.has(row.card.id) && (
+                  <Badge size="sm" tone="info">
+                    Ajoutée à la main
+                  </Badge>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => keepFocusInList(list, index, () => action.run(row), fallback)}
+                >
+                  {action.label}
+                </Button>
+              </>
+            )}
+          </CardLine>
+        </li>
+      ))}
+    </ul>
+  )
 }
 
 /** Un groupe de cartes mises de côté ; fermé, il ne rend que son titre et son nombre. */
@@ -383,7 +396,6 @@ function PlanGroup({
   hint?: string
   action?: PlanAction
 }) {
-  const list = useRef<HTMLUListElement>(null)
   return (
     <AccordionItem value={value} title={`${title} (${rows.length})`} headingLevel={3}>
       {open &&
@@ -392,25 +404,7 @@ function PlanGroup({
         ) : (
           <>
             {hint && <p className="muted">{hint}</p>}
-            <ul ref={list} className={page.lines}>
-              {rows.map((row, index) => (
-                <li key={row.card.id}>
-                  <PlanLine row={row}>
-                    {action && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          keepFocusInList(list, index, () => action.run(row), fallback)
-                        }
-                      >
-                        {action.label}
-                      </Button>
-                    )}
-                  </PlanLine>
-                </li>
-              ))}
-            </ul>
+            <PlanList rows={rows} fallback={fallback} action={action} />
           </>
         ))}
     </AccordionItem>

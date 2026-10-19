@@ -1,6 +1,6 @@
 /**
  * Le code d'une carte : le code de la série et le numéro qui finissent sa référence
- * (« Bulbizarre (SV2A 166) »). Sans import : le serveur s'en sert aussi.
+ * (« Bulbizarre (SV2A 166) »).
  */
 
 interface CardCode {

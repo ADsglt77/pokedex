@@ -99,18 +99,16 @@ function readDraft(draft: Draft, base: Order, stored: Order | null, collection: 
     return value ?? 0
   }
   const lines: OrderLine[] = draft.lines.map((line) => {
+    // Illisible, la ligne compte pour 0 dans l'aperçu : l'erreur bloque l'enregistrement.
     const quantity = parseQuantity(line.quantity) ?? 0
     const unitPrice = parseEuros(line.unitPrice)
-    const readable = quantity >= 1
-    if (!readable) errors[`quantity-${line.cardId}`] = 'Un nombre entier, 1 ou plus.'
+    if (quantity < 1) errors[`quantity-${line.cardId}`] = 'Un nombre entier, 1 ou plus.'
     if (unitPrice === null) errors[`price-${line.cardId}`] = 'Un montant, par exemple 12,50.'
-    const previous = previousOf(line.cardId, stored, collection)
-    // Illisible, la ligne compte pour 0 dans l'aperçu : l'erreur bloque l'enregistrement.
     return {
       cardId: line.cardId,
-      quantity: readable ? quantity : 0,
+      quantity,
       unitPrice: unitPrice ?? 0,
-      previous,
+      previous: previousOf(line.cardId, stored, collection),
     }
   })
   // Les jours que l'import et le serveur acceptent (`isDay`) : « 05/10/26 » donnerait l'an 26, un
@@ -168,7 +166,8 @@ export function OrderForm({
   const [draft, setDraft] = useState(initial)
   // Les erreurs s'affichent après une première tentative, puis suivent la saisie.
   const [submitted, setSubmitted] = useState(false)
-  const [overCeiling, setOverCeiling] = useState<{ order: Order; monthTotal: number } | null>(null)
+  // La question du plafond : la saisie est cachée pendant ce temps, la commande ne change pas.
+  const [overCeiling, setOverCeiling] = useState(false)
   const [abandoning, setAbandoning] = useState(false)
   const fields = useRef<HTMLElement>(null)
   const set = (change: Partial<Draft>) => setDraft({ ...draft, ...change })
@@ -181,7 +180,7 @@ export function OrderForm({
   // recherche Ctrl K) : la même question que fermer la fenêtre.
   const blocker = useBlocker(() => started && !closing.current)
   const asking = abandoning || blocker.state === 'blocked'
-  const formOpen = !asking && overCeiling === null
+  const formOpen = !asking && !overCeiling
   // Le focus : après « Abandonner », il revient au bouton qui avait ouvert la saisie (`opener`, le
   // focus à l'ouverture ; la question le rendrait sinon à un champ qui n'existe plus). Après
   // « Annuler », la fenêtre revient et le met à son premier bouton, comme à son ouverture ; au
@@ -222,7 +221,7 @@ export function OrderForm({
   const month = monthOf(order.date)
   const monthTotal = cents(spentIn(others, month).spent + orderSpent(order))
 
-  const save = (order: Order) => {
+  const save = () => {
     closing.current = true
     const count = cardCount(order.lines)
     act(
@@ -244,8 +243,8 @@ export function OrderForm({
     }
     // Le plafond est dépassé par cet enregistrement : on demande, sans interdire.
     if (monthTotal > budget.ceiling && monthTotal > spentIn(orders, month).spent) {
-      setOverCeiling({ order, monthTotal })
-    } else save(order)
+      setOverCeiling(true)
+    } else save()
   }
 
   return (
@@ -387,23 +386,20 @@ export function OrderForm({
       </Modal>
 
       <ConfirmDialog
-        open={overCeiling !== null && !asking}
+        open={overCeiling && !asking}
         title="Dépasser votre plafond du mois ?"
         confirmLabel="Enregistrer quand même"
         tone="warn"
         onClose={() => {
           backToSave.current = true
-          setOverCeiling(null)
+          setOverCeiling(false)
         }}
-        onConfirm={() => save(overCeiling!.order)}
+        onConfirm={save}
       >
-        {overCeiling && (
-          <p>
-            Avec cette commande, vos achats atteignent {formatEuro(overCeiling.monthTotal)} en{' '}
-            {formatMonth(monthOf(overCeiling.order.date))}, pour un plafond de{' '}
-            {formatEuro(budget.ceiling)}.
-          </p>
-        )}
+        <p>
+          Avec cette commande, vos achats atteignent {formatEuro(monthTotal)} en{' '}
+          {formatMonth(month)}, pour un plafond de {formatEuro(budget.ceiling)}.
+        </p>
       </ConfirmDialog>
       <ConfirmDialog
         open={asking}

@@ -28,7 +28,7 @@ export function SpentThisMonthStat() {
 /** La liste d'achats : ses cartes à acheter et leur coût au prix du jour (accueil et Achats). */
 export function WishlistStat() {
   const statSize = useStatSize()
-  const { rows } = useWishlist()
+  const rows = useWishlist()
   const estimate = wishlistEstimate(rows)
   return (
     <Stat

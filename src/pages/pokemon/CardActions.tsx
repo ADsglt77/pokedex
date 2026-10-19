@@ -1,19 +1,19 @@
 import { Button, ButtonGroup, Spinner, Stack, Toggle } from '@camply/ui'
 import { Pencil, Trash2 } from '@camply/ui/icons'
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useState, type ComponentProps } from 'react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { EuroInput } from '@/components/EuroInput'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { isToBuy } from '@/lib/collection'
 import { isInAnOrder } from '@/lib/orders'
 import { cx } from '@/lib/cx'
 import { otherSpeciesNames, speciesNames } from '@/lib/species'
-import { statusLabel } from '@/lib/format'
+import { formatEuro, statusLabel } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
 import type { CardStatus, PokemonSpecies } from '@/types'
-import { PaidPriceField } from './PaidPriceField'
 import styles from './CardActions.module.css'
 
 /**
@@ -22,6 +22,15 @@ import styles from './CardActions.module.css'
  */
 const loadCardForm = () => import('./CardForm')
 const CardForm = lazy(() => loadCardForm().then(({ CardForm }) => ({ default: CardForm })))
+
+/** Cette fenêtre, et son attente le temps de son chargement (la fiche s'en sert aussi). */
+export function CardFormWindow(props: ComponentProps<typeof CardForm>) {
+  return (
+    <Suspense fallback={<Spinner size={16} label="Ouverture de la fenêtre…" />}>
+      <CardForm {...props} />
+    </Suspense>
+  )
+}
 
 const STATUS_BUTTONS: { status: CardStatus; label: string }[] = [
   { status: 'owned', label: 'Je possède cette carte' },
@@ -104,7 +113,22 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
       </ButtonGroup>
 
       {!isToBuy(view) && (
-        <PaidPriceField card={card} paid={view.paidPrice} className={styles.group} />
+        // Le prix payé, enregistré en quittant le champ (ou Entrée).
+        <EuroInput
+          className={styles.group}
+          label="Prix payé"
+          hint="Pour suivre ce que la carte vous a coûté, et ce qu’elle vaut depuis."
+          value={view.paidPrice ?? undefined}
+          onCommit={(amount) =>
+            act(
+              () => useCollectionStore.getState().setPaidPrice(card, amount),
+              amount === undefined
+                ? `Prix payé retiré de la carte ${card.reference}.`
+                : `Carte ${card.reference} payée ${formatEuro(amount)}.`,
+              amount === undefined ? 'info' : 'success',
+            )
+          }
+        />
       )}
 
       <Stack gap={2} align="start" className={styles.group}>
@@ -142,9 +166,7 @@ export function CardActions({ view, species }: { view: CardView; species: Pokemo
       </Stack>
 
       {editing && (
-        <Suspense fallback={<Spinner size={16} label="Ouverture de la fenêtre…" />}>
-          <CardForm species={species} card={card} onClose={() => setEditing(false)} />
-        </Suspense>
+        <CardFormWindow species={species} card={card} onClose={() => setEditing(false)} />
       )}
 
       <ConfirmDialog

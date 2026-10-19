@@ -157,7 +157,8 @@ export function CardDetails({
 
 /** Ce qu'on sait de la carte, ligne à ligne ; ce qu'on ne sait pas n'a pas de ligne. */
 function facts(card: SetCard, place: CollectionPlace) {
-  const rows: { term: string; description: ReactNode }[] = [
+  const pokemon = card.dexIds.length > 0
+  const rows: (Fact | false | '' | null)[] = [
     {
       term: 'Extension',
       description: details(
@@ -175,9 +176,7 @@ function facts(card: SetCard, place: CollectionPlace) {
         </span>
       ),
     },
-  ]
-  if (card.rarity) {
-    rows.push({
+    card.rarity && {
       term: 'Rareté',
       description: (
         <span className={styles.inline}>
@@ -185,30 +184,24 @@ function facts(card: SetCard, place: CollectionPlace) {
           <span>{card.rarity.name}</span>
         </span>
       ),
-    })
-  }
-  if (card.type !== null) {
-    rows.push({
-      term: card.dexIds.length ? 'Type' : 'Catégorie',
+    },
+    card.type !== null && {
+      term: pokemon ? 'Type' : 'Catégorie',
       description: (
         <span className={styles.inline}>
           <TypeIcon type={card.type} />
           <span>{CARD_TYPES.get(card.type)}</span>
         </span>
       ),
-    })
-  }
-  if (card.dexIds.length) {
-    rows.push({
+    },
+    pokemon && {
       term: 'Pokémon',
       description: formatList(
         card.dexIds.map((id) => `${getSpecies(id)!.names.fr} (${formatDexNumber(id)})`),
       ),
-    })
-  }
-  if (card.illustrator) rows.push({ term: 'Illustration', description: card.illustrator })
-  if (card.versions.length) {
-    rows.push({
+    },
+    card.illustrator && { term: 'Illustration', description: card.illustrator },
+    card.versions.length > 0 && {
       term: 'Versions',
       description: (
         <span className={styles.tags}>
@@ -217,15 +210,18 @@ function facts(card: SetCard, place: CollectionPlace) {
           ))}
         </span>
       ),
-    })
-  }
-  if (card.english) rows.push({ term: 'Nom anglais', description: card.english })
-  if (card.german) rows.push({ term: 'Nom allemand', description: card.german })
-  if (card.set.released) {
-    rows.push({ term: 'Sortie au Japon', description: formatDate(card.set.released) })
-  }
-  if (card.dexIds.length) rows.push({ term: 'Collection', description: placeText(place) })
-  return rows
+    },
+    card.english && { term: 'Nom anglais', description: card.english },
+    card.german && { term: 'Nom allemand', description: card.german },
+    card.set.released && { term: 'Sortie au Japon', description: formatDate(card.set.released) },
+    pokemon && { term: 'Collection', description: placeText(place) },
+  ]
+  return rows.filter((row): row is Fact => !!row)
+}
+
+interface Fact {
+  term: string
+  description: ReactNode
 }
 
 /** La carte dans la collection, en une phrase. */

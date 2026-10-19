@@ -22,11 +22,8 @@ interface ShoppingStore {
 }
 
 export const useShoppingStore = create<ShoppingStore>()((set, get) => {
-  const update = (change: (shopping: ShoppingData, now: string) => ShoppingData) =>
-    set({ shopping: change(get().shopping, new Date().toISOString()) })
-
   /**
-   * Passe la commande `orderId` à `order` (`null` : supprimée), dans le registre et la collection.
+   * Passe la commande `orderId` à `edited` (`null` : supprimée), dans le registre et la collection.
    * L'état d'avant de chaque carte est relu (`previousOf`) : « Marquer reçue » comme le formulaire.
    */
   const replaceOrder = (orderId: string, edited: Order | null) => {
@@ -51,7 +48,8 @@ export const useShoppingStore = create<ShoppingStore>()((set, get) => {
   return {
     shopping: emptyShopping(),
 
-    setBudget: (change) => update((shopping, now) => updateBudget(shopping, change, now)),
+    setBudget: (change) =>
+      set({ shopping: updateBudget(get().shopping, change, new Date().toISOString()) }),
     saveOrder: (order) => replaceOrder(order.id, order),
     deleteOrder: (orderId) => replaceOrder(orderId, null),
     replaceShopping: (shopping) => set({ shopping }),
