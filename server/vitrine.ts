@@ -19,6 +19,7 @@
 import type { Database } from 'bun:sqlite'
 import { Elysia } from 'elysia'
 import { TOTAL_SPECIES } from '@/config/pokedex'
+import { isPseudo } from '@/lib/account'
 import { emptyCollection } from '@/lib/collection'
 import { formatShare, pokedexTitle, unlockedOf } from '@/lib/format'
 import { progressPercent, unlockEvents } from '@/lib/pokedex'
@@ -110,7 +111,10 @@ export function vitrineRoutes(app: Database, data: Database, origin: string) {
      WHERE u.username = ?`,
   )
   const readShown = app.query('SELECT collection FROM collections WHERE user_id = ?')
-  const ownerOf = (pseudo: string) => readOwner.get(pseudo.toLowerCase()) as Owner | null
+  // Seulement un pseudo possible : jamais une adresse du site (`RESERVED_PSEUDOS`), même portée par
+  // un compte créé avant qu'elle ne le devienne.
+  const ownerOf = (pseudo: string) =>
+    isPseudo(pseudo) ? (readOwner.get(pseudo.toLowerCase()) as Owner | null) : null
   const shown = (owner: Owner) => {
     const row = readShown.get(owner.id) as { collection: string } | null
     return row ? shownCollection(JSON.parse(row.collection) as CollectionData) : emptyCollection()

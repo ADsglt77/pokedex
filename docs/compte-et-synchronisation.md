@@ -85,8 +85,9 @@ Les comptes, la collection synchronisée entre les appareils, le Pokédex public
   retirée). Toute adresse d'un seul segment qui n'est pas une page du site y mène (la route
   `:pseudo`, `vitrinePseudo`, `lib/filters.ts`) : les premiers segments des adresses du site sont
   des pseudos réservés (`RESERVED_PSEUDOS`, `config/account.ts` : refusés à l'inscription et au
-  changement de pseudo, testé ; une nouvelle page de premier niveau s'y ajoute, et aucun compte ne
-  doit déjà porter son nom). Ce qui n'est pas un pseudo (`/achat`, `/a.b`) y est une
+  changement de pseudo, testé ; une nouvelle page de premier niveau s'y ajoute ; un compte qui
+  porterait déjà son nom n'y a jamais son Pokédex : le serveur ne cherche qu'un pseudo possible,
+  `isPseudo`, testé). Ce qui n'est pas un pseudo (`/achat`, `/a.b`) y est une
   page introuvable, comme un pseudo qui n'est à personne (404 du serveur : « Rien à cette
   adresse »). En tête, « Se connecter » et « Créer un compte », ou « Mon Pokédex » une fois
   connecté ; son titre : « Le Pokédex de … » (`pokedexTitle`), le pseudo du compte
