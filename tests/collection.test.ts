@@ -3,10 +3,11 @@
  * collection partie d'une version dépassée, ou d'un autre document au même numéro (la base
  * restaurée), est refusé (409), et la version du serveur reste telle quelle ; sans session, ou d'un
  * autre site, rien ne passe ; un document abîmé est refusé (400). Une erreur ici écraserait les
- * commandes d'un autre appareil. Et ce que montre le Pokédex public (`/api/vitrine`) : ce qu'il
+ * commandes d'un autre appareil. Chaque compte ne touche qu'à sa collection, et la sienne part avec
+ * lui. Et ce que montre le Pokédex public d'un compte (`/api/vitrine/<pseudo>`) : ce qu'il
  * laisserait passer serait public. Le serveur entier (`createApp`), sur des bases neuves dans le
- * dossier temporaire de `setup.ts`, avec le compte créé comme à la première visite et un premier
- * envoi ; chaque test part de la version du moment, dans n'importe quel ordre.
+ * dossier temporaire de `setup.ts`, avec un compte créé comme à l'inscription et un premier envoi ;
+ * chaque test part de la version du moment, dans n'importe quel ordre.
  */
 
 import { afterAll, describe, expect, spyOn, test } from 'bun:test'
@@ -26,22 +27,39 @@ const { data, app } = testBases()
 const server = createApp({ data, app, accounts: await createAuth(app) })
 const ORIGIN = process.env.BETTER_AUTH_URL!
 
-const signUp = await server.handle(
-  new Request(`${ORIGIN}/api/auth/sign-up/email`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Origin: ORIGIN },
-    body: JSON.stringify({
-      email: process.env.ACCOUNT_EMAIL,
-      password: 'mot-de-passe-d-essai',
-      name: 'Sacha',
+const PASSWORD = 'mot-de-passe-d-essai'
+
+/** Une action du compte (`/api/auth/…`), du site, avec la session `cookie`. */
+const authCall = (path: string, body: unknown, cookie = '') =>
+  server.handle(
+    new Request(`${ORIGIN}/api/auth/${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie },
+      body: JSON.stringify(body),
     }),
-  }),
-)
-/** La session ouverte à la création du compte. */
-const cookie = signUp.headers
-  .getSetCookie()
-  .map((line) => line.split(';')[0])
-  .join('; ')
+  )
+
+/**
+ * Un compte créé comme à l'inscription (le pseudo deux fois, l'e-mail vide : le serveur en donne
+ * une), sa réponse, son id et la session ouverte avec lui.
+ */
+async function createAccount(pseudo: string) {
+  const response = await authCall('sign-up/email', {
+    name: pseudo,
+    username: pseudo,
+    email: '',
+    password: PASSWORD,
+  })
+  const body = (await response.clone().json()) as { user?: { id: string; email: string } }
+  const cookie = response.headers
+    .getSetCookie()
+    .map((line) => line.split(';')[0])
+    .join('; ')
+  return { response, user: body.user, cookie }
+}
+
+const signUp = await createAccount('Sacha')
+const cookie = signUp.cookie
 
 /** `/api/collection`, du site et avec la session ; `headers` s'y ajoute ou les remplace. */
 const collection = (method: 'GET' | 'PUT', body?: unknown, headers: Record<string, string> = {}) =>
@@ -92,7 +110,7 @@ const afterFirst = await stored()
 
 describe('/api/collection : jamais une version écrasée', () => {
   test('le compte créé, parti de la version 0 : enregistré, version 1, avec son empreinte', () => {
-    expect(signUp.status).toBe(200)
+    expect(signUp.response.status).toBe(200)
     expect(saved.status).toBe(200)
     expect(savedBody).toEqual({ version: 1, tag: afterFirst.tag })
     expect(afterFirst.body).toEqual({ version: 1, ...first } satisfies CollectionResponse)
@@ -133,9 +151,9 @@ describe('/api/collection : jamais une version écrasée', () => {
     expect(stale.status).toBe(409)
     expect(await stored()).toEqual(after)
     // La version remplacée est gardée (une par heure au plus), pour revenir en arrière à la main.
-    const kept = app.query('SELECT MIN(version) AS version FROM collection_versions').get() as {
-      version: number | null
-    }
+    const kept = app
+      .query('SELECT MIN(version) AS version FROM collection_versions WHERE user_id = ?')
+      .get(signUp.user!.id) as { version: number | null }
     expect(kept.version).not.toBeNull()
     expect(kept.version!).toBeLessThan(after.body.version)
   })
@@ -195,12 +213,69 @@ describe('/api/collection : jamais une version écrasée', () => {
   })
 })
 
-describe('/api/vitrine : ce que voit un visiteur', () => {
-  const visit = async () => {
-    const response = await server.handle(new Request(`${ORIGIN}/api/vitrine`))
+describe('les comptes : chacun le sien', () => {
+  test('pas d’e-mail : le serveur en donne une sans boîte, propre au compte', () => {
+    expect(signUp.user!.email).toMatch(/^[0-9a-f-]{36}@pokedex\.invalid$/)
+  })
+
+  test('un pseudo déjà pris, même autrement écrit : refusé, rien de créé', async () => {
+    const { response } = await createAccount('SACHA')
+    expect(response.status).toBe(400)
+    expect(((await response.json()) as { code: string }).code).toBe('USERNAME_IS_ALREADY_TAKEN')
+    const count = app.query('SELECT COUNT(*) AS count FROM "user" WHERE username = ?').get('sacha')
+    expect(count).toEqual({ count: 1 })
+  })
+
+  test('un autre compte ne voit ni ne touche la collection du premier', async () => {
+    const before = await stored()
+    const ondine = await createAccount('Ondine')
+    const asOndine = { Cookie: ondine.cookie }
+    const empty = await collection('GET', undefined, asOndine)
+    expect((await empty.json()) as CollectionResponse).toEqual({
+      version: 0,
+      collection: null,
+      shopping: null,
+    })
+    expect((await collection('PUT', { baseVersion: 0, ...second }, asOndine)).status).toBe(200)
+    expect(await stored()).toEqual(before)
+    const ondineSees = (await (
+      await collection('GET', undefined, asOndine)
+    ).json()) as CollectionResponse
+    expect(ondineSees).toEqual({ version: 1, ...second })
+  })
+
+  test('supprimé avec son mot de passe : son compte, sa collection et son Pokédex public partent', async () => {
+    const pierre = await createAccount('Pierre')
+    const asPierre = { Cookie: pierre.cookie }
+    expect((await collection('PUT', { baseVersion: 0, ...first }, asPierre)).status).toBe(200)
+    // Sans mot de passe, ou avec un faux : rien ne part.
+    expect((await authCall('delete-user', {}, pierre.cookie)).status).toBe(400)
+    expect((await authCall('delete-user', { password: 'faux' }, pierre.cookie)).status).toBe(400)
+    expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/pierre`))).status).toBe(200)
+
+    expect((await authCall('delete-user', { password: PASSWORD }, pierre.cookie)).status).toBe(200)
+    const left = (table: string) =>
+      app.query(`SELECT COUNT(*) AS count FROM ${table} WHERE user_id = ?`).get(pierre.user!.id)
+    expect(left('collections')).toEqual({ count: 0 })
+    expect(left('collection_versions')).toEqual({ count: 0 })
+    expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/pierre`))).status).toBe(404)
+    expect((await collection('GET', undefined, asPierre)).status).toBe(401)
+  })
+})
+
+describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
+  const visit = async (pseudo = 'sacha') => {
+    const response = await server.handle(new Request(`${ORIGIN}/api/vitrine/${pseudo}`))
     expect(response.status).toBe(200)
     return (await response.json()) as VitrineData
   }
+
+  test('le Pokédex du pseudo, sans tenir compte des majuscules ; un pseudo à personne : 404', async () => {
+    expect((await visit('Sacha')).owner).toBe('Sacha')
+    expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/personne`))).status).toBe(404)
+    const preview = await server.handle(new Request(`${ORIGIN}/api/vitrine/personne/apercu`))
+    expect(preview.status).toBe(404)
+  })
 
   test('sans session : les cartes, jamais un prix payé, une commande ni un statut « commandée »', async () => {
     const shown = await visit()

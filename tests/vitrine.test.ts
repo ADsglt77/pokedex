@@ -62,6 +62,5 @@ describe('vitrineSummary', () => {
     expect(summary.description).toStartWith('1 Pokémon débloqué sur 1')
     expect(JSON.stringify(summary)).not.toMatch(/30|12|commandée/)
     expect(vitrineSummary('Adrien', collection).title).toBe('Le Pokédex d’Adrien')
-    expect(vitrineSummary(null, collection).title).toBe('Un Pokédex de cartes japonaises')
   })
 })

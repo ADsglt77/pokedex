@@ -1,11 +1,18 @@
 import { Button, Input, Stack } from '@camply/ui'
+import { Trash2 } from '@camply/ui/icons'
 import { useRef, useState, type FormEvent } from 'react'
 import { flushSync } from 'react-dom'
+import { useNavigate } from 'react-router'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { ExportCollectionButton } from '@/components/ExportCollectionButton'
+import { PSEUDO, PSEUDO_HINT } from '@/config/account'
 import { useNotify } from '@/hooks/useNotify'
 import { authCall, authClient } from '@/lib/auth'
-import { refusalMessage } from '@/lib/account'
+import { PSEUDO_TAKEN, refusalMessage } from '@/lib/account'
+import { vitrinePath } from '@/lib/filters'
 import { pokedexTitle } from '@/lib/format'
-import { markExpired, renameAccount, useSyncStore } from '@/store/sync'
+import { accountDeleted, markExpired, renameAccount, useSyncStore } from '@/store/sync'
+import { DataSection } from './DataSection'
 
 /**
  * Sans session (401) : une connexion sur un autre appareil a fermé celle-ci (une seule à la
@@ -13,27 +20,24 @@ import { markExpired, renameAccount, useSyncStore } from '@/store/sync'
  */
 const EXPIRED =
   'Session expirée (connexion sur un autre appareil ?) : reconnectez-vous depuis le menu du compte.'
-import { DataSection } from './DataSection'
 
 /**
- * Mon compte : le pseudo (« Le Pokédex de … », sur le Pokédex public) et le mot de passe. Le site
- * n'envoie pas d'e-mail : pas de mot de passe oublié, on le change ici en donnant l'actuel.
+ * Mon compte : le pseudo (« Le Pokédex de … » et l'adresse du Pokédex public), le mot de passe, et
+ * la suppression du compte. Le site n'envoie pas d'e-mail : pas de mot de passe oublié, on le
+ * change ici en donnant l'actuel.
  */
 export function AccountSection() {
-  const account = useSyncStore((state) => state.account)
+  const name = useSyncStore((state) => state.account?.name ?? '')
   return (
     <DataSection
       id="compte"
       title="Mon compte"
-      description={
-        account?.email
-          ? `Connecté avec ${account.email}. Le site n’envoie pas d’e-mail : gardez bien votre mot de passe.`
-          : 'Le site n’envoie pas d’e-mail : gardez bien votre mot de passe.'
-      }
+      description="Le site n’envoie pas d’e-mail : gardez bien votre mot de passe, sans lui le compte ne se récupère pas."
     >
       <Stack gap={6}>
-        <NameForm current={account?.name ?? ''} />
+        <NameForm current={name} />
         <PasswordForm />
+        <DeleteForm />
       </Stack>
     </DataSection>
   )
@@ -43,24 +47,28 @@ function NameForm({ current }: { current: string }) {
   const notify = useNotify()
   const [name, setName] = useState(current)
   const [busy, setBusy] = useState(false)
-  const next = name.trim()
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     setBusy(true)
-    const { error } = await authCall(() => authClient.updateUser({ name: next }))
+    const { error } = await authCall(() => authClient.updateUser({ name, username: name }))
     setBusy(false)
     if (error?.status === 401) markExpired()
     if (error) {
-      const message = refusalMessage(
-        { 401: EXPIRED },
-        error.status,
-        'Pseudo inchangé : réessayez plus tard.',
-      )
+      const message =
+        error.code === PSEUDO_TAKEN
+          ? 'Ce pseudo est déjà pris : choisissez-en un autre.'
+          : refusalMessage(
+              { 400: `Pseudo refusé : ${PSEUDO_HINT}`, 401: EXPIRED },
+              error.status,
+              'Pseudo inchangé : réessayez plus tard.',
+            )
       return notify(message, { tone: 'danger' })
     }
-    renameAccount(next)
-    notify(`Pseudo changé : « ${pokedexTitle(next)} ».`)
+    renameAccount(name)
+    notify(
+      `Pseudo changé : « ${pokedexTitle(name)} », à l’adresse ${location.host}${vitrinePath(name)}.`,
+    )
   }
 
   return (
@@ -68,19 +76,21 @@ function NameForm({ current }: { current: string }) {
       <Stack gap={3} align="start">
         <Input
           label="Pseudo"
-          hint="Montré sur le Pokédex public : « Le Pokédex de … »."
-          autoComplete="nickname"
-          maxLength={40}
+          hint={`${PSEUDO_HINT} Le titre de votre Pokédex public (« Le Pokédex de … ») et son adresse.`}
+          autoComplete="username"
+          minLength={PSEUDO.min}
+          maxLength={PSEUDO.max}
+          pattern={PSEUDO.pattern}
           required
           value={name}
-          onChange={(event) => setName(event.target.value)}
+          onChange={(event) => setName(event.target.value.trim())}
         />
         <Button
           type="submit"
           size="sm"
           variant="secondary"
           loading={busy}
-          disabled={!next || next === current}
+          disabled={!name || name === current}
         >
           Changer le pseudo
         </Button>
@@ -90,15 +100,14 @@ function NameForm({ current }: { current: string }) {
 }
 
 /**
- * Le message d'un refus, d'après la réponse du serveur : un mauvais mot de passe actuel (400), et
- * non une session expirée (401), qui ferait croire le mot de passe perdu (pas de « mot de passe
- * oublié »).
+ * Le message d'un refus, d'après la réponse du serveur : un mauvais mot de passe (400), et non une
+ * session expirée (401), qui ferait croire le mot de passe perdu (pas de « mot de passe oublié »).
  */
-const failure = (status: number) =>
+const failure = (status: number, wrongPassword: string) =>
   refusalMessage(
-    { 400: 'Mot de passe actuel incorrect.', 401: EXPIRED },
+    { 400: wrongPassword, 401: EXPIRED },
     status,
-    'Changement impossible pour le moment : réessayez plus tard.',
+    'Impossible pour le moment : réessayez plus tard.',
   )
 
 function PasswordForm() {
@@ -125,7 +134,7 @@ function PasswordForm() {
     if (refused?.status === 401) markExpired()
     if (refused) {
       // Le refus s'affiche sous le mot de passe actuel, qui reçoit le focus : il est lu avec lui.
-      flushSync(() => setError(failure(refused.status)))
+      flushSync(() => setError(failure(refused.status, 'Mot de passe actuel incorrect.')))
       currentField.current?.focus()
       return
     }
@@ -162,5 +171,85 @@ function PasswordForm() {
         </Button>
       </Stack>
     </form>
+  )
+}
+
+/**
+ * Supprimer le compte, avec son mot de passe et après confirmation : sa collection, ses achats et
+ * son Pokédex public partent du serveur, sans retour (l'export d'abord) ; puis il quitte ce
+ * navigateur (`accountDeleted`).
+ */
+function DeleteForm() {
+  const notify = useNotify()
+  const navigate = useNavigate()
+  const [password, setPassword] = useState('')
+  const [confirming, setConfirming] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const field = useRef<HTMLInputElement>(null)
+
+  const remove = async () => {
+    setBusy(true)
+    setError(null)
+    const { error: refused } = await authCall(() => authClient.deleteUser({ password }))
+    if (refused) {
+      setBusy(false)
+      if (refused.status === 401) markExpired()
+      flushSync(() => setError(failure(refused.status, 'Mot de passe incorrect.')))
+      field.current?.focus()
+      return
+    }
+    await accountDeleted()
+    notify('Votre compte est supprimé, avec sa collection.', { tone: 'info' })
+    navigate('/connexion', { replace: true })
+  }
+
+  return (
+    <>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault()
+          setConfirming(true)
+        }}
+      >
+        <Stack gap={3} align="start">
+          <Input
+            ref={field}
+            label="Supprimer mon compte"
+            hint="Votre mot de passe, pour confirmer."
+            type="password"
+            autoComplete="current-password"
+            required
+            error={error ?? undefined}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          <Button
+            type="submit"
+            size="sm"
+            variant="secondary"
+            tone="danger"
+            loading={busy}
+            leftIcon={<Trash2 size={14} />}
+          >
+            Supprimer mon compte
+          </Button>
+        </Stack>
+      </form>
+      <ConfirmDialog
+        open={confirming}
+        title="Supprimer votre compte ?"
+        confirmLabel="Supprimer mon compte"
+        onClose={() => setConfirming(false)}
+        onConfirm={() => void remove()}
+      >
+        <p>
+          Votre collection, vos achats, votre budget et votre Pokédex public sont effacés du
+          serveur, sans retour possible, et votre pseudo redevient libre. Exportez d’abord votre
+          collection pour la garder.
+        </p>
+        <ExportCollectionButton>Exporter ma collection</ExportCollectionButton>
+      </ConfirmDialog>
+    </>
   )
 }

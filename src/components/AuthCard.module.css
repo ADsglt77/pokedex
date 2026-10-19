@@ -1,4 +1,4 @@
-/* Connexion et première visite : la marque, puis une carte seule, centrées, à la largeur d'un
+/* Connexion et inscription : la marque, puis une carte seule, centrées, à la largeur d'un
    formulaire. */
 .page {
   display: grid;
@@ -12,6 +12,14 @@
 .card {
   width: 100%;
   max-width: 26rem;
+}
+
+/* Le pied de page, sous la carte, à sa largeur. */
+.footer {
+  max-width: 26rem;
+  color: var(--camply-text-muted-2);
+  font-size: var(--text-xs);
+  text-align: center;
 }
 
 /* Le titre de la page (camply n'a pas de `CardTitle` de niveau 1) : un `h1` à la taille d'un `h2`. */

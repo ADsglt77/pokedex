@@ -184,7 +184,7 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   `AppShell`, montrée après 0,3 s). La fenêtre d'une carte est préparée dès que le pointeur ou le
   focus arrive sur « Modifier la carte » (sur une fiche sans carte, quand le navigateur est libre),
   et une roue dit son ouverture si elle tarde. Le client Better Auth non plus (`lib/auth.ts`, à
-  part de `lib/account.ts` que lit le démarrage) : seules la connexion, la première visite et
+  part de `lib/account.ts` que lit le démarrage) : seules la connexion, l'inscription et
   Données › Mon compte l'importent, la déconnexion le charge à la demande. Une
   donnée chargée à la demande et lue par `use()` passe par `settled` : sans lui, React retient
   l'affichage environ 300 ms à chaque ouverture (fenêtre d'ajout, catalogue). La fiche d'un

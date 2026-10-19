@@ -3,16 +3,18 @@
  * `bun run dev:server`) : une ligne par évènement, alignée, à l'heure de Paris, son niveau en
  * symbole de couleur, son thème, un message court et ses détails en `clé=valeur` :
  *
- *   16/10 14:03:12  ✔  compte      Connexion                  email=moi@exemple.fr ip=1.2.3.4
+ *   16/10 14:03:12  ✔  compte      Connexion                  pseudo=sacha ip=1.2.3.4
  *
- * - `compte` : connexion (réussie, refusée, bloquée), création du compte (ou son refus),
- *   déconnexion, mot de passe et pseudo changés, ancienne session fermée (`auth.ts`) ;
- * - `collection` et `achats` : ce qui change dans le document synchronisé, comparé à la version
- *   d'avant (`documentChanges`, `collection.ts`) : cartes ajoutées, possédées, commandes, budget… ;
+ * - `compte` : connexion (réussie, refusée, bloquée), création d'un compte (ou son refus),
+ *   déconnexion, mot de passe et pseudo changés, compte supprimé, ancienne session fermée
+ *   (`auth.ts`) ;
+ * - `collection` et `achats` : ce qui change dans le document synchronisé d'un compte (`compte=`),
+ *   comparé à la version d'avant (`documentChanges`, `collection.ts`) : cartes ajoutées, possédées,
+ *   commandes, budget… ;
  * - `données` : l'export et l'import, que le navigateur signale (`POST /api/journal`) : le serveur
  *   ne les voit pas autrement ;
- * - `vitrine` : une visite du Pokédex public, un lien partagé lu par un robot d'aperçu (une ligne
- *   par visiteur et par heure au plus, `vitrine.ts`) ;
+ * - `vitrine` : une visite du Pokédex public d'un compte, un lien partagé lu par un robot
+ *   d'aperçu (une ligne par visiteur, par Pokédex et par heure au plus, `vitrine.ts`) ;
  * - `serveur` : une erreur imprévue de l'API ou de Better Auth, une image que sa source n'a pas
  *   donnée (`images.ts`).
  * Pas les requêtes une à une : seulement ce qui se passe.
@@ -242,15 +244,7 @@ function pixelRow(top: string, bottom: string) {
  * Le démarrage du serveur : la Poké Ball, et à côté l'adresse de l'API et du site, le compte (ou
  * où le créer), le mode, la version de Bun et le temps de démarrage. Sans couleurs, le texte seul.
  */
-export function banner({
-  api,
-  site,
-  account,
-}: {
-  api: string
-  site: string
-  account: string | null
-}) {
+export function banner({ api, site, accounts }: { api: string; site: string; accounts: number }) {
   const mode = process.env.NODE_ENV === 'production' ? 'production' : 'développement'
   const ready = formatInteger(Math.round(performance.now()))
   const text = [
@@ -259,7 +253,7 @@ export function banner({
     dim('─'.repeat(38)),
     `${dim('API     ')}${api}`,
     `${dim('Site    ')}${site}`,
-    `${dim('Compte  ')}${account ?? yellow(`à créer sur ${site}`)}`,
+    `${dim('Comptes ')}${accounts ? formatInteger(accounts) : yellow(`aucun : ${site}/inscription`)}`,
     dim(`${mode} · Bun ${Bun.version} · prêt en ${ready} ms`),
   ]
   const ball = COLOR

@@ -3,7 +3,8 @@
  * développement (`bun run dev:server`). Il lit `data.db`, que remplissent les tâches d'ingestion
  * (`ingest.ts`) ; il n'écrit que `app.db` (le compte, la collection synchronisée), les images
  * copiées à la demande et, à son démarrage, les étapes du schéma qui manquent aux deux bases. Les
- * données de référence sont publiques ; la collection exige la connexion. Au démarrage, il le dit
+ * données de référence et les Pokédex publics sont publics ; la collection exige la connexion. Au
+ * démarrage, il le dit
  * dans son journal (`banner`).
  */
 
@@ -16,10 +17,6 @@ if (!process.env.BETTER_AUTH_URL) {
   throw new Error('BETTER_AUTH_URL manque : l’adresse publique du site (voir server/auth.ts)')
 }
 if (process.env.NODE_ENV === 'production') {
-  // Le compte ne se crée qu'avec votre adresse : personne ne peut le prendre avant vous.
-  if (!process.env.ACCOUNT_EMAIL) {
-    throw new Error('ACCOUNT_EMAIL manque : l’adresse de votre compte (voir server/auth.ts)')
-  }
   // En http, les cookies ne seraient plus réservés au https, et l'origine attendue ne serait pas
   // celle du site : chaque modification serait refusée (403).
   if (!process.env.BETTER_AUTH_URL.startsWith('https://')) {
@@ -44,5 +41,5 @@ const server = createApp({ data, app, accounts }).listen({
 banner({
   api: String(server.server?.url),
   site: appOrigin(accounts.auth),
-  account: accounts.account(),
+  accounts: accounts.count(),
 })

@@ -1,9 +1,9 @@
-/* Le formulaire des pages de connexion et de première visite, sous le texte de leur carte. */
+/* Le formulaire des pages de connexion et d'inscription, sous le texte de leur carte. */
 .form {
   margin-top: var(--camply-space-5);
 }
 
-/* Le lien vers le Pokédex public, sous le formulaire de connexion. */
+/* Le lien vers l'autre page (inscription, connexion), sous le formulaire. */
 .back {
   display: block;
   margin-top: var(--camply-space-4);

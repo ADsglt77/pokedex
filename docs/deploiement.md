@@ -32,10 +32,9 @@ de Bun n'en gardent aucun, `cap_drop: [ALL]` ; `server` est sain tant que `/api/
 - `pokedex` : le site sur `127.0.0.1:${POKEDEX_PORT:-8080}`, que le tunnel publie ;
 - `server` : l'API, qui lit la base du volume `db`, y garde le compte et la collection (`app.db`),
   et copie à la demande dans le volume `images` ; ses secrets (`BETTER_AUTH_URL`, l'adresse
-  publique en https, `BETTER_AUTH_SECRET` et `ACCOUNT_EMAIL`, la seule adresse qui crée le compte)
-  viennent du `.env` du clone (ignoré par git) : sans
-  eux, docker compose refuse de démarrer (le compte et `ACCOUNT_EMAIL` :
-  `docs/compte-et-synchronisation.md`). Son journal (`server/journal.ts` :
+  publique en https, et `BETTER_AUTH_SECRET`) viennent du `.env` du clone (ignoré par git) : sans
+  eux, docker compose refuse de démarrer (les comptes : `docs/compte-et-synchronisation.md`). Son
+  journal (`server/journal.ts` :
   connexions, cartes, commandes, exports…) : `docker compose logs -f server` ;
 - `ingest` : `server/ingest.ts --loop`, les tâches à leur rythme, dans les volumes `db`, `images`
   et `backups`. Dans l'ordre d'`INGEST_JOBS` (`config/jobs.ts`) : espèces chaque mois, catalogue
@@ -73,7 +72,6 @@ Les variables d'environnement :
 |---|---|---|---|
 | `BETTER_AUTH_URL` | (exigée) | `server` | L'adresse publique du site, en https en production (le serveur refuse de démarrer sinon) ; en développement, celle de Vite |
 | `BETTER_AUTH_SECRET` | (exigée en production) | `server` | La clé des sessions, 32 caractères au moins en production (`openssl rand -base64 32`) |
-| `ACCOUNT_EMAIL` | (exigée en production) | `server` | La seule adresse qui peut créer le compte |
 | `PORT` | `3000` | `server` | Le port de l'API (nginx et Vite visent 3000 : à ne changer qu'avec eux) |
 | `HOST` | `127.0.0.1` | `server` | L'adresse d'écoute ; `0.0.0.0` dans le conteneur (`Dockerfile`), que nginx joint |
 | `DATA_DIR` | `.data` (`/data` dans Docker) | `server`, `ingest` | Les bases SQLite et le cache des téléchargements |

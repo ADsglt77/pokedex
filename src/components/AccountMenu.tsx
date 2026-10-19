@@ -8,7 +8,6 @@ import { SyncConflictDialog } from '@/components/SyncConflictDialog'
 import { useNotify } from '@/hooks/useNotify'
 import { loginPath } from '@/lib/account'
 import { cx } from '@/lib/cx'
-import { details } from '@/lib/format'
 import {
   hasUnsentChanges,
   setConflictQuestion,
@@ -88,7 +87,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
     setLeaving(false)
     if (done) {
       notify('Vous êtes déconnecté : votre collection reste sur le serveur.', { tone: 'info' })
-      navigate('/vitrine', { replace: true })
+      navigate('/connexion', { replace: true })
     } else {
       notify('Déconnexion impossible : le serveur ne répond pas.', { tone: 'danger' })
     }
@@ -122,8 +121,8 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
           </Button>
         }
       >
-        <MenuLabel uppercase={false} className={styles.email}>
-          {details(account.name, account.email)}
+        <MenuLabel uppercase={false} className={styles.name}>
+          {account.name}
         </MenuLabel>
         <MenuLabel uppercase={false} className={styles.text}>
           {text}

@@ -21,9 +21,9 @@ const SECTIONS = [
 ]
 
 /**
- * Données : la collection, le compte (pseudo, mot de passe), le Pokédex public, la sauvegarde
- * (export, import), les données du serveur, l'effacement. Un sommaire (collé à gauche sur grand
- * écran) mène à chaque section.
+ * Données : la collection, le compte (pseudo, mot de passe, suppression), le Pokédex public, la
+ * sauvegarde (export, import), les données du serveur, l'effacement. Un sommaire (collé à gauche
+ * sur grand écran) mène à chaque section.
  */
 export function DataPage() {
   return (

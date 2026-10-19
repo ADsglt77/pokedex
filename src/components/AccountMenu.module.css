@@ -9,8 +9,8 @@
   width: 100%;
 }
 
-/* L'adresse du compte et la phrase d'état : en casse normale, sur plusieurs lignes au besoin. */
-.email,
+/* Le pseudo du compte et la phrase d'état : en casse normale, sur plusieurs lignes au besoin. */
+.name,
 .text {
   max-width: 17rem;
 }

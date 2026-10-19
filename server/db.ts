@@ -296,6 +296,11 @@ export const APP_STEPS = [
   ALTER TABLE collections DROP COLUMN public;
   `,
   FINGERPRINTS_STEP,
+  `
+  -- Chacun crée son compte (octobre 2026) : plus de limite à un seul (\`auth.ts\` posait ce
+  -- déclencheur sur la table de Better Auth).
+  DROP TRIGGER IF EXISTS one_account;
+  `,
 ]
 
 const userVersion = (db: Database) =>

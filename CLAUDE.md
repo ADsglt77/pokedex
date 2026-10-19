@@ -6,9 +6,9 @@ Pokémon, ou à la main (sa référence, d'où son image est retrouvée, et son 
 prix). Un Pokémon est « débloqué » quand sa
 carte est possédée. React 19 + Vite + TypeScript, UI `@camply/ui`, espèces PokéAPI, catalogue et
 images Pokécardex, prix Cardmarket : tout passe par le serveur de l'app (Elysia, SQLite,
-`server/`), le navigateur ne parle qu'à lui. Connecté (Better Auth), la
-collection est synchronisée entre vos appareils ; sans connexion, on ne voit que le Pokédex
-public (`/vitrine`, la page d'accueil d'un visiteur).
+`server/`), le navigateur ne parle qu'à lui. Chacun crée son compte (Better Auth : pseudo et mot
+de passe, sans e-mail) ; connecté, sa collection est synchronisée entre ses appareils ; sans
+connexion, on ne voit que la connexion et le Pokédex public de chaque compte (`/@pseudo`).
 
 ## Commandes
 
@@ -50,8 +50,9 @@ bun run ingest images  # copie les images (≈ 1,5 Go ; inutile en développemen
   reprise entre onglets (`persist` : une valeur reprise d'un autre onglet n'est jamais réécrite,
   sans quoi les dernières modifications se perdraient : `tests/persist.test.ts`), retrait d'une
   carte TAG TEAM (son statut et son prix payé restent à ses autres Pokémon) et les règles de la
-  collection et des commandes, qui ne modifient jamais ce qu'elles reçoivent (« Annuler ») ; ce
-  que montre le Pokédex public (ce qu'il laisserait passer serait public ; ses règles et sa route) ;
+  collection et des commandes, qui ne modifient jamais ce qu'elles reçoivent (« Annuler ») ; les
+  comptes (chacun ne touche qu'à sa collection, qui part avec lui) et ce que montre le Pokédex
+  public de chacun (ce qu'il laisserait passer serait public ; ses règles et sa route) ;
   et l'historique des prix (`server/history.ts`, irremplaçable : Cardmarket n'en garde pas ; son
   écriture quotidienne, `savePriceGuide` ; sa relecture pour la courbe de la valeur,
   `historiesOf` ; les étapes du schéma, qui gardent les lignes d'une base remplie :
@@ -70,7 +71,8 @@ bun run ingest images  # copie les images (≈ 1,5 Go ; inutile en développemen
   TCGplayer retirés). L'accord de Pokécardex (octobre 2026) : lire tout ce qu'on veut sur son site
   (ses pages chiffrent leurs données : on les déchiffre comme son propre JavaScript, avec sa clé
   relue dans ce JavaScript), utiliser ses images à condition de les **héberger chez nous** (jamais
-  affichées depuis ses serveurs) ; payé par l'utilisateur (octobre 2026), il ne demande aucun
+  affichées depuis ses serveurs) ; il vaut aussi pour le site ouvert à tous (confirmé par
+  Pokécardex, octobre 2026) ; payé par l'utilisateur (octobre 2026), il ne demande aucun
   crédit : **l'app ne cite aucune source** (crédits de Pokécardex et de PokéAPI retirés à sa
   demande ; le pied de page ne dit que ce que le site n'est pas, `SiteDisclaimer`). Seulement des cartes japonaises (pas les françaises de Pokécardex, son choix). Ne pas
   réintroduire le reste sans demande.
@@ -106,7 +108,8 @@ bun run ingest images  # copie les images (≈ 1,5 Go ; inutile en développemen
   dire précisément quoi (pages, rythme, méthode). Jamais de CAPTCHA ni de défi anti-robot
   (Cloudflare…), même avec un accord. Sources convenues : PokéAPI, Pokécardex (pages et images),
   les fichiers publics de Cardmarket.
-- Cardmarket : seulement les fichiers publics (guide des prix, liste des produits). Pas de
+- Cardmarket : seulement les fichiers publics (guide des prix, liste des produits) ; leurs prix
+  peuvent se montrer sur le site ouvert à tous, sans citer Cardmarket (son accord, octobre 2026). Pas de
   scraping, pas d'API (fermée), pas de panier ni de commande à distance. Un seul lien Cardmarket
   construit : la page d'un produit par son id (`cardmarketPage` :
   `/fr/Pokemon/Products?idProduct=…`, vérifié par l'utilisateur en octobre 2026, le site bloquant
@@ -151,7 +154,7 @@ tenir à jour avec le code.
 | Cartes, catalogue, images | [docs/cartes.md](docs/cartes.md) | Une carte par Pokémon (`manual:<uuid>`), choisie par l'utilisateur : catalogue Pokécardex ou saisie ; images copiées chez nous (`/images/…`), jamais affichées depuis Pokécardex |
 | Prix, historique, état des données | [docs/prix.md](docs/prix.md) | Guide public Cardmarket du jour ; l'historique n'existe que relevé par le serveur (Cardmarket n'en garde pas) ; aucun prix inventé ; `/api/histories` : la courbe de la valeur en une demande, relue dans l'ordre des cartes ; `/api/status`, `/api/health` ; `/api/wants` : la version suit l'ordre des numéros imprimés (pas des ids), jamais une ligne qui pourrait désigner une autre carte |
 | Collection, achats, commandes, budget | [docs/collection-et-achats.md](docs/collection-et-achats.md) | Clés `pokedex-collection.collection` et `.shopping` : ne pas changer leur format ; `applyOrder` ; une possession n'est jamais retirée ; un import demande toujours confirmation |
-| Compte, synchronisation, Pokédex public | [docs/compte-et-synchronisation.md](docs/compte-et-synchronisation.md) | Un seul compte, une session ; un document numéroté, avec son empreinte, `decide` testé, jamais de fusion ; une collection illisible n'est jamais envoyée ; `/vitrine` ne montre jamais un prix payé ni un achat |
+| Compte, synchronisation, Pokédex public | [docs/compte-et-synchronisation.md](docs/compte-et-synchronisation.md) | Un compte par personne (pseudo et mot de passe, sans e-mail), une session ; chacun ne touche qu'à sa collection ; un document numéroté, avec son empreinte, `decide` testé, jamais de fusion ; une collection illisible n'est jamais envoyée ; `/@pseudo` ne montre jamais un prix payé ni un achat |
 | Interface, filtres, performance | [docs/interface.md](docs/interface.md) | Système de design (`global.css`, `theme.css`) ; 1 025 pochettes (`content-visibility`, `settled`) ; filtres dans l'adresse ; courbes jour par jour |
 | Déploiement, sauvegardes | [docs/deploiement.md](docs/deploiement.md), README | Docker sur le VPS derrière un tunnel Cloudflare ; conteneurs sans droits d'administrateur ; politique de sécurité du contenu ; **jamais `docker compose down -v`** (les volumes `db` et `backups` sont irremplaçables) |
 

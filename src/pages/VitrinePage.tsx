@@ -1,7 +1,17 @@
 import { Button, EmptyState, RadialProgress, SegmentedControl, Skeleton, Stat } from '@camply/ui'
-import { CloudOff, Flag, House, Layers, Lock, LogIn, Wallet } from '@camply/ui/icons'
+import {
+  CloudOff,
+  Flag,
+  House,
+  Layers,
+  Lock,
+  LogIn,
+  SearchX,
+  UserPlus,
+  Wallet,
+} from '@camply/ui/icons'
 import { Suspense, use, useMemo, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useParams } from 'react-router'
 import { ChartPeriodControl } from '@/components/ChartParts'
 import { Logo } from '@/components/Logo'
 import { Panel } from '@/components/Panel'
@@ -12,9 +22,10 @@ import { SiteDisclaimer } from '@/components/SiteDisclaimer'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { UnlockedChart } from '@/components/UnlockedChart'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
-import { getJson } from '@/lib/api'
+import { getJson, requestFailed } from '@/lib/api'
 import type { ChartPeriod } from '@/lib/chart'
 import { cx } from '@/lib/cx'
+import { vitrinePseudo } from '@/lib/filters'
 import {
   formatDate,
   formatEuro,
@@ -33,13 +44,16 @@ import styles from './VitrinePage.module.css'
 import { useStatSize } from '@/hooks/useStatSize'
 
 /**
- * `/vitrine` : le Pokédex public, toujours montré, la page d'accueil d'un visiteur ; en lecture
- * seule, hors de la coquille : la progression, la valeur au prix du jour, la courbe des Pokémon
- * débloqués et le classeur, d'après ce que le serveur montre (`server/vitrine.ts`). En tête, « Se
- * connecter », ou, connecté, « Mon Pokédex ». Pas proposé aux moteurs de recherche.
+ * `/@pseudo` : le Pokédex public d'un compte, toujours montré ; en lecture seule, hors de la
+ * coquille : la progression, la valeur au prix du jour, la courbe des Pokémon débloqués et le
+ * classeur, d'après ce que le serveur montre (`server/vitrine.ts`). En tête, « Se connecter » et
+ * « Créer un compte », ou, connecté, « Mon Pokédex ». Une autre adresse d'un seul segment
+ * (`/achat`), que le routeur y mène aussi : une page introuvable. Pas proposé aux moteurs de
+ * recherche.
  */
 export function VitrinePage() {
   const signedIn = useSyncStore((state) => state.account !== null)
+  const pseudo = vitrinePseudo(useParams().handle!)
   return (
     <div className={cx('container', styles.page)}>
       <meta name="robots" content="noindex" />
@@ -50,15 +64,24 @@ export function VitrinePage() {
             <Link to="/">Mon Pokédex</Link>
           </Button>
         ) : (
-          <Button asChild size="sm" variant="ghost" leftIcon={<LogIn size={16} />}>
-            <Link to="/connexion">Se connecter</Link>
-          </Button>
+          <div className={styles.actions}>
+            <Button asChild size="sm" variant="ghost" leftIcon={<LogIn size={16} />}>
+              <Link to="/connexion">Se connecter</Link>
+            </Button>
+            <Button asChild size="sm" variant="secondary" leftIcon={<UserPlus size={16} />}>
+              <Link to="/inscription">Créer un compte</Link>
+            </Button>
+          </div>
         )}
       </header>
       <main className={styles.main}>
-        <Suspense fallback={<VitrineSkeleton />}>
-          <VitrineContent />
-        </Suspense>
+        {pseudo ? (
+          <Suspense fallback={<VitrineSkeleton />}>
+            <VitrineContent key={pseudo} pseudo={pseudo} />
+          </Suspense>
+        ) : (
+          <Missing vitrine={false} />
+        )}
       </main>
       <footer className={styles.footer}>
         <SiteDisclaimer />
@@ -90,24 +113,52 @@ function VitrineSkeleton() {
   )
 }
 
-function VitrineContent() {
-  const shown = use(getJson<VitrineData>('/api/vitrine'))
-  if (!shown) {
-    // camply n'offre pas de titre `h1` à `EmptyState` : celui de la page, pour les lecteurs d'écran.
-    return (
-      <>
-        <title>{pageTitle('Pokédex public')}</title>
-        <h1 className="visually-hidden">Pokédex public</h1>
-        <EmptyState
-          headingLevel={2}
-          icon={<CloudOff size={22} />}
-          title="Le Pokédex ne peut pas s’afficher"
-          description="Le serveur ne répond pas pour le moment : réessayez dans un instant."
-        />
-      </>
-    )
-  }
-  return <Vitrine {...shown} />
+/**
+ * Une adresse sans Pokédex (`vitrine`) : un pseudo qui n'est à personne (ou plus : compte
+ * supprimé, pseudo changé) ; sinon une autre page inconnue. camply n'offre pas de titre `h1` à
+ * `EmptyState` : celui de la page, pour les lecteurs d'écran.
+ */
+function Missing({ vitrine }: { vitrine: boolean }) {
+  return (
+    <>
+      <title>{pageTitle('Page introuvable')}</title>
+      <h1 className="visually-hidden">Page introuvable</h1>
+      <EmptyState
+        headingLevel={2}
+        icon={<SearchX size={22} />}
+        title={vitrine ? 'Aucun Pokédex à cette adresse' : 'Cette page n’existe pas'}
+        description={
+          vitrine
+            ? 'Vérifiez le pseudo : il a pu changer, ou le compte être supprimé.'
+            : 'L’adresse ne correspond à aucune page du site.'
+        }
+        actions={
+          <Button asChild>
+            <Link to="/">Revenir à l’accueil</Link>
+          </Button>
+        }
+      />
+    </>
+  )
+}
+
+function VitrineContent({ pseudo }: { pseudo: string }) {
+  const url = `/api/vitrine/${pseudo}`
+  const shown = use(getJson<VitrineData>(url))
+  if (shown) return <Vitrine {...shown} />
+  if (!requestFailed(url)) return <Missing vitrine />
+  return (
+    <>
+      <title>{pageTitle('Pokédex public')}</title>
+      <h1 className="visually-hidden">Pokédex public</h1>
+      <EmptyState
+        headingLevel={2}
+        icon={<CloudOff size={22} />}
+        title="Le Pokédex ne peut pas s’afficher"
+        description="Le serveur ne répond pas pour le moment : réessayez dans un instant."
+      />
+    </>
+  )
 }
 
 type Shown = 'all' | 'unlocked' | 'chosen'
@@ -121,7 +172,7 @@ const isChosen = (entry: PokedexEntry) => entry.card !== null && !entry.unlocked
  */
 function Vitrine({ owner, collection, prices }: VitrineData) {
   const statSize = useStatSize()
-  const heading = owner ? pokedexTitle(owner) : 'Un Pokédex de cartes japonaises'
+  const heading = pokedexTitle(owner)
   const { entries, progress, generations } = useMemo(() => buildPokedex(collection), [collection])
   const owned = useMemo(
     () => tallyByStatus(trackedCards(collection, prices)).owned,

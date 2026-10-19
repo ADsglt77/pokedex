@@ -14,6 +14,14 @@
   gap: 1rem;
 }
 
+/* Se connecter, créer un compte : côte à côte, l'un sous l'autre s'il le faut. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--camply-space-2);
+}
+
 .main {
   flex: 1;
 }

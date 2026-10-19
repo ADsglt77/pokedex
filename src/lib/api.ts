@@ -67,6 +67,10 @@ export function getJson<T>(url: string, timeout?: number): Promise<T | null> {
 export function forget(url: string) {
   requests.delete(url)
 }
+
+/** La réponse de `url` (`getJson`) manque-t-elle par une panne passagère, et non un 404 ? */
+export const requestFailed = (url: string) => requests.get(url)?.failedAt !== undefined
+
 /**
  * Une réponse demandée à chaque appel, jamais celle d'un cache (« Réessayer » la redemande aussitôt,
  * pas une minute après comme `getJson`) : `null` si le serveur ne répond pas en 10 s, ou par une

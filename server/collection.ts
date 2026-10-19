@@ -86,7 +86,7 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
             topic: 'collection',
             level: 'error',
             message: 'Envoi refusé',
-            details: { raison: problem },
+            details: { compte: user.username ?? undefined, raison: problem },
           })
           return json('null', 400)
         }
@@ -129,11 +129,16 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
             topic: 'collection',
             level: 'warn',
             message: 'Envoi refusé',
-            details: { raison: 'conflit, changée ailleurs entre-temps' },
+            details: {
+              compte: user.username ?? undefined,
+              raison: 'conflit, changée ailleurs entre-temps',
+            },
           })
           return json('null', 409)
         }
-        for (const change of documentChanges(result.previous ?? null, document)) journal(change)
+        for (const change of documentChanges(result.previous ?? null, document)) {
+          journal({ ...change, details: { compte: user.username ?? undefined, ...change.details } })
+        }
         const answer: CollectionSaved = { version: result.version, tag: result.tag }
         return json(JSON.stringify(answer))
       },

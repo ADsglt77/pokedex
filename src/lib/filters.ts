@@ -2,9 +2,11 @@
  * Les filtres de la page Pokédex : leur place dans l'adresse, leur application aux Pokémon, la
  * recherche par nom ou numéro. Et les adresses de l'app : le Pokédex filtré (`pokedexUrl`), la
  * fiche d'un Pokémon (`speciesPath`), les onglets des Achats et les filtres de leur liste
- * d'achats (`parseShopping`, `shoppingUrl`).
+ * d'achats (`parseShopping`, `shoppingUrl`), le Pokédex public d'un compte (`vitrinePath`,
+ * `vitrinePseudo`).
  */
 
+import { PSEUDO } from '@/config/account'
 import { generationById, POKEMON_TYPES, type Generation } from '@/config/pokedex'
 import { SPECIES } from '@/lib/species'
 import type { PokedexEntry } from '@/lib/pokedex'
@@ -74,6 +76,14 @@ export function pokedexUrl(filters: Partial<PokedexFilters>): string {
 
 /** La fiche d'un Pokémon : `/pokemon/25`. */
 export const speciesPath = (id: number) => `/pokemon/${id}`
+
+/** Le Pokédex public d'un compte : `/@sacha`, son pseudo en minuscules. */
+export const vitrinePath = (pseudo: string) => `/@${pseudo.toLowerCase()}`
+
+const VITRINE = new RegExp(`^@(${PSEUDO.pattern})$`)
+
+/** Le pseudo d'une adresse `/@sacha` (`handle` : « @sacha ») ; `null` pour une autre adresse. */
+export const vitrinePseudo = (handle: string) => VITRINE.exec(handle)?.[1] ?? null
 
 /** Les onglets des Achats, dans l'adresse (`?vue=`) ; la liste d'achats est celui par défaut. */
 const SHOPPING_VIEWS = ['liste', 'prochaine-commande', 'commandes', 'budget'] as const

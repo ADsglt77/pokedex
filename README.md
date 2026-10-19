@@ -43,8 +43,11 @@ bun run format   # Prettier
   Cardmarket) ; registre
   des commandes (Cardmarket, Myutsu, Hikaru…) qui met à jour les statuts, suivi du budget par mois
   et par fournisseur.
-- **Pokédex public** : la page d'accueil d'un visiteur, en lecture seule (`/vitrine`, toujours
-  publique) : progression, régions, valeur au prix du jour, courbe et classeur. Jamais les prix
+- **Comptes** : chacun crée le sien (`/inscription`), un pseudo et un mot de passe, sans e-mail
+  (pas de mot de passe oublié) ; le pseudo, le mot de passe et la suppression du compte dans
+  Données › Mon compte.
+- **Pokédex public** : celui de chaque compte, à son adresse (`/@pseudo`, toujours public), en
+  lecture seule : progression, régions, valeur au prix du jour, courbe et classeur. Jamais les prix
   payés, les commandes ni le budget. Le reste du site demande d'être connecté.
 - **Thème** : sombre (gris foncé et jaune) ou clair (blanc pastel et rouge), au bouton de la
   barre ; sans choix, celui du système.
@@ -86,17 +89,16 @@ par git) :
 ```sh
 BETTER_AUTH_URL=http://localhost:5173
 BETTER_AUTH_SECRET=…        # openssl rand -base64 32
-ACCOUNT_EMAIL=moi@exemple.fr   # facultatif en développement : la seule adresse qui crée le compte
 ```
 
-Au premier lancement, le site n'a pas de compte : toute page mène à `/bienvenue`, où vous créez le
-vôtre (pseudo, e-mail, mot de passe) ; le premier créé est le seul. Pseudo et mot de passe se
-changent ensuite dans Données › Mon compte. La documentation de l'API
-(Elysia, OpenAPI) est à `http://localhost:5173/api/docs`, en développement seulement.
+Un visiteur arrive sur la connexion ; `/inscription` crée un compte (pseudo, mot de passe). Pseudo
+et mot de passe se changent ensuite dans Données › Mon compte, où le compte se supprime aussi. La
+documentation de l'API (Elysia, OpenAPI) est à `http://localhost:5173/api/docs`, en développement
+seulement.
 
-Votre collection : le site ne s'ouvre que connecté (« Se connecter », en haut du Pokédex public) ;
-elle est gardée sur le serveur et vous suit d'un appareil à l'autre : un seul connecté à la fois (se connecter ailleurs
-déconnecte le précédent, qui garde ses modifications). Personne d'autre ne peut créer de compte.
+Votre collection : le site ne s'ouvre que connecté ; elle est gardée sur le serveur et vous suit
+d'un appareil à l'autre : un seul connecté à la fois (se connecter ailleurs déconnecte le
+précédent, qui garde ses modifications).
 
 ## Déploiement (VPS + tunnel Cloudflare)
 
@@ -105,11 +107,12 @@ déconnecte le précédent, qui garde ses modifications). Personne d'autre ne pe
 - [ ] **Avant tout** : exporter sa collection depuis le site actuel (Données › Exporter).
 - [ ] Sur le VPS : Docker, `git` et le tunnel Cloudflare (`cloudflared`).
 - [ ] Le clone en SSH, avec une clé de déploiement en lecture seule (étape 1 plus bas).
-- [ ] Le fichier `.env` : l'adresse publique en https, la clé des sessions et l'adresse de votre
-      compte (étape 2).
+- [ ] Le fichier `.env` : l'adresse publique en https et la clé des sessions (étape 2).
+- [ ] Les mentions légales : l'hébergeur (nom, adresse) et une adresse de contact publique, dans
+      `src/config/legal.ts` (sans eux, la page `/mentions-legales` dit « à compléter »).
 - [ ] `docker compose up -d --build`, puis le tunnel vers `http://localhost:8080` (étape 3).
-- [ ] Le compte (étape 4), puis l'import de l'export d'avant (Données › Importer) : connecté, la
-      collection part sur le serveur.
+- [ ] Votre compte (`/inscription`), puis l'import de l'export d'avant (Données › Importer) :
+      connecté, la collection part sur le serveur.
 - [ ] Les secrets GitHub du déploiement, `VPS_FINGERPRINT` compris (plus bas).
 - [ ] Les sauvegardes copiées hors du VPS chaque nuit (section Sauvegardes).
 - [ ] La surveillance : un service gratuit (UptimeRobot, Healthchecks…) qui demande
@@ -164,12 +167,10 @@ collection et l'historique des prix ; `backups` ; `images`).
    cd pokedex
    ```
 2. Créer, dans le clone, le fichier `.env` des secrets (ignoré par git ; sans lui, docker compose
-   refuse de démarrer) : l'adresse publique du site, en https, la clé qui signe les sessions et
-   l'adresse e-mail de votre compte, la seule qui pourra le créer.
+   refuse de démarrer) : l'adresse publique du site, en https, et la clé qui signe les sessions.
    ```sh
    echo "BETTER_AUTH_URL=https://pokedex.ton-domaine.fr" > .env
    echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
-   echo "ACCOUNT_EMAIL=moi@exemple.fr" >> .env
    chmod 600 .env
    docker compose up -d --build
    ```
@@ -184,11 +185,9 @@ collection et l'historique des prix ; `backups` ; `images`).
    ```
    Si cloudflared tourne lui-même dans Docker, mettre les deux conteneurs sur un même réseau et
    viser `http://pokedex:80`.
-4. Créer votre compte, le seul : ouvrez le site, la première visite le demande (pseudo, e-mail,
-   mot de passe). Seule l'adresse `ACCOUNT_EMAIL` peut le créer, sans vérification de l'e-mail :
-   quelqu'un qui connaîtrait cette adresse pourrait le prendre avant vous. Créez-le donc juste
-   après le premier démarrage, et vérifiez « Compte créé » dans `docker compose logs server`. Gardez bien le mot de passe : le site n'envoie pas d'e-mail, il n'y a pas de « mot de
-   passe oublié » ; il se change dans Données › Mon compte, en donnant l'actuel.
+4. Créer votre compte : `/inscription` (pseudo, mot de passe), comme tout le monde. Gardez bien le
+   mot de passe : le site n'envoie pas d'e-mail, il n'y a pas de « mot de passe oublié » ; il se
+   change dans Données › Mon compte, en donnant l'actuel.
 
 **Ensuite, à chaque déploiement** (`.github/workflows/deploy.yml`, lancé à la main depuis l'onglet
 Actions tant que le domaine n'est pas prêt ; son en-tête dit comment le relancer à chaque push sur

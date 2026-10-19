@@ -1,16 +1,17 @@
 /**
- * Le Pokédex public (`/vitrine` sur le site), toujours montré : la page d'accueil d'un visiteur.
- * - `GET /api/vitrine`, sans session : `{ owner, collection, prices }` (`VitrineData`), le pseudo
- *   du compte et sa collection, réduite à ce qui se montre : ses cartes (référence, image, id
- *   Cardmarket pour la valeur au prix du jour ; pas leur page) et, pour celles possédées, la date
- *   d'obtention (pas le prix payé). Rien des achats : ni commandes, ni budget, ni statut
- *   « commandée ». Une collection vide tant qu'aucun appareil n'a rien envoyé. Avec elle, les prix
- *   du jour de ses seules cartes possédées, dans la forme de `/api/prices/collection` (`null` sans
- *   guide des prix) : la page n'en montre que la valeur, sans charger ceux de toutes les cartes.
- * - `GET /api/vitrine/apercu` : la page que lisent les robots d'aperçu (Discord, WhatsApp…) quand
- *   on partage le lien : « Le Pokédex de … » et sa progression (ils ne lancent pas le JavaScript
- *   de l'app). nginx les y envoie (`deploy/nginx.conf`).
- * Chacune au journal, une fois par heure au plus par visiteur (`journalOnce`).
+ * Le Pokédex public de chaque compte (`/@pseudo` sur le site), toujours montré.
+ * - `GET /api/vitrine/<pseudo>`, sans session (le pseudo sans tenir compte des majuscules ; 404
+ *   s'il n'est à personne) : `{ owner, collection, prices }` (`VitrineData`), le pseudo du compte
+ *   et sa collection, réduite à ce qui se montre : ses cartes (référence, image, id Cardmarket pour
+ *   la valeur au prix du jour ; pas leur page) et, pour celles possédées, la date d'obtention (pas
+ *   le prix payé). Rien des achats : ni commandes, ni budget, ni statut « commandée ». Une
+ *   collection vide tant qu'aucun appareil n'a rien envoyé. Avec elle, les prix du jour de ses
+ *   seules cartes possédées, dans la forme de `/api/prices/collection` (`null` sans guide des
+ *   prix) : la page n'en montre que la valeur, sans charger ceux de toutes les cartes.
+ * - `GET /api/vitrine/<pseudo>/apercu` : la page que lisent les robots d'aperçu (Discord,
+ *   WhatsApp…) quand on partage le lien : « Le Pokédex de … » et sa progression (ils ne lancent pas
+ *   le JavaScript de l'app). nginx les y envoie (`deploy/nginx.conf`).
+ * Chacune au journal, une fois par heure au plus par visiteur et par Pokédex (`journalOnce`).
  */
 
 import type { Database } from 'bun:sqlite'
@@ -24,7 +25,7 @@ import type { CardOwnership, CollectionData, PokemonCard, VitrineData } from '@/
 import { readSource } from './db'
 import { readPrices } from './jobs/prices'
 import { journalOnce, visitorOf } from './journal'
-import { serveTagged } from './snapshots'
+import { notFound, serveTagged } from './snapshots'
 
 /**
  * La collection telle que la voit un visiteur (testé : jamais un prix payé ni un achat). Chaque
@@ -52,11 +53,11 @@ export function shownCollection(collection: CollectionData): CollectionData {
 }
 
 /** Le titre et la phrase de l'aperçu d'un lien partagé : le pseudo, la progression (testé). */
-export function vitrineSummary(owner: string | null, collection: CollectionData) {
+export function vitrineSummary(owner: string, collection: CollectionData) {
   const unlocked = unlockEvents(collection).length
   const share = formatShare(progressPercent(unlocked, TOTAL_SPECIES))
   return {
-    title: owner ? pokedexTitle(owner) : 'Un Pokédex de cartes japonaises',
+    title: pokedexTitle(owner),
     description: `${unlockedOf({ unlocked, total: TOTAL_SPECIES }, 'Pokémon')} (${share}) : une carte Pokémon japonaise par Pokémon.`,
   }
 }
@@ -69,62 +70,97 @@ const PREVIEW_BOTS =
   /discordbot|whatsapp|facebookexternalhit|twitterbot|slackbot|telegrambot|linkedinbot|skypeuripreview|redditbot|embedly/i
 
 /**
- * Une visite au journal, une fois par heure au plus par visiteur et par message : des visites
- * répétées (un rechargement sans fin, un robot) ne font pas tourner le journal de Docker, qui
- * effacerait les connexions.
+ * Une visite au journal, une fois par heure au plus par visiteur, par message et par Pokédex : des
+ * visites répétées (un rechargement sans fin, un robot) ne font pas tourner le journal de Docker,
+ * qui effacerait les connexions.
  */
 const journalVisit = (entry: Parameters<typeof journalOnce>[1], request: Request) =>
-  journalOnce(`${entry.message} ${visitorOf(request)}`, entry, request, HOUR)
+  journalOnce(
+    `${entry.message} ${entry.details?.pseudo} ${visitorOf(request)}`,
+    entry,
+    request,
+    HOUR,
+  )
+
+/** Le compte d'un pseudo, et la version de sa collection (`null` tant qu'il n'a rien envoyé). */
+interface Owner {
+  id: string
+  name: string
+  username: string
+  version: number | null
+}
 
 /**
- * `app` : le compte et sa collection ; `data` : les prix ; `origin` : l'adresse publique du site
- * (`BETTER_AUTH_URL`), pour les liens de l'aperçu.
+ * `app` : les comptes et leurs collections ; `data` : les prix ; `origin` : l'adresse publique du
+ * site (`BETTER_AUTH_URL`), pour les liens de l'aperçu.
  */
 export function vitrineRoutes(app: Database, data: Database, origin: string) {
-  // Un seul compte : son pseudo et sa collection.
-  const readShown = app.query('SELECT collection FROM collections LIMIT 1')
-  const readVersion = app.query('SELECT version FROM collections LIMIT 1')
-  const readOwner = app.query('SELECT name FROM "user" LIMIT 1')
-  const shown = () => {
-    const row = readShown.get() as { collection: string } | null
+  // `username` : le pseudo en minuscules (`server/auth.ts`).
+  const readOwner = app.query(
+    `SELECT u.id, u.name, u.username, c.version
+     FROM "user" AS u LEFT JOIN collections AS c ON c.user_id = u.id
+     WHERE u.username = ?`,
+  )
+  const readShown = app.query('SELECT collection FROM collections WHERE user_id = ?')
+  const ownerOf = (pseudo: string) => readOwner.get(pseudo.toLowerCase()) as Owner | null
+  const shown = (owner: Owner) => {
+    const row = readShown.get(owner.id) as { collection: string } | null
     return row ? shownCollection(JSON.parse(row.collection) as CollectionData) : emptyCollection()
   }
-  const owner = () => (readOwner.get() as { name: string } | null)?.name || null
 
   return new Elysia({ name: 'vitrine' })
     .get(
-      '/vitrine',
-      ({ request }) => {
-        journalVisit({ topic: 'vitrine', message: 'Pokédex public consulté' }, request)
-        // Ce dont la réponse dépend : la collection (sa version), le pseudo, les prix du jour. Un
-        // visiteur qui revient reçoit un 304, sans que la collection soit relue. Lus dans une même
-        // transaction de chaque base : la version et la collection, le jour des prix et les prix
-        // sont ceux d'un même instant (une écriture entre deux partirait avec l'ancien ETag).
+      '/vitrine/:pseudo',
+      ({ params, request }) => {
+        // Ce dont la réponse dépend : le compte, la version de sa collection, son pseudo, les prix
+        // du jour. Un visiteur qui revient reçoit un 304, sans que la collection soit relue. Lus
+        // dans une même transaction de chaque base : la version et la collection, le jour des prix
+        // et les prix sont ceux d'un même instant (une écriture entre deux partirait avec l'ancien
+        // ETag).
         const serve = () => {
-          const version = (readVersion.get() as { version: number } | null)?.version ?? 0
+          const owner = ownerOf(params.pseudo)
+          if (!owner) return notFound()
+          journalVisit(
+            {
+              topic: 'vitrine',
+              message: 'Pokédex public consulté',
+              details: { pseudo: owner.username },
+            },
+            request,
+          )
           const prices = readSource(data, 'cardmarket')
           return serveTagged(
             request,
-            `${version}|${owner() ?? ''}|${prices?.stamp ?? ''}|${prices?.date ?? ''}`,
+            `${owner.id}|${owner.version ?? 0}|${owner.name}|${prices?.stamp ?? ''}|${prices?.date ?? ''}`,
             (): VitrineData => {
-              const collection = shown()
+              const collection = shown(owner)
               const owned = Object.values(collection.customCards).flatMap(({ id, cardmarket }) =>
                 cardmarket && collection.cards[id] ? [cardmarket] : [],
               )
-              return { owner: owner(), collection, prices: readPrices(data, owned) }
+              return { owner: owner.name, collection, prices: readPrices(data, owned) }
             },
           )
         }
         return app.transaction(() => data.transaction(serve)())()
       },
-      { detail: { summary: 'Le Pokédex public' } },
+      { detail: { summary: 'Le Pokédex public d’un compte' } },
     )
     .get(
-      '/vitrine/apercu',
-      ({ request }) => {
+      '/vitrine/:pseudo/apercu',
+      ({ params, request }) => {
+        const owner = ownerOf(params.pseudo)
+        if (!owner) return notFound()
         const robot = request.headers.get('user-agent')?.match(PREVIEW_BOTS)?.[0]
-        journalVisit({ topic: 'vitrine', message: 'Lien partagé lu', details: { robot } }, request)
-        const { title, description } = vitrineSummary(owner(), shown())
+        journalVisit(
+          {
+            topic: 'vitrine',
+            message: 'Lien partagé lu',
+            details: { pseudo: owner.username, robot },
+          },
+          request,
+        )
+        const { title, description } = vitrineSummary(owner.name, shown(owner))
+        const url = `${origin}/@${owner.username}`
         const meta = (property: string, content: string) =>
           `<meta property="${property}" content="${escape(content)}">`
         const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${escape(title)}</title>${[
@@ -132,15 +168,15 @@ export function vitrineRoutes(app: Database, data: Database, origin: string) {
           meta('og:site_name', 'Mon Pokédex'),
           meta('og:title', title),
           meta('og:description', description),
-          meta('og:url', `${origin}/vitrine`),
+          meta('og:url', url),
           meta('og:image', `${origin}/icons/icon-512.png`),
         ].join(
           '',
-        )}<meta name="twitter:card" content="summary"><meta name="description" content="${escape(description)}"></head><body><a href="${origin}/vitrine">${escape(title)}</a></body></html>`
+        )}<meta name="twitter:card" content="summary"><meta name="description" content="${escape(description)}"></head><body><a href="${escape(url)}">${escape(title)}</a></body></html>`
         return new Response(html, {
           headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' },
         })
       },
-      { detail: { summary: 'L’aperçu d’un lien partagé vers le Pokédex public (robots)' } },
+      { detail: { summary: 'L’aperçu d’un lien partagé vers un Pokédex public (robots)' } },
     )
 }

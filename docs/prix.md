@@ -46,7 +46,7 @@ Les prix Cardmarket, leur historique relevé par le serveur, les lignes de la li
   L'historique d'une carte se charge à la demande
   (`/api/prices/<id>`, 404 sans historique) : la courbe de sa fiche, le nom affiché dans le
   formulaire pour vérifier l'id saisi (au départ du champ) ; ceux de la collection, en une fois
-  (`/api/histories`, plus bas). `/api/vitrine` donne les prix des seules cartes possédées du
+  (`/api/histories`, plus bas). `/api/vitrine/<pseudo>` donne les prix des seules cartes possédées du
   Pokédex public (`readPrices` avec leurs ids, `docs/compte-et-synchronisation.md`).
   Sans serveur, ou base encore vide, l'app marche sans prix. Une réponse manquante (404) n'est pas
   redemandée ; après une panne passagère (réseau, délai, réponse illisible), elle l'est la fois

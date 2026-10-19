@@ -3,7 +3,7 @@ import { LogIn } from '@camply/ui/icons'
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { authCall, authClient } from '@/lib/auth'
-import { refusalMessage } from '@/lib/account'
+import { accountOf, refusalMessage } from '@/lib/account'
 import { pageTitle } from '@/lib/format'
 import { signIn } from '@/store/sync'
 import { AuthCard } from '@/components/AuthCard'
@@ -19,20 +19,20 @@ const returnPath = (path: string | null) =>
 /** Le message d'un échec de connexion, d'après la réponse du serveur. */
 const failure = (status: number) =>
   refusalMessage(
-    { 401: 'E-mail ou mot de passe incorrect.' },
+    { 401: 'Pseudo ou mot de passe incorrect.' },
     status,
     'Connexion impossible pour le moment : réessayez plus tard.',
   )
 
 /**
- * `/connexion` : se connecter pour ouvrir son Pokédex, hors de la coquille (elle ne s'ouvre que
- * connecté). Pas d'inscription : le seul compte se crée à la première visite (`WelcomePage`).
- * Ensuite, retour à la page d'où l'on venait (`?retour=`), l'accueil sinon.
+ * `/connexion` : se connecter par son pseudo pour ouvrir son Pokédex, hors de la coquille (elle ne
+ * s'ouvre que connecté), la page d'un visiteur qui ouvre le site ; sans compte, l'inscription
+ * (`SignUpPage`). Ensuite, retour à la page d'où l'on venait (`?retour=`), l'accueil sinon.
  */
 export function LoginPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
+  const [pseudo, setPseudo] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -43,11 +43,11 @@ export function LoginPage() {
     setBusy(true)
     setError(null)
     const { data, error: refused } = await authCall(() =>
-      authClient.signIn.email({ email: email.trim(), password }),
+      authClient.signIn.username({ username: pseudo.trim(), password }),
     )
     setBusy(false)
     if (refused || !data) return setError(failure(refused?.status ?? 0))
-    signIn(data.user)
+    signIn(accountOf(data.user))
     navigate(back, { replace: true })
   }
 
@@ -61,12 +61,11 @@ export function LoginPage() {
         <Stack gap={4}>
           {error && <Alert tone="danger" title={error} />}
           <Input
-            label="E-mail"
-            type="email"
+            label="Pseudo"
             autoComplete="username"
             required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            value={pseudo}
+            onChange={(event) => setPseudo(event.target.value)}
           />
           <Input
             label="Mot de passe"
@@ -81,8 +80,8 @@ export function LoginPage() {
           </Button>
         </Stack>
       </form>
-      <Link to="/vitrine" className={styles.back}>
-        Voir le Pokédex public
+      <Link to="/inscription" className={styles.back}>
+        Pas encore de compte ? En créer un
       </Link>
     </AuthCard>
   )

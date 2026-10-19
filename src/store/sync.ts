@@ -4,7 +4,7 @@
  * (`localStorage`, comme sans compte) : l'app marche hors ligne, et envoie ses modifications au
  * retour du réseau. Elle synchronise une seconde après chaque modification, et quand la page
  * revient au premier plan ou que le réseau revient. Sans connexion, l'app ne s'ouvre pas : on voit
- * le Pokédex public (`account`, `router.tsx`).
+ * la connexion, ou le Pokédex public d'un compte (`account`, `router.tsx`).
  *
  * Cet appareil note la dernière version échangée (`pokedex-collection.sync`, partagée par ses
  * onglets) : son numéro, l'empreinte que lui donne le serveur (un numéro peut revenir après une
@@ -97,10 +97,10 @@ function readBase(): SyncVersion | null {
 
 function writeBase({ version, hash, tag }: SyncVersion) {
   rebasedAt = Date.now()
-  // L'e-mail et le pseudo aussi : hors ligne au démarrage, le menu du compte les montre encore.
-  // Sans stockage, le bandeau d'échec le dit ; la version sera redemandée.
-  const { email, name } = useSyncStore.getState().account ?? {}
-  writeStored(BASE_KEY, JSON.stringify({ user, email, name, version, hash, tag }))
+  // Le pseudo aussi : hors ligne au démarrage, le menu du compte le montre encore. Sans stockage,
+  // le bandeau d'échec le dit ; la version sera redemandée.
+  const { name } = useSyncStore.getState().account ?? {}
+  writeStored(BASE_KEY, JSON.stringify({ user, name, version, hash, tag }))
 }
 
 /** L'ETag d'une version (`server/collection.ts`) : `"v<numéro>-<empreinte>"`. */
@@ -112,18 +112,27 @@ const tagOf = (response: Response) => /"v\d+-(\w+)"/.exec(response.headers.get('
 const setStatus = (status: SyncStatus) => useSyncStore.setState({ status })
 
 /**
- * Le Pokédex public (`/api/vitrine`), lu une fois par `getJson` : oublié à la connexion et à la
- * déconnexion, pour qu'il montre ensuite ce que le compte a changé entre-temps.
+ * Le Pokédex public du compte (`/api/vitrine/<pseudo>`), lu une fois par `getJson` : oublié à la
+ * connexion, à la déconnexion et au changement de pseudo, pour qu'il montre ensuite ce que le
+ * compte a changé entre-temps.
  */
-const forgetVitrine = () => forget('/api/vitrine')
+const forgetVitrine = (name: string) => forget(`/api/vitrine/${name.toLowerCase()}`)
 
 /**
  * Connecté (connexion, création du compte, démarrage) : la synchronisation commence, ou reprend
- * (le même compte, après une session expirée).
+ * (le même compte, après une session expirée). La collection d'un autre compte restée sur ce
+ * navigateur (sa session expirée, sans déconnexion) le quitte d'abord : elle partirait sinon sur
+ * celui-ci (elle est sur le serveur, sauf ses modifications pas encore envoyées).
  */
 export function signIn(account: AccountUser) {
+  const previous = readBaseRecord()?.user
+  if (typeof previous === 'string' && previous !== account.id) {
+    user = null
+    writeStored(BASE_KEY, null)
+    replaceDocument({ collection: emptyCollection(), shopping: emptyShopping() })
+  }
   user = account.id
-  forgetVitrine()
+  forgetVitrine(account.name)
   useSyncStore.setState({ account, status: 'syncing', conflict: null })
   void sync()
 }
@@ -141,7 +150,7 @@ export function startSession(account: AccountUser | null | undefined) {
   const base = readBaseRecord()
   const text = (value: unknown) => (typeof value === 'string' ? value : '')
   if (typeof base?.user === 'string') {
-    signIn({ id: base.user, email: text(base.email), name: text(base.name) })
+    signIn({ id: base.user, name: text(base.name) })
   }
 }
 
@@ -158,10 +167,12 @@ export const syncedBefore = () => typeof readBaseRecord()?.user === 'string'
  */
 export const markExpired = () => setStatus('expired')
 
-/** Le pseudo vient de changer (Données › Mon compte). */
+/** Le pseudo vient de changer (Données › Mon compte) : l'adresse du Pokédex public aussi. */
 export function renameAccount(name: string) {
   const { account } = useSyncStore.getState()
-  if (account) useSyncStore.setState({ account: { ...account, name } })
+  if (!account) return
+  forgetVitrine(account.name)
+  useSyncStore.setState({ account: { ...account, name } })
 }
 
 let retry: ReturnType<typeof setTimeout> | undefined
@@ -407,6 +418,13 @@ export async function signOut() {
     .then(({ authClient }) => authClient.signOut())
     .catch(() => ({ error: true }))
   if (error) return false
+  await leave()
+  return true
+}
+
+/** Plus de compte sur ce navigateur : sa collection le quitte aussi. */
+async function leave() {
+  const { account } = useSyncStore.getState()
   user = null
   sent = null
   // Une synchronisation en cours finit d'abord (elle s'arrête, sans compte) : rien ne passe après
@@ -414,11 +432,16 @@ export async function signOut() {
   await exclusive(async () => {
     writeStored(BASE_KEY, null)
     replaceDocument({ collection: emptyCollection(), shopping: emptyShopping() })
-    forgetVitrine()
+    if (account) forgetVitrine(account.name)
     useSyncStore.setState({ account: null, conflict: null })
   })
-  return true
 }
+
+/**
+ * Le compte vient d'être supprimé (Données › Mon compte), sa collection avec lui : il quitte ce
+ * navigateur, comme à la déconnexion.
+ */
+export const accountDeleted = leave
 
 // Une seconde après chaque modification, et au retour de la page ou du réseau.
 let timer: ReturnType<typeof setTimeout> | undefined

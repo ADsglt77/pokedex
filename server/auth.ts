@@ -1,13 +1,15 @@
 /**
- * La connexion (Better Auth) : un seul compte, le vôtre, par e-mail et mot de passe, dans `app.db`.
- * - Il se crée à la première visite du site (`/bienvenue`) : pseudo, e-mail, mot de passe, et
- *   seulement avec l'adresse `ACCOUNT_EMAIL` (exigée en production, `index.ts`) : un visiteur
- *   arrivé avant vous ne peut pas le prendre. Le premier créé est le seul : ensuite, plus aucune
- *   inscription (refusée d'emblée, et la base refuse un second compte, même si deux créations
- *   arrivent ensemble). Son mot de passe et son pseudo se changent dans l'app (Données › Mon
- *   compte).
- * - Une seule session : se connecter sur un appareil déconnecte les autres. La collection n'est
- *   donc modifiée que d'un appareil à la fois.
+ * La connexion (Better Auth) : un compte par personne, par pseudo et mot de passe, dans `app.db`.
+ * - Chacun crée le sien (`/inscription`) : un pseudo (`PSEUDO`, `src/config/account.ts`), unique
+ *   sans tenir compte des majuscules, et un mot de passe. Le pseudo est gardé deux fois, d'accord
+ *   (`guard`) : `name` tel que tapé (« Le Pokédex de Sacha »), `username` en minuscules (le plugin
+ *   `username` : la connexion, l'adresse du Pokédex public `/@sacha`). Pas d'e-mail : le site n'en
+ *   envoie pas et n'en garde pas (Better Auth en exige une : chaque compte reçoit une adresse sans
+ *   boîte, `<uuid>@pokedex.invalid`, que personne ne connaît) ; pas de mot de passe oublié, donc.
+ * - Le pseudo et le mot de passe se changent dans l'app (Données › Mon compte) ; le compte s'y
+ *   supprime, avec son mot de passe, et sa collection part avec lui.
+ * - Une seule session par compte : se connecter sur un appareil déconnecte ses autres. La
+ *   collection n'est donc modifiée que d'un appareil à la fois.
  * Sessions de 60 jours, renouvelées chaque jour d'usage, dans un cookie (`__Secure-`, SameSite
  * Lax, en https) : le cookie renouvelé repart avec la réponse de `/api/account` et des routes du
  * compte (`sessionOf`).
@@ -18,9 +20,12 @@
  */
 
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
+import { APIError, createAuthMiddleware, isAPIError } from 'better-auth/api'
 import { getMigrations } from 'better-auth/db/migration'
+import { username } from 'better-auth/plugins'
 import type { Database } from 'bun:sqlite'
 import { Elysia, type Context } from 'elysia'
+import { PSEUDO } from '@/config/account'
 import { MINUTE } from '@/lib/time'
 import type { AccountState } from '@/types'
 import { journal, journalOnce, safeText, visitorOf, type JournalLevel } from './journal'
@@ -28,8 +33,46 @@ import { journal, journalOnce, safeText, visitorOf, type JournalLevel } from './
 /** Un jour, en secondes (Better Auth compte ses durées en secondes ; `@/lib/time` en ms). */
 const DAY_IN_SECONDS = 24 * 60 * 60
 
-/** L'adresse du compte (`ACCOUNT_EMAIL`) : aucune autre ne peut le créer. */
-const ACCOUNT_EMAIL = process.env.ACCOUNT_EMAIL?.trim().toLowerCase()
+const PSEUDO_RULE = new RegExp(`^${PSEUDO.pattern}$`)
+
+/**
+ * Une erreur de Better Auth dans le journal de l'app. Son message peut recopier ce qu'envoie un
+ * visiteur (« Invalid callbackURL: … ») : écrit en détail, échappé, une fois par minute au plus
+ * pour un même début. Sa cause (l'erreur, sa pile) suit.
+ */
+function logError(message: string, ...causes: unknown[]) {
+  journalOnce(
+    `better-auth ${message.slice(0, 60)}`,
+    { topic: 'serveur', level: 'error', message: 'Better Auth', details: { cause: message } },
+    undefined,
+    MINUTE,
+  )
+  if (causes.length > 0) {
+    console.error(...causes.map((cause) => (typeof cause === 'string' ? safeText(cause) : cause)))
+  }
+}
+
+/**
+ * Avant Better Auth. À la création et au changement de pseudo : un pseudo exigé (sans lui, ni
+ * connexion ni Pokédex public), et `name` qui le reprend tel que tapé : une requête ne peut pas
+ * mettre autre chose dans le titre de son Pokédex public. À la création, l'adresse sans boîte du
+ * compte. La suppression du compte exige son mot de passe (Better Auth s'en passerait pour une
+ * session ouverte depuis moins d'un jour).
+ */
+const guard = createAuthMiddleware(async (ctx) => {
+  const body = (ctx.body ?? {}) as Record<string, unknown>
+  const signUp = ctx.path === '/sign-up/email'
+  if (signUp || (ctx.path === '/update-user' && ('name' in body || 'username' in body))) {
+    if (typeof body.username !== 'string') {
+      throw new APIError('BAD_REQUEST', { message: 'Pseudo manquant' })
+    }
+    const email = signUp ? { email: `${crypto.randomUUID()}@pokedex.invalid` } : {}
+    return { context: { body: { ...body, name: body.username, ...email } } }
+  }
+  if (ctx.path === '/delete-user' && !body.password) {
+    throw new APIError('BAD_REQUEST', { message: 'Mot de passe manquant' })
+  }
+})
 
 /** La connexion, une fois créées les tables du compte qui manquent. */
 export async function createAuth(db: Database) {
@@ -38,40 +81,47 @@ export async function createAuth(db: Database) {
     baseURL: process.env.BETTER_AUTH_URL,
     secret: process.env.BETTER_AUTH_SECRET,
     emailAndPassword: { enabled: true },
+    // Personne ne connaît les adresses des comptes : la connexion se fait par le pseudo.
+    disabledPaths: ['/sign-in/email'],
+    plugins: [
+      username({
+        minUsernameLength: PSEUDO.min,
+        maxUsernameLength: PSEUDO.max,
+        usernameValidator: (value) => PSEUDO_RULE.test(value),
+        displayUsername: false,
+      }),
+    ],
+    hooks: { before: guard },
+    user: {
+      deleteUser: {
+        enabled: true,
+        // Rien ne reste du compte sur le serveur (hors des sauvegardes, gardées 30 jours).
+        afterDelete: async (user) => {
+          db.query('DELETE FROM collections WHERE user_id = ?').run(user.id)
+          db.query('DELETE FROM collection_versions WHERE user_id = ?').run(user.id)
+        },
+      },
+    },
     // Ses messages dans le journal de l'app, ses erreurs seulement : une connexion refusée y est
-    // déjà (« Invalid password » en plus serait du bruit). Son message peut recopier ce qu'envoie
-    // un visiteur (« Invalid callbackURL: … ») : écrit en détail, échappé, une fois par minute au
-    // plus pour un même début. Leur cause (l'erreur, sa pile) suit.
+    // déjà (« Invalid password » en plus serait du bruit).
     logger: {
       level: 'error',
-      log: (_level, message, ...args) => {
-        const cause = String(message)
-        journalOnce(
-          `better-auth ${cause.slice(0, 60)}`,
-          { topic: 'serveur', level: 'error', message: 'Better Auth', details: { cause } },
-          undefined,
-          MINUTE,
-        )
-        if (args.length > 0) {
-          console.error(...args.map((arg) => (typeof arg === 'string' ? safeText(arg) : arg)))
-        }
+      log: (_level, message, ...args) => logError(String(message), ...args),
+    },
+    // Ses refus (pseudo pris, mot de passe faux…) aussi : `journalAuth` les note déjà. Une erreur
+    // imprévue, si.
+    onAPIError: {
+      onError: (error) => {
+        if (isAPIError(error) && error.status !== 'INTERNAL_SERVER_ERROR') return
+        logError(error instanceof Error ? error.message : String(error), error)
       },
     },
     session: { expiresIn: 60 * DAY_IN_SECONDS, updateAge: DAY_IN_SECONDS },
     databaseHooks: {
-      user: {
-        create: {
-          // La garde de `/sign-up/email` (plus bas) lit la requête à sa façon ; celle-ci porte sur
-          // l'adresse que Better Auth enregistre vraiment : une requête qu'ils liraient chacun
-          // autrement ne crée pas le compte d'un autre.
-          before: async (user) =>
-            !ACCOUNT_EMAIL || user.email.trim().toLowerCase() === ACCOUNT_EMAIL,
-        },
-      },
       session: {
         create: {
-          // Une seule session par compte : les autres appareils sont déconnectés (et, au changement
-          // du mot de passe, l'ancienne session de celui-ci).
+          // Une seule session par compte : ses autres appareils sont déconnectés (et, au
+          // changement du mot de passe, l'ancienne session de celui-ci).
           after: async (session) => {
             const { changes } = db
               .query('DELETE FROM session WHERE userId = ? AND id != ?')
@@ -84,115 +134,87 @@ export async function createAuth(db: Database) {
       },
     },
     // Derrière le tunnel Cloudflare et nginx (qui n'écoute que sur la machine), l'adresse du
-    // visiteur est dans cet en-tête : la limite de tentatives vaut pour lui, pas pour le tunnel.
+    // visiteur est dans cet en-tête : les limites valent pour lui, pas pour le tunnel.
     advanced: { ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] } },
-    // En production : 5 tentatives de connexion, de création du compte ou de changement du mot de
-    // passe par minute, 100 requêtes pour le reste.
+    // En production, par visiteur : 10 tentatives de création de compte par heure ; 5 tentatives de
+    // connexion, de changement du mot de passe ou de suppression du compte par minute ; 100
+    // requêtes pour le reste.
     rateLimit: {
       window: 60,
       max: 100,
       customRules: {
-        '/sign-in/email': { window: 60, max: 5 },
-        '/sign-up/email': { window: 60, max: 5 },
+        '/sign-in/username': { window: 60, max: 5 },
+        '/sign-up/email': { window: 60 * 60, max: 10 },
         '/change-password': { window: 60, max: 5 },
+        '/delete-user': { window: 60, max: 5 },
       },
     },
   } satisfies BetterAuthOptions
   await (await getMigrations(options)).runMigrations()
-  // Un seul compte, même si deux créations arrivent ensemble : la base refuse le second.
-  db.exec(`
-    CREATE TRIGGER IF NOT EXISTS one_account BEFORE INSERT ON "user"
-    WHEN EXISTS (SELECT 1 FROM "user")
-    BEGIN SELECT RAISE(ABORT, 'un seul compte'); END
-  `)
 
-  const account = db.query('SELECT email FROM "user" LIMIT 1')
+  const count = db.query('SELECT COUNT(*) AS count FROM "user"')
   return {
     auth: betterAuth(options),
-    /** Le compte (son e-mail), `null` tant qu'il n'est pas créé. */
-    account: () => (account.get() as { email: string } | null)?.email ?? null,
+    /** Le nombre de comptes (le journal du démarrage). */
+    count: () => (count.get() as { count: number }).count,
   }
 }
 
 export type Accounts = Awaited<ReturnType<typeof createAuth>>
 
-/** L'e-mail et le pseudo d'une requête (une copie), pour le journal (jamais le mot de passe). */
-async function bodyOf(request: { json: () => Promise<unknown> }) {
-  const body = (await request.json().catch(() => null)) as {
-    email?: unknown
-    name?: unknown
-  } | null
-  const text = (value: unknown) => (typeof value === 'string' ? value : undefined)
-  return { email: text(body?.email), name: text(body?.name) }
+/** Le pseudo tapé dans une requête (une copie), pour le journal (jamais le mot de passe). */
+async function typedPseudo(request: { json: () => Promise<unknown> }) {
+  const body = (await request.json().catch(() => null)) as { username?: unknown } | null
+  return typeof body?.username === 'string' ? body.username.toLowerCase() : undefined
 }
 
-/**
- * Un e-mail pour le journal : tel quel s'il en a l'air (une arobase), sinon `?` : un mot de passe
- * collé par erreur dans le champ de l'e-mail n'y est jamais écrit.
- */
-const shownEmail = (email: string) => (email.includes('@') ? email : '?')
-
 /** Les actions du compte que note le journal, d'après leur chemin. */
-const WATCHED = /\/(sign-in\/email|sign-up\/email|sign-out|change-password|update-user)$/
+const WATCHED =
+  /\/(sign-in\/username|sign-up\/email|sign-out|change-password|update-user|delete-user)$/
 
 /**
- * Pour le journal : connexion, création du compte, déconnexion, mot de passe, pseudo. Une
- * connexion refusée ou bloquée, qu'un visiteur peut répéter à volonté : une ligne par visiteur et
- * par minute au plus (`journalOnce`).
+ * Pour le journal : connexion, création du compte, déconnexion, mot de passe, pseudo, suppression.
+ * `pseudo` : celui de la session ; `typed` : celui de la requête, écrit seulement s'il est accepté
+ * (un mot de passe tapé par erreur dans le champ du pseudo n'est jamais écrit). Un refus, qu'un
+ * visiteur peut répéter à volonté : une ligne par visiteur et par minute au plus (`journalOnce`).
  */
 function journalAuth(
   path: string,
   request: Request,
   response: Response,
-  email: string,
-  name?: string,
+  pseudo: string | undefined,
+  typed: string | undefined,
 ) {
   const ok = response.ok
-  const details = (pseudo?: string, raison?: string) => ({ email, pseudo, raison })
-  const log = (message: string, level: JournalLevel, pseudo?: string) =>
-    journal({ topic: 'compte', level, message, details: details(pseudo) }, request)
-  const refused = (message: string, raison?: string) =>
+  const log = (message: string, level: JournalLevel, details: Record<string, string | undefined>) =>
+    journal({ topic: 'compte', level, message, details }, request)
+  const refused = (message: string) =>
     journalOnce(
       `${message} ${visitorOf(request)}`,
-      { topic: 'compte', level: 'error', message, details: details(undefined, raison) },
+      {
+        topic: 'compte',
+        level: 'error',
+        message,
+        details: { raison: response.status === 429 ? 'trop d’essais' : undefined },
+      },
       request,
       MINUTE,
     )
-  if (path.endsWith('/sign-in/email')) {
-    if (ok) log('Connexion', 'ok')
-    else if (response.status === 429) refused('Connexion bloquée', 'trop d’essais')
-    else refused('Connexion refusée')
+  if (path.endsWith('/sign-in/username')) {
+    if (ok) log('Connexion', 'ok', { pseudo: typed })
+    else refused(response.status === 429 ? 'Connexion bloquée' : 'Connexion refusée')
   } else if (path.endsWith('/sign-up/email')) {
-    if (ok) log('Compte créé', 'ok', name)
-    else refused('Création du compte refusée')
+    if (ok) log('Compte créé', 'ok', { pseudo: typed })
+    else refused(response.status === 429 ? 'Création bloquée' : 'Création refusée')
   } else if (path.endsWith('/sign-out')) {
-    if (ok) log('Déconnexion', 'info')
+    if (ok) log('Déconnexion', 'info', { pseudo })
   } else if (path.endsWith('/change-password')) {
-    log(ok ? 'Mot de passe changé' : 'Mot de passe non changé', ok ? 'ok' : 'error')
+    log(ok ? 'Mot de passe changé' : 'Mot de passe non changé', ok ? 'ok' : 'error', { pseudo })
+  } else if (path.endsWith('/delete-user')) {
+    log(ok ? 'Compte supprimé' : 'Compte non supprimé', ok ? 'warn' : 'error', { pseudo })
   } else if (ok) {
-    log('Pseudo changé', 'info', name)
+    log('Pseudo changé', 'info', { pseudo, nouveau: typed })
   }
-}
-
-/** Les créations refusées d'emblée de chaque visiteur, la dernière minute (leurs heures, en ms). */
-const refusals = new Map<string, number[]>()
-
-/**
- * Une création refusée de plus pour ce visiteur : au-delà de 5 par minute, `true` (429), comme la
- * limite de Better Auth pour une création qu'il traite. Un refus d'emblée ne passe pas par elle :
- * on pourrait sinon essayer des adresses sans fin pour trouver celle du compte.
- */
-function tooManyRefusals(visitor: string, now: number) {
-  const recent = (refusals.get(visitor) ?? []).filter((at) => now - at < MINUTE)
-  recent.push(now)
-  refusals.delete(visitor)
-  refusals.set(visitor, recent)
-  // Une liste bornée : les plus anciens visiteurs d'abord.
-  for (const oldest of refusals.keys()) {
-    if (refusals.size <= 10_000) break
-    refusals.delete(oldest)
-  }
-  return recent.length > 5
 }
 
 /**
@@ -207,14 +229,15 @@ export const appOrigin = (auth: Accounts['auth']) => new URL(auth.options.baseUR
 
 /**
  * Le compte dans l'API (`/api/…`) :
- * - `/api/auth/*` : Better Auth (connexion, déconnexion, session, création du compte) ;
- * - `GET /api/account` : `AccountState`, si le compte existe déjà (sinon, la première visite) et
- *   qui est connecté sur ce navigateur (`null` : personne) : une seule requête au démarrage ;
+ * - `/api/auth/*` : Better Auth (création du compte, connexion, déconnexion, session, pseudo, mot
+ *   de passe, suppression) ;
+ * - `GET /api/account` : `AccountState`, qui est connecté sur ce navigateur (`null` : personne) :
+ *   une seule requête au démarrage ;
  * - la macro `auth` des routes réservées au compte : 401 sans session, 403 pour une modification
  *   venue d'une autre origine (le cookie part avec toute requête vers le site), jamais en cache ;
  *   la route reçoit `user`.
  */
-export function accountRoutes({ auth, account }: Accounts) {
+export function accountRoutes({ auth }: Accounts) {
   const origin = appOrigin(auth)
   /**
    * La session d'une requête. Renouvelée (une fois par jour d'usage), son nouveau cookie part avec
@@ -258,45 +281,17 @@ export function accountRoutes({ auth, account }: Accounts) {
   return new Elysia({ name: 'account' })
     .all(
       '/auth/*',
-      async ({ request, status }) => {
+      async ({ request }) => {
         const path = new URL(request.url).pathname
         if (!WATCHED.test(path)) return auth.handler(request)
-        // Lus avant que Better Auth ne lise la requête (une copie) ; hors connexion et création,
-        // l'e-mail de la session.
-        const body = await bodyOf(request.clone())
-        const email = /\/sign-(in|up)\/email$/.test(path)
-          ? shownEmail(body.email ?? '?')
-          : ((await auth.api.getSession({ headers: request.headers }))?.user.email ?? '?')
-        // Une création refusée d'emblée (sans dire si une adresse est celle du compte, ni calculer
-        // un mot de passe pour rien) : le compte existe, ce n'est pas son adresse, ou la requête
-        // n'est pas en JSON (Better Auth lirait aussi un formulaire, autrement que cette garde).
-        if (path.endsWith('/sign-up/email')) {
-          const json = /^application\/json\b/i.test(request.headers.get('content-type') ?? '')
-          const refused =
-            account() !== null
-              ? 'un compte existe déjà'
-              : !json
-                ? 'pas en JSON'
-                : ACCOUNT_EMAIL && (body.email ?? '').trim().toLowerCase() !== ACCOUNT_EMAIL
-                  ? 'adresse non prévue'
-                  : null
-          if (refused) {
-            journalOnce(
-              `Création refusée ${visitorOf(request)}`,
-              {
-                topic: 'compte',
-                level: 'error',
-                message: 'Création refusée',
-                details: { email, raison: refused },
-              },
-              request,
-              MINUTE,
-            )
-            return status(tooManyRefusals(visitorOf(request), Date.now()) ? 429 : 403, null)
-          }
-        }
+        // Lus avant que Better Auth ne lise la requête (une copie, et la session d'avant : celle
+        // d'un compte qui se supprime n'existe plus après).
+        const typed = await typedPseudo(request.clone())
+        const pseudo = /\/sign-(in\/username|up\/email)$/.test(path)
+          ? undefined
+          : ((await auth.api.getSession({ headers: request.headers }))?.user.username ?? undefined)
         const response = await auth.handler(request)
-        journalAuth(path, request, response, email, body.name)
+        journalAuth(path, request, response, pseudo, typed)
         return response
       },
       {
@@ -309,18 +304,10 @@ export function accountRoutes({ auth, account }: Accounts) {
       '/account',
       async ({ request, set }): Promise<AccountState> => {
         set.headers['cache-control'] = 'no-store'
-        const exists = account() !== null
-        const session = exists ? await sessionOf(request, set) : null
-        const user = session && {
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.name,
-        }
-        return { exists, user }
+        const session = await sessionOf(request, set)
+        return { user: session && { id: session.user.id, name: session.user.name } }
       },
-      {
-        detail: { summary: 'Le compte existe-t-il (sinon, la première visite) ; qui est connecté' },
-      },
+      { detail: { summary: 'Qui est connecté sur ce navigateur' } },
     )
     .macro({
       auth: {

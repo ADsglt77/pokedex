@@ -285,7 +285,7 @@ export type CardPriceRow = [price: number, low: number | null, avg30: number | n
 
 /**
  * Les prix Cardmarket du jour des cartes demandées (`/api/prices/collection`, `/selection`, et ceux
- * des cartes possédées de `/api/vitrine` ; 404 tant que le guide n'a jamais été lu).
+ * des cartes possédées de `/api/vitrine/<pseudo>` ; 404 tant que le guide n'a jamais été lu).
  */
 export interface PriceFile {
   /** Jour du guide des prix (YYYY-MM-DD). */
@@ -300,17 +300,17 @@ export interface PriceFile {
 
 /* Le compte (`/api/account`) et la collection synchronisée (`/api/collection`), `server/` */
 
-/** Le compte connecté : son id, son e-mail, son pseudo. */
+/**
+ * Le compte connecté : son id et son pseudo, tel que tapé (« Le Pokédex de Sacha ») ; en
+ * minuscules, l'adresse de son Pokédex public (`/@sacha`, `vitrinePath`).
+ */
 export interface AccountUser {
   id: string
-  email: string
   name: string
 }
 
 /** `GET /api/account` : une seule requête au démarrage (`loadAccount`). */
 export interface AccountState {
-  /** Le site a-t-il son compte ? Sinon, c'est la première visite (`/bienvenue`). */
-  exists: boolean
   /** Qui est connecté sur ce navigateur ; `null` : personne. */
   user: AccountUser | null
 }
@@ -336,10 +336,10 @@ export interface CollectionSaved {
   tag: string
 }
 
-/** Le Pokédex public (`/api/vitrine`, `server/vitrine.ts`). */
+/** Le Pokédex public d'un compte (`/api/vitrine/<pseudo>`, `server/vitrine.ts`). */
 export interface VitrineData {
-  /** Le pseudo du compte ; `null` sans pseudo. */
-  owner: string | null
+  /** Le pseudo du compte, tel que tapé. */
+  owner: string
   /** La collection, réduite à ce qui se montre (`shownCollection`). */
   collection: CollectionData
   /** Les prix du jour de ses seules cartes possédées ; `null` sans guide des prix. */
