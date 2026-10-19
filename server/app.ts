@@ -15,7 +15,6 @@ import { Elysia } from 'elysia'
 import { accountRoutes, appOrigin, ForeignOrigin, type Accounts } from './auth'
 import { collectionRoutes } from './collection'
 import { journal, journalRoutes } from './journal'
-import { notFound } from './responses'
 import { vitrineRoutes } from './vitrine'
 
 /** Bien au-delà d'une collection de 1 025 cartes et de ses commandes : 413 au-delà. */
@@ -46,7 +45,9 @@ export function createApp({ app, accounts }: AppContext) {
       // `SQLITE_BUSY`, fichier absent `ENOENT`…) : dans le journal du serveur, et 500 sans corps
       // (rien de ses détails, une requête SQL par exemple, ne part vers le site).
       .onError(({ code, error, request }) => {
-        if (code === 'NOT_FOUND') return notFound()
+        if (code === 'NOT_FOUND') {
+          return new Response(null, { status: 404, headers: { 'Cache-Control': 'no-cache' } })
+        }
         // Une modification d'une autre origine, arrêtée avant la lecture de son corps (`auth.ts`).
         if (code === 'PARSE' && error.cause instanceof ForeignOrigin) {
           return new Response(null, { status: 403, headers: { 'Cache-Control': 'no-store' } })

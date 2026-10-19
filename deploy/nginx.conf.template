@@ -63,9 +63,8 @@ server {
         try_files $uri =404;
     }
 
-    # L'API (service `server`) : elle donne elle-même ses en-têtes de cache. Des tampons d'1 Mo en
-    # mémoire, assez pour presque toutes ses réponses ; une plus grosse (les historiques d'une
-    # collection, plusieurs Mo) passe par un fichier temporaire si le navigateur la lit lentement.
+    # Le serveur de l'app (compte, collection, Pokédex public) : il donne lui-même ses en-têtes de
+    # cache. Des tampons d'1 Mo en mémoire, assez pour ses réponses.
     location /api/ {
         proxy_pass $server;
         proxy_set_header Host $host;
@@ -74,8 +73,9 @@ server {
     }
 
     # Les données (espèces, catalogue, prix, historiques, état des tâches) : l'API des données, sous
-    # `/v1`, avec le token du site (le navigateur ne le voit jamais, ni l'API ses cookies). Les
-    # mêmes adresses pour le navigateur, son service worker compris.
+    # `/v1`, avec le token du site (le navigateur ne le voit jamais, ni l'API ses cookies). Des
+    # tampons d'1 Mo ; une réponse plus grosse (les historiques d'une collection, plusieurs Mo)
+    # passe par un fichier temporaire si le navigateur la lit lentement.
     location ~ ^/api/(species|catalog|prices|status|health)(/|$) {
         rewrite ^/api/(.*)$ /v1/$1 break;
         proxy_pass $data_api;

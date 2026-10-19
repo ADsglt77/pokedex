@@ -7,8 +7,8 @@
  *   le prix payé). Rien des achats : ni commandes, ni budget, ni statut « commandée ». Une
  *   collection vide tant qu'aucun appareil n'a rien envoyé. Avec elle, les prix du jour de ses
  *   seules cartes possédées, demandés à l'API des données (`dataPrices`), dans la forme de
- *   `/api/prices/collection` (`null` sans guide des prix, ou l'API muette : la page s'affiche sans
- *   valeur) : la page n'en montre que la valeur, sans charger ceux de toutes les cartes.
+ *   `/api/prices` (`null` sans guide des prix, ou l'API muette : la page s'affiche sans valeur) :
+ *   la page n'en montre que la valeur, sans charger ceux de toutes les cartes.
  * - `GET /api/vitrine/<pseudo>/apercu` : la page que lisent les robots d'aperçu (Discord,
  *   WhatsApp…) quand on partage le lien : « Le Pokédex de … » et sa progression (ils ne lancent pas
  *   le JavaScript de l'app). nginx les y envoie pour toute adresse d'un seul segment
@@ -18,7 +18,7 @@
  */
 
 import type { Database } from 'bun:sqlite'
-import { Elysia } from 'elysia'
+import { Elysia, NotFoundError } from 'elysia'
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { isPseudo } from '@/lib/account'
 import { emptyCollection } from '@/lib/collection'
@@ -27,7 +27,6 @@ import { progressPercent, unlockEvents } from '@/lib/pokedex'
 import { HOUR, MINUTE } from '@/lib/time'
 import type { CardOwnership, CollectionData, PokemonCard, PriceFile, VitrineData } from '@/types'
 import { journalOnce, visitorOf } from './journal'
-import { notFound, serveJson } from './responses'
 
 /**
  * La collection telle que la voit un visiteur (testé : jamais un prix payé ni un achat). Chaque
@@ -123,6 +122,21 @@ async function dataPrices(ids: number[]): Promise<PriceFile | null> {
   }
 }
 
+/**
+ * Une réponse JSON et son ETag, tiré de son contenu : un visiteur qui revient sur un Pokédex
+ * inchangé reçoit un 304, sans corps (un relais, Cloudflare, peut affaiblir l'ETag en `W/"…"` :
+ * c'est le même).
+ */
+function serveJson(request: Request, body: unknown) {
+  const text = JSON.stringify(body)
+  const etag = `"${Bun.hash(text).toString(36)}"`
+  const headers = { 'Cache-Control': 'no-cache', ETag: etag }
+  if (request.headers.get('if-none-match')?.replace(/^W\//, '') === etag) {
+    return new Response(null, { status: 304, headers })
+  }
+  return new Response(text, { headers: { ...headers, 'Content-Type': 'application/json' } })
+}
+
 /** Le compte d'un pseudo. */
 interface Owner {
   id: string
@@ -152,7 +166,7 @@ export function vitrineRoutes(app: Database, origin: string) {
       '/vitrine/:pseudo',
       async ({ params, request }) => {
         const owner = ownerOf(params.pseudo)
-        if (!owner) return notFound()
+        if (!owner) throw new NotFoundError()
         const collection = shown(owner)
         journalVisit(
           {
@@ -170,7 +184,6 @@ export function vitrineRoutes(app: Database, origin: string) {
           collection,
           prices: await dataPrices(owned),
         }
-        // Un visiteur qui revient sur un Pokédex inchangé reçoit un 304.
         return serveJson(request, vitrine)
       },
       { detail: { summary: 'Le Pokédex public d’un compte' } },

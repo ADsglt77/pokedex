@@ -64,25 +64,20 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
     .put(
       '/collection',
       ({ user, body }) => {
-        if (body.account !== user.id) {
+        const compte = user.username ?? undefined
+        /** Refusé : au journal, et la réponse, sans corps utile. */
+        const refused = (status: number, level: 'warn' | 'error', raison?: string) => {
           journal({
             topic: 'collection',
-            level: 'warn',
+            level,
             message: 'Envoi refusé',
-            details: { compte: user.username ?? undefined, raison: 'parti d’un autre compte' },
+            details: { compte, raison },
           })
-          return json('null', 401)
+          return json('null', status)
         }
+        if (body.account !== user.id) return refused(401, 'warn', 'parti d’un autre compte')
         const { document, problem } = readSent(body)
-        if (!document) {
-          journal({
-            topic: 'collection',
-            level: 'error',
-            message: 'Envoi refusé',
-            details: { compte: user.username ?? undefined, raison: problem },
-          })
-          return json('null', 400)
-        }
+        if (!document) return refused(400, 'error', problem)
         const { baseVersion } = body
 
         const now = new Date()
@@ -94,40 +89,30 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
             collection: JSON.parse(row.collection) as CollectionData,
             shopping: JSON.parse(row.shopping) as ShoppingData,
           }
+          if (row) keep(user.id, row, now)
           const version = baseVersion + 1
-          const values = [JSON.stringify(document.collection), JSON.stringify(document.shopping)]
-          if (row) {
-            keep(user.id, row, now)
-            app
-              .query(
-                'UPDATE collections SET version = ?, collection = ?, shopping = ?, updated_at = ? WHERE user_id = ?',
-              )
-              .run(version, ...values, now.toISOString(), user.id)
-          } else {
-            app
-              .query(
-                'INSERT INTO collections (user_id, version, collection, shopping, updated_at) VALUES (?, ?, ?, ?, ?)',
-              )
-              .run(user.id, version, ...values, now.toISOString())
-          }
+          app
+            .query(
+              `INSERT INTO collections (user_id, version, collection, shopping, updated_at)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT (user_id) DO UPDATE SET version = excluded.version,
+                 collection = excluded.collection, shopping = excluded.shopping,
+                 updated_at = excluded.updated_at`,
+            )
+            .run(
+              user.id,
+              version,
+              JSON.stringify(document.collection),
+              JSON.stringify(document.shopping),
+              now.toISOString(),
+            )
           return { version, previous }
         })
         // `immediate` : la version lue est encore celle du serveur au moment d'écrire.
         const result = saved.immediate()
-        if (!result) {
-          journal({
-            topic: 'collection',
-            level: 'warn',
-            message: 'Envoi refusé',
-            details: {
-              compte: user.username ?? undefined,
-              raison: 'conflit, changée ailleurs entre-temps',
-            },
-          })
-          return json('null', 409)
-        }
-        for (const change of documentChanges(result.previous ?? null, document)) {
-          journal({ ...change, details: { compte: user.username ?? undefined, ...change.details } })
+        if (!result) return refused(409, 'warn', 'conflit, changée ailleurs entre-temps')
+        for (const change of documentChanges(result.previous, document)) {
+          journal({ ...change, details: { compte, ...change.details } })
         }
         const answer: CollectionSaved = { version: result.version }
         return json(JSON.stringify(answer))

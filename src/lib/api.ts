@@ -90,7 +90,7 @@ export const loadWantsLines = (ids: readonly number[]) =>
 
 /**
  * L'état des tâches de l'API des données (`/api/status`), demandé à chaque appel (`fetchFresh`) ;
- * `null` si elle ne répond pas, ou si elle n'est pas de la même version que le site. La cause d'un
+ * `null` si elle ne répond pas, ou si sa réponse n'a pas la forme attendue. La cause d'un
  * échec n'est que dans son journal : elle peut nommer une source, et tout le monde peut avoir un
  * compte. Lu par `use()`.
  */

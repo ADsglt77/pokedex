@@ -183,7 +183,7 @@ type CatalogRow = [string, string, number, string, number, number, number, numbe
 
 /**
  * `/api/catalog/species/<n°>` : les cartes Pokémon japonaises d'un Pokémon chez Pokécardex, avec
- * leurs séries et leurs raretés (tâche `catalog`, `server/jobs/catalog.ts`) : la fenêtre d'ajout.
+ * leurs séries et leurs raretés (la tâche `catalog` de l'API des données) : la fenêtre d'ajout.
  */
 export interface CatalogFile {
   /**
@@ -280,10 +280,7 @@ export interface ServerStatus {
   pricesDate: string | null
 }
 
-/*
- * Prix : `/api/prices/collection` et `/api/prices/selection`, mis à jour par la tâche d'ingestion
- * `prices` (`server/jobs/prices.ts`)
- */
+/* Prix : `/api/prices?ids=…`, mis à jour par la tâche `prices` de l'API des données */
 
 export interface CardPrice {
   /**

@@ -1,6 +1,5 @@
 {
-  // Les tests (`bun test`) : lancés par Bun, ils importent le serveur et du code de l'app (les stores
-  // lisent `window`, `localStorage`) : avec les types du navigateur.
+  // Les tests (`bun test`) : lancés par Bun, ils importent le serveur et du code de l'app.
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tests.tsbuildinfo",

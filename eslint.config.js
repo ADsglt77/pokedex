@@ -30,14 +30,13 @@ export default defineConfig([
     files: ['server/**/*.ts', 'tests/**/*.ts', '*.ts'],
     languageOptions: { globals: globals.node },
   },
-  // Les scripts de `public/` : le service worker (`sw.js`) et le thème (`theme.js`), tels quels
-  // dans le navigateur.
+  // Le script de `public/` : le thème (`theme.js`), tel quel dans le navigateur.
   {
     files: ['public/**/*.js'],
     extends: [js.configs.recommended],
     languageOptions: {
       sourceType: 'script',
-      globals: { ...globals.browser, ...globals.serviceworker },
+      globals: globals.browser,
     },
   },
 ])

@@ -84,7 +84,7 @@ const TIME = new Intl.DateTimeFormat('fr-FR', {
   second: '2-digit',
 })
 
-/** La longueur d'une valeur écrite, au plus (un e-mail, une référence de carte y tiennent). */
+/** La longueur d'une valeur écrite, au plus (un pseudo, une référence de carte y tiennent). */
 const MAX_VALUE = 200
 
 /** Coupé au-delà de `MAX_VALUE` caractères (« … » à la fin). */
@@ -105,10 +105,10 @@ export const safeText = (text: string) => escapeControls(cut(text))
 /**
  * `carte="Pikachu ex (SV8 033)"` : entre guillemets, échappée comme en JSON, dès qu'il y a une
  * espace, un guillemet, un `=` ou un caractère de contrôle. Une valeur peut venir d'un visiteur
- * (l'e-mail ou le pseudo d'une connexion refusée) : un retour à la ligne lui ferait écrire une
+ * (le pseudo d'une connexion refusée) : un retour à la ligne lui ferait écrire une
  * fausse ligne du journal, un échappement ANSI piloter le terminal. Ceux que JSON laisse passer
  * (DEL, les contrôles C1) sont échappés aussi. Coupée au-delà de `MAX_VALUE` caractères : un
- * e-mail de 2 Mo ferait une ligne de 2 Mo, et quelques-unes suffiraient à faire tourner le journal
+ * pseudo de 2 Mo ferait une ligne de 2 Mo, et quelques-unes suffiraient à faire tourner le journal
  * de Docker (3 × 10 Mo) et à effacer les connexions.
  */
 const detail = (key: string, value: string | number) => {
@@ -187,10 +187,8 @@ export function journalOnce(
   }
   noted.delete(key)
   noted.set(key, { at: now, silenced: 0 })
-  for (const oldest of noted.keys()) {
-    if (noted.size <= MAX_NOTED) break
-    noted.delete(oldest)
-  }
+  // Une clé de plus à chaque fois : la plus ancienne part au-delà de `MAX_NOTED`.
+  if (noted.size > MAX_NOTED) noted.delete(noted.keys().next().value!)
   const tues = known?.silenced || undefined
   journal({ ...entry, details: { ...entry.details, tues } }, request)
 }
