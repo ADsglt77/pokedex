@@ -1,10 +1,9 @@
 import { Badge, DescriptionList, SkeletonText, type BadgeTone } from '@camply/ui'
-import { Suspense, use, useState, type ReactNode } from 'react'
-import { INGEST_JOB_NAMES, INGEST_JOBS, type IngestJob } from '@/config/jobs'
+import { Suspense, use, useState } from 'react'
 import { loadStatus } from '@/lib/api'
-import { isOverdue, pricesFrozen } from '@/lib/jobs'
 import { details, formatDate, formatDateTime } from '@/lib/format'
-import type { JobStatus, ServerStatus } from '@/types'
+import { DAY, HOUR } from '@/lib/time'
+import type { JobState, JobStatus, ServerStatus } from '@/types'
 import { DataSection } from './DataSection'
 import styles from './DataPage.module.css'
 
@@ -21,15 +20,11 @@ export function ReferenceSection() {
       <p>
         Les espèces, le catalogue des cartes japonaises de chaque Pokémon (toutes les extensions
         depuis 1996, decks et promos compris : numéro, nom, id Cardmarket) et les images des cartes
-        sont gardés par le serveur, qui refait le catalogue chaque jour. Vous y choisissez vos
-        cartes, ou les saisissez : l’image est alors retrouvée d’après la référence (le code de
-        l’extension et le numéro), ou c’est celle de l’adresse que vous collez. Leur prix vient de
-        leur id Cardmarket : celui du guide quotidien de Cardmarket, relu chaque jour par le
-        serveur, qui en garde l’historique carte par carte.
-      </p>
-      <p>
-        Le serveur relit chaque source à son rythme. En développement, une source se relit avec{' '}
-        <code>bun run ingest &lt;tâche&gt;</code>.
+        sont gardés par le serveur, qui refait le catalogue quand de nouvelles cartes sortent. Vous
+        y choisissez vos cartes, ou les saisissez : l’image est alors retrouvée d’après la référence
+        (le code de l’extension et le numéro), ou c’est celle de l’adresse que vous collez. Leur
+        prix vient de leur id Cardmarket : celui du guide quotidien de Cardmarket, relu chaque jour
+        par le serveur, qui en garde l’historique carte par carte.
       </p>
       <Suspense fallback={<SkeletonText lines={5} className={styles.jobs} />}>
         <JobsStatus status={status} />
@@ -38,68 +33,41 @@ export function ReferenceSection() {
   )
 }
 
-/**
- * Où en est une tâche : un badge et une phrase. `error` : la cause de son dernier échec ;
- * `pricesDate` : le jour des prix en base (pour la tâche `prices`). `now` : en ms.
- */
-function describeJob(
-  job: IngestJob,
-  status: JobStatus | undefined,
-  pricesDate: string | null,
-  now: number,
-): { tone: BadgeTone; badge: string; text: ReactNode } {
-  const { optional } = INGEST_JOBS[job]
-  const success = status?.lastSuccess ?? null
-  const since = success && `Dernière réussite le ${formatDateTime(success)}`
-  if (!status?.lastRun) {
-    return optional
-      ? {
-          tone: 'neutral',
-          badge: 'Facultatif',
-          text: 'Jamais passée : le serveur copie à la demande les images affichées.',
-        }
-      : {
-          tone: 'warn',
-          badge: 'À lancer',
-          text: (
-            <>
-              Jamais passée (en développement : <code>bun run ingest {job}</code>).
-            </>
-          ),
-        }
-  }
-  if (status.lastRun !== success) {
-    return {
-      tone: 'danger',
-      badge: 'En échec',
-      text: details(
-        `Dernier essai le ${formatDateTime(status.lastRun)}`,
-        since || 'aucune réussite',
-        'la cause est dans le journal du serveur',
-      ),
-    }
-  }
-  if (isOverdue(job, success, now)) {
-    return { tone: 'warn', badge: 'En retard', text: since }
-  }
-  if (job === 'prices' && pricesFrozen(pricesDate, now)) {
-    return {
-      tone: 'warn',
-      badge: 'Figés',
-      text: details(since, 'le guide de Cardmarket n’a pas changé depuis plus de deux jours'),
-    }
-  }
-  return { tone: 'success', badge: 'À jour', text: since }
+/** Le badge de chaque état d'une tâche. */
+const STATES: Record<JobState, { tone: BadgeTone; badge: string }> = {
+  ok: { tone: 'success', badge: 'À jour' },
+  late: { tone: 'warn', badge: 'En retard' },
+  failed: { tone: 'danger', badge: 'En échec' },
+  never: { tone: 'neutral', badge: 'Jamais passée' },
+  frozen: { tone: 'warn', badge: 'Figés' },
+}
+
+/** « Chaque jour », « Toutes les 6 h », « À la demande ». */
+function rhythm(every: number | null) {
+  if (every === null) return 'À la demande'
+  if (every < DAY) return `Toutes les ${every / HOUR} h`
+  return every === DAY ? 'Chaque jour' : `Tous les ${every / DAY} jours`
+}
+
+/** Ce qu'on sait d'une tâche : son rythme, ses dates, et pour les prix, leur jour. */
+function describeJob(job: JobStatus, pricesDate: string | null) {
+  const since = job.lastSuccess && `dernière réussite le ${formatDateTime(job.lastSuccess)}`
+  return details(
+    rhythm(job.every),
+    job.job === 'prices' && pricesDate && `prix du ${formatDate(pricesDate)}`,
+    job.state === 'failed' && `dernier essai le ${formatDateTime(job.lastRun)}`,
+    since || (job.state === 'failed' && 'aucune réussite'),
+    job.state === 'frozen' && 'le guide de Cardmarket n’a pas changé depuis plus de deux jours',
+  )
 }
 
 function JobsStatus({ status }: { status: Promise<ServerStatus | null> }) {
   const current = use(status)
-  const [now] = useState(() => Date.now())
   if (!current) {
     return (
       <p className="muted">
-        L’état des données est inconnu : le serveur ne répond pas, ou il n’est pas à jour
-        (redémarrez-le).
+        L’état des données est inconnu : le serveur des données ne répond pas, ou il n’est pas à
+        jour.
       </p>
     )
   }
@@ -107,26 +75,17 @@ function JobsStatus({ status }: { status: Promise<ServerStatus | null> }) {
     <DescriptionList
       className={styles.jobs}
       divided
-      items={INGEST_JOB_NAMES.map((job) => {
-        const { tone, badge, text } = describeJob(job, current.jobs[job], current.pricesDate, now)
-        // Le jour des prix, qui peut précéder celui de leur relevé.
-        const pricesDate =
-          job === 'prices' && current.pricesDate && `Prix du ${formatDate(current.pricesDate)}. `
-        return {
-          term: INGEST_JOBS[job].label,
-          description: (
-            <span className={styles.job}>
-              <Badge size="sm" tone={tone}>
-                {badge}
-              </Badge>
-              <span className="muted">
-                {pricesDate}
-                {text}
-              </span>
-            </span>
-          ),
-        }
-      })}
+      items={current.jobs.map((job) => ({
+        term: job.label,
+        description: (
+          <span className={styles.job}>
+            <Badge size="sm" tone={STATES[job.state].tone}>
+              {STATES[job.state].badge}
+            </Badge>
+            <span className="muted">{describeJob(job, current.pricesDate)}</span>
+          </span>
+        ),
+      }))}
     />
   )
 }

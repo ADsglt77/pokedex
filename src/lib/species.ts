@@ -1,5 +1,5 @@
 /**
- * Les 1 025 espèces, données par le serveur (`/api/species`, tâche `species` d'après PokéAPI) avant
+ * Les 1 025 espèces, données par l'API des données (`/api/species`, d'après PokéAPI) avant
  * le premier affichage (`main.tsx`), et leurs détails à la demande. Les cartes, elles, sont celles
  * que l'utilisateur ajoute (`customCards`).
  */

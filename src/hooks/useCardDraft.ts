@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState, type RefObject } from 'react'
 import { findCardImage, type CatalogCard } from '@/lib/card-catalog'
-import { isFoundImage } from '@/lib/card-images'
+import { isFoundImage, isSourceImage } from '@/lib/card-images'
 import { referenceCode } from '@/lib/card-code'
 import { isCardmarketImage, parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
 import { newCardId } from '@/lib/collection'
@@ -49,7 +49,9 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
         ? 'Une adresse web : https://…'
         : isCardmarketImage(imageUrl)
           ? 'Cardmarket n’affiche ses images que sur son site : prenez-en une ailleurs.'
-          : undefined,
+          : isSourceImage(imageUrl.href)
+            ? 'Cette image ne s’affiche pas ici : laissez le champ vide, elle sera retrouvée.'
+            : undefined,
     cardmarket:
       cardmarket === undefined ? 'Un nombre : l’id du produit chez Cardmarket.' : undefined,
     page: page.trim() && !pageUrl ? 'Collez une adresse de www.cardmarket.com.' : undefined,

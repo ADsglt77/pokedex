@@ -14,8 +14,7 @@ const MARGIN = 3
  * peu). Le résumé lu par les lecteurs d'écran donne le début, la fin et les extrêmes. `format` :
  * des euros, sinon autre chose (un nombre de Pokémon).
  * `fromZero` : l'axe part de zéro (un total, qui ne se lit qu'à partir de rien) ; sinon du plus
- * bas de la série (un prix, dont on suit les écarts). `reference` : une valeur repère, tracée en
- * pointillés et nommée dessous (la moyenne Cardmarket sur 30 jours d'une carte).
+ * bas de la série (un prix, dont on suit les écarts).
  */
 export function PriceChart({
   points,
@@ -23,14 +22,12 @@ export function PriceChart({
   window,
   format = formatEuro,
   fromZero = false,
-  reference,
 }: {
   points: PricePoint[]
   label: string
   window: ChartWindow
   format?: (value: number) => string
   fromZero?: boolean
-  reference?: { value: number; label: string }
 }) {
   const first = points[0]
   const last = points.at(-1)
@@ -48,10 +45,9 @@ export function PriceChart({
   const values = points.map((point) => point.value)
   const low = Math.min(...values)
   const high = Math.max(...values)
-  // Les bornes de l'axe, étiquetées : zéro pour un total ; le repère y tient toujours.
-  const extra = reference ? [reference.value] : []
-  const min = Math.min(low, ...extra, ...(fromZero ? [0] : []))
-  const max = Math.max(high, ...extra)
+  // Les bornes de l'axe, étiquetées : zéro pour un total.
+  const min = fromZero ? Math.min(low, 0) : low
+  const max = high
   const start = Date.parse(from)
   const span = Date.parse(to) - start || 1
   const x = (date: string) => ((Date.parse(date) - start) / span) * WIDTH
@@ -66,7 +62,7 @@ export function PriceChart({
     .join(' ')
   // Sur plusieurs années, les dates de l'axe disent l'année.
   const withYear = from.slice(0, 4) !== to.slice(0, 4)
-  const summary = `${label} : ${format(first.value)} le ${formatDate(first.date)}, ${format(last.value)} le ${formatDate(last.date)} ; au plus bas ${format(low)}, au plus haut ${format(high)}.${reference ? ` ${reference.label} : ${format(reference.value)}.` : ''}`
+  const summary = `${label} : ${format(first.value)} le ${formatDate(first.date)}, ${format(last.value)} le ${formatDate(last.date)} ; au plus bas ${format(low)}, au plus haut ${format(high)}.`
 
   return (
     <figure className={styles.chart}>
@@ -83,13 +79,6 @@ export function PriceChart({
           />
           <path className={styles.line} d={line} />
         </svg>
-        {reference && (
-          <span
-            className={styles.reference}
-            style={{ top: `${(y(reference.value) / HEIGHT) * 100}%` }}
-            aria-hidden="true"
-          />
-        )}
         <span className={styles.max} aria-hidden="true">
           {format(max)}
         </span>
@@ -104,12 +93,6 @@ export function PriceChart({
         <span>{formatShortDate(from, withYear)}</span>
         <span>{formatShortDate(to, withYear)}</span>
       </figcaption>
-      {reference && (
-        <p className={styles.legend} aria-hidden="true">
-          <span className={styles.dash} />
-          {reference.label} : {format(reference.value)}
-        </p>
-      )}
     </figure>
   )
 }

@@ -1,8 +1,9 @@
 /**
- * Le serveur de l'app (Elysia) : l'API que lit le site (`/api/…`) et les images copiées chez nous
- * (`/images/…`, `images.ts`). Chaque domaine est un plugin : les données de référence
- * (`reference.ts`), le compte (`auth.ts`), la collection synchronisée (`collection.ts`), ce que le
- * navigateur signale au journal (`journal.ts`), le Pokédex public (`vitrine.ts`). Les paramètres et
+ * Le serveur de l'app (Elysia) : l'API que lit le site (`/api/…`), hors des données de référence
+ * (espèces, catalogue, prix, images : l'API des données, que nginx et Vite joignent eux-mêmes).
+ * Chaque domaine est un plugin : le compte (`auth.ts`), la collection synchronisée
+ * (`collection.ts`), ce que le navigateur signale au journal (`journal.ts`), le Pokédex public
+ * (`vitrine.ts`). Les paramètres et
  * les corps des requêtes sont validés par leurs schémas (422 sinon ; 413 au-delà de 5 Mo). Une
  * adresse inconnue : 404 sans corps ; une erreur imprévue : dans le journal, et 500 sans corps. En
  * développement, la documentation de l'API est à `/api/docs`.
@@ -13,24 +14,20 @@ import type { Database } from 'bun:sqlite'
 import { Elysia } from 'elysia'
 import { accountRoutes, appOrigin, ForeignOrigin, type Accounts } from './auth'
 import { collectionRoutes } from './collection'
-import { serveImage } from './images'
-import { referenceRoutes } from './reference'
 import { journal, journalRoutes } from './journal'
+import { notFound } from './responses'
 import { vitrineRoutes } from './vitrine'
-import { notFound } from './snapshots'
 
 /** Bien au-delà d'une collection de 1 025 cartes et de ses commandes : 413 au-delà. */
 const MAX_BODY = 5_000_000
 
 interface AppContext {
-  /** Les données de référence, en lecture seule. */
-  data: Database
-  /** Le compte et la collection. */
+  /** Les comptes et les collections. */
   app: Database
   accounts: Accounts
 }
 
-export function createApp({ data, app, accounts }: AppContext) {
+export function createApp({ app, accounts }: AppContext) {
   const account = accountRoutes(accounts)
   return (
     new Elysia({ serve: { maxRequestBodySize: MAX_BODY } })
@@ -68,12 +65,9 @@ export function createApp({ data, app, accounts }: AppContext) {
       .group('/api', (api) =>
         api
           .use(account)
-          .use(referenceRoutes(data))
           .use(collectionRoutes(app, account))
           .use(journalRoutes(account))
-          .use(vitrineRoutes(app, data, appOrigin(accounts.auth))),
+          .use(vitrineRoutes(app, appOrigin(accounts.auth))),
       )
-      // Les images copiées chez nous (sur le VPS, nginx ne renvoie ici que celles qu'il n'a pas).
-      .get('/images/*', ({ request }) => serveImage(data, request), { detail: { hide: true } })
   )
 }

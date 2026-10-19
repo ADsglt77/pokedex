@@ -18,6 +18,12 @@
       "runtimeExecutable": "bun",
       "runtimeArgs": ["run", "preview"],
       "port": 4173
+    },
+    {
+      "name": "data-api",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "--cwd=../pokedex-data", "dev"],
+      "port": 3001
     }
   ]
 }

@@ -17,14 +17,14 @@ import type { CollectionResponse, CollectionSaved, VitrineData } from '@/types'
 import { createApp } from '../server/app'
 import { createAuth } from '../server/auth'
 import { card, collectionWith, order, ownership } from './fixtures'
-import { testBases } from './server'
+import { testApp } from './server'
 
 // Le journal du serveur (une ligne par évènement) : muet pendant ces tests.
 const log = spyOn(console, 'log').mockImplementation(() => {})
 afterAll(() => log.mockRestore())
 
-const { data, app } = testBases()
-const server = createApp({ data, app, accounts: await createAuth(app) })
+const app = testApp()
+const server = createApp({ app, accounts: await createAuth(app) })
 const ORIGIN = process.env.BETTER_AUTH_URL!
 
 const PASSWORD = 'mot-de-passe-d-essai'
@@ -357,9 +357,35 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
     expect(Object.keys(shown.collection.cards)).toEqual(['a'])
   })
 
-  test('les prix du jour des seules cartes possédées', async () => {
-    const { prices } = await visit()
-    // Sans guide des prix lu (selon l'ordre des fichiers de test), aucun prix.
-    if (prices) expect(Object.keys(prices.cards)).toEqual(['719445'])
+  test('les prix du jour des seules cartes possédées, demandés à l’API des données avec le token', async () => {
+    // Une fausse API des données : elle note ce qu'on lui demande, et rend un prix par carte.
+    const asked: string[] = []
+    const api = Bun.serve({
+      port: 0,
+      hostname: '127.0.0.1',
+      fetch(request) {
+        const url = new URL(request.url)
+        asked.push(`${request.headers.get('authorization')} ${url.pathname}${url.search}`)
+        const ids = url.searchParams.get('ids')!.split(',')
+        return Response.json({
+          date: '2026-10-19',
+          cards: Object.fromEntries(ids.map((id) => [id, [6.87, 5, 7.2]])),
+        })
+      },
+    })
+    const before = process.env.DATA_API_URL
+    process.env.DATA_API_URL = api.url.origin
+    try {
+      expect((await visit()).prices).toEqual({
+        date: '2026-10-19',
+        cards: { '719445': [6.87, 5, 7.2] },
+      })
+      expect(asked).toEqual(['Bearer token-d-essai /v1/prices/collection?ids=719445'])
+    } finally {
+      await api.stop(true)
+      process.env.DATA_API_URL = before
+    }
+    // L'API muette : le Pokédex, sans prix.
+    expect((await visit()).prices).toBeNull()
   })
 })

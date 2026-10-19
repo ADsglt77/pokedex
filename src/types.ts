@@ -173,7 +173,7 @@ export interface SpeciesDetailsFile {
  * aucun), nom français, numéro de son image chez Pokécardex (0 : aucune), sa rareté (0 : inconnue),
  * son type (`CARD_TYPES` ; 0 : inconnu), ses Pokémon s'ils sont plusieurs].
  */
-export type CatalogRow = [string, string, number, string, number, number, number, number[]?]
+type CatalogRow = [string, string, number, string, number, number, number, number[]?]
 
 /**
  * `/api/catalog/species/<n°>` : les cartes Pokémon japonaises d'un Pokémon chez Pokécardex, avec
@@ -212,7 +212,7 @@ export interface CatalogSetsFile {
 }
 
 /** Une carte d'une série, telle que la donne `/api/catalog/sets/<code>`. */
-export interface CatalogSetRow {
+interface CatalogSetRow {
   /** Le numéro de sa référence (« 006 » ; sans numéro imprimé : son rang), unique dans la série. */
   number: string
   /** Le numéro tel qu'imprimé : « 006/165 », « R/RGB » ; '' sans numéro. */
@@ -244,19 +244,32 @@ export interface CatalogSetFile {
   rarities: CatalogFile['rarities']
 }
 
-/* État du serveur : `/api/status`, d'après le journal des tâches d'ingestion (`server/ingest.ts`) */
+/* L'état des tâches d'ingestion de l'API des données : `/api/status` */
 
-/** Les passages d'une tâche (ISO) ; une tâche qui tourne encore n'en compte pas. */
+/**
+ * Où en est une tâche : à jour, en retard (pas de réussite depuis deux de ses intervalles), en
+ * échec (son dernier passage), jamais passée, ou, pour les prix, figés (le guide de Cardmarket
+ * inchangé depuis plus de deux jours). Une tâche à la demande n'est jamais en retard.
+ */
+export type JobState = 'ok' | 'late' | 'failed' | 'never' | 'frozen'
+
 export interface JobStatus {
-  /** La fin du dernier passage réussi ; `null` s'il n'y en a pas eu. */
+  /** Son nom de commande (`bun run ingest prices`, dans l'API des données). */
+  job: string
+  /** Son nom affiché (« Prix »). */
+  label: string
+  /** Son rythme, en ms ; `null` : à la demande. */
+  every: number | null
+  state: JobState
+  /** La fin du dernier passage réussi (ISO) ; `null` s'il n'y en a pas eu. */
   lastSuccess: string | null
-  /** La fin du dernier passage, réussi ou non : après `lastSuccess`, il a échoué. */
+  /** La fin du dernier passage, réussi ou non (ISO) : après `lastSuccess`, il a échoué. */
   lastRun: string | null
 }
 
 export interface ServerStatus {
-  /** Clé : la tâche (`INGEST_JOBS`, `config/jobs.ts`) ; absente tant qu'elle n'est jamais passée. */
-  jobs: Partial<Record<string, JobStatus>>
+  /** Chaque tâche, dans l'ordre de `INGEST_JOBS`. La cause d'un échec : le journal de l'API. */
+  jobs: JobStatus[]
   /** Le jour du guide des prix Cardmarket en base ; `null` sans prix. */
   pricesDate: string | null
 }
@@ -267,15 +280,18 @@ export interface ServerStatus {
  */
 
 export interface CardPrice {
-  /** Prix du marché, en euros : la tendance Cardmarket, sinon sa moyenne sur 30 jours. */
+  /**
+   * Prix du marché, en euros, la règle de Pokécardex (`guidePrice`) : la tendance Cardmarket pour
+   * une série sortie depuis moins de 31 jours, sa moyenne sur 30 jours ensuite.
+   */
   price: number
   low: number | null
-  /** Moyenne sur 30 jours. */
-  avg30: number | null
+  /** Son prix d'il y a 30 jours, d'après l'historique ; `null` sans. */
+  monthAgo: number | null
 }
 
-/** Le prix du jour d'une carte, en court : prix du marché, plus bas, moyenne sur 30 jours. */
-export type CardPriceRow = [price: number, low: number | null, avg30: number | null]
+/** Le prix du jour d'une carte, en court : prix du marché, plus bas, prix d'il y a 30 jours. */
+type CardPriceRow = [price: number, low: number | null, monthAgo: number | null]
 
 /**
  * Les prix Cardmarket du jour des cartes demandées (`/api/prices/collection`, `/selection`, et ceux
@@ -342,7 +358,7 @@ export interface VitrineData {
 
 /**
  * `/api/wants?ids=…` : pour chaque id Cardmarket demandé (`idProduct`), sa ligne pour « Ajouter
- * une deck list » d'une liste de souhaits Cardmarket (`wantsLine`), ou `null` quand elle ne
+ * une deck list » d'une liste de souhaits Cardmarket, ou `null` quand elle ne
  * désignerait pas sûrement cette carte-là (produit inconnu, extension ambiguë…).
  */
 export type WantsLines = Record<string, string | null>

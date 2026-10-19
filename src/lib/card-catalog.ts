@@ -1,19 +1,19 @@
 /**
- * Le catalogue des cartes japonaises, que la tâche `catalog` construit d'après Pokécardex :
+ * Le catalogue des cartes japonaises, que l'API des données construit d'après Pokécardex :
  * - `/api/catalog/species/<n°>` : les cartes d'un Pokémon, des plus récentes aux plus anciennes,
  *   avec leur rareté, leur type et leurs séries (nom, date de sortie, logo) ; chargées par la
  *   fenêtre d'ajout, et préparées d'avance par la fiche d'un Pokémon sans carte (quand le
  *   navigateur est libre) ;
  * - `/api/catalog/sets` et `/api/catalog/sets/<code>` : les séries, puis toutes les cartes d'une
  *   série, dresseurs et énergies compris, avec tout ce qu'on en sait (la page Catalogue) ; elles
- *   donnent aussi l'image exacte d'une carte chez Pokécardex (`findCardImage`).
+ *   donnent aussi l'image exacte d'une carte (`findCardImage`).
  * Aucun tri ni détection : l'utilisateur choisit, l'app ne propose rien seule.
  */
 
 import { CARD_TYPES } from '@/config/catalog'
 import { derived } from '@/lib/api'
 import { codeKey, numberKey, referenceCode, setKey } from '@/lib/card-code'
-import { cardImage, localSrc, pokecardexImage } from '@/lib/card-images'
+import { cardImage, catalogImage } from '@/lib/card-images'
 import { settled } from '@/lib/settled'
 import { getSpecies } from '@/lib/species'
 import type { CardImage, CatalogFile, CatalogSetFile, CatalogSetsFile, PokemonCard } from '@/types'
@@ -50,7 +50,7 @@ export interface CatalogCard {
   cardmarket?: number
   /** « Pikachu ex (SV8 033) », « Pikachu & Zekrom GX (SM9 031) » : son nom et son code. */
   reference: string
-  /** Son image chez Pokécardex ; `null` s'il ne l'a pas. */
+  /** Son image ; `null` si la source ne l'a pas. */
   image: CardImage | null
   /** Sa rareté ; `null` tant que Pokécardex ne la donne pas. */
   rarity: Rarity | null
@@ -87,7 +87,7 @@ function toCard<S extends CatalogSet>(
     dexIds,
     cardmarket: row.cardmarket || undefined,
     reference: `${name} (${set.id} ${number})`,
-    image: row.image ? pokecardexImage(set.id, row.image) : null,
+    image: row.image ? catalogImage(set.id, row.image) : null,
     rarity,
     type: CARD_TYPES.has(type) ? type : null,
   }
@@ -280,11 +280,9 @@ export const passesFilter = (card: CatalogCard, { rarities, types }: CardFilter)
 const found = new Map<string, Promise<CardImage | null>>()
 const missing = new Set<string>()
 
-/** `true` si l'image se charge (sa copie chez nous) ; `false` sans réponse en 10 s, ou sans copie. */
+/** `true` si l'image se charge ; `false` sans réponse en 10 s, ou si elle n'existe pas. */
 const loads = (image: CardImage) =>
   new Promise<boolean>((resolve) => {
-    const src = localSrc(image.small)
-    if (src === null) return resolve(false)
     const probe = new Image()
     const timer = setTimeout(() => {
       probe.onload = probe.onerror = null
@@ -298,13 +296,13 @@ const loads = (image: CardImage) =>
       clearTimeout(timer)
       resolve(false)
     }
-    probe.src = src
+    probe.src = image.small
   })
 
 /**
- * L'image de la carte chez Pokécardex, si sa copie se charge (le serveur la copie à la première
- * demande) : celle que le catalogue donne à cette référence (son adresse exacte), sinon celle que
- * la référence désigne (`cardImage`) ; `null` si Pokécardex ne l'a pas. La même promesse pour la
+ * L'image de la carte, si elle se charge (l'API des données la copie à la première demande) :
+ * celle que le catalogue donne à cette référence, sinon celle que la référence désigne
+ * (`cardImage`) ; `null` si la source ne l'a pas. La même promesse pour la
  * même référence (ce qu'attend `use`). `retry`, au moment d'enregistrer, redemande une image qui a
  * échoué : une panne passagère ne doit pas compter pour une image absente. Sans réponse en 10 s,
  * elle compte pour absente : l'enregistrement, qui l'attend, ne reste pas bloqué.
@@ -314,7 +312,7 @@ export function findCardImage(reference: string, { retry = false } = {}) {
   if (!promise || (retry && missing.has(reference))) {
     promise = settled(
       catalogCard(reference).then(async (listed) => {
-        // Une carte du catalogue sans image chez Pokécardex : rien à chercher.
+        // Une carte du catalogue sans image : rien à chercher.
         const image = listed ? listed.image : cardImage(reference)
         if (image && (await loads(image))) {
           missing.delete(reference)

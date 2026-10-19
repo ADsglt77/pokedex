@@ -1,29 +1,18 @@
 /**
- * Les étapes du schéma des bases (`server/db.ts`) : une base existante garde ses lignes en passant
- * les étapes suivantes (l'historique des prix et la collection sont irremplaçables) ; une étape
- * modifiée après son application, ou une base plus avancée que le code, et rien n'est appliqué.
+ * Les étapes du schéma de la base (`server/db.ts`) : une base existante garde ses lignes en passant
+ * les étapes suivantes (les collections sont irremplaçables) ; une étape modifiée après son
+ * application, ou une base plus avancée que le code, et rien n'est appliqué.
  */
 
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { APP_STEPS, DATA_STEPS, migrate } from '../server/db'
+import { APP_STEPS, migrate } from '../server/db'
 
 const version = (db: Database) =>
   (db.query('PRAGMA user_version').get() as { user_version: number }).user_version
 
 describe('migrate', () => {
   test('une base remplie à une étape ancienne garde ses lignes jusqu’à la dernière', () => {
-    const data = new Database(':memory:')
-    migrate(data, 'data.db', DATA_STEPS.slice(0, 1))
-    data.run(
-      "INSERT INTO cardmarket_history (id, year, first, prices) VALUES (719445, 2026, 285, '[6.87,7.1]')",
-    )
-    migrate(data, 'data.db', DATA_STEPS)
-    expect(version(data)).toBe(DATA_STEPS.length)
-    expect(data.query('SELECT * FROM cardmarket_history').all()).toEqual([
-      { id: 719445, year: 2026, first: 285, prices: '[6.87,7.1]' },
-    ])
-
     const app = new Database(':memory:')
     migrate(app, 'app.db', APP_STEPS.slice(0, 1))
     app.run(

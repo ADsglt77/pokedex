@@ -1,8 +1,8 @@
 /**
- * La lecture de l'API du site (`/api/…`, `server/app.ts` ; les données de référence :
- * `server/reference.ts`) : les espèces, le catalogue, les prix et leur historique, les lignes d'une
- * liste de souhaits Cardmarket, l'état des tâches du serveur. Facultative, sauf les espèces
- * (`main.tsx`) : sans serveur, ou base encore vide, l'app s'affiche sans ces données.
+ * La lecture de l'API du site (`/api/…`, `server/app.ts` ; les données de référence : l'API des
+ * données, que nginx joint) : les espèces, le catalogue, les prix et leur historique, les lignes
+ * d'une liste de souhaits Cardmarket, l'état des tâches de l'API des données. Facultative, sauf les
+ * espèces (`main.tsx`) : sans serveur, ou base encore vide, l'app s'affiche sans ces données.
  */
 
 import { settled } from '@/lib/settled'
@@ -89,13 +89,17 @@ export const loadWantsLines = (ids: readonly number[]) =>
   settled(fetchFresh<WantsLines>(`/api/wants?ids=${ids.join()}`))
 
 /**
- * L'état des tâches du serveur (`/api/status`), demandé à chaque appel (`fetchFresh`) ; `null`
- * s'il ne répond pas, ou s'il n'est pas de la même version que le site (pas encore redémarré
- * après une mise à jour). La cause d'un échec n'est que dans le journal du serveur : elle peut
- * nommer une source, et tout le monde peut avoir un compte. Lu par `use()`.
+ * L'état des tâches de l'API des données (`/api/status`), demandé à chaque appel (`fetchFresh`) ;
+ * `null` si elle ne répond pas, ou si elle n'est pas de la même version que le site. La cause d'un
+ * échec n'est que dans son journal : elle peut nommer une source, et tout le monde peut avoir un
+ * compte. Lu par `use()`.
  */
 export const loadStatus = () =>
-  settled(fetchFresh<ServerStatus>('/api/status').then((status) => (status?.jobs ? status : null)))
+  settled(
+    fetchFresh<ServerStatus>('/api/status').then((status) =>
+      Array.isArray(status?.jobs) ? status : null,
+    ),
+  )
 
 /**
  * Ce que l'app tire d'une réponse de l'API (le catalogue lu, les détails par espèce…), calculé

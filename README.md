@@ -4,7 +4,7 @@ Pokédex personnel de cartes Pokémon japonaises : pour chacun des 1 025 Pokémo
 carte que l'on veut (sa référence, d'où son image est retrouvée, et son id Cardmarket pour suivre
 son prix) ; le Pokémon se débloque quand on la possède. React + Vite + TypeScript, interface
 [`@camply/ui`](https://www.npmjs.com/package/@camply/ui) ; espèces, cartes, images et prix relus
-par le serveur de l'app (plus bas).
+par l'API des données, un dépôt à part (plus bas).
 
 ```sh
 bun install
@@ -53,42 +53,28 @@ bun run format   # Prettier
   barre ; sans choix, celui du système.
 - **Données** : la collection et les images à chercher pour les cartes qui n'en ont pas, le compte
   (pseudo, mot de passe), l'adresse du Pokédex public, export / import (achats compris),
-  effacement, et l'état des données du serveur (dernière lecture de chaque source, jour des prix,
-  tâche en échec ou en retard).
+  effacement, et l'état des données du serveur (le rythme et la dernière réussite de chaque tâche,
+  jour des prix, tâche en échec ou en retard).
 
-Toutes les données passent par le serveur de l'app (`server/`, Elysia et une base SQLite) : le
-navigateur ne parle qu'à lui. Des tâches d'ingestion lisent les sources et remplissent la base :
-- `catalog`, chaque jour : le catalogue des cartes japonaises, d'après Pokécardex : ses ≈ 450
-  séries japonaises depuis 1996, decks et promos compris, toutes leurs cartes (dresseurs et
-  énergies comprises) avec le numéro, les noms, les Pokémon, l'id Cardmarket, la rareté, le type,
-  l'illustrateur et les versions de chacune, et le bloc de chaque série (`/api/catalog/species/…`,
-  `/api/catalog/sets`). Une page par série, une toutes les 3 s : le premier passage prend une
-  vingtaine de minutes ;
-- `prices`, toutes les 6 h : les prix d'après les fichiers publics de Cardmarket (le prix du jour
-  de toutes ses cartes à l'unité, et l'historique de chacune ; l'app ne demande que ceux de ses
-  cartes, `/api/prices/collection`, `/api/histories`),
-  et l'extension de chaque carte, pour les lignes de la liste de souhaits (`/api/wants`) ;
-- `images`, chaque jour : les images copiées chez nous (`/images/…`) — chez Pokécardex, les
-  cartes, le logo japonais de chaque série et les icônes des types et des raretés, hébergés chez
-  nous (jamais affichés depuis ses serveurs) ;
-  sprites et illustrations des Pokémon chez PokéAPI. Une image qui manque encore est copiée à la
-  demande.
+Les données (espèces, catalogue des cartes japonaises, images, prix Cardmarket et leur
+historique) viennent de **l'API des données**, un dépôt à part (`pokedex-data`) : privée, sans
+token aucune donnée. Le navigateur ne parle qu'au site, aux mêmes adresses qu'avant (`/api/…`,
+`/images/…`) : nginx (Vite en développement) renvoie celles des données à l'API, avec le token du
+site, que le navigateur ne voit jamais. Aucune adresse de la source n'apparaît dans le navigateur :
+les images ont des chemins neutres (`/images/cards/SV2A/166-md.webp`). Le serveur de l'app
+(`server/`, Elysia et SQLite) garde les comptes et les collections. Seule une image à l'adresse
+collée se charge ailleurs ; pas celles de Cardmarket, qui ne s'affichent que sur son site.
 
-Les espèces (PokéAPI) viennent aussi du serveur (tâche `species`, chaque mois ; une espèce sans
-nom français ou anglais, ou d'un type inconnu, fait échouer la tâche : les espèces d'avant
-restent, l'app ne plante pas sur une nouvelle génération pas encore traduite). Seule une
-image à l'adresse collée se charge ailleurs ; pas celles de Cardmarket, qui ne s'affichent que sur
-son site.
-
-En développement : `bun run dev:server` (l'API, sur le port 3000) à côté de `bun dev`, qui lui
-renvoie `/api` et `/images` ; la base vit dans `.data/`. La remplir une fois :
-`bun run ingest species`, `bun run ingest catalog`, puis `bun run ingest prices`. Inutile de lancer `bun run ingest images` (1,5 Go) : le
-serveur copie à la demande les images affichées. Pour la connexion, un fichier `.env.local` (ignoré
-par git) :
+En développement, trois terminaux : l'API des données (`bun run dev` dans `../pokedex-data`, sur
+le port 3001 ; sa base et ses tâches : son README), `bun run dev:server` (le serveur de l'app, sur
+le port 3000) et `bun dev`, qui renvoie à chacun ce qui est à lui. La base de l'app vit dans
+`.data/`. Un fichier `.env` (ignoré par git), avec le token du site, le même que dans
+`API_TOKENS` de l'API des données :
 
 ```sh
 BETTER_AUTH_URL=http://localhost:5173
 BETTER_AUTH_SECRET=…        # openssl rand -base64 32
+DATA_API_TOKEN=…            # le token « pokedex » de l'API des données
 ```
 
 Un visiteur arrive sur la connexion ; `/inscription` crée un compte (pseudo, mot de passe). Pseudo
@@ -106,8 +92,11 @@ précédent, qui garde ses modifications).
 
 - [ ] **Avant tout** : exporter sa collection depuis le site actuel (Données › Exporter).
 - [ ] Sur le VPS : Docker, `git` et le tunnel Cloudflare (`cloudflared`).
+- [ ] L'API des données d'abord : le réseau `pokedex-net`, son clone, son `.env` (le token du
+      site), ses conteneurs et ses cartes (son README).
 - [ ] Le clone en SSH, avec une clé de déploiement en lecture seule (étape 1 plus bas).
-- [ ] Le fichier `.env` : l'adresse publique en https et la clé des sessions (étape 2).
+- [ ] Le fichier `.env` : l'adresse publique en https, la clé des sessions et le token de l'API des
+      données (étape 2).
 - [ ] Les mentions légales : l'hébergeur (nom, adresse) et une adresse de contact publique, dans
       `src/config/legal.ts` (sans eux, la page `/mentions-legales` dit « à compléter »).
 - [ ] `docker compose up -d --build`, puis le tunnel vers `http://localhost:8080` (étape 3).
@@ -122,13 +111,12 @@ précédent, qui garde ses modifications).
       sans réseau (après une première ouverture en ligne) ; les modifications partent au retour du
       réseau.
 
-**La surveillance** : `/api/health` répond 200 quand le serveur répond et que chaque tâche
-nécessaire a réussi récemment (en deux intervalles au plus : les prix en 12 h, le catalogue et les
-sauvegardes en 2 jours, les espèces en 60 jours), 503 sinon, avec la liste des tâches en retard.
-Au tout premier démarrage, il répond 503 le temps des premières tâches (le catalogue prend une
-vingtaine de minutes ; la sauvegarde suit les prix, sans attendre la copie des images).
-Sans surveillance, un trou dans l'historique des prix passerait inaperçu : Cardmarket ne le garde
-pas, un jour manqué l'est pour toujours.
+**La surveillance** : `/api/health` est celui de l'API des données (nginx le lui renvoie) : 200
+quand chaque tâche à rythme a réussi récemment (les prix en 12 h, les sauvegardes en 2 jours, les
+espèces en 60 jours) et que le guide des prix n'est pas figé, 503 sinon, avec les tâches en
+retard ; une erreur de nginx (502) si l'API ne répond plus. Sans surveillance, un trou dans
+l'historique des prix passerait inaperçu : Cardmarket ne le garde pas, un jour manqué l'est pour
+toujours.
 
 **Le journal** : le serveur écrit une ligne par évènement, alignée, à l'heure de Paris : un symbole
 de niveau en couleur (✔ réussi, • info, ▲ à surveiller, ✖ refusé), le thème, un message court et
@@ -137,24 +125,18 @@ compte (pas les requêtes une à une : seulement ce qui se passe). Sans couleurs
 avec `NO_COLOR=1`. Il note les connexions
 (réussies ou refusées, avec l'adresse du visiteur), création du compte, pseudo et mot de passe
 changés, cartes ajoutées, possédées ou retirées, commandes enregistrées, reçues ou annulées, budget,
-exports et imports, visites du Pokédex public, et les erreurs du serveur (avec leur cause). Pour le
+exports et imports, visites du Pokédex public, sauvegardes, l'API des données muette, et les erreurs
+du serveur (avec leur cause). Pour le
 suivre : `docker compose logs -f server` (en développement, le terminal de
 `bun run dev:server`).
 
 Les services (`pokedex` : le site, nginx, sur `127.0.0.1:8080`, joignable seulement par le
-tunnel ; `server` : l'API ; `ingest` : les tâches d'ingestion et les sauvegardes) et leurs
-volumes : `docs/deploiement.md`. Pour lancer une tâche à la main (par exemple relire tout le
-catalogue), arrêtez d'abord le service `ingest`, qui la relancerait en même temps s'il redémarrait
-pendant ce temps :
+tunnel ; `server` : les comptes, les collections et leurs sauvegardes) et leurs volumes :
+`docs/deploiement.md`. Les tâches d'ingestion (de nouvelles cartes…) : le README de l'API des
+données.
 
-```sh
-docker compose stop ingest
-docker compose run --rm ingest bun server/ingest.ts catalog --refresh
-docker compose start ingest
-```
-
-Ne jamais lancer `docker compose down -v`, qui effacerait les volumes (`db` : le compte, la
-collection et l'historique des prix ; `backups` ; `images`).
+Ne jamais lancer `docker compose down -v`, qui effacerait les volumes (`db` : les comptes et les
+collections ; `backups`).
 
 **Une fois, sur le VPS**
 
@@ -167,10 +149,12 @@ collection et l'historique des prix ; `backups` ; `images`).
    cd pokedex
    ```
 2. Créer, dans le clone, le fichier `.env` des secrets (ignoré par git ; sans lui, docker compose
-   refuse de démarrer) : l'adresse publique du site, en https, et la clé qui signe les sessions.
+   refuse de démarrer) : l'adresse publique du site, en https, la clé qui signe les sessions, et le
+   token du site pour l'API des données (celui de son `API_TOKENS`, `pokedex:<token>`).
    ```sh
    echo "BETTER_AUTH_URL=https://pokedex.ton-domaine.fr" > .env
    echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+   echo "DATA_API_TOKEN=<le token du site>" >> .env
    chmod 600 .env
    docker compose up -d --build
    ```
@@ -229,45 +213,35 @@ Puis, une fois `main` corrigé : `git checkout main` et un nouveau déploiement.
 
 ## Sauvegardes
 
-Chaque jour, le service `ingest` copie les deux bases dans le volume `backups` :
-`app-AAAA-MM-JJ.db` (votre compte et votre collection, 30 jours gardés) et
-`data-AAAA-MM-JJ.db.gz` (catalogue, prix et leur historique, 7 jours gardés). Chaque copie est
-vérifiée (`PRAGMA quick_check`) et écrite sous un nom provisoire (`tmp-…`) avant de prendre sa
-place : une copie en cours n'est jamais prise pour une sauvegarde. Ce volume est sur le même
-disque que les bases : copiez-le aussi ailleurs. Pour en sortir les fichiers (dans
-`./sauvegardes`, que git ignore, vidé d'abord : il ne garde que ce qu'a le volume ; `--user root` :
-les conteneurs tournent sans droits d'administrateur, ce dossier du VPS ne leur appartient pas) :
+Chaque jour, le serveur copie sa base dans le volume `backups` : `app-AAAA-MM-JJ.db` (les comptes
+et les collections, 30 jours gardés). Chaque copie est vérifiée (`PRAGMA quick_check`) et écrite
+sous un nom provisoire (`tmp-…`) avant de prendre sa place : une copie en cours n'est jamais prise
+pour une sauvegarde. Les données de référence et l'historique des prix ont les leurs, dans l'API
+des données (son README). Ce volume est sur le même disque que la base : copiez-le aussi
+ailleurs. Pour en sortir les fichiers (dans `./sauvegardes`, que git ignore, vidé d'abord : il ne
+garde que ce qu'a le volume ; `--user root` : les conteneurs tournent sans droits
+d'administrateur, ce dossier du VPS ne leur appartient pas) :
 
 ```sh
 rm -rf sauvegardes && mkdir sauvegardes
-docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/out" ingest sh -c 'cp /backups/app-* /backups/data-* /out/'
+docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/out" server sh -c 'cp /backups/app-* /out/'
 ```
 
 Chaque nuit, hors du VPS, avec `rclone` (configuré une fois, `rclone config`, vers un stockage à
 vous : Backblaze B2, Google Drive, un autre serveur…) : dans la crontab de l'utilisateur du
-déploiement (`crontab -e`), ici à 4 h 30, le dossier du clone à adapter. La sauvegarde n'a pas
-d'heure fixe (une par jour, à son rythme) : chaque copie emporte celles du volume, la plus récente
-datant de moins d'un jour. Le stockage distant garde 90 jours (`rclone delete --min-age 90d`) :
+déploiement (`crontab -e`), ici à 4 h 30, le dossier du clone à adapter. Le stockage distant garde
+90 jours (`rclone delete --min-age 90d`) :
 
 ```sh
-30 4 * * * cd /home/moi/pokedex && rm -rf sauvegardes && mkdir sauvegardes && docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/out" ingest sh -c 'cp /backups/app-* /backups/data-* /out/' && rclone copy sauvegardes distant:pokedex-sauvegardes && rclone delete --min-age 90d distant:pokedex-sauvegardes
+30 4 * * * cd /home/moi/pokedex && rm -rf sauvegardes && mkdir sauvegardes && docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/out" server sh -c 'cp /backups/app-* /out/' && rclone copy sauvegardes distant:pokedex-sauvegardes && rclone delete --min-age 90d distant:pokedex-sauvegardes
 ```
 
-**Restaurer une sauvegarde** : arrêter le serveur et les tâches, remettre la copie à la place de
-la base, sans les fichiers `-wal` et `-shm` de l'ancienne, puis redémarrer. Le compte et la
-collection (`app.db`) :
+**Restaurer une sauvegarde** : arrêter le serveur, remettre la copie à la place de la base, sans
+les fichiers `-wal` et `-shm` de l'ancienne, puis redémarrer :
 
 ```sh
-docker compose stop server ingest
+docker compose stop server
 docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/app.db-wal /data/app.db-shm && cp /restore/app-AAAA-MM-JJ.db /data/app.db && chown bun:bun /data/app.db'
-docker compose up -d
-```
-
-Les données de référence et l'historique des prix (`data.db`, compressée) :
-
-```sh
-docker compose stop server ingest
-docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/data.db-wal /data/data.db-shm && gunzip -c /restore/data-AAAA-MM-JJ.db.gz > /data/data.db && chown bun:bun /data/data.db'
 docker compose up -d
 ```
 

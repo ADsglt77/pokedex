@@ -24,12 +24,6 @@ export const GENERATIONS: readonly Generation[] = [
 
 export const TOTAL_SPECIES = GENERATIONS.at(-1)!.last
 
-/** Les numéros du Pokédex national, de 1 à `TOTAL_SPECIES`. */
-export const SPECIES_IDS: readonly number[] = Array.from(
-  { length: TOTAL_SPECIES },
-  (_, index) => index + 1,
-)
-
 export function generationById(id: number): Generation | undefined {
   return GENERATIONS.find((generation) => generation.id === id)
 }
@@ -68,7 +62,7 @@ export const POKEMON_TYPES: Record<PokemonTypeId, { label: string; color: string
   fairy: { label: 'Fée', color: '#F1BEDD' },
 }
 
-// Les images des Pokémon, de PokéAPI, copiées par le serveur (`server/images.ts`).
+// Les images des Pokémon, de PokéAPI, copiées par l'API des données.
 
 /** Sprite 96×96, sur la carte de substitution d'une carte sans image ou d'un Pokémon sans carte. */
 export const spriteUrl = (speciesId: number) => `/images/species/${speciesId}.png`

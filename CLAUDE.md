@@ -4,9 +4,12 @@ Pokédex personnel de cartes Pokémon **japonaises** : les 1 025 Pokémon, et po
 l'utilisateur veut, qu'il choisit lui-même : dans le catalogue des cartes japonaises de chaque
 Pokémon, ou à la main (sa référence, d'où son image est retrouvée, et son id Cardmarket pour le
 prix). Un Pokémon est « débloqué » quand sa
-carte est possédée. React 19 + Vite + TypeScript, UI `@camply/ui`, espèces PokéAPI, catalogue et
-images Pokécardex, prix Cardmarket : tout passe par le serveur de l'app (Elysia, SQLite,
-`server/`), le navigateur ne parle qu'à lui. Chacun crée son compte (Better Auth : pseudo et mot
+carte est possédée. React 19 + Vite + TypeScript, UI `@camply/ui`. Les données (espèces,
+catalogue et images des cartes, prix Cardmarket et leur historique) viennent de **l'API des
+données**, un dépôt à part (`pokedex-data`, à côté), privée (un token) : nginx (Vite en
+développement) la joint avec le token du site ; le navigateur ne parle qu'au site, aux mêmes
+adresses (`/api/…`, `/images/…`). Le serveur de l'app (Elysia, SQLite, `server/`) garde les
+comptes et les collections. Chacun crée son compte (Better Auth : pseudo et mot
 de passe, sans e-mail) ; connecté, sa collection est synchronisée entre ses appareils ; sans
 connexion, on ne voit que la connexion et le Pokédex public de chaque compte (`/pseudo`).
 
@@ -22,12 +25,14 @@ bun lint               # ESLint, puis knip : à lancer après chaque changement 
 bun run knip           # le code mort seul : exports, fichiers et dépendances sans usage (entrées : knip.json)
 bun test               # tests de tests/ (ce qu'ils couvrent : Principes), relancés par le build Docker
 bun run format         # Prettier sur src/, server/ et tests/
-bun run dev:server     # le serveur de l'app (API, server/index.ts) sur le port 3000 ; `bun dev` lui renvoie /api et /images
-bun run ingest catalog # une tâche d'ingestion : catalogue (Pokécardex) → .data/data.db ; `--refresh` relit toutes les séries
-bun run ingest prices  # prix du jour (Cardmarket)
-bun run ingest species # les espèces (PokéAPI) → .data/data.db : la première tâche à lancer
-bun run ingest images  # copie les images (≈ 1,5 Go ; inutile en développement : copiées à la demande) ; aussi `backups`
+bun run dev:server     # le serveur de l'app (server/index.ts) sur le port 3000 ; `bun dev` lui renvoie le reste de /api
 ```
+
+Les données : l'API des données, lancée à côté (`bun run dev` dans `../pokedex-data`, port 3001),
+que `bun dev` joint pour `/api/species`, `/api/catalog/…`, `/api/prices/…`, `/api/histories`,
+`/api/wants`, `/api/status`, `/api/health` et `/images/…`, avec le token du site (`DATA_API_TOKEN`
+dans `.env`, le même que dans `API_TOKENS` de l'API). Ses tâches d'ingestion, sa base et ses
+images : son propre README.
 
 ## Principes
 
@@ -42,9 +47,7 @@ bun run ingest images  # copie les images (≈ 1,5 Go ; inutile en développemen
   commande, import et montants saisis (un montant mal lu fausserait le budget), id Cardmarket
   saisi, le lien vers Cardmarket (ses offres en japonais, Near Mint au moins : une autre langue,
   ce serait une autre carte achetée), prix d'une carte (le plan le lit : jamais celui d'une
-  autre), la ligne d'une carte pour la liste de souhaits Cardmarket (une mauvaise version
-  achèterait une autre carte : `tests/wants.test.ts`, ses règles et le SQL de `/api/wants`),
-  synchronisation (une erreur écraserait les commandes d'un autre appareil ; la garde du serveur,
+  autre), synchronisation (une erreur écraserait les commandes d'un autre appareil ; la garde du serveur,
   409 pour un envoi parti d'une version dépassée, en avance ou d'un autre document au même numéro,
   une mise à jour, un document refusé, sur le serveur entier : `tests/collection.test.ts`), la
   reprise entre onglets (`persist` : une valeur reprise d'un autre onglet n'est jamais réécrite,
@@ -53,11 +56,11 @@ bun run ingest images  # copie les images (≈ 1,5 Go ; inutile en développemen
   collection et des commandes, qui ne modifient jamais ce qu'elles reçoivent (« Annuler ») ; les
   comptes (chacun ne touche qu'à sa collection, qui part avec lui ; ses derniers pseudos quittés
   jamais repris par un autre ; rien d'un autre site) et ce que montre le Pokédex
-  public de chacun (ce qu'il laisserait passer serait public ; ses règles et sa route) ;
-  et l'historique des prix (`server/history.ts`, irremplaçable : Cardmarket n'en garde pas ; son
-  écriture quotidienne, `savePriceGuide` ; sa relecture pour la courbe de la valeur,
-  `historiesOf` ; les étapes du schéma, qui gardent les lignes d'une base remplie :
-  `tests/schema.test.ts`). Pas de
+  public de chacun (ce qu'il laisserait passer serait public ; ses règles et sa route, ses prix
+  demandés à l'API des données pour ses seules cartes possédées, une fausse API dans le test) ; la
+  relecture des historiques pour la courbe de la valeur (`historiesOf`) ; les étapes du schéma, qui
+  gardent les lignes d'une base remplie (`tests/schema.test.ts`). Les prix, leur historique et les
+  lignes de la liste de souhaits ont leurs tests dans l'API des données. Pas de
   tests d'interface. Le build Docker les lance : un test en échec bloque le déploiement. C'est la
   liste de référence : le README et les commandes y renvoient.
 - Les cartes viennent de l'utilisateur, une par Pokémon, qu'il **choisit** : aucune détection ni
@@ -72,8 +75,9 @@ bun run ingest images  # copie les images (≈ 1,5 Go ; inutile en développemen
   TCGplayer retirés). L'accord de Pokécardex (octobre 2026) : lire tout ce qu'on veut sur son site
   (ses pages chiffrent leurs données : on les déchiffre comme son propre JavaScript, avec sa clé
   relue dans ce JavaScript), utiliser ses images à condition de les **héberger chez nous** (jamais
-  affichées depuis ses serveurs) ; il vaut aussi pour le site ouvert à tous (confirmé par
-  Pokécardex, octobre 2026) ; payé par l'utilisateur (octobre 2026), il ne demande aucun
+  affichées depuis ses serveurs), et reprendre son historique des prix (les 180 jours que porte la
+  page de chaque carte, une fois : l'API des données) ; il vaut aussi pour le site ouvert à tous
+  (confirmé par Pokécardex, octobre 2026) ; payé par l'utilisateur (octobre 2026), il ne demande aucun
   crédit : **l'app ne cite aucune source** (crédits de Pokécardex et de PokéAPI retirés à sa
   demande ; le pied de page ne dit que ce que le site n'est pas, `SiteDisclaimer`). Seulement des cartes japonaises (pas les françaises de Pokécardex, son choix). Ne pas
   réintroduire le reste sans demande.
@@ -101,16 +105,21 @@ bun run ingest images  # copie les images (≈ 1,5 Go ; inutile en développemen
   s'il est métier ou absent de la lib.
 - Périmètre volontairement réduit : pas d'image téléversée (on colle une adresse), pas de
   comparaison ni de fusion à l'import. Le navigateur ne parle qu'au site lui-même : son API
-  (`/api/…` : catalogue, prix) et les images copiées (`/images/…`) ; seule exception, une image à
-  l'adresse collée. Les sources (PokéAPI, Pokécardex, Cardmarket) ne sont lues que par les tâches
-  d'ingestion du serveur.
+  (`/api/…` : compte, collection ; catalogue et prix, que nginx renvoie à l'API des données) et les
+  images (`/images/…`, de l'API des données, gardées en cache par nginx) ; seule exception, une
+  image à l'adresse collée (jamais une du serveur d'images de Pokécardex : `isSourceImage`).
+  **Aucune source n'est nommée** dans ce que voit le navigateur : chemins d'images neutres
+  (`/images/cards/SV2A/166-md.webp`), le token jamais côté navigateur. Les sources (PokéAPI,
+  Pokécardex, Cardmarket) ne sont lues que par l'API des données.
 - Sources : on peut lire (scraper) n'importe quel site, ou contourner une protection (données
   chiffrées…), mais **toujours demander d'abord à l'utilisateur**, qui obtient l'accord du site ;
   dire précisément quoi (pages, rythme, méthode). Jamais de CAPTCHA ni de défi anti-robot
   (Cloudflare…), même avec un accord. Sources convenues : PokéAPI, Pokécardex (pages et images),
   les fichiers publics de Cardmarket.
 - Cardmarket : seulement les fichiers publics (guide des prix, liste des produits) ; leurs prix
-  peuvent se montrer sur le site ouvert à tous, sans citer Cardmarket (son accord, octobre 2026). Pas de
+  peuvent se montrer sur le site ouvert à tous, sans citer Cardmarket (son accord, octobre 2026). Le
+  prix suivi, partout le même, est celui de Pokécardex (pour une série de moins de 31 jours la
+  tendance, ensuite la moyenne sur 30 jours : `guidePrice`, dans l'API des données). Pas de
   scraping, pas d'API (fermée), pas de panier ni de commande à distance. Un seul lien Cardmarket
   construit : la page d'un produit par son id (`cardmarketPage` :
   `/fr/Pokemon/Products?idProduct=…`, vérifié par l'utilisateur en octobre 2026, le site bloquant
@@ -125,7 +134,8 @@ bun run ingest images  # copie les images (≈ 1,5 Go ; inutile en développemen
   commande › « Copier pour Cardmarket ») et colle lui-même dans « Ajouter une deck list » de sa
   liste ; l'app n'envoie rien à Cardmarket. Le format vérifié par l'utilisateur (octobre 2026), la
   version `(V.n)` (dans l'ordre des numéros imprimés, pas des ids), l'extension et les cas sans
-  ligne : `docs/prix.md` ; jamais une ligne qui pourrait désigner une autre carte (une carte sans
+  ligne : `docs/donnees.md` de l'API des données ; jamais une ligne qui pourrait désigner une
+  autre carte (une carte sans
   ligne s'ajoute depuis sa page). Pas de CSV ni de recherches à copier (retirés à la demande de
   l'utilisateur, octobre 2026).
 - Textes en français (fr-FR pour nombres et dates), vouvoiement. Un Pokémon dont la carte n'est
@@ -136,14 +146,14 @@ bun run ingest images  # copie les images (≈ 1,5 Go ; inutile en développemen
 
 | Dossier | Rôle |
 |---|---|
-| `src/config/` | Configuration, sans logique : générations, couleurs des types, achats (budget par défaut, fournisseurs, états d'une commande), tâches d'ingestion (`jobs` : leur ordre et leur rythme, lus par le serveur et la page Données), types et raretés des cartes (`catalog`), forme des réponses de l'API (`api` : `API_FORMAT`, à augmenter quand elle change : le cache du service worker et les ETag suivent) |
-| `src/lib/` | Les règles **pures**, un domaine par module (son en-tête dit ce qu'il contient), et les seules lectures de l'API et du compte (`api`, `account`, `auth`, `species`, `card-catalog`). Le serveur en importe plusieurs (`transfer` contrôle le document reçu, `card-images`, `cardmarket`, `format`, `time`…) : aucun ne touche au navigateur. `account` se passe du client Better Auth (premier chargement léger) ; `auth`, ce client, n'est chargé que par la connexion, la première visite, Données › Mon compte et la déconnexion |
+| `src/config/` | Configuration, sans logique : générations, couleurs des types, achats (budget par défaut, fournisseurs, états d'une commande), types et raretés des cartes (`catalog`), forme des réponses de l'API (`api` : `API_FORMAT`, la même que celle de l'API des données, à augmenter avec elle : le cache du service worker et les ETag suivent) |
+| `src/lib/` | Les règles **pures**, un domaine par module (son en-tête dit ce qu'il contient), et les seules lectures de l'API et du compte (`api`, `account`, `auth`, `species`, `card-catalog`). `card-images` : les chemins neutres des images (`catalogImage`, `cardImage`), une image retrouvée (`isFoundImage`), le serveur d'images de la source refusé (`isSourceImage`). Le serveur en importe plusieurs (`transfer` contrôle le document reçu, `cardmarket`, `format`, `time`…) : aucun ne touche au navigateur. `account` se passe du client Better Auth (premier chargement léger) ; `auth`, ce client, n'est chargé que par la connexion, la première visite, Données › Mon compte et la déconnexion |
 | `src/store/` | Zustand : `collection` et `shopping` (dans `localStorage`), `document` (les deux ensemble), `prices` (les prix des seules cartes affichées), `sync` (le compte et `/api/collection`), `theme` (une préférence de ce navigateur). `persist` les enregistre et garde les onglets d'accord (une valeur reprise d'un autre onglet n'est jamais réécrite) ; le stockage se lit par `readStored` et s'écrit par `writeStored` (un refus lève le bandeau de la coquille) ; une valeur illisible est mise de côté (`setAsideUnreadable`) |
 | `src/hooks/` | Les hooks partagés : `usePokedex` (le modèle de toutes les pages), `useNotify` (toasts et « Annuler », aussi par Ctrl+Z), filtres, saisie d'une carte, export, `useGrowingList` (une longue liste dessinée au fil du défilement), `useFollowLinks` (une longue liste de liens simples, suivie par le routeur)… |
 | `src/components/` | Les composants métier partagés par plusieurs pages (cartes, catalogue, classeur du Pokédex, courbes, prix, coquille `AppShell`, compte, budget) et les seuls génériques absents de camply (confirmation, `PageHeader`, `Panel`, lien externe, montants en euros) ; le reste vient de camply |
 | `src/pages/` | Une page par route ; les sous-composants d'une page vivent dans son dossier (accueil et Achats : le module CSS d'un composant à côté de lui, celui qu'en partagent plusieurs importé sous le nom `page`) |
-| `tests/` | `bun test` (ce qu'ils couvrent : Principes), un fichier par domaine ; `fixtures.ts`, les données d'essai ; `setup.ts` (par `bunfig.toml`, avant le premier fichier) : un dossier de données temporaire, jamais `.data`, et un compte d'essai ; `server.ts`, les bases d'essai. Chaque test pose son propre état : ils passent dans n'importe quel ordre. Types : `tsconfig.tests.json` |
-| `server/` | Bun (`tsconfig.server.json`, sans les types du navigateur). `index.ts` lance le serveur ; `app.ts` assemble l'API (Elysia, un plugin par domaine : `reference.ts`, `auth.ts`, `collection.ts`, `vitrine.ts`, `journal.ts` ; paramètres et corps validés par leurs schémas ; 404 et 500 sans corps ; OpenAPI à `/api/docs` en développement). `db.ts` : deux bases SQLite dans `DATA_DIR` (`data.db`, les données de référence ; `app.db`, le compte et la collection), un schéma par étapes, chacune avec son empreinte (une étape ne se modifie jamais après coup). `ingest.ts` lance les tâches de `jobs/` (espèces, catalogue, prix, sauvegardes, images) ; `snapshots.ts` garde les grosses réponses, calculées en fin de tâche, compressées ; `images.ts` copie les images (seulement les chemins de `UPSTREAMS`) ; `history.ts`, l'historique des prix ; `lib/`, le réseau (cache disque, file limitée) et les pages de Pokécardex (déchiffrées, une toutes les 3 s) |
+| `tests/` | `bun test` (ce qu'ils couvrent : Principes), un fichier par domaine ; `fixtures.ts`, les données d'essai ; `setup.ts` (par `bunfig.toml`, avant le premier fichier) : un dossier de données temporaire, jamais `.data`, et un compte d'essai ; `server.ts`, la base d'essai. Chaque test pose son propre état : ils passent dans n'importe quel ordre. Types : `tsconfig.tests.json` |
+| `server/` | Bun (`tsconfig.server.json`, sans les types du navigateur). `index.ts` lance le serveur ; `app.ts` assemble l'API (Elysia, un plugin par domaine : `auth.ts`, `collection.ts`, `vitrine.ts` (ses prix demandés à l'API des données, `DATA_API_URL`, `DATA_API_TOKEN`), `journal.ts` ; paramètres et corps validés par leurs schémas ; 404 et 500 sans corps ; OpenAPI à `/api/docs` en développement). `db.ts` : `app.db` dans `DATA_DIR` (les comptes et les collections), un schéma par étapes, chacune avec son empreinte (une étape ne se modifie jamais après coup). `backups.ts` : la sauvegarde d'`app.db`, chaque jour (30 gardées). `responses.ts` : 404 sans corps, ETag (`serveTagged`). Les données de référence : l'API des données (dépôt `pokedex-data`) |
 
 Points à connaître :
 
@@ -152,12 +162,12 @@ tenir à jour avec le code.
 
 | Domaine | Page | L'essentiel |
 |---|---|---|
-| Cartes, catalogue, images | [docs/cartes.md](docs/cartes.md) | Une carte par Pokémon (`manual:<uuid>`), choisie par l'utilisateur : catalogue Pokécardex ou saisie ; images copiées chez nous (`/images/…`), jamais affichées depuis Pokécardex |
-| Prix, historique, état des données | [docs/prix.md](docs/prix.md) | Guide public Cardmarket du jour ; l'historique n'existe que relevé par le serveur (Cardmarket n'en garde pas) ; aucun prix inventé ; `/api/histories` : la courbe de la valeur en une demande, relue dans l'ordre des cartes ; `/api/status`, `/api/health` ; `/api/wants` : la version suit l'ordre des numéros imprimés (pas des ids), jamais une ligne qui pourrait désigner une autre carte |
+| Cartes, catalogue, images | [docs/cartes.md](docs/cartes.md) | Une carte par Pokémon (`manual:<uuid>`), choisie par l'utilisateur : catalogue ou saisie ; images aux chemins neutres (`/images/cards/…`), servies par l'API des données, jamais affichées depuis la source |
+| Prix, historique, état des données | [docs/prix.md](docs/prix.md) | Les prix des seules cartes affichées ; aucun prix inventé ; `/api/histories` : la courbe de la valeur en une demande, relue dans l'ordre des cartes ; l'état des tâches de l'API des données (`/api/status`) ; leur côté serveur : `docs/donnees.md` de l'API des données |
 | Collection, achats, commandes, budget | [docs/collection-et-achats.md](docs/collection-et-achats.md) | Clés `pokedex-collection.collection` et `.shopping` : ne pas changer leur format ; `applyOrder` ; une possession n'est jamais retirée ; un import demande toujours confirmation |
 | Compte, synchronisation, Pokédex public | [docs/compte-et-synchronisation.md](docs/compte-et-synchronisation.md) | Un compte par personne (pseudo et mot de passe, sans e-mail), une session ; chacun ne touche qu'à sa collection ; un document numéroté, avec son empreinte, `decide` testé, jamais de fusion ; une collection illisible n'est jamais envoyée ; `/pseudo` ne montre jamais un prix payé ni un achat ; les adresses du site sont des pseudos réservés |
 | Interface, filtres, performance | [docs/interface.md](docs/interface.md) | Système de design (`global.css`, `theme.css`) ; 1 025 pochettes (`content-visibility`, `settled`) ; filtres dans l'adresse ; courbes jour par jour |
-| Déploiement, sauvegardes | [docs/deploiement.md](docs/deploiement.md), README | Docker sur le VPS derrière un tunnel Cloudflare ; conteneurs sans droits d'administrateur ; politique de sécurité du contenu ; **jamais `docker compose down -v`** (les volumes `db` et `backups` sont irremplaçables) |
+| Déploiement, sauvegardes | [docs/deploiement.md](docs/deploiement.md), README | Docker sur le VPS derrière un tunnel Cloudflare, à côté de l'API des données (réseau `pokedex-net`) ; nginx d'après un gabarit (le token) ; conteneurs sans droits d'administrateur ; politique de sécurité du contenu ; **jamais `docker compose down -v`** (les volumes `db` et `backups` sont irremplaçables) |
 
 Pièges du poste de développement :
 

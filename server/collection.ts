@@ -22,7 +22,7 @@ import { readSent } from '@/lib/transfer'
 import type { CollectionData, CollectionSaved, ShoppingData } from '@/types'
 import type { accountRoutes } from './auth'
 import { documentChanges, journal } from './journal'
-import { matchesEtag } from './snapshots'
+import { matchesEtag } from './responses'
 
 interface Row {
   version: number

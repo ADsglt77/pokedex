@@ -15,8 +15,8 @@
  *   ne les voit pas autrement ;
  * - `vitrine` : une visite du Pokédex public d'un compte, un lien partagé lu par un robot
  *   d'aperçu (une ligne par visiteur, par Pokédex et par heure au plus, `vitrine.ts`) ;
- * - `serveur` : une erreur imprévue de l'API ou de Better Auth, une image que sa source n'a pas
- *   donnée (`images.ts`).
+ * - `serveur` : une erreur imprévue de l'API ou de Better Auth, l'API des données muette
+ *   (`vitrine.ts`), les sauvegardes d'`app.db` (`backups.ts`).
  * Pas les requêtes une à une : seulement ce qui se passe.
  * Au démarrage, une Poké Ball en pixel art (`banner`). Jamais un mot de passe ; l'adresse du
  * visiteur quand le tunnel la donne (`cf-connecting-ip`). Ce qu'un visiteur peut provoquer à

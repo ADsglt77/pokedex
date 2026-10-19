@@ -92,13 +92,16 @@ Les comptes, la collection synchronisée entre les appareils, le Pokédex public
   adresse »). En tête, « Se connecter » et « Créer un compte », ou « Mon Pokédex » une fois
   connecté ; son titre : « Le Pokédex de … » (`pokedexTitle`), le pseudo du compte
   (`GET /api/vitrine/<pseudo>`, sans tenir compte des majuscules : `{ owner, collection, prices }`,
-  `VitrineData`). `prices` : les prix du jour de ses seules cartes possédées (`readPrices`,
-  `server/jobs/prices.ts`), `null` sans guide des prix (la valeur est alors « — ») ; un ETag tiré
-  du compte, de la version de sa collection, de son pseudo et du passage de la tâche `prices`
-  (`serveTagged`) : un visiteur qui revient reçoit un 304, sans que la collection soit relue.
+  `VitrineData`). `prices` : les prix du jour de ses seules cartes possédées, que le serveur
+  demande à l'API des données (`dataPrices`, `/v1/prices/collection` avec le token du site,
+  `DATA_API_URL` et `DATA_API_TOKEN`, 5 s au plus ; testé avec une fausse API : seulement les ids
+  de ces cartes, avec le token), `null` sans carte possédée, sans guide des prix ou l'API muette
+  (la valeur est alors « — », et une ligne au journal par minute au plus) ; un ETag tiré du compte,
+  de la version de sa collection, de son pseudo et des prix rendus (`serveTagged`) : un visiteur
+  qui revient reçoit un 304.
   Données › Pokédex public en donne l'adresse (`vitrinePath`). Un lien partagé (Discord,
   WhatsApp…) a son aperçu : nginx envoie les robots d'aperçu (`map $vitrine_preview` sur
-  toute adresse d'un seul segment, `deploy/nginx.conf`) à `/api/vitrine/<pseudo>/apercu`, une page
+  toute adresse d'un seul segment, `deploy/nginx.conf.template`) à `/api/vitrine/<pseudo>/apercu`, une page
   faite par le serveur (l'aperçu du site pour une page du site ou un pseudo à personne)
   avec le titre et la progression (`vitrineSummary`, testé : rien d'autre que le pseudo et le
   nombre de Pokémon débloqués). Une page seule, hors de la coquille, en lecture seule et pas

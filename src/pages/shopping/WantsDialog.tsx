@@ -15,7 +15,7 @@ type Linked = PokemonCard & { cardmarket: number }
 
 /**
  * « Copier pour Cardmarket » : les cartes de la prochaine commande en lignes pour « Ajouter une
- * deck list » d'une liste de souhaits Cardmarket (`/api/wants`, `wantsLine`), que l'utilisateur
+ * deck list » d'une liste de souhaits Cardmarket (`/api/wants`, de l'API des données), que l'utilisateur
  * colle lui-même avant le Shopping Wizard : l'app n'envoie rien à Cardmarket. Une carte sans ligne
  * sûre (version ou extension incertaine) s'ajoute depuis sa page.
  */

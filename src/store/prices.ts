@@ -1,8 +1,8 @@
 /**
  * Les prix Cardmarket : ceux du jour, demandés pour les seules cartes affichées (l'API du site,
  * `/api/prices/collection` pour celles de la collection, `/api/prices/selection` pour les autres :
- * une extension du catalogue, les cartes d'un Pokémon, un id saisi), que la tâche d'ingestion
- * `prices` met à jour (`server/jobs/prices.ts`), et leur historique (`/api/prices/<id>` pour une
+ * une extension du catalogue, les cartes d'un Pokémon, un id saisi), que l'API des données met à
+ * jour (sa tâche `prices`), et leur historique (`/api/prices/<id>` pour une
  * carte, `/api/histories` pour la collection). Les réponses s'ajoutent : une carte dont le prix est
  * connu n'est plus redemandée, sauf au retour sur une page restée ouverte plus de 6 h
  * (`refreshPrices`). Facultatifs : sans eux (serveur arrêté, base encore vide), `null`, et l'app

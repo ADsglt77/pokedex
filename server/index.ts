@@ -1,17 +1,17 @@
 /**
  * Lance le serveur de l'app (`app.ts`), derrière nginx sur le VPS, derrière le proxy de Vite en
- * développement (`bun run dev:server`). Il lit `data.db`, que remplissent les tâches d'ingestion
- * (`ingest.ts`) ; il n'écrit que `app.db` (le compte, la collection synchronisée), les images
- * copiées à la demande et, à son démarrage, les étapes du schéma qui manquent aux deux bases. Les
- * données de référence et les Pokédex publics sont publics ; la collection exige la connexion. Au
- * démarrage, il le dit
- * dans son journal (`banner`).
+ * développement (`bun run dev:server`). Il n'écrit que `app.db` (les comptes, les collections
+ * synchronisées) et ses sauvegardes (`backups.ts`) ; les données de référence sont à l'API des
+ * données, qu'il ne joint que pour les prix d'un Pokédex public (`DATA_API_URL`,
+ * `DATA_API_TOKEN`). Les Pokédex publics sont publics ; la collection exige la connexion. Au
+ * démarrage, il le dit dans son journal (`banner`).
  */
 
 import { createApp } from './app'
 import { appOrigin, createAuth } from './auth'
+import { scheduleBackups } from './backups'
+import { openApp } from './db'
 import { banner } from './journal'
-import { openApp, openData } from './db'
 
 if (!process.env.BETTER_AUTH_URL) {
   throw new Error('BETTER_AUTH_URL manque : l’adresse publique du site (voir server/auth.ts)')
@@ -28,12 +28,12 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
-const data = openData({ readonly: true })
 const app = openApp()
 const accounts = await createAuth(app)
+scheduleBackups(app)
 // Sur cette machine seulement, sauf `HOST` (`0.0.0.0` dans son conteneur, que nginx joint) : en
 // développement, sur un Wi-Fi public, l'API ne s'ouvre pas aux autres appareils.
-const server = createApp({ data, app, accounts }).listen({
+const server = createApp({ app, accounts }).listen({
   port: Number(process.env.PORT ?? 3000),
   hostname: process.env.HOST ?? '127.0.0.1',
 })

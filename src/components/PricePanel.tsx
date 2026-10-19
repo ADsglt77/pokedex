@@ -62,11 +62,11 @@ export function PricePanel({
             hint={details(
               paid !== null && `payée ${formatEuro(paid)}`,
               price.low && `au plus bas ${formatEuro(price.low)}`,
-              price.avg30 && `moyenne 30 jours ${formatEuro(price.avg30)}`,
+              price.monthAgo && `il y a 30 jours ${formatEuro(price.monthAgo)}`,
             )}
           />
           <Suspense fallback={<Skeleton height="7rem" />}>
-            <PriceHistory card={card} avg30={price.avg30} />
+            <PriceHistory card={card} />
           </Suspense>
         </>
       ) : prices || missing ? (
@@ -87,10 +87,9 @@ export function PricePanel({
 
 /**
  * La courbe d'une carte qui a un prix (donc un id Cardmarket), jour par jour sur la période
- * choisie, et ses chiffres ; en repère, la moyenne de ses ventes sur 30 jours que donne le guide
- * des prix du jour (une vraie donnée de Cardmarket, quand l'historique relevé est encore court).
+ * choisie, et ses chiffres.
  */
-function PriceHistory({ card, avg30 }: { card: PricedCard; avg30: number | null }) {
+function PriceHistory({ card }: { card: PricedCard }) {
   const [period, setPeriod] = useState<ChartPeriod>('month')
   const history = use(loadPriceHistory(card.cardmarket!))
   const series = cardHistory(history)
@@ -99,12 +98,7 @@ function PriceHistory({ card, avg30 }: { card: PricedCard; avg30: number | null 
   return (
     <div className={styles.history}>
       <ChartPeriodControl value={period} onChange={setPeriod} />
-      <PriceChart
-        points={points}
-        window={window}
-        label={`Prix de la carte ${card.reference}`}
-        reference={avg30 ? { value: avg30, label: 'Moyenne Cardmarket sur 30 jours' } : undefined}
-      />
+      <PriceChart points={points} window={window} label={`Prix de la carte ${card.reference}`} />
       <ChartStats items={levelStats(points)} />
     </div>
   )

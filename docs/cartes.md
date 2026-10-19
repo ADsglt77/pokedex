@@ -1,10 +1,10 @@
 # Cartes, catalogue et images
 
-La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et leurs images. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
+La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, par l'API des données) et leurs images. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
 - Une carte (`PokemonCard`) : id `manual:<uuid>`, ses Pokémon (`dexIds`), une référence (vide à la
   saisie : le nom de la carte chez Cardmarket, sinon le nom du Pokémon), son image (`image` :
-  celle de Pokécardex en deux tailles, ou l'adresse
+  celle du catalogue en deux tailles (un chemin du site), ou l'adresse
   collée, `small` = `large` ; `null` sans image),
   son id Cardmarket (`cardmarket`) et sa page chez Cardmarket (`page`), tous deux facultatifs ;
   sans page notée, le lien « Voir sur Cardmarket » se fait par l'id (`cardmarketPage`). Il
@@ -23,67 +23,31 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   Choisir la carte d'un Pokémon dit déjà qu'on la veut : ni statut « souhaitée » ni « À acheter »
   (retirés à la demande de l'utilisateur, octobre 2026) ; tant qu'elle n'est ni commandée ni
   possédée, elle est dans la liste d'achats.
-- Catalogue (tâche `catalog`, `server/jobs/catalog.ts`, une fois par jour → tables `sets`, `cards`,
-  `card_species`, `rarities` → `/api/catalog/species/<n°>`, `/api/catalog/sets`, `/api/catalog/sets/<code>`,
-  `lib/card-catalog.ts`) : les cartes japonaises de Pokécardex, Pokémon, dresseurs et énergies (`server/lib/pokecardex.ts`), ≈ 450 séries de 1996 à aujourd'hui, decks, promos et
-  anciennes séries compris (27 Herbizarre japonaises, contre 8 chez TCGdex), sans les exclusivités
-  d'autres pays d'Asie (bloc « Asia Exclusive » de son menu, `asiaExclusive`). La liste des séries
-  vient de son plan du site (`sitemap_fr.xml`, `/series/jp/<code>`) ; chaque série, de sa page :
-  son nom, sa sortie au Japon, et ses cartes (id Pokécardex, numéro imprimé « 001/165 », `sort`,
-  noms français, anglais et allemand, Pokémon `id_pokedex_list`, id Cardmarket, rareté
-  `id_rarete`, type `id_type`, illustrateur `nom_illustrateur`, versions `versions` : « Standard »,
-  « Reverse »… ; un tiret seul, « — », qu'il écrit pour « inconnu », est gardé vide), toutes les
-  raretés (`raretes` : nom et ordre) et le menu des séries (`seriesMenu` : le bloc de chacune,
-  « Scarlet & Violet », son rang dans le menu, et si c'est un deck), gardés depuis la première page
-  lue de chaque passage. Les types sont numérotés par Pokécardex sans être nommés : leurs noms sont dans
-  `CARD_TYPES` (`src/config/catalog.ts` : 1 Plante, 2 Eau, 3 Feu, 4 Électrique, 5 Psy,
-  6 Obscurité, 7 Métal, 8 Combat, 9 Dragon, 10 Incolore, 11 Fée ; les catégories des dresseurs,
-  12 Stade, 13 Dresseur (une carte d'avant les catégories), 14 Supporter, 15 Objet, 41 Outil
-  (`TRAINER_TYPES`), et 16 Énergie (`ENERGY_TYPE`), d'après ses icônes et ses cartes). Les raretés gardent les noms de Pokécardex : « C », « SAR »… pour
-  les cartes récentes, « Commune », « Unco », « Rare », « Holographique » pour les anciennes, « Sans
-  rareté » pour celles qui n'en impriment pas. Toutes les cartes, dresseurs et énergies compris
-  (pour la page Catalogue, à la demande de l'utilisateur, octobre 2026) : sans Pokémon, rien dans
-  `card_species` (ni dans `/api/catalog/species/<n°>`, qui ne donne que les cartes Pokémon). Ses pages portent leurs données chiffrées
-  (`__INITIAL_DATA_ENCRYPTED__`, AES-CBC) : déchiffrées avec la clé que contient son JavaScript,
-  relue quand l'adresse de son script change (à chaque mise en ligne du site), jamais recopiée dans le
-  dépôt. Une page toutes les 3 s, User-Agent identifié : le premier passage prend une vingtaine de
-  minutes ; ensuite, une série est relue chaque semaine, chaque jour si elle est sortie depuis
-  moins de 90 jours (`read_at`), et `--refresh` les relit toutes. Une page en échec n'empêche pas
-  les autres (la tâche échoue ensuite, pour être relancée) ; dix d'affilée arrêtent la lecture
-  (le site a changé : on ne le sollicite pas davantage). Une série qui donne moins de la moitié
-  des cartes qu'elle avait est refusée (format des pages changé : rien n'est gardé, c'est un échec).
-  Une page sans cartes (série annoncée, ou
-  site changé) ne retire rien et n'est pas notée : elle est relue au passage suivant ; plus de la
-  moitié des séries déjà connues relues rendues sans cartes, et la tâche échoue (le champ des
-  cartes renommé : sans quoi un catalogue figé, sans un mot ; la page Données en dit la cause). Tant qu'aucune
-  carte n'a été lue, rien n'est publié : les réponses du catalogue répondent 404 (« pas disponible »).
-  Une carte qu'une lecture de sa série ne voit plus est retirée (`seen`). Sans serveur, la fenêtre
-  d'ajout et la page Catalogue le disent (« pas disponible pour le moment »).
-  `/api/catalog/species/<n°>` (octobre 2026 ; avant, `/api/catalog`, le catalogue entier, 930 Ko
-  pour n'en lire qu'un Pokémon, retiré par une étape du schéma), les cartes Pokémon d'un Pokémon
-  (la fenêtre d'ajout, `loadSpeciesCards` ; une réponse par Pokémon, les 1 025, même sans carte :
-  la fenêtre le dit), dans la forme du catalogue entier réduit à lui, des plus récentes aux plus
-  anciennes : `[série, numéro (sans numéro imprimé : `sort`), id Cardmarket (0 :
-  aucun), nom français, numéro de son image (`sort`, 0 : Pokécardex ne l'a pas), rareté (0 :
+- Catalogue (de l'API des données : sa lecture de Pokécardex, ses gardes et ses tables sont dans
+  sa page `docs/donnees.md` ; côté site, `lib/card-catalog.ts`) : les cartes japonaises, Pokémon,
+  dresseurs et énergies, environ 450 séries de 1996 à aujourd'hui, decks, promos et anciennes
+  séries compris, sans les exclusivités d'autres pays d'Asie. Trois réponses, aux mêmes adresses
+  qu'avant pour le navigateur (nginx les renvoie à l'API) :
+  `/api/catalog/species/<n°>`, les cartes Pokémon d'un Pokémon (la fenêtre d'ajout,
+  `loadSpeciesCards` ; une réponse pour chacun des 1 025, même sans carte : la fenêtre le dit), des
+  plus récentes aux plus anciennes : `[série, numéro (sans numéro imprimé : son rang), id
+  Cardmarket (0 : aucun), nom français, numéro de son image (son rang, 0 : aucune), rareté (0 :
   inconnue), type (0 : inconnu), Pokémon s'ils sont plusieurs]` ; chaque série : `[nom, sortie,
-  logo]` (0 : Pokécardex n'a pas de logo) ; les raretés de ces cartes : `[nom, rang]`. La forme a
-  changé (octobre 2026, rareté, type et logo) : l'étape du schéma qui ajoute ces colonnes fait
-  relire toutes les séries au passage suivant de la tâche (`read_at` remis à 1970), la suivante
-  retire l'ancienne réponse, que le navigateur ne sait plus lire (404, « pas disponible », plutôt
-  qu'une page en erreur), et la tâche la refait dès son démarrage d'après les tables (`saveCatalog`,
-  comme la boucle d'ingestion au sien), avant de relire les séries. Pour la page Catalogue :
+  logo]` (0 : pas de logo) ; les raretés de ces cartes : `[nom, rang]`. Pour la page Catalogue :
   `/api/catalog/sets`, les séries, des plus récentes aux plus anciennes, `[code, nom, sortie, logo,
   nombre de cartes, rang de son bloc dans `blocks` (-1 : aucun), 1 pour un deck]`, et les blocs
-  dans l'ordre du menu ; `/api/catalog/sets/<code>`, toutes les cartes d'une série dans son ordre
-  (`sort`), chacune `{ number, printed, name, en, de, dexIds, cardmarket, image, rarity, type,
-  illustrator, versions }`, et leurs raretés ; une réponse par série (`snapshots` :
-  `catalog/sets/<code>`, celles des séries disparues retirées), gardée hors ligne par le service
-  worker une fois vue. Toutes les cartes et ce qu'on en sait de plus (octobre 2026) : l'étape du
-  schéma qui ajoute ces colonnes fait relire toutes les séries (`read_at` remis à 1970) ; jusque-là,
-  les dresseurs et les énergies manquent et les nouveaux champs sont vides. Chaque réponse est
-  gardée compressée en gzip et en Brotli (un quart plus petite ; `saveSnapshot` ne recompresse
-  pas une réponse inchangée : le premier passage prend une vingtaine de secondes, les suivants
-  moins d'une). La référence d'une carte : « Dracaufeu ex (SV2A 006) », son nom puis le code de
+  dans l'ordre du menu ; `/api/catalog/sets/<code>`, toutes les cartes d'une série dans son ordre,
+  chacune `{ number, printed, name, en, de, dexIds, cardmarket, image, rarity, type, illustrator,
+  versions }`, et leurs raretés ; gardées hors ligne par le service worker une fois vues. Les types
+  sont numérotés sans être nommés par la source : leurs noms sont dans `CARD_TYPES`
+  (`src/config/catalog.ts` : 1 Plante, 2 Eau, 3 Feu, 4 Électrique, 5 Psy, 6 Obscurité, 7 Métal,
+  8 Combat, 9 Dragon, 10 Incolore, 11 Fée ; les catégories des dresseurs, 12 Stade, 13 Dresseur
+  (une carte d'avant les catégories), 14 Supporter, 15 Objet, 41 Outil (`TRAINER_TYPES`), et
+  16 Énergie (`ENERGY_TYPE`)). Les raretés gardent les noms de la source : « C », « SAR »… pour les
+  cartes récentes, « Commune », « Unco », « Rare », « Holographique » pour les anciennes, « Sans
+  rareté » pour celles qui n'en impriment pas. Sans API des données, ou tant qu'aucune carte n'a
+  été lue (404), la fenêtre d'ajout et la page Catalogue le disent (« pas disponible pour le
+  moment »). La référence d'une carte : « Dracaufeu ex (SV2A 006) », son nom puis le code de
   sa série et son numéro. « Ajouter une carte »
   (`pokemon/CardForm`) s'ouvre sur l'onglet « Cartes japonaises » (`CatalogPicker` : image
   Pokécardex, code, rareté, prix du jour, tri par date ou par prix, filtres de rareté et de type
@@ -133,43 +97,23 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex) et
   Cardmarket, `/ajouter`) : retiré à la demande de l'utilisateur (octobre 2026), le catalogue
   Pokécardex donnant presque toutes les cartes avec leur id Cardmarket ; une carte qu'il n'a pas se
   saisit à la main. Ne pas le réintroduire sans demande.
-- Images (`lib/card-images.ts`, `server/images.ts`, tâche `images`) : chez Pokécardex,
-  `pokecardex-scans.b-cdn.net/sets_jp/<série>/<sort>.jpg?class=md` (son code tel quel, « S8A-G »
-  compris ; tailles `md` pour la grille, `hd` pour la fiche) : `pokecardexImage`. Le catalogue
-  donne l'adresse exacte de chaque carte ; pour une référence hors du catalogue, `cardImage` la
+- Images (`lib/card-images.ts`) : copiées et servies par l'API des données (sa page
+  `docs/donnees.md` : leurs sources, la tâche `images`, la copie à la demande), aux chemins neutres
+  que demande le navigateur : `/images/cards/<série>/<rang>-<md|hd>.webp` (`catalogImage` : `md`
+  pour la grille, `hd` pour la fiche), `/images/sets/<série>-<md|hd>.webp` (le logo japonais d'une
+  série, `setLogo`), `/images/types/<n>.webp` (`typeIcon`), `/images/rarities/<n>.webp`
+  (`rarityIcon` ; les noires, `DARK_RARITY_ICONS`, inversées sur le thème sombre,
+  `--dark-icon-filter` ; une rareté sans icône, « FUR », s'écrit en texte), les sprites et
+  illustrations des Pokémon (`spriteUrl`, `artworkUrl`). nginx les renvoie à l'API et les garde sur
+  son disque (`proxy_cache`) ; le navigateur, un an, sans redemande (`immutable`). Le catalogue
+  donne le rang de l'image de chaque carte ; pour une référence hors du catalogue, `cardImage` la
   déduit du code de la référence (série en majuscules sans tiret, SV-P → SVP ; numéro sans zéro),
-  sans certitude. La collection garde les adresses d'origine (son format ne change pas), mais le
-  navigateur ne charge que la copie du serveur (condition de Pokécardex) : `localSrc` en donne le
-  chemin (`/images/cards/pokecardex/SV2A/6-md.webp`), pour le `src` de `CardArt` et pour
-  `findCardImage`. La tâche `images` (chaque jour, la dernière, après les prix et les sauvegardes ; deux téléchargements à la
-  fois, seulement ce qui manque ; le premier passage, environ 1,5 Go, prend une heure ou plus) copie
-  d'abord, pour chaque série du catalogue, son logo japonais
-  (`pokecardex.b-cdn.net/assets/images/logos_jp/<série>.png`, jamais `logos/`, le français ; en
-  WebP, `?class=md` pour la fenêtre des extensions, `hd` en tête de la page :
-  `/images/sets/SV2A-md.webp`, `setLogo`), noté s'il existe (`sets.logo`, cherché de nouveau chaque
-  semaine) ; les icônes des types (`types/type_<n>.png` → `/images/types/<n>.webp`, `typeIcon`) et
-  des raretés (`rarete/ids/rarete_<n>.png` → `/images/rarities/<n>.webp`, `rarityIcon` ; les noires,
-  `DARK_RARITY_ICONS`, inversées sur le thème sombre, `--dark-icon-filter` ; une rareté sans icône,
-  « FUR », s'écrit en texte) : légers (une dizaine de Mo), attendus par le choix d'une extension ;
-  puis les sprites et illustrations des 1 025 Pokémon ; puis, pour chaque carte du catalogue, son
-  scan en deux tailles, noté s'il existe (`cards.image`) : le catalogue le dit d'avance. Une carte sans
-  scan est recherchée chaque semaine. Une image en erreur (panne, réponse qui n'est pas une image)
-  n'arrête pas les autres : rien n'est noté pour elle, elle est redemandée au passage suivant, et la
-  tâche échoue à la fin (à la 20e erreur, elle s'arrête : la source est sans doute en panne).
-  Une image absente du volume (référence saisie hors du
-  catalogue, image pas encore copiée) est copiée à la demande par le serveur (`serveImage` :
-  seulement les chemins connus et plausibles, chacun avec son adresse d'origine dans une seule table,
-  `UPSTREAMS` de `server/images.ts` : chez Pokécardex, une série du catalogue et un numéro d'image
-  jusqu'au plus grand des siens, le logo d'une série du catalogue, un type de `CARD_TYPES`, une
-  rareté connue ; un Pokémon de 1 à 1 025 ; le chemin d'une image de
-  carte et son adresse d'origine sont ceux de `card-images.ts`, `SCAN_PATH` et `scanUrl`, que lit
-  aussi le navigateur : il ne construit jamais un chemin que le serveur refuserait, et une adresse
-  de Pokécardex d'une autre forme n'est jamais chargée depuis ses serveurs, pas d'image ; une
-  image écrite d'un coup, son fichier provisoire retiré si l'écriture échoue ; une absence retenue une semaine ; une source en panne :
-  502, et « Image non copiée » au journal ; nginx laisse passer jusqu'à 60 copies d'un coup puis
-  10 par seconde, sans faire attendre, `nodelay`, et le serveur en télécharge 4 à la fois, sans la
-  pause de la tâche, 15 s au plus). Une image copiée est gardée un an par le navigateur, sans
-  redemande (`immutable` : `mirror` ne réécrit jamais un fichier qui existe). Données › « Chercher
+  sans certitude. La collection garde ces chemins (`isFoundImage` : une image retrouvée, qui suit
+  la référence) ; aucun ne nomme la source. Une image absente est copiée à la demande par l'API
+  (une source qui ne l'a pas : 404, la carte de substitution). Une adresse collée du serveur
+  d'images de la source est refusée à la saisie, et jamais affichée (`isSourceImage` : son accord,
+  jamais une image affichée depuis chez elle ; une collection d'avant les chemins neutres peut en
+  garder : la carte de substitution, jusqu'à ce que la carte soit corrigée). Données › « Chercher
   les images » cherche d'un coup celles des cartes sans image. `findCardImage` (`lib/card-catalog.ts`) : l'image du catalogue pour
   cette référence (lue dans sa série : `/api/catalog/sets`, puis `/api/catalog/sets/<code>`), sinon celle que la référence désigne, si elle se charge (sans réponse en 10 s :
   absente, pour ne pas bloquer l'enregistrement) ; la saisie le dit, sans nommer de source (aucun

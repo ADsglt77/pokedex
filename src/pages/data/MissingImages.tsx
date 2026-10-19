@@ -11,7 +11,7 @@ import type { CardImage } from '@/types'
 
 /**
  * Les cartes sans image dont la référence donne un code d'extension et un numéro : chercher leurs
- * images d'un coup chez Pokécardex (une image qui manquait à l'ajout de la carte). `title` : le
+ * images d'un coup (une image qui manquait à l'ajout de la carte). `title` : le
  * titre de la section, où va le focus quand toutes sont trouvées (le bouton disparaît).
  */
 export function MissingImages({ title }: { title: RefObject<HTMLElement | null> }) {
@@ -26,7 +26,7 @@ export function MissingImages({ title }: { title: RefObject<HTMLElement | null> 
 
   const search = async () => {
     setSearching(true)
-    // Quatre à la fois : le serveur copie chaque image de Pokécardex à sa première demande.
+    // Quatre à la fois : l'API des données copie chaque image à sa première demande.
     const images: (CardImage | null)[] = []
     try {
       for (let start = 0; start < candidates.length; start += 4) {

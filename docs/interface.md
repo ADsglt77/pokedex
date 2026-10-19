@@ -88,9 +88,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   d'une carte sur sa fiche, chacune avec ses chiffres dessous (`ChartStats` : évolution, plus haut,
   plus bas, moyenne ; pour un total, ce qu'il a gagné et son rythme par semaine). Aucun point
   inventé : un jour sans prix n'en a pas ; un total (`fromZero`) part de zéro. Cardmarket ne publie
-  que le guide du jour (aucune archive) : l'historique n'existe que depuis que le serveur le relève,
-  un point par jour où la tâche `prices` passe. En repère sur la courbe d'une carte, la moyenne de
-  ses ventes sur 30 jours que donne ce guide (`reference`, en pointillés). Les
+  que le guide du jour (aucune archive) : l'historique vient du relevé quotidien de l'API des
+  données, et des 180 jours d'avant repris de Pokécardex (sa tâche `history`), au même prix suivi. Les
   nombres formatés gardent une espace insécable visible (`spaced`, `lib/format.ts` : l'espace fine
   de `Intl` manque à certaines polices ; une part : `formatShare`, « 12,5 % »).
 - Installation et hors ligne : le site s'installe sur téléphone et ordinateur

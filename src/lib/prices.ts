@@ -30,7 +30,7 @@ interface Priced {
  */
 export function priceOf(prices: PriceFile | null, card: Priced): CardPrice | null {
   const row = card.cardmarket && prices?.cards[card.cardmarket]
-  return row ? { price: row[0], low: row[1], avg30: row[2] } : null
+  return row ? { price: row[0], low: row[1], monthAgo: row[2] } : null
 }
 
 /** Le prix du marché d'une carte ; `null` sans prix. */
@@ -49,10 +49,11 @@ export const priceText = (prices: PriceFile | null, missing: boolean, card: Pric
   prices ? priceLabel(marketPrice(prices, card)) : missing ? '—' : null
 
 /**
- * L'écart du prix du jour à la moyenne sur 30 jours : 0,12 pour +12 %, −0,2 pour −20 % ; `null`
- * sans moyenne.
+ * L'évolution du prix sur 30 jours : 0,12 pour +12 %, −0,2 pour −20 % ; `null` sans prix d'il y a
+ * 30 jours.
  */
-export const priceChange = ({ price, avg30 }: CardPrice) => (avg30 ? (price - avg30) / avg30 : null)
+export const priceChange = ({ price, monthAgo }: CardPrice) =>
+  monthAgo ? (price - monthAgo) / monthAgo : null
 
 /** L'écart en % entre ce que vaut une carte (ou une collection) et ce qu'elle a coûté. */
 export const gainPercent = (value: number, paid: number) =>
@@ -117,18 +118,18 @@ export const tallyHint = (tally: Tally, priced: boolean) =>
     priced && tally.unpriced > 0 && `${formatInteger(tally.unpriced)} sans prix`,
   )
 
-/** Une carte dont le prix a bougé : son prix du jour, sa moyenne sur 30 jours, l'écart. */
+/** Une carte dont le prix a bougé : son prix du jour, celui d'il y a 30 jours, l'évolution. */
 interface PriceMove {
   card: PokemonCard
   price: number
-  avg30: number
-  /** L'écart du prix du jour à la moyenne sur 30 jours : 0,12 pour +12 %, −0,2 pour −20 %. */
+  monthAgo: number
+  /** L'évolution du prix sur 30 jours : 0,12 pour +12 %, −0,2 pour −20 %. */
   change: number
 }
 
 /**
- * Les cartes possédées dont le prix a le plus bougé : l'écart du prix du jour à la moyenne sur 30
- * jours de Cardmarket, les `limit` plus fortes hausses et les `limit` plus fortes baisses, en %.
+ * Les cartes possédées dont le prix a le plus bougé en 30 jours, les `limit` plus fortes hausses
+ * et les `limit` plus fortes baisses, en %.
  * Un écart de moins de 5 % ou de moins de 0,50 € n'est que le bruit du marché : il n'y est pas.
  * Une carte possédée pour deux Pokémon n'y est qu'une fois.
  */
@@ -141,11 +142,11 @@ export function priceMovers(
   const moves = cards.flatMap(({ card, status }): PriceMove[] => {
     const price = status === 'owned' ? priceOf(prices, card) : null
     const change = price && priceChange(price)
-    if (!price?.avg30 || !change || seen.has(card.cardmarket!)) return []
+    if (!price?.monthAgo || !change || seen.has(card.cardmarket!)) return []
     seen.add(card.cardmarket!)
-    return Math.abs(change) < 0.05 || Math.abs(price.price - price.avg30) < 0.5
+    return Math.abs(change) < 0.05 || Math.abs(price.price - price.monthAgo) < 0.5
       ? []
-      : [{ card, price: price.price, avg30: price.avg30, change }]
+      : [{ card, price: price.price, monthAgo: price.monthAgo, change }]
   })
   moves.sort((a, b) => b.change - a.change)
   return {

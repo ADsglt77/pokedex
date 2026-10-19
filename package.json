@@ -11,8 +11,7 @@
     "lint": "eslint . && knip",
     "knip": "knip",
     "test": "bun test",
-    "format": "prettier --write src/ server/ tests/",
-    "ingest": "bun server/ingest.ts"
+    "format": "prettier --write src/ server/ tests/"
   },
   "dependencies": {
     "@elysiajs/openapi": "^1.4.16",

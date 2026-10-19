@@ -270,7 +270,7 @@ function Movers({ cards }: { cards: TrackedCard[] }) {
   return (
     <Panel
       title="Ce qui bouge"
-      description="Vos cartes possédées dont le prix du jour s’écarte le plus de leur moyenne Cardmarket sur 30 jours (au moins 5 % et 0,50 €)."
+      description="Vos cartes possédées dont le prix a le plus bougé en 30 jours (au moins 5 % et 0,50 €)."
     >
       <div className={styles.columns}>
         {groups.map(({ title, list, className }) => (
@@ -286,12 +286,12 @@ function Movers({ cards }: { cards: TrackedCard[] }) {
               <p className="muted">Aucune pour l’instant.</p>
             ) : (
               <ul className={styles.movers}>
-                {list.map(({ card, price, avg30, change }) => (
+                {list.map(({ card, price, monthAgo, change }) => (
                   <li key={card.id}>
                     <Link to={speciesPath(card.dexIds[0]!)}>{card.reference}</Link>
                     <span className={styles.moverPrice}>
                       {formatEuro(price)} <span className={className}>{formatPercent(change)}</span>
-                      <span className="muted"> · moyenne {formatEuro(avg30)}</span>
+                      <span className="muted"> · il y a 30 jours {formatEuro(monthAgo)}</span>
                     </span>
                   </li>
                 ))}
