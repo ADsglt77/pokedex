@@ -44,16 +44,16 @@ import styles from './VitrinePage.module.css'
 import { useStatSize } from '@/hooks/useStatSize'
 
 /**
- * `/@pseudo` : le Pokédex public d'un compte, toujours montré ; en lecture seule, hors de la
+ * `/pseudo` : le Pokédex public d'un compte, toujours montré ; en lecture seule, hors de la
  * coquille : la progression, la valeur au prix du jour, la courbe des Pokémon débloqués et le
  * classeur, d'après ce que le serveur montre (`server/vitrine.ts`). En tête, « Se connecter » et
- * « Créer un compte », ou, connecté, « Mon Pokédex ». Une autre adresse d'un seul segment
- * (`/achat`), que le routeur y mène aussi : une page introuvable. Pas proposé aux moteurs de
- * recherche.
+ * « Créer un compte », ou, connecté, « Mon Pokédex ». Toute adresse d'un seul segment qui n'est pas
+ * une page du site y mène : un pseudo inconnu, ou ce qui n'en est pas un (`/achat`), est une page
+ * introuvable. Pas proposé aux moteurs de recherche.
  */
 export function VitrinePage() {
   const signedIn = useSyncStore((state) => state.account !== null)
-  const pseudo = vitrinePseudo(useParams().handle!)
+  const pseudo = vitrinePseudo(useParams().pseudo!)
   return (
     <div className={cx('container', styles.page)}>
       <meta name="robots" content="noindex" />
@@ -80,7 +80,7 @@ export function VitrinePage() {
             <VitrineContent key={pseudo} pseudo={pseudo} />
           </Suspense>
         ) : (
-          <Missing vitrine={false} />
+          <Missing />
         )}
       </main>
       <footer className={styles.footer}>
@@ -114,11 +114,11 @@ function VitrineSkeleton() {
 }
 
 /**
- * Une adresse sans Pokédex (`vitrine`) : un pseudo qui n'est à personne (ou plus : compte
- * supprimé, pseudo changé) ; sinon une autre page inconnue. camply n'offre pas de titre `h1` à
- * `EmptyState` : celui de la page, pour les lecteurs d'écran.
+ * Rien à cette adresse : ni une page du site, ni un pseudo à quelqu'un (ou plus : pseudo changé,
+ * compte supprimé). camply n'offre pas de titre `h1` à `EmptyState` : celui de la page, pour les
+ * lecteurs d'écran.
  */
-function Missing({ vitrine }: { vitrine: boolean }) {
+function Missing() {
   return (
     <>
       <title>{pageTitle('Page introuvable')}</title>
@@ -126,12 +126,8 @@ function Missing({ vitrine }: { vitrine: boolean }) {
       <EmptyState
         headingLevel={2}
         icon={<SearchX size={22} />}
-        title={vitrine ? 'Aucun Pokédex à cette adresse' : 'Cette page n’existe pas'}
-        description={
-          vitrine
-            ? 'Vérifiez le pseudo : il a pu changer, ou le compte être supprimé.'
-            : 'L’adresse ne correspond à aucune page du site.'
-        }
+        title="Rien à cette adresse"
+        description="Ni une page du site, ni le Pokédex d’un compte : vérifiez l’adresse (un pseudo a pu changer, ou un compte être supprimé)."
         actions={
           <Button asChild>
             <Link to="/">Revenir à l’accueil</Link>
@@ -146,7 +142,7 @@ function VitrineContent({ pseudo }: { pseudo: string }) {
   const url = `/api/vitrine/${pseudo}`
   const shown = use(getJson<VitrineData>(url))
   if (shown) return <Vitrine {...shown} />
-  if (!requestFailed(url)) return <Missing vitrine />
+  if (!requestFailed(url)) return <Missing />
   return (
     <>
       <title>{pageTitle('Pokédex public')}</title>

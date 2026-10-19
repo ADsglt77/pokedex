@@ -8,7 +8,7 @@ carte est possédée. React 19 + Vite + TypeScript, UI `@camply/ui`, espèces Po
 images Pokécardex, prix Cardmarket : tout passe par le serveur de l'app (Elysia, SQLite,
 `server/`), le navigateur ne parle qu'à lui. Chacun crée son compte (Better Auth : pseudo et mot
 de passe, sans e-mail) ; connecté, sa collection est synchronisée entre ses appareils ; sans
-connexion, on ne voit que la connexion et le Pokédex public de chaque compte (`/@pseudo`).
+connexion, on ne voit que la connexion et le Pokédex public de chaque compte (`/pseudo`).
 
 ## Commandes
 
@@ -155,7 +155,7 @@ tenir à jour avec le code.
 | Cartes, catalogue, images | [docs/cartes.md](docs/cartes.md) | Une carte par Pokémon (`manual:<uuid>`), choisie par l'utilisateur : catalogue Pokécardex ou saisie ; images copiées chez nous (`/images/…`), jamais affichées depuis Pokécardex |
 | Prix, historique, état des données | [docs/prix.md](docs/prix.md) | Guide public Cardmarket du jour ; l'historique n'existe que relevé par le serveur (Cardmarket n'en garde pas) ; aucun prix inventé ; `/api/histories` : la courbe de la valeur en une demande, relue dans l'ordre des cartes ; `/api/status`, `/api/health` ; `/api/wants` : la version suit l'ordre des numéros imprimés (pas des ids), jamais une ligne qui pourrait désigner une autre carte |
 | Collection, achats, commandes, budget | [docs/collection-et-achats.md](docs/collection-et-achats.md) | Clés `pokedex-collection.collection` et `.shopping` : ne pas changer leur format ; `applyOrder` ; une possession n'est jamais retirée ; un import demande toujours confirmation |
-| Compte, synchronisation, Pokédex public | [docs/compte-et-synchronisation.md](docs/compte-et-synchronisation.md) | Un compte par personne (pseudo et mot de passe, sans e-mail), une session ; chacun ne touche qu'à sa collection ; un document numéroté, avec son empreinte, `decide` testé, jamais de fusion ; une collection illisible n'est jamais envoyée ; `/@pseudo` ne montre jamais un prix payé ni un achat |
+| Compte, synchronisation, Pokédex public | [docs/compte-et-synchronisation.md](docs/compte-et-synchronisation.md) | Un compte par personne (pseudo et mot de passe, sans e-mail), une session ; chacun ne touche qu'à sa collection ; un document numéroté, avec son empreinte, `decide` testé, jamais de fusion ; une collection illisible n'est jamais envoyée ; `/pseudo` ne montre jamais un prix payé ni un achat ; les adresses du site sont des pseudos réservés |
 | Interface, filtres, performance | [docs/interface.md](docs/interface.md) | Système de design (`global.css`, `theme.css`) ; 1 025 pochettes (`content-visibility`, `settled`) ; filtres dans l'adresse ; courbes jour par jour |
 | Déploiement, sauvegardes | [docs/deploiement.md](docs/deploiement.md), README | Docker sur le VPS derrière un tunnel Cloudflare ; conteneurs sans droits d'administrateur ; politique de sécurité du contenu ; **jamais `docker compose down -v`** (les volumes `db` et `backups` sont irremplaçables) |
 

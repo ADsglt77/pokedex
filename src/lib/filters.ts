@@ -6,8 +6,8 @@
  * `vitrinePseudo`).
  */
 
-import { PSEUDO } from '@/config/account'
 import { generationById, POKEMON_TYPES, type Generation } from '@/config/pokedex'
+import { isPseudo } from '@/lib/account'
 import { SPECIES } from '@/lib/species'
 import type { PokedexEntry } from '@/lib/pokedex'
 import type { GenerationId, PokemonSpecies, PokemonTypeId } from '@/types'
@@ -77,13 +77,14 @@ export function pokedexUrl(filters: Partial<PokedexFilters>): string {
 /** La fiche d'un Pokémon : `/pokemon/25`. */
 export const speciesPath = (id: number) => `/pokemon/${id}`
 
-/** Le Pokédex public d'un compte : `/@sacha`, son pseudo en minuscules. */
-export const vitrinePath = (pseudo: string) => `/@${pseudo.toLowerCase()}`
+/** Le Pokédex public d'un compte : `/sacha`, son pseudo en minuscules. */
+export const vitrinePath = (pseudo: string) => `/${pseudo.toLowerCase()}`
 
-const VITRINE = new RegExp(`^@(${PSEUDO.pattern})$`)
-
-/** Le pseudo d'une adresse `/@sacha` (`handle` : « @sacha ») ; `null` pour une autre adresse. */
-export const vitrinePseudo = (handle: string) => VITRINE.exec(handle)?.[1] ?? null
+/**
+ * Le pseudo d'une adresse d'un seul segment (`/sacha` : « sacha ») ; `null` si ce n'en est pas un
+ * (`isPseudo` : caractères, longueur, ni une adresse du site).
+ */
+export const vitrinePseudo = (segment: string) => (isPseudo(segment) ? segment : null)
 
 /** Les onglets des Achats, dans l'adresse (`?vue=`) ; la liste d'achats est celui par défaut. */
 const SHOPPING_VIEWS = ['liste', 'prochaine-commande', 'commandes', 'budget'] as const

@@ -8,7 +8,7 @@ import { ExportCollectionButton } from '@/components/ExportCollectionButton'
 import { PSEUDO, PSEUDO_HINT } from '@/config/account'
 import { useNotify } from '@/hooks/useNotify'
 import { authCall, authClient } from '@/lib/auth'
-import { PSEUDO_TAKEN, refusalMessage } from '@/lib/account'
+import { PSEUDO_RESERVED, PSEUDO_TAKEN, refusalMessage, reservedPseudo } from '@/lib/account'
 import { vitrinePath } from '@/lib/filters'
 import { pokedexTitle } from '@/lib/format'
 import { accountDeleted, markExpired, renameAccount, useSyncStore } from '@/store/sync'
@@ -50,6 +50,7 @@ function NameForm({ current }: { current: string }) {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
+    if (reservedPseudo(name)) return notify(PSEUDO_RESERVED, { tone: 'danger' })
     setBusy(true)
     const { error } = await authCall(() => authClient.updateUser({ name, username: name }))
     setBusy(false)

@@ -25,8 +25,8 @@ function appLoader({ request }: LoaderFunctionArgs) {
  * seulement (`appLoader`). Hors d'elle : la connexion (`/connexion`, la page d'un visiteur qui
  * ouvre le site), l'inscription (`/inscription`), les mentions légales (`/mentions-legales`) et le
  * Pokédex public de chaque compte
- * (`/@pseudo` : un seul segment, que le routeur ne sait pas découper ; une autre adresse d'un
- * segment, inconnue, y est une page introuvable). Toutes sous une route parente sans chemin, qui
+ * (`/pseudo` : toute adresse d'un seul segment qui n'est pas une page du site, `RESERVED_PSEUDOS` ;
+ * un pseudo inconnu, ou ce qui n'en est pas un, y est une page introuvable). Toutes sous une route parente sans chemin, qui
  * porte une seule fois la page d'erreur (une erreur d'affichage remplace toute la page, coquille
  * comprise, par ErrorPage) et l'attente du premier chargement. L'accueil, le Pokédex et les fiches
  * sont dans le premier chargement ; les autres pages, plus lourdes (achats, valeur…), sont
@@ -56,11 +56,11 @@ export const createRouter = () =>
             import('@/pages/LegalPage').then(({ LegalPage }) => ({ Component: LegalPage })),
         },
         {
-          path: ':handle',
+          path: ':pseudo',
           // Ses données demandées en même temps que la page, pas après elle (`getJson` garde la
           // réponse, que la page lit).
           loader: ({ params }) => {
-            const pseudo = vitrinePseudo(params.handle!)
+            const pseudo = vitrinePseudo(params.pseudo!)
             if (pseudo) void getJson(`/api/vitrine/${pseudo}`)
             return null
           },

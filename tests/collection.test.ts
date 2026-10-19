@@ -218,6 +218,13 @@ describe('les comptes : chacun le sien', () => {
     expect(signUp.user!.email).toMatch(/^[0-9a-f-]{36}@pokedex\.invalid$/)
   })
 
+  test('un pseudo de deux caractères, oui ; une adresse du site, non', async () => {
+    expect((await createAccount('Al')).response.status).toBe(200)
+    for (const pseudo of ['A', 'connexion', 'Pokedex', 'api']) {
+      expect((await createAccount(pseudo)).response.status).toBe(400)
+    }
+  })
+
   test('un pseudo déjà pris, même autrement écrit : refusé, rien de créé', async () => {
     const { response } = await createAccount('SACHA')
     expect(response.status).toBe(400)
@@ -324,8 +331,11 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
   test('le Pokédex du pseudo, sans tenir compte des majuscules ; un pseudo à personne : 404', async () => {
     expect((await visit('Sacha')).owner).toBe('Sacha')
     expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/personne`))).status).toBe(404)
-    const preview = await server.handle(new Request(`${ORIGIN}/api/vitrine/personne/apercu`))
-    expect(preview.status).toBe(404)
+    // L'aperçu d'un lien vers une adresse sans compte (une page du site, `/connexion`) : celui du
+    // site, jamais celui d'un compte.
+    const preview = await server.handle(new Request(`${ORIGIN}/api/vitrine/connexion/apercu`))
+    expect(preview.status).toBe(200)
+    expect(await preview.text()).toContain('<title>Mon Pokédex</title>')
   })
 
   test('sans session : les cartes, jamais un prix payé, une commande ni un statut « commandée »', async () => {

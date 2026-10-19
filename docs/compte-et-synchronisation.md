@@ -5,14 +5,14 @@ Les comptes, la collection synchronisée entre les appareils, le Pokédex public
 - Comptes (`server/auth.ts`, `config/account.ts`) : Better Auth, **un compte par personne**, que
   chacun crée (décision de l'utilisateur, octobre 2026 : l'app est ouverte à tous ; avant, un seul
   compte, puis des invitations, retirés). `/inscription` (`SignUpPage`, hors de la coquille) : un
-  pseudo et un mot de passe (8 caractères au moins). Le pseudo (`PSEUDO` : 3 à 20 caractères,
+  pseudo et un mot de passe (8 caractères au moins). Le pseudo (`PSEUDO` : 2 à 20 caractères,
   lettres sans accent, chiffres, `-` et `_`, de quoi tenir dans une adresse) est unique sans tenir
   compte des majuscules (plugin `username` de Better Auth). Il est gardé deux fois, d'accord
   (`guard`, crochet `before`) : `name` tel que tapé (« Le Pokédex de Sacha », le menu du compte),
-  `username` en minuscules (la connexion, l'adresse du Pokédex public `/@sacha`) ; une requête ne
+  `username` en minuscules (la connexion, l'adresse du Pokédex public `/sacha`) ; une requête ne
   peut pas mettre autre chose dans `name`. Les 3 derniers pseudos qu'un compte a quittés (changés,
   ou compte supprimé) ne sont jamais repris par un autre (`released_pseudos`, testé) : un lien
-  partagé vers `/@pseudo` ne mène jamais au Pokédex d'un autre ; son compte peut les reprendre. La
+  partagé vers `/pseudo` ne mène jamais au Pokédex d'un autre ; son compte peut les reprendre. La
   base les garde elle-même (`PSEUDO_TRIGGERS`), d'un seul tenant avec le changement : deux requêtes
   ensemble ne passent pas entre un contrôle et l'écriture ; le crochet `guard` (sur le chemin
   reconnu par Better Auth, quelle que soit l'écriture de l'adresse) ne fait qu'en dire la raison
@@ -80,11 +80,14 @@ Les comptes, la collection synchronisée entre les appareils, le Pokédex public
   mène à `/connexion` et toute autre page de la coquille à `/connexion?retour=…` (`appLoader`,
   `router.tsx`) ; `/connexion` et `/inscription` sont hors de la coquille et mènent l'une à
   l'autre. Se déconnecter, ou supprimer son compte, ramène à la connexion.
-- Le Pokédex public de chaque compte (`/@pseudo`, `VitrinePage` ; à la demande de l'utilisateur,
+- Le Pokédex public de chaque compte (`/pseudo`, `VitrinePage` ; à la demande de l'utilisateur,
   octobre 2026) : **toujours public** (plus de réglage : la colonne `public` de `collections` est
-  retirée). Le routeur ne découpe pas `@pseudo` dans un segment : la route `:handle` le lit
-  (`vitrinePseudo`, `lib/filters.ts`) ; une autre adresse d'un seul segment (`/achat`) y est une
-  page introuvable, comme un pseudo qui n'est à personne (404 du serveur : « Aucun Pokédex à cette
+  retirée). Toute adresse d'un seul segment qui n'est pas une page du site y mène (la route
+  `:pseudo`, `vitrinePseudo`, `lib/filters.ts`) : les premiers segments des adresses du site sont
+  des pseudos réservés (`RESERVED_PSEUDOS`, `config/account.ts` : refusés à l'inscription et au
+  changement de pseudo, testé ; une nouvelle page de premier niveau s'y ajoute, et aucun compte ne
+  doit déjà porter son nom). Ce qui n'est pas un pseudo (`/achat`, `/a.b`) y est une
+  page introuvable, comme un pseudo qui n'est à personne (404 du serveur : « Rien à cette
   adresse »). En tête, « Se connecter » et « Créer un compte », ou « Mon Pokédex » une fois
   connecté ; son titre : « Le Pokédex de … » (`pokedexTitle`), le pseudo du compte
   (`GET /api/vitrine/<pseudo>`, sans tenir compte des majuscules : `{ owner, collection, prices }`,
@@ -94,7 +97,8 @@ Les comptes, la collection synchronisée entre les appareils, le Pokédex public
   (`serveTagged`) : un visiteur qui revient reçoit un 304, sans que la collection soit relue.
   Données › Pokédex public en donne l'adresse (`vitrinePath`). Un lien partagé (Discord,
   WhatsApp…) a son aperçu : nginx envoie les robots d'aperçu (`map $vitrine_preview` sur
-  `/@pseudo`, `deploy/nginx.conf`) à `/api/vitrine/<pseudo>/apercu`, une page faite par le serveur
+  toute adresse d'un seul segment, `deploy/nginx.conf`) à `/api/vitrine/<pseudo>/apercu`, une page
+  faite par le serveur (l'aperçu du site pour une page du site ou un pseudo à personne)
   avec le titre et la progression (`vitrineSummary`, testé : rien d'autre que le pseudo et le
   nombre de Pokémon débloqués). Une page seule, hors de la coquille, en lecture seule et pas
   indexée (`noindex`) : la progression, les régions (la réglette n'y est qu'une image, `linked`

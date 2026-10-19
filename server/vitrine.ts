@@ -1,5 +1,5 @@
 /**
- * Le Pokédex public de chaque compte (`/@pseudo` sur le site), toujours montré.
+ * Le Pokédex public de chaque compte (`/pseudo` sur le site), toujours montré.
  * - `GET /api/vitrine/<pseudo>`, sans session (le pseudo sans tenir compte des majuscules ; 404
  *   s'il n'est à personne) : `{ owner, collection, prices }` (`VitrineData`), le pseudo du compte
  *   et sa collection, réduite à ce qui se montre : ses cartes (référence, image, id Cardmarket pour
@@ -10,7 +10,9 @@
  *   prix) : la page n'en montre que la valeur, sans charger ceux de toutes les cartes.
  * - `GET /api/vitrine/<pseudo>/apercu` : la page que lisent les robots d'aperçu (Discord,
  *   WhatsApp…) quand on partage le lien : « Le Pokédex de … » et sa progression (ils ne lancent pas
- *   le JavaScript de l'app). nginx les y envoie (`deploy/nginx.conf`).
+ *   le JavaScript de l'app). nginx les y envoie pour toute adresse d'un seul segment
+ *   (`deploy/nginx.conf`) : une page du site (`/connexion`), ou un pseudo à personne, a l'aperçu
+ *   du site.
  * Chacune au journal, une fois par heure au plus par visiteur et par Pokédex (`journalOnce`).
  */
 
@@ -60,6 +62,12 @@ export function vitrineSummary(owner: string, collection: CollectionData) {
     title: pokedexTitle(owner),
     description: `${unlockedOf({ unlocked, total: TOTAL_SPECIES }, 'Pokémon')} (${share}) : une carte Pokémon japonaise par Pokémon.`,
   }
+}
+
+/** L'aperçu d'une adresse qui n'est pas un Pokédex public : celui du site. */
+const SITE_SUMMARY = {
+  title: 'Mon Pokédex',
+  description: 'Un Pokédex de cartes Pokémon japonaises : une carte par Pokémon, à collectionner.',
 }
 
 const escape = (text: string) =>
@@ -149,18 +157,21 @@ export function vitrineRoutes(app: Database, data: Database, origin: string) {
       '/vitrine/:pseudo/apercu',
       ({ params, request }) => {
         const owner = ownerOf(params.pseudo)
-        if (!owner) return notFound()
         const robot = request.headers.get('user-agent')?.match(PREVIEW_BOTS)?.[0]
-        journalVisit(
-          {
-            topic: 'vitrine',
-            message: 'Lien partagé lu',
-            details: { pseudo: owner.username, robot },
-          },
-          request,
-        )
-        const { title, description } = vitrineSummary(owner.name, shown(owner))
-        const url = `${origin}/@${owner.username}`
+        if (owner) {
+          journalVisit(
+            {
+              topic: 'vitrine',
+              message: 'Lien partagé lu',
+              details: { pseudo: owner.username, robot },
+            },
+            request,
+          )
+        }
+        const { title, description } = owner
+          ? vitrineSummary(owner.name, shown(owner))
+          : SITE_SUMMARY
+        const url = owner ? `${origin}/${owner.username}` : origin
         const meta = (property: string, content: string) =>
           `<meta property="${property}" content="${escape(content)}">`
         const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${escape(title)}</title>${[

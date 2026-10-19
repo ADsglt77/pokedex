@@ -296,7 +296,7 @@ export interface PriceFile {
 
 /**
  * Le compte connecté : son id et son pseudo, tel que tapé (« Le Pokédex de Sacha ») ; en
- * minuscules, l'adresse de son Pokédex public (`/@sacha`, `vitrinePath`).
+ * minuscules, l'adresse de son Pokédex public (`/sacha`, `vitrinePath`).
  */
 export interface AccountUser {
   id: string

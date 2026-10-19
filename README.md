@@ -46,7 +46,7 @@ bun run format   # Prettier
 - **Comptes** : chacun crée le sien (`/inscription`), un pseudo et un mot de passe, sans e-mail
   (pas de mot de passe oublié) ; le pseudo, le mot de passe et la suppression du compte dans
   Données › Mon compte.
-- **Pokédex public** : celui de chaque compte, à son adresse (`/@pseudo`, toujours public), en
+- **Pokédex public** : celui de chaque compte, à son adresse (`/pseudo`, toujours public), en
   lecture seule : progression, régions, valeur au prix du jour, courbe et classeur. Jamais les prix
   payés, les commandes ni le budget. Le reste du site demande d'être connecté.
 - **Thème** : sombre (gris foncé et jaune) ou clair (blanc pastel et rouge), au bouton de la

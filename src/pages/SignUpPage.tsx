@@ -4,7 +4,13 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { PSEUDO, PSEUDO_HINT } from '@/config/account'
 import { authCall, authClient } from '@/lib/auth'
-import { accountOf, PSEUDO_TAKEN, refusalMessage } from '@/lib/account'
+import {
+  accountOf,
+  PSEUDO_RESERVED,
+  PSEUDO_TAKEN,
+  refusalMessage,
+  reservedPseudo,
+} from '@/lib/account'
 import { pageTitle } from '@/lib/format'
 import { signIn } from '@/store/sync'
 import { AuthCard } from '@/components/AuthCard'
@@ -22,7 +28,8 @@ const failure = (status: number, code?: string) =>
 
 /**
  * `/inscription` : créer son compte, hors de la coquille : un pseudo (son Pokédex public sera à
- * `/@pseudo`) et un mot de passe, sans e-mail (`server/auth.ts`). Puis, connecté, l'accueil.
+ * `/pseudo` ; pas une adresse du site) et un mot de passe, sans e-mail (`server/auth.ts`). Puis,
+ * connecté, l'accueil.
  */
 export function SignUpPage() {
   const navigate = useNavigate()
@@ -33,6 +40,7 @@ export function SignUpPage() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
+    if (reservedPseudo(pseudo)) return setError(PSEUDO_RESERVED)
     setBusy(true)
     setError(null)
     // L'e-mail, que Better Auth exige : le serveur en donne une sans boîte au compte.
@@ -56,7 +64,7 @@ export function SignUpPage() {
           {error && <Alert tone="danger" title={error} />}
           <Input
             label="Pseudo"
-            hint={`${PSEUDO_HINT} Votre Pokédex public sera à l’adresse ${location.host}/@${pseudo.toLowerCase() || 'pseudo'}.`}
+            hint={`${PSEUDO_HINT} Votre Pokédex public sera à l’adresse ${location.host}/${pseudo.toLowerCase() || 'pseudo'}.`}
             autoComplete="username"
             minLength={PSEUDO.min}
             maxLength={PSEUDO.max}

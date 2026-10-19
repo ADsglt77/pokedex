@@ -3,13 +3,14 @@
  * - Chacun crée le sien (`/inscription`) : un pseudo (`PSEUDO`, `src/config/account.ts`), unique
  *   sans tenir compte des majuscules, et un mot de passe. Le pseudo est gardé deux fois, d'accord
  *   (`guard`) : `name` tel que tapé (« Le Pokédex de Sacha »), `username` en minuscules (le plugin
- *   `username` : la connexion, l'adresse du Pokédex public `/@sacha`). Pas d'e-mail : le site n'en
+ *   `username` : la connexion, l'adresse du Pokédex public `/sacha`). Pas d'e-mail : le site n'en
  *   envoie pas et n'en garde pas (Better Auth en exige une : chaque compte reçoit une adresse sans
  *   boîte, `<uuid>@pokedex.invalid`, que personne ne connaît) ; pas de mot de passe oublié, donc.
  * - Le pseudo et le mot de passe se changent dans l'app (Données › Mon compte) ; le compte s'y
  *   supprime, avec son mot de passe, et sa collection part avec lui. Les derniers pseudos qu'un
  *   compte a quittés (changés, ou compte supprimé) ne sont jamais repris par un autre
- *   (`PSEUDO_TRIGGERS`) : un lien partagé vers `/@pseudo` ne mène jamais au Pokédex d'un autre.
+ *   (`PSEUDO_TRIGGERS`) : un lien partagé vers `/pseudo` ne mène jamais au Pokédex d'un autre. Les
+ *   adresses du site (`RESERVED_PSEUDOS`) ne sont à personne.
  * - Une modification du compte venue d'une autre origine est refusée (403) : un autre site ne
  *   connecte pas un visiteur à un compte qu'il ne connaît pas.
  * - Une seule session par compte : se connecter sur un appareil déconnecte ses autres. La
@@ -30,14 +31,13 @@ import { username, USERNAME_ERROR_CODES } from 'better-auth/plugins'
 import type { Database } from 'bun:sqlite'
 import { Elysia, type Context } from 'elysia'
 import { PSEUDO } from '@/config/account'
+import { isPseudo } from '@/lib/account'
 import { MINUTE } from '@/lib/time'
 import type { AccountState } from '@/types'
 import { journal, journalOnce, safeText, visitorOf, type JournalLevel } from './journal'
 
 /** Un jour, en secondes (Better Auth compte ses durées en secondes ; `@/lib/time` en ms). */
 const DAY_IN_SECONDS = 24 * 60 * 60
-
-const PSEUDO_RULE = new RegExp(`^${PSEUDO.pattern}$`)
 
 /**
  * Une erreur de Better Auth dans le journal de l'app. Son message peut recopier ce qu'envoie un
@@ -144,7 +144,7 @@ export async function createAuth(db: Database) {
       username({
         minUsernameLength: PSEUDO.min,
         maxUsernameLength: PSEUDO.max,
-        usernameValidator: (value) => PSEUDO_RULE.test(value),
+        usernameValidator: isPseudo,
         displayUsername: false,
       }),
     ],

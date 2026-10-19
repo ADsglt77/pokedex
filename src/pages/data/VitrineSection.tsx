@@ -8,7 +8,7 @@ import { useSyncStore } from '@/store/sync'
 import { DataSection } from './DataSection'
 
 /**
- * Le Pokédex public du compte (`/@pseudo`), toujours montré : son adresse, à copier ou ouvrir. Elle
+ * Le Pokédex public du compte (`/pseudo`), toujours montré : son adresse, à copier ou ouvrir. Elle
  * suit le pseudo (Mon compte) : l'ancienne ne mène plus à rien.
  */
 export function VitrineSection() {
