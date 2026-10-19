@@ -38,9 +38,9 @@ server {
     large_client_header_buffers 4 16k;
 
     # Niveau 6 plutôt que 1 (le défaut) : le code rétrécit, pour un coût serveur négligeable.
-    # `gzip_proxied` : les réponses de l'API aussi (celles déjà compressées par le serveur, en gzip
-    # ou en Brotli, passent telles quelles). `text/javascript` : le type que donne nginx aux scripts
-    # récents ; le manifeste de l'app aussi.
+    # `gzip_proxied` : les réponses de l'API aussi (celles déjà compressées, en gzip, passent
+    # telles quelles). `text/javascript` : le type que donne nginx aux scripts récents ; le
+    # manifeste de l'app aussi.
     gzip on;
     gzip_comp_level 6;
     gzip_vary on;

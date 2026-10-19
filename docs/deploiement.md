@@ -33,7 +33,7 @@ d'un coup) et pour la connexion (`/api/auth/` : 20 d'un coup), 429 au-delà ; un
 jusqu'à 16 Ko (`large_client_header_buffers` : les 1 025 ids d'une collection) ; un fichier
 manquant de `/assets/` répond 404 ; `/assets/` en cache un an ; compression gzip niveau 6,
 réponses de l'API comprises (`gzip_proxied` ; les réponses précalculées arrivent déjà compressées,
-en Brotli si le navigateur l'accepte), des tampons d'1 Mo pour les réponses de l'API
+en gzip), des tampons d'1 Mo pour les réponses de l'API
 (`proxy_buffers`) ; version de nginx masquée (`server_tokens off`) et en-têtes de sécurité sur
 chaque réponse (`deploy/security-headers.conf` : HSTS un an, `nosniff`, `Referrer-Policy`,
 `X-Frame-Options`, `Permissions-Policy`, la politique de sécurité du contenu : scripts, requêtes et
