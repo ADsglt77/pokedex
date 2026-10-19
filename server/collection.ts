@@ -3,9 +3,10 @@
  * (`src/store/account.ts`). Un seul document, numéroté (`version`) :
  * - `GET` : `{ version, collection, shopping }` (`CollectionResponse` ; `version` 0 et rien d'autre
  *   tant que rien n'a été enregistré) ;
- * - `PUT` `{ baseVersion, collection, shopping }` : enregistré seulement si `baseVersion` est celle
- *   du serveur, et rend `{ version }` (`CollectionSaved`) ; sinon 409 : l'appareil relit la version
- *   du serveur, qu'il n'écrase jamais. Le document est contrôlé aux règles d'un fichier importé
+ * - `PUT` `{ account, baseVersion, collection, shopping }` : enregistré seulement si `account` est
+ *   le compte de la session (sinon 401 : un envoi parti juste après une connexion à un autre compte
+ *   n'écrase jamais sa collection) et `baseVersion` la version du serveur, et rend `{ version }`
+ *   (`CollectionSaved`) ; sinon 409 : l'appareil relit la version du serveur, qu'il n'écrase jamais. Le document est contrôlé aux règles d'un fichier importé
  *   (`readSent` ; 400 sinon, la règle en cause au journal).
  * Sans session : 401 ; jamais gardé en cache (`no-store`), ni par le navigateur ni par Cloudflare
  * (macro `auth`, `auth.ts`).
@@ -63,6 +64,15 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
     .put(
       '/collection',
       ({ user, body }) => {
+        if (body.account !== user.id) {
+          journal({
+            topic: 'collection',
+            level: 'warn',
+            message: 'Envoi refusé',
+            details: { compte: user.username ?? undefined, raison: 'parti d’un autre compte' },
+          })
+          return json('null', 401)
+        }
         const { document, problem } = readSent(body)
         if (!document) {
           journal({
@@ -125,6 +135,7 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
       {
         auth: true,
         body: t.Object({
+          account: t.String(),
           baseVersion: t.Integer({ minimum: 0 }),
           collection: t.Unknown(),
           shopping: t.Unknown(),

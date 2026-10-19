@@ -5,7 +5,8 @@
  * rien ne s'enregistre (le menu du compte le dit, l'envoi repart au retour du réseau ou de la page,
  * et quitter la page le demande d'abord). Chaque envoi part de la version lue (`version`) : changée
  * ailleurs entre-temps (un autre onglet, un autre appareil), le serveur la refuse (409) et l'app
- * relit la sienne, sans rien écraser. Au retour sur la page, la collection est relue, si rien
+ * relit la sienne, sans rien écraser ; il porte aussi le compte d'où il vient : parti juste après
+ * une connexion à un autre compte, le serveur le refuse (401). Au retour sur la page, la collection est relue, si rien
  * n'attend d'être envoyé. Sans connexion, l'app ne s'ouvre pas : on voit la connexion, ou le
  * Pokédex public d'un compte (`router.tsx`).
  */
@@ -88,11 +89,13 @@ let retry: ReturnType<typeof setTimeout> | undefined
 
 /** Envoie la collection, si une modification attend. */
 async function push() {
-  if (edits === saved || !useAccountStore.getState().account) return
+  const { account } = useAccountStore.getState()
+  if (edits === saved || !account) return
   const sending = edits
   setStatus('saving')
   const document = currentDocument()
-  const response = await call('PUT', JSON.stringify({ baseVersion: version, ...document }))
+  const body = { account: account.id, baseVersion: version, ...document }
+  const response = await call('PUT', JSON.stringify(body))
   if (response?.ok) {
     version = ((await response.json()) as CollectionSaved).version
     saved = sending
@@ -135,13 +138,19 @@ export const save = () => void inTurn(push)
  */
 const forgetVitrine = (name: string) => forget(`/api/vitrine/${name.toLowerCase()}`)
 
-/** Connecté (démarrage, connexion, création du compte) : sa collection est lue ; `false` sans. */
+/**
+ * Connecté (démarrage, connexion, création du compte) : ce qu'un autre compte (une session
+ * expirée) laissait en mémoire part d'abord, envois en attente compris ; puis la collection du
+ * compte est lue, et le compte n'est posé qu'une fois elle lue ; `false` sans elle.
+ */
 export async function signIn(account: AccountUser) {
-  forgetVitrine(account.name)
-  useAccountStore.setState({ account, status: 'saved', refusal: null })
+  await leave()
   let loaded = false
   await inTurn(async () => (loaded = await load()))
-  return loaded
+  if (!loaded) return false
+  forgetVitrine(account.name)
+  useAccountStore.setState({ account, status: 'saved', refusal: null })
+  return true
 }
 
 /**
@@ -161,7 +170,10 @@ export function renameAccount(name: string) {
 /** Une modification attend encore d'être enregistrée : à dire avant de se déconnecter. */
 export const hasUnsavedChanges = () => edits !== saved
 
-/** Plus de compte sur ce navigateur : sa collection le quitte aussi (elle reste sur le serveur). */
+/**
+ * Plus de compte en mémoire : ni sa collection (elle reste sur le serveur), ni ses envois en
+ * attente.
+ */
 async function leave() {
   const { account } = useAccountStore.getState()
   useAccountStore.setState({ account: null, status: 'saved', refusal: null })

@@ -122,7 +122,10 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   navigateur lit le document à la connexion (ou au démarrage, avant le premier affichage : sans
   lui, « Le Pokédex ne peut pas s'afficher »), le garde en mémoire, et envoie chaque modification
   une demi-seconde après, un échange à la fois. Le document est numéroté par le serveur :
-  `PUT /api/collection` `{ baseVersion, collection, shopping }` est refusé, 409, corps `null`, si
+  `PUT /api/collection` `{ account, baseVersion, collection, shopping }` est refusé, 401, si
+  `account` n'est pas le compte de la session (un envoi parti juste après une connexion à un autre
+  compte, sur la même page, n'écrase jamais sa collection ; la connexion vide d'abord la mémoire et
+  les envois en attente, `signIn`), et 409, corps `null`, si
   le navigateur part d'une autre version que celle du serveur (changée entre-temps par un autre
   onglet ou un autre appareil ; en avance, la base restaurée d'une sauvegarde) ; testé sur le
   serveur entier avec 401, 403, une mise à jour, la version remplacée gardée et un document refusé

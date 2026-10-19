@@ -59,6 +59,7 @@ async function createAccount(pseudo: string) {
 
 const signUp = await createAccount('Sacha')
 const cookie = signUp.cookie
+const sacha = signUp.user!.id
 
 /** `/api/collection`, du site et avec la session ; `headers` s'y ajoute ou les remplace. */
 const collection = (method: 'GET' | 'PUT', body?: unknown, headers: Record<string, string> = {}) =>
@@ -98,7 +99,7 @@ const second: CollectionDocument = {
 }
 
 /** Le premier envoi, parti de la version 0 (le serveur n'a encore rien), et ce qu'il a enregistré. */
-const saved = await collection('PUT', { baseVersion: 0, ...first })
+const saved = await collection('PUT', { account: sacha, baseVersion: 0, ...first })
 const savedBody = (await saved.json()) as CollectionSaved
 const afterFirst = await stored()
 
@@ -112,7 +113,7 @@ describe('/api/collection : jamais une version écrasée', () => {
 
   test('un autre appareil, parti de la version 0 : 409, la version du serveur reste', async () => {
     const before = await stored()
-    const response = await collection('PUT', { baseVersion: 0, ...second })
+    const response = await collection('PUT', { account: sacha, baseVersion: 0, ...second })
     expect(response.status).toBe(409)
     expect(await stored()).toEqual(before)
   })
@@ -123,7 +124,11 @@ describe('/api/collection : jamais une version écrasée', () => {
       ...first,
       shopping: { ...emptyShopping(), orders: [order()] },
     }
-    const response = await collection('PUT', { baseVersion: before.body.version, ...next })
+    const response = await collection('PUT', {
+      account: sacha,
+      baseVersion: before.body.version,
+      ...next,
+    })
     expect(response.status).toBe(200)
     const after = await stored()
     expect(after.body).toEqual({ version: before.body.version + 1, ...next })
@@ -131,7 +136,11 @@ describe('/api/collection : jamais une version écrasée', () => {
       version: before.body.version + 1,
     })
     // Un appareil encore à la version d'avant : 409, la nouvelle reste.
-    const stale = await collection('PUT', { baseVersion: before.body.version, ...second })
+    const stale = await collection('PUT', {
+      account: sacha,
+      baseVersion: before.body.version,
+      ...second,
+    })
     expect(stale.status).toBe(409)
     expect(await stored()).toEqual(after)
     // La version remplacée est gardée (une par heure au plus), pour revenir en arrière à la main.
@@ -144,7 +153,11 @@ describe('/api/collection : jamais une version écrasée', () => {
 
   test('une version en avance sur le serveur (une base restaurée plus ancienne) : 409', async () => {
     const before = await stored()
-    const response = await collection('PUT', { baseVersion: before.body.version + 5, ...second })
+    const response = await collection('PUT', {
+      account: sacha,
+      baseVersion: before.body.version + 5,
+      ...second,
+    })
     expect(response.status).toBe(409)
     expect(await stored()).toEqual(before)
   })
@@ -155,7 +168,11 @@ describe('/api/collection : jamais une version écrasée', () => {
       ...first,
       collection: { ...first.collection, customCards: { a: { ...card('a', [25]), id: 'z' } } },
     }
-    const response = await collection('PUT', { baseVersion: before.body.version, ...broken })
+    const response = await collection('PUT', {
+      account: sacha,
+      baseVersion: before.body.version,
+      ...broken,
+    })
     expect(response.status).toBe(400)
     expect(await stored()).toEqual(before)
   })
@@ -164,7 +181,7 @@ describe('/api/collection : jamais une version écrasée', () => {
     const before = await stored()
     const response = await collection(
       'PUT',
-      { baseVersion: before.body.version, ...second },
+      { account: sacha, baseVersion: before.body.version, ...second },
       { Origin: 'https://autre.exemple' },
     )
     expect(response.status).toBe(403)
@@ -180,7 +197,13 @@ describe('/api/collection : jamais une version écrasée', () => {
     const noCookie = { Cookie: '' }
     expect((await collection('GET', undefined, noCookie)).status).toBe(401)
     expect(
-      (await collection('PUT', { baseVersion: before.body.version, ...second }, noCookie)).status,
+      (
+        await collection(
+          'PUT',
+          { account: sacha, baseVersion: before.body.version, ...second },
+          noCookie,
+        )
+      ).status,
     ).toBe(401)
     expect(await stored()).toEqual(before)
   })
@@ -216,7 +239,10 @@ describe('les comptes : chacun le sien', () => {
       collection: null,
       shopping: null,
     })
-    expect((await collection('PUT', { baseVersion: 0, ...second }, asOndine)).status).toBe(200)
+    expect(
+      (await collection('PUT', { account: ondine.user!.id, baseVersion: 0, ...second }, asOndine))
+        .status,
+    ).toBe(200)
     expect(await stored()).toEqual(before)
     const ondineSees = (await (
       await collection('GET', undefined, asOndine)
@@ -224,10 +250,26 @@ describe('les comptes : chacun le sien', () => {
     expect(ondineSees).toEqual({ version: 1, ...second })
   })
 
+  test('parti d’un autre compte (une connexion entre-temps) : 401, rien d’écrit', async () => {
+    const before = await stored()
+    const misty = await createAccount('Ondine2')
+    const asMisty = { Cookie: misty.cookie }
+    const response = await collection('PUT', { account: sacha, baseVersion: 0, ...first }, asMisty)
+    expect(response.status).toBe(401)
+    expect(await stored()).toEqual(before)
+    const mistySees = (await (
+      await collection('GET', undefined, asMisty)
+    ).json()) as CollectionResponse
+    expect(mistySees.version).toBe(0)
+  })
+
   test('supprimé avec son mot de passe : son compte, sa collection et son Pokédex public partent', async () => {
     const pierre = await createAccount('Pierre')
     const asPierre = { Cookie: pierre.cookie }
-    expect((await collection('PUT', { baseVersion: 0, ...first }, asPierre)).status).toBe(200)
+    expect(
+      (await collection('PUT', { account: pierre.user!.id, baseVersion: 0, ...first }, asPierre))
+        .status,
+    ).toBe(200)
     // Sans mot de passe, ou avec un faux : rien ne part.
     expect((await authCall('delete-user', {}, pierre.cookie)).status).toBe(400)
     expect((await authCall('delete-user', { password: 'faux' }, pierre.cookie)).status).toBe(400)
