@@ -13,17 +13,18 @@ import type { AccountState, AccountUser } from '@/types'
 const TOO_MANY_ATTEMPTS = 'Trop de tentatives : réessayez un peu plus tard.'
 
 /**
- * Le message d'un refus du serveur, d'après son statut (`messages`, propres au formulaire), trop de
- * tentatives (429), ou `otherwise` pour les autres (0 : pas de réponse).
+ * Le message d'un refus du serveur : un pseudo déjà pris (le code du refus de Better Auth), son
+ * statut (`messages`, propres au formulaire), trop de tentatives (429), ou `otherwise` pour les
+ * autres (0 : pas de réponse).
  */
 export const refusalMessage = (
   messages: Partial<Record<number, string>>,
-  status: number,
+  { status, code }: { status: number; code?: string },
   otherwise: string,
-) => messages[status] ?? (status === 429 ? TOO_MANY_ATTEMPTS : otherwise)
-
-/** Le pseudo est déjà celui d'un autre compte : le code du refus de Better Auth. */
-export const PSEUDO_TAKEN = 'USERNAME_IS_ALREADY_TAKEN'
+) =>
+  code === 'USERNAME_IS_ALREADY_TAKEN'
+    ? 'Ce pseudo est déjà pris : choisissez-en un autre.'
+    : (messages[status] ?? (status === 429 ? TOO_MANY_ATTEMPTS : otherwise))
 
 /** Un pseudo réservé au site (le premier segment d'une de ses adresses : `RESERVED_PSEUDOS`) ? */
 export const reservedPseudo = (value: string) => RESERVED_PSEUDOS.includes(value.toLowerCase())
@@ -45,9 +46,6 @@ export const isPseudo = (value: string) =>
 
 /** La page de connexion, qui ramène ensuite à `back` (une page du site, filtres compris). */
 export const loginPath = (back: string) => `/connexion?retour=${encodeURIComponent(back)}`
-
-/** Le compte d'une réponse de Better Auth (connexion, création) : son id et son pseudo. */
-export const accountOf = ({ id, name }: AccountUser): AccountUser => ({ id, name })
 
 /**
  * Une seule requête au démarrage : qui est connecté. Rend le compte connecté sur ce navigateur :

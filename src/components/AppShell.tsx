@@ -121,7 +121,7 @@ function Brand() {
  * La coquille de toutes les pages. Grand écran : une barre latérale (recherche, navigation par
  * groupes, progression, données, thème et compte). Tablette et téléphone : une barre en haut
  * (recherche, données, thème, compte) et une barre d'onglets en bas. Partout : la recherche
- * (Ctrl K), le lien d'évitement, les avertissements de l'app, le pied de page, le focus et le
+ * (Ctrl K), le lien d'évitement, le pied de page, le focus et le
  * défilement à chaque changement de page. Ne se redessine qu'en changeant de page : pas à chaque
  * frappe d'une recherche gardée dans l'adresse (`Shell`, mémoïsée sur le chemin).
  */

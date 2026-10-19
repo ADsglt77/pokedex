@@ -5,15 +5,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import { applyOrder, emptyShopping } from '@/lib/orders'
-import {
-  buildExportFile,
-  documentProblem,
-  isDay,
-  parseImport,
-  readDocument,
-  readImport,
-  readSent,
-} from '@/lib/transfer'
+import { buildExportFile, documentProblem, isDay, readImport, readSent } from '@/lib/transfer'
 import type { CollectionData, ShoppingData } from '@/types'
 import { card, collectionWith, line, NOW, order, ownership } from './fixtures'
 
@@ -51,7 +43,7 @@ function reimport(
     if (value === undefined) delete parent[path.at(-1)!]
     else parent[path.at(-1)!] = value
   }
-  return parseImport(JSON.stringify(file))
+  return readImport(JSON.stringify(file)).document
 }
 
 const ORDER = ['shopping', 'orders', 0]
@@ -178,7 +170,7 @@ describe('import', () => {
 
 describe('document envoyé au serveur', () => {
   /** Le document tel que le serveur le reçoit (JSON). */
-  const received = (document: object) => readDocument(JSON.parse(JSON.stringify(document)))
+  const received = (document: object) => readSent(JSON.parse(JSON.stringify(document))).document
 
   test('un document de l’app est accepté tel quel', () => {
     expect(received({ collection, shopping })).toEqual({ collection, shopping })
@@ -216,7 +208,7 @@ describe('quantité d’une ligne', () => {
   })
 
   test('un fichier qui n’est pas du JSON, ou d’un autre genre : refusé, et dit pourquoi', () => {
-    expect(parseImport('pas du JSON')).toBeNull()
+    expect(readImport('pas du JSON').document).toBeNull()
     expect(readImport(JSON.stringify({ kind: 'autre chose' })).problem).toBe(
       'ce n’est pas un export de collection de ce Pokédex',
     )

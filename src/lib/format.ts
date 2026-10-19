@@ -46,10 +46,13 @@ function toDate(iso: string | null | undefined): Date | null {
   return date && !Number.isNaN(date.getTime()) ? date : null
 }
 
-export function formatDate(iso: string | null | undefined): string | null {
+/** Une date ISO mise en forme par `format` ; `null` sans date lisible. */
+const dateWith = (format: Intl.DateTimeFormat) => (iso: string | null | undefined) => {
   const date = toDate(iso)
-  return date && dateFormat.format(date)
+  return date && format.format(date)
 }
+
+export const formatDate = dateWith(dateFormat)
 
 const monthFormat = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
 
@@ -64,15 +67,10 @@ const shortDateYearFormat = new Intl.DateTimeFormat('fr-FR', {
 })
 
 /** « 11 oct. » ; `withYear` : « 11 oct. 2026 ». */
-export function formatShortDate(iso: string | null | undefined, withYear = false): string | null {
-  const date = toDate(iso)
-  return date && (withYear ? shortDateYearFormat : shortDateFormat).format(date)
-}
+export const formatShortDate = (iso: string | null | undefined, withYear = false) =>
+  dateWith(withYear ? shortDateYearFormat : shortDateFormat)(iso)
 
-export function formatDateTime(iso: string | null | undefined): string | null {
-  const date = toDate(iso)
-  return date && dateTimeFormat.format(date)
-}
+export const formatDateTime = dateWith(dateTimeFormat)
 
 const euroFormat = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' })
 const signedEuroFormat = new Intl.NumberFormat('fr-FR', {

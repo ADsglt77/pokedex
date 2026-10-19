@@ -13,7 +13,7 @@
 
 /* Grand écran : deux colonnes plutôt qu'une bande étroite et du vide, dans l'ordre du sommaire. La
    collection à gauche, le compte et le Pokédex public à droite ; l'export et l'import côte à côte ;
-   les sources et l'effacement sur toute la largeur. */
+   les données du serveur et l'effacement sur toute la largeur. */
 @container page (min-width: 84rem) {
   .sections {
     grid-template-columns: repeat(2, minmax(0, 1fr));

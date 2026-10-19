@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react'
 import { createBrowserRouter, redirect, type LoaderFunctionArgs } from 'react-router'
 import { AppShell } from '@/components/AppShell'
 import { loginPath } from '@/lib/account'
@@ -20,18 +21,22 @@ function appLoader({ request }: LoaderFunctionArgs) {
   return redirect(pathname === '/' ? '/connexion' : loginPath(pathname + search))
 }
 
+/** Une page chargée à la demande : son module, et le nom de son composant. */
+const page = <M,>(module: Promise<M>, name: keyof M) =>
+  module.then((loaded) => ({ Component: loaded[name] as ComponentType }))
+
 /**
  * Les pages de l'app, dans la coquille commune (en-tête, navigation), 404 comprise : connecté
  * seulement (`appLoader`). Hors d'elle : la connexion (`/connexion`, la page d'un visiteur qui
  * ouvre le site), l'inscription (`/inscription`), les mentions légales (`/mentions-legales`) et le
- * Pokédex public de chaque compte
- * (`/pseudo` : toute adresse d'un seul segment qui n'est pas une page du site, `RESERVED_PSEUDOS` ;
- * un pseudo inconnu, ou ce qui n'en est pas un, y est une page introuvable). Toutes sous une route parente sans chemin, qui
- * porte une seule fois la page d'erreur (une erreur d'affichage remplace toute la page, coquille
- * comprise, par ErrorPage) et l'attente du premier chargement. L'accueil, le Pokédex et les fiches
- * sont dans le premier chargement ; les autres pages, plus lourdes (achats, valeur…), sont
- * chargées à leur première ouverture. Créé une fois le compte connu (`main.tsx`) : le routeur lit
- * la page ouverte dès sa création.
+ * Pokédex public de chaque compte (`/pseudo` : toute adresse d'un seul segment qui n'est pas une
+ * page du site, `RESERVED_PSEUDOS` ; un pseudo inconnu, ou ce qui n'en est pas un, y est une page
+ * introuvable). Toutes sous une route parente sans chemin, qui porte une seule fois la page
+ * d'erreur (une erreur d'affichage remplace toute la page, coquille comprise, par ErrorPage) et
+ * l'attente du premier chargement. L'accueil, le Pokédex et les fiches sont dans le premier
+ * chargement ; les autres pages, plus lourdes (achats, valeur…), sont chargées à leur première
+ * ouverture (`page`). Créé une fois le compte connu (`main.tsx`) : le routeur lit la page ouverte
+ * dès sa création.
  */
 export const createRouter = () =>
   createBrowserRouter([
@@ -42,18 +47,15 @@ export const createRouter = () =>
       children: [
         {
           path: 'connexion',
-          lazy: () =>
-            import('@/pages/LoginPage').then(({ LoginPage }) => ({ Component: LoginPage })),
+          lazy: () => page(import('@/pages/LoginPage'), 'LoginPage'),
         },
         {
           path: 'inscription',
-          lazy: () =>
-            import('@/pages/SignUpPage').then(({ SignUpPage }) => ({ Component: SignUpPage })),
+          lazy: () => page(import('@/pages/SignUpPage'), 'SignUpPage'),
         },
         {
           path: 'mentions-legales',
-          lazy: () =>
-            import('@/pages/LegalPage').then(({ LegalPage }) => ({ Component: LegalPage })),
+          lazy: () => page(import('@/pages/LegalPage'), 'LegalPage'),
         },
         {
           path: ':pseudo',
@@ -64,8 +66,7 @@ export const createRouter = () =>
             if (pseudo) void getJson(`/api/vitrine/${pseudo}`)
             return null
           },
-          lazy: () =>
-            import('@/pages/VitrinePage').then(({ VitrinePage }) => ({ Component: VitrinePage })),
+          lazy: () => page(import('@/pages/VitrinePage'), 'VitrinePage'),
         },
         {
           // Le classeur, rendu par la coquille, qui le garde en vie d'une page à l'autre.
@@ -78,29 +79,19 @@ export const createRouter = () =>
             { path: 'pokemon/:id', element: <PokemonPage /> },
             {
               path: 'valeur',
-              lazy: () =>
-                import('@/pages/value/ValuePage').then(({ ValuePage }) => ({
-                  Component: ValuePage,
-                })),
+              lazy: () => page(import('@/pages/value/ValuePage'), 'ValuePage'),
             },
             {
               path: 'achats',
-              lazy: () =>
-                import('@/pages/shopping/ShoppingPage').then(({ ShoppingPage }) => ({
-                  Component: ShoppingPage,
-                })),
+              lazy: () => page(import('@/pages/shopping/ShoppingPage'), 'ShoppingPage'),
             },
             {
               path: 'donnees',
-              lazy: () =>
-                import('@/pages/data/DataPage').then(({ DataPage }) => ({ Component: DataPage })),
+              lazy: () => page(import('@/pages/data/DataPage'), 'DataPage'),
             },
             {
               path: 'catalogue',
-              lazy: () =>
-                import('@/pages/catalog/CatalogPage').then(({ CatalogPage }) => ({
-                  Component: CatalogPage,
-                })),
+              lazy: () => page(import('@/pages/catalog/CatalogPage'), 'CatalogPage'),
             },
             { path: '*', element: <NotFoundPage /> },
           ],

@@ -1,14 +1,14 @@
 import { Button, Input, Stack } from '@camply/ui'
 import { Trash2 } from '@camply/ui/icons'
 import { useRef, useState, type FormEvent } from 'react'
-import { flushSync } from 'react-dom'
+import { focusAfter } from '@/lib/focus'
 import { useNavigate } from 'react-router'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExportCollectionButton } from '@/components/ExportCollectionButton'
 import { PSEUDO, PSEUDO_HINT } from '@/config/account'
 import { useNotify } from '@/hooks/useNotify'
 import { authCall, authClient } from '@/lib/auth'
-import { PSEUDO_RESERVED, PSEUDO_TAKEN, refusalMessage, reservedPseudo } from '@/lib/account'
+import { PSEUDO_RESERVED, refusalMessage, reservedPseudo } from '@/lib/account'
 import { vitrinePath } from '@/lib/filters'
 import { pokedexTitle } from '@/lib/format'
 import { accountDeleted, markExpired, renameAccount, useAccountStore } from '@/store/account'
@@ -56,14 +56,11 @@ function NameForm({ current }: { current: string }) {
     setBusy(false)
     if (error?.status === 401) markExpired()
     if (error) {
-      const message =
-        error.code === PSEUDO_TAKEN
-          ? 'Ce pseudo est déjà pris : choisissez-en un autre.'
-          : refusalMessage(
-              { 400: `Pseudo refusé : ${PSEUDO_HINT}`, 401: EXPIRED },
-              error.status,
-              'Pseudo inchangé : réessayez plus tard.',
-            )
+      const message = refusalMessage(
+        { 400: `Pseudo refusé : ${PSEUDO_HINT}`, 401: EXPIRED },
+        error,
+        'Pseudo inchangé : réessayez plus tard.',
+      )
       return notify(message, { tone: 'danger' })
     }
     renameAccount(name)
@@ -104,10 +101,10 @@ function NameForm({ current }: { current: string }) {
  * Le message d'un refus, d'après la réponse du serveur : un mauvais mot de passe (400), et non une
  * session expirée (401), qui ferait croire le mot de passe perdu (pas de « mot de passe oublié »).
  */
-const failure = (status: number, wrongPassword: string) =>
+const failure = (refused: { status: number }, wrongPassword: string) =>
   refusalMessage(
     { 400: wrongPassword, 401: EXPIRED },
-    status,
+    refused,
     'Impossible pour le moment : réessayez plus tard.',
   )
 
@@ -133,11 +130,12 @@ function PasswordForm() {
     )
     setBusy(false)
     if (refused?.status === 401) markExpired()
+    // Le refus s'affiche sous le mot de passe actuel, qui reçoit le focus : il est lu avec lui.
     if (refused) {
-      // Le refus s'affiche sous le mot de passe actuel, qui reçoit le focus : il est lu avec lui.
-      flushSync(() => setError(failure(refused.status, 'Mot de passe actuel incorrect.')))
-      currentField.current?.focus()
-      return
+      return focusAfter(
+        () => setError(failure(refused, 'Mot de passe actuel incorrect.')),
+        currentField,
+      )
     }
     setCurrent('')
     setNext('')
@@ -196,9 +194,7 @@ function DeleteForm() {
     if (refused) {
       setBusy(false)
       if (refused.status === 401) markExpired()
-      flushSync(() => setError(failure(refused.status, 'Mot de passe incorrect.')))
-      field.current?.focus()
-      return
+      return focusAfter(() => setError(failure(refused, 'Mot de passe incorrect.')), field)
     }
     await accountDeleted()
     notify('Votre compte est supprimé, avec sa collection.', { tone: 'info' })
@@ -249,7 +245,7 @@ function DeleteForm() {
           serveur, sans retour possible ; votre pseudo ne sera jamais repris par un autre compte.
           Exportez d’abord votre collection pour la garder.
         </p>
-        <ExportCollectionButton>Exporter ma collection</ExportCollectionButton>
+        <ExportCollectionButton />
       </ConfirmDialog>
     </>
   )

@@ -44,12 +44,6 @@ const STATUS: Record<SaveStatus, { label: string; icon: typeof CloudCheck; text:
   },
 }
 
-/** La phrase d'un refus, avec sa raison (`refusal`) : « … : la carte « SV2a 165 » est abîmée. » */
-const refusedText = (refusal: string | null) =>
-  refusal
-    ? `Le serveur refuse cette collection : ${refusal}. Exportez-la depuis la page Données pour la garder.`
-    : STATUS.refused.text
-
 /**
  * Le compte connecté (la coquille ne s'ouvre que connecté) : où en est l'enregistrement de la
  * collection, et un menu : se reconnecter (session fermée) ou renvoyer, puis se déconnecter. En
@@ -68,7 +62,11 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   if (!account) return null
 
   const { label, icon: Icon } = STATUS[status]
-  const text = status === 'refused' ? refusedText(refusal) : STATUS[status].text
+  // Un refus, avec sa raison : « … : la carte « SV2a 165 » est abîmée. »
+  const text =
+    status === 'refused' && refusal
+      ? `Le serveur refuse cette collection : ${refusal}. Exportez-la depuis la page Données pour la garder.`
+      : STATUS[status].text
   const leave = async () => {
     setLeaving(true)
     const done = await signOut()
@@ -140,7 +138,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
           Votre dernière modification n’est pas encore enregistrée sur le serveur : en vous
           déconnectant, elle sera perdue. Exportez d’abord votre collection pour la garder.
         </p>
-        <ExportCollectionButton>Exporter ma collection</ExportCollectionButton>
+        <ExportCollectionButton />
       </ConfirmDialog>
     </>
   )

@@ -200,7 +200,7 @@
   border-top: 1px solid var(--camply-border-soft);
 }
 
-/* Le contenu : avertissements, page, pied de page */
+/* Le contenu : page, pied de page */
 
 .content {
   display: flex;

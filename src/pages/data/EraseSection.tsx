@@ -61,7 +61,7 @@ export function EraseSection() {
         <p>Ceci sera effacé de votre compte, sur tous vos appareils :</p>
         <SummaryLedger summary={summary} />
         <p>Exportez d’abord votre collection si vous voulez pouvoir la retrouver.</p>
-        <ExportCollectionButton>Exporter ma collection</ExportCollectionButton>
+        <ExportCollectionButton />
       </ConfirmDialog>
     </DataSection>
   )

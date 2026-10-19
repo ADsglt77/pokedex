@@ -78,8 +78,8 @@ async function load() {
   loading = true
   // Lue comme un fichier importé : seuls ses champs connus.
   replaceDocument({
-    collection: (body.collection && readCollection(body.collection)) || emptyCollection(),
-    shopping: (body.shopping && readShopping(body.shopping)) || emptyShopping(),
+    collection: readCollection(body.collection) ?? emptyCollection(),
+    shopping: readShopping(body.shopping) ?? emptyShopping(),
   })
   loading = false
   return true
@@ -145,12 +145,27 @@ const forgetVitrine = (name: string) => forget(`/api/vitrine/${name.toLowerCase(
  */
 export async function signIn(account: AccountUser) {
   await leave()
-  let loaded = false
-  await inTurn(async () => (loaded = await load()))
-  if (!loaded) return false
+  if (!(await inTurn(load))) return false
   forgetVitrine(account.name)
   useAccountStore.setState({ account, status: 'saved', refusal: null })
   return true
+}
+
+/**
+ * La réponse de Better Auth (connexion, création du compte) : le compte connecté et sa collection
+ * lue (`null`) ; sinon le message à dire (`failure` : celui d'un refus).
+ */
+export async function openSession(
+  {
+    data,
+    error,
+  }: { data: { user: AccountUser } | null; error: { status: number; code?: string } | null },
+  failure: (refused: { status: number; code?: string }) => string,
+) {
+  if (error || !data) return failure(error ?? { status: 0 })
+  return (await signIn({ id: data.user.id, name: data.user.name }))
+    ? null
+    : 'Connecté, mais votre collection n’a pas pu être lue : réessayez dans un instant.'
 }
 
 /**

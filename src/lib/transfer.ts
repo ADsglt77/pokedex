@@ -73,10 +73,6 @@ export function readShopping(value: unknown): ShoppingData | null {
   } as unknown as ShoppingData
 }
 
-/** Chaque valeur d'un dictionnaire (ou d'une liste) est un objet qui passe `ok` (avec sa clé). */
-const all = (values: object, ok: (value: Record<string, unknown>, key: string) => boolean) =>
-  Object.entries(values).every(([key, value]) => isRecord(value) && ok(value, key))
-
 /** Aucune valeur en double. */
 const distinct = (values: readonly unknown[]) => new Set(values).size === values.length
 
@@ -151,7 +147,7 @@ const isOrder = (order: Record<string, unknown>) =>
   isAmount(order.refunded) &&
   isOptional(order.link, (link) => isText(link) && parseLink(link as string) !== null) &&
   Array.isArray(order.lines) &&
-  all(order.lines, isLine) &&
+  !firstBad(order.lines, isLine) &&
   // Une carte par ligne : deux lignes d'une même carte, la seconde effacerait le report de la
   // première sur la collection.
   distinct(order.lines.map((line: { cardId: string }) => line.cardId)) &&
@@ -242,9 +238,6 @@ export function readImport(text: string) {
   return readParts(file.collection, file.shopping, true)
 }
 
-/** Le contenu d'un fichier d'export ; `null` si ce n'en est pas un, ou s'il est abîmé. */
-export const parseImport = (text: string) => readImport(text).document
-
 /**
  * La collection et les achats qu'un navigateur envoie au serveur, ou la raison
  * de leur refus : le serveur les contrôle aux mêmes règles qu'un fichier importé.
@@ -255,6 +248,3 @@ export function readSent(value: unknown): Read<CollectionDocument> {
   if (!document) return refusal(problem)
   return { document: { collection: document.collection, shopping: document.shopping! }, problem }
 }
-
-/** La collection et les achats envoyés au serveur ; `null` s'ils sont abîmés (`readSent`). */
-export const readDocument = (value: unknown) => readSent(value).document

@@ -24,7 +24,7 @@ export function CollectionSection() {
       id="collection"
       title="Ma collection"
       titleRef={title}
-      description="Synchronisée avec votre compte : la même sur tous vos appareils, et sauvegardée sur le serveur."
+      description="Enregistrée sur le serveur : la même sur tous vos appareils."
     >
       {summary.cards === 0 ? (
         <EmptyState

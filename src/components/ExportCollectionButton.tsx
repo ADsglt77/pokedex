@@ -1,13 +1,12 @@
 import { Button } from '@camply/ui'
 import { Download } from '@camply/ui/icons'
-import type { ReactNode } from 'react'
 import { useExportCollection } from '@/hooks/useExportCollection'
 
 /**
  * Exporter avant de remplacer ou d'effacer la collection : un petit bouton secondaire, dans son
  * propre bloc (il ne s'étire pas dans une pile).
  */
-export function ExportCollectionButton({ children }: { children: ReactNode }) {
+export function ExportCollectionButton() {
   const exportCollection = useExportCollection()
   return (
     <div>
@@ -17,7 +16,7 @@ export function ExportCollectionButton({ children }: { children: ReactNode }) {
         leftIcon={<Download size={14} />}
         onClick={exportCollection}
       >
-        {children}
+        Exporter ma collection
       </Button>
     </div>
   )

@@ -22,7 +22,20 @@
   text-align: center;
 }
 
-/* Le titre de la page (camply n'a pas de `CardTitle` de niveau 1) : un `h1` à la taille d'un `h2`. */
+/* Le titre de la page : un `h1` à la taille d'un `h2`. */
 .title {
   font-size: var(--title-md);
+}
+
+/* Le formulaire, sous le texte de la carte. */
+.form {
+  margin-top: var(--camply-space-5);
+}
+
+/* Le lien vers l'autre page (inscription, connexion), sous le formulaire. */
+.other {
+  display: block;
+  margin-top: var(--camply-space-4);
+  font-size: var(--text-sm);
+  text-align: center;
 }
