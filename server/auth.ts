@@ -34,7 +34,7 @@ import { PASSWORD_MIN, PSEUDO } from '@/config/account'
 import { isPseudo } from '@/lib/account'
 import { MINUTE } from '@/lib/time'
 import type { AccountState } from '@/types'
-import { journal, journalOnce, safeText, visitorOf, type JournalLevel } from './journal'
+import { journal, journalOnce, reasonOf, safeText, visitorOf, type JournalLevel } from './journal'
 
 /** Un jour, en secondes (Better Auth compte ses durées en secondes ; `@/lib/time` en ms). */
 const DAY_IN_SECONDS = 24 * 60 * 60
@@ -60,6 +60,17 @@ function logError(message: string, ...causes: unknown[]) {
 const KEPT_PSEUDOS = 3
 
 /**
+ * Un pseudo quitté (`OLD`, changé ou compte supprimé) : réservé à son compte, qui n'en garde que
+ * ses `KEPT_PSEUDOS` derniers.
+ */
+const RELEASE = `
+    INSERT OR REPLACE INTO released_pseudos (username, user_id, released_at)
+      VALUES (OLD.username, OLD.id, strftime('%Y-%m-%dT%H:%M:%f', 'now'));
+    DELETE FROM released_pseudos WHERE user_id = OLD.id AND username NOT IN (
+      SELECT username FROM released_pseudos WHERE user_id = OLD.id
+      ORDER BY released_at DESC LIMIT ${KEPT_PSEUDOS});`
+
+/**
  * Les pseudos quittés, gardés par la base elle-même, d'un seul tenant avec le changement de pseudo
  * ou la suppression du compte (deux requêtes ensemble ne passent pas entre un contrôle et
  * l'écriture) : un pseudo quitté reste réservé à son compte, qui peut le reprendre ; un autre
@@ -79,22 +90,12 @@ const PSEUDO_TRIGGERS = `
   CREATE TRIGGER IF NOT EXISTS pseudo_released_on_update AFTER UPDATE OF username ON "user"
   WHEN OLD.username IS NOT NULL AND OLD.username IS NOT NEW.username
   BEGIN
-    DELETE FROM released_pseudos WHERE username = NEW.username;
-    INSERT OR REPLACE INTO released_pseudos (username, user_id, released_at)
-      VALUES (OLD.username, OLD.id, strftime('%Y-%m-%dT%H:%M:%f', 'now'));
-    DELETE FROM released_pseudos WHERE user_id = OLD.id AND username NOT IN (
-      SELECT username FROM released_pseudos WHERE user_id = OLD.id
-      ORDER BY released_at DESC LIMIT ${KEPT_PSEUDOS});
+    DELETE FROM released_pseudos WHERE username = NEW.username;${RELEASE}
   END;
 
   CREATE TRIGGER IF NOT EXISTS pseudo_released_on_delete AFTER DELETE ON "user"
   WHEN OLD.username IS NOT NULL
-  BEGIN
-    INSERT OR REPLACE INTO released_pseudos (username, user_id, released_at)
-      VALUES (OLD.username, OLD.id, strftime('%Y-%m-%dT%H:%M:%f', 'now'));
-    DELETE FROM released_pseudos WHERE user_id = OLD.id AND username NOT IN (
-      SELECT username FROM released_pseudos WHERE user_id = OLD.id
-      ORDER BY released_at DESC LIMIT ${KEPT_PSEUDOS});
+  BEGIN${RELEASE}
   END;
 `
 
@@ -171,7 +172,7 @@ export async function createAuth(db: Database) {
     onAPIError: {
       onError: (error) => {
         if (isAPIError(error) && error.status !== 'INTERNAL_SERVER_ERROR') return
-        logError(error instanceof Error ? error.message : String(error), error)
+        logError(reasonOf(error), error)
       },
     },
     session: { expiresIn: 60 * DAY_IN_SECONDS, updateAge: DAY_IN_SECONDS },
@@ -215,6 +216,8 @@ export async function createAuth(db: Database) {
   const count = db.query('SELECT COUNT(*) AS count FROM "user"')
   return {
     auth: betterAuth(options),
+    /** L'origine publique du site, que doivent avoir les requêtes qui modifient des données. */
+    origin: new URL(options.baseURL!).origin,
     /** Le nombre de comptes (le journal du démarrage). */
     count: () => (count.get() as { count: number }).count,
   }
@@ -284,9 +287,6 @@ function journalAuth(
  */
 export class ForeignOrigin extends Error {}
 
-/** L'origine publique du site, que doivent avoir les requêtes qui modifient des données. */
-export const appOrigin = (auth: Accounts['auth']) => new URL(auth.options.baseURL as string).origin
-
 /**
  * Le compte dans l'API (`/api/…`) :
  * - `/api/auth/*` : Better Auth (création du compte, connexion, déconnexion, session, pseudo, mot
@@ -297,8 +297,7 @@ export const appOrigin = (auth: Accounts['auth']) => new URL(auth.options.baseUR
  *   venue d'une autre origine (le cookie part avec toute requête vers le site), jamais en cache ;
  *   la route reçoit `user`.
  */
-export function accountRoutes({ auth }: Accounts) {
-  const origin = appOrigin(auth)
+export function accountRoutes({ auth, origin }: Accounts) {
   /**
    * La session d'une requête. Renouvelée (une fois par jour d'usage), son nouveau cookie part avec
    * la réponse : sans lui, le navigateur garderait l'ancien, et il faudrait se reconnecter au bout

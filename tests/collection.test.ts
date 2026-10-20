@@ -11,18 +11,29 @@
  */
 
 import { afterAll, describe, expect, spyOn, test } from 'bun:test'
+import { tmpdir } from 'node:os'
 import { emptyShopping } from '@/lib/orders'
 import type { CollectionDocument, CollectionResponse, CollectionSaved, VitrineData } from '@/types'
 import { createApp } from '../server/app'
 import { createAuth } from '../server/auth'
+import { DATA_DIR, openApp } from '../server/db'
 import { card, collectionWith, order, ownership } from './fixtures'
-import { testApp } from './server'
+
+// Les bases dans le dossier temporaire de `setup.ts`, jamais `.data` : sans lui (`bun test` lancé
+// hors du projet), `DATA_DIR` reviendrait à `.data`, et rien n'est ouvert.
+if (!DATA_DIR.startsWith(tmpdir())) throw new Error(`DATA_DIR n’est pas temporaire : ${DATA_DIR}`)
 
 // Le journal du serveur (une ligne par évènement) : muet pendant ces tests.
 const log = spyOn(console, 'log').mockImplementation(() => {})
 afterAll(() => log.mockRestore())
 
-const app = testApp()
+const app = openApp()
+// Better Auth prépare ses requêtes sans les libérer : la base ne lâche son fichier qu'une fois
+// elles ramassées (Windows refuserait sinon de le retirer).
+afterAll(() => {
+  app.close()
+  Bun.gc(true)
+})
 const server = createApp({ app, accounts: await createAuth(app) })
 const ORIGIN = process.env.BETTER_AUTH_URL!
 

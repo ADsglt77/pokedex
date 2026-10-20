@@ -15,7 +15,7 @@ import { mkdir, readdir, rename, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { HOUR } from '@/lib/time'
 import { DATA_DIR } from './db'
-import { journal } from './journal'
+import { journal, reasonOf } from './journal'
 
 const BACKUP_DIR = process.env.BACKUP_DIR ?? join(DATA_DIR, 'backups')
 
@@ -58,7 +58,7 @@ export function scheduleBackups(app: Database) {
         topic: 'serveur',
         level: 'error',
         message: 'Sauvegarde en échec',
-        details: { raison: error instanceof Error ? error.message : String(error) },
+        details: { raison: reasonOf(error) },
       }),
     )
   void run()

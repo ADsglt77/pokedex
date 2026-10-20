@@ -36,7 +36,7 @@ const PSEUDO_RULE = new RegExp(`^${PSEUDO.pattern}$`)
 
 /**
  * Un pseudo possible (`PSEUDO`) : sa longueur, ses caractères, et pas une adresse du site. La règle
- * du serveur (`server/auth.ts`) et du routeur (`vitrinePseudo`).
+ * du serveur (`server/auth.ts`) et du Pokédex public (`/sacha` : `router.tsx`, `VitrinePage`).
  */
 export const isPseudo = (value: string) =>
   value.length >= PSEUDO.min &&

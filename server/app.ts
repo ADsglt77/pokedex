@@ -12,7 +12,7 @@
 import { openapi } from '@elysiajs/openapi'
 import type { Database } from 'bun:sqlite'
 import { Elysia } from 'elysia'
-import { accountRoutes, appOrigin, ForeignOrigin, type Accounts } from './auth'
+import { accountRoutes, ForeignOrigin, type Accounts } from './auth'
 import { collectionRoutes } from './collection'
 import { journal, journalRoutes } from './journal'
 import { vitrineRoutes } from './vitrine'
@@ -68,7 +68,7 @@ export function createApp({ app, accounts }: AppContext) {
           .use(account)
           .use(collectionRoutes(app, account))
           .use(journalRoutes(account))
-          .use(vitrineRoutes(app, appOrigin(accounts.auth))),
+          .use(vitrineRoutes(app, accounts.origin)),
       )
   )
 }

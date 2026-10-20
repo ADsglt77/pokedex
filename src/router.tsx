@@ -1,9 +1,8 @@
 import type { ComponentType } from 'react'
 import { createBrowserRouter, redirect, type LoaderFunctionArgs } from 'react-router'
 import { AppShell } from '@/components/AppShell'
-import { loginPath } from '@/lib/account'
+import { isPseudo, loginPath } from '@/lib/account'
 import { getJson } from '@/lib/api'
-import { vitrinePseudo } from '@/lib/filters'
 import { ErrorPage } from '@/pages/ErrorPage'
 import { HomePage } from '@/pages/home/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
@@ -62,8 +61,8 @@ export const createRouter = () =>
           // Ses données demandées en même temps que la page, pas après elle (`getJson` garde la
           // réponse, que la page lit).
           loader: ({ params }) => {
-            const pseudo = vitrinePseudo(params.pseudo!)
-            if (pseudo) void getJson(`/api/vitrine/${pseudo}`)
+            const pseudo = params.pseudo!
+            if (isPseudo(pseudo)) void getJson(`/api/vitrine/${pseudo}`)
             return null
           },
           lazy: () => page(import('@/pages/VitrinePage'), 'VitrinePage'),

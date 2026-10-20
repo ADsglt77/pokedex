@@ -26,7 +26,7 @@ import { formatShare, pokedexTitle, unlockedOf } from '@/lib/format'
 import { progressPercent, unlockEvents } from '@/lib/pokedex'
 import { HOUR, MINUTE } from '@/lib/time'
 import type { CardOwnership, CollectionData, PokemonCard, PriceFile, VitrineData } from '@/types'
-import { journalOnce, visitorOf } from './journal'
+import { journalOnce, reasonOf, visitorOf } from './journal'
 
 /**
  * La collection telle que la voit un visiteur (testé : jamais un prix payé ni un achat). Chaque
@@ -113,7 +113,7 @@ async function dataPrices(ids: number[]): Promise<PriceFile | null> {
         topic: 'serveur',
         level: 'warn',
         message: 'API des données muette',
-        details: { raison: error instanceof Error ? error.message : String(error) },
+        details: { raison: reasonOf(error) },
       },
       undefined,
       MINUTE,

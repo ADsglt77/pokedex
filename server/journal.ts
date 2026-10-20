@@ -102,6 +102,9 @@ const escapeControls = (text: string) =>
  */
 export const safeText = (text: string) => escapeControls(cut(text))
 
+/** La raison d'un échec, pour les détails d'une ligne (`raison=`) : le message d'une erreur. */
+export const reasonOf = (error: unknown) => (error instanceof Error ? error.message : String(error))
+
 /**
  * `carte="Pikachu ex (SV8 033)"` : entre guillemets, échappée comme en JSON, dès qu'il y a une
  * espace, un guillemet, un `=` ou un caractère de contrôle. Une valeur peut venir d'un visiteur

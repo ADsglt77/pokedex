@@ -12,10 +12,10 @@ import { STATUS_ICONS } from '@/components/statusIcons'
 import { Unavailable } from '@/components/Unavailable'
 import { UnlockedChart } from '@/components/UnlockedChart'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { isPseudo } from '@/lib/account'
 import { getJson, requestFailed } from '@/lib/api'
 import type { ChartPeriod } from '@/lib/chart'
 import { cx } from '@/lib/cx'
-import { vitrinePseudo } from '@/lib/filters'
 import {
   formatDate,
   formatEuro,
@@ -42,7 +42,7 @@ import { useStatSize } from '@/hooks/useStatSize'
  */
 export function VitrinePage() {
   const signedIn = useAccountStore((state) => state.account !== null)
-  const pseudo = vitrinePseudo(useParams().pseudo!)
+  const pseudo = useParams().pseudo!
   return (
     <StandalonePage
       actions={
@@ -63,7 +63,7 @@ export function VitrinePage() {
       }
     >
       <meta name="robots" content="noindex" />
-      {pseudo ? (
+      {isPseudo(pseudo) ? (
         <Suspense fallback={<VitrineSkeleton />}>
           <VitrineContent key={pseudo} pseudo={pseudo} />
         </Suspense>

@@ -8,7 +8,7 @@
  */
 
 import { createApp } from './app'
-import { appOrigin, createAuth } from './auth'
+import { createAuth } from './auth'
 import { scheduleBackups } from './backups'
 import { openApp } from './db'
 import { banner } from './journal'
@@ -40,6 +40,6 @@ const server = createApp({ app, accounts }).listen({
 
 banner({
   api: String(server.server?.url),
-  site: appOrigin(accounts.auth),
+  site: accounts.origin,
   accounts: accounts.count(),
 })
