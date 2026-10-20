@@ -1,13 +1,16 @@
 /**
  * Ce que l'utilisateur saisit et qui compte en argent : les montants (lignes de commande, port,
- * frais, remboursé, budget, prix payé) et l'id Cardmarket d'une carte (d'où son prix). Un montant
- * mal lu fausserait le budget sans rien dire. Et le lien vers Cardmarket : ses offres en japonais,
- * Near Mint au moins (une autre langue, ce serait une autre carte achetée).
+ * frais, remboursé, budget, prix payé), la saisie d'une commande qui les lit (`readDraft`) et l'id
+ * Cardmarket d'une carte (d'où son prix). Un montant mal lu fausserait le budget sans rien dire. Et
+ * le lien vers Cardmarket : ses offres en japonais, Near Mint au moins (une autre langue, ce serait
+ * une autre carte achetée).
  */
 
 import { describe, expect, test } from 'bun:test'
 import { cardmarketPage, readCardmarketId } from '@/lib/cardmarket'
 import { parseEuros, parseQuantity } from '@/lib/format'
+import { readDraft, toDraft, type Draft } from '@/pages/shopping/orderDraft'
+import { collectionWith, line, order } from './fixtures'
 
 describe('parseEuros', () => {
   test('virgule ou point, symbole et espaces des milliers, insécables compris', () => {
@@ -45,6 +48,106 @@ describe('parseQuantity', () => {
     expect(parseQuantity(' 2 ')).toBe(2)
     for (const text of ['1e1', '0x2', '1.5', '-1', '', 'deux'])
       expect(parseQuantity(text)).toBeNull()
+  })
+})
+
+describe('readDraft : la saisie d’une commande', () => {
+  const base = order()
+  /** La saisie d'une nouvelle commande : une carte, 2 à 12,50 €, et `change`. */
+  const read = (change: Partial<Draft> = {}) =>
+    readDraft(
+      {
+        ...toDraft(base),
+        lines: [{ cardId: 'a', quantity: '2', unitPrice: '12,50' }],
+        ...change,
+      },
+      base,
+      null,
+      collectionWith(),
+    )
+
+  test('des montants lisibles : lus au centime, sans erreur', () => {
+    const { order: typed, errors } = read({ shipping: '4,50', fees: '1.20 €', refunded: ' 3 ' })
+    expect(errors).toEqual({})
+    expect([typed.shipping, typed.fees, typed.refunded]).toEqual([4.5, 1.2, 3])
+    expect(typed.lines).toEqual([{ cardId: 'a', quantity: 2, unitPrice: 12.5, previous: null }])
+  })
+
+  test('les champs facultatifs vides : 0 ou rien, sans erreur', () => {
+    const { order: typed, errors } = read({
+      shipping: '',
+      fees: '  ',
+      refunded: '',
+      supplier: 'other',
+      supplierName: ' ',
+      reference: ' ',
+      link: '',
+      note: '',
+    })
+    expect(errors).toEqual({})
+    expect([typed.shipping, typed.fees, typed.refunded]).toEqual([0, 0, 0])
+    expect([typed.supplierName, typed.reference, typed.link, typed.note]).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ])
+  })
+
+  test('une saisie illisible : l’erreur du champ, compté pour 0, jamais un montant approché', () => {
+    const { order: typed, errors } = read({
+      shipping: '4,505',
+      fees: 'abc',
+      refunded: '12 50',
+      lines: [
+        { cardId: 'a', quantity: '1e1', unitPrice: '' },
+        { cardId: 'b', quantity: '0', unitPrice: '1.234,50' },
+      ],
+    })
+    expect(Object.keys(errors).sort()).toEqual([
+      'fees',
+      'price-a',
+      'price-b',
+      'quantity-a',
+      'quantity-b',
+      'refunded',
+      'shipping',
+    ])
+    expect([typed.shipping, typed.fees, typed.refunded]).toEqual([0, 0, 0])
+    expect(typed.lines.map((each) => [each.quantity, each.unitPrice])).toEqual([
+      [0, 0],
+      [0, 0],
+    ])
+  })
+
+  test('le remboursé, pas plus que la commande ; les dates, en quatre chiffres ; une carte au moins', () => {
+    expect(read({ refunded: '25' }).errors).toEqual({})
+    expect(read({ refunded: '25,01' }).errors).toEqual({
+      refunded: 'Pas plus que le total de la commande.',
+    })
+    // « 05/10/26 » dans le calendrier du navigateur : l'an 26.
+    expect(read({ date: '0026-10-05' }).errors.date).toBe(
+      'L’année en quatre chiffres, par exemple 05/10/2026.',
+    )
+    expect(read({ date: '' }).errors.date).toBe('Indiquez la date d’achat.')
+    expect(read({ state: 'received', receivedAt: '0026-10-07' }).errors.receivedAt).toBeDefined()
+    expect(read({ lines: [] }).errors.lines).toBeDefined()
+    expect(read({ link: 'commande 42' }).errors.link).toBeDefined()
+  })
+
+  test('une commande relue de sa propre saisie reste la même, au centime', () => {
+    const saved = order({
+      lines: [line('a', 12.5, { quantity: 2 }), line('b', 0.1)],
+      shipping: 4.5,
+      refunded: 1.05,
+      reference: 'C-42',
+      link: 'https://exemple.fr/commande/42',
+      note: 'Une carte abîmée',
+    })
+    const draft = toDraft(saved)
+    // Sans frais : un champ vide, pas « 0,00 ».
+    expect(draft.fees).toBe('')
+    expect(readDraft(draft, saved, saved, collectionWith())).toEqual({ order: saved, errors: {} })
   })
 })
 

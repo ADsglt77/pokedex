@@ -12,18 +12,12 @@ import { useCollectionStore } from '@/store/collection'
 import { usePrices } from '@/store/prices'
 import type { Order } from '@/types'
 import { CardLine } from './CardLine'
+import type { DraftLine } from './orderDraft'
 import page from './ShoppingPage.module.css'
 import styles from './OrderLines.module.css'
 
 /** Les cartes rangées comme on les lit (« Évoli » avec les E). */
 const collator = new Intl.Collator('fr')
-
-/** Une ligne telle que saisie : la quantité et le prix en texte, lus à l'enregistrement. */
-export interface DraftLine {
-  cardId: string
-  quantity: string
-  unitPrice: string
-}
 
 /**
  * Les cartes d'une commande (`OrderForm`) : une ligne par carte, sa quantité, son prix, ce qu'elle

@@ -80,7 +80,10 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     est abîmée. », `documentProblem`, `readImport`). Les montants saisis (`parseEuros`) acceptent
     une virgule ou un point, le symbole et une espace entre les milliers seulement (« 1 234,50 ») :
     « 12 50 », une virgule oubliée, est refusé plutôt que lu 1 250 € ; une quantité (`parseQuantity`)
-    s'écrit en chiffres seulement (« 1e1 » ne vaut pas 10). Une carte d'une commande (en cours,
+    s'écrit en chiffres seulement (« 1e1 » ne vaut pas 10). La saisie d'une commande, des textes,
+    est lue à l'enregistrement par `readDraft` (`pages/shopping/orderDraft.ts`, testé) : un
+    montant facultatif vide vaut 0, un montant ou une quantité illisible est une erreur du champ,
+    jamais un montant approché. Une carte d'une commande (en cours,
     reçue ou annulée) ne se retire pas de la collection, sauf d'un seul de ses Pokémon (`isInAnOrder`,
     `lib/orders.ts` : la fiche d'un Pokémon et celle d'une carte du catalogue) ; les règles de la
     collection et des commandes ne modifient jamais ce qu'elles reçoivent (« Annuler » repose
