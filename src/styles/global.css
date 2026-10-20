@@ -287,11 +287,3 @@ img {
     transition-duration: 0.01ms !important;
   }
 }
-
-/* La recherche (Ctrl K) liste plus de 1 000 commandes à son ouverture : le navigateur ne met en
-   page et ne dessine que celles à l'écran. Classe interne de camply (pas une API) : à revérifier
-   après une mise à jour (à retirer quand la palette limitera elle-même ses résultats). */
-.camply-commandpalette__item {
-  content-visibility: auto;
-  contain-intrinsic-block-size: auto 2.5rem;
-}

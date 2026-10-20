@@ -10,7 +10,7 @@
         "elysia": "^1.4.30",
       },
       "devDependencies": {
-        "@camply/ui": "^0.3.0",
+        "@camply/ui": "^0.4.0",
         "@eslint/js": "^10.0.1",
         "@fontsource/manrope": "^5.3.0",
         "@fontsource/space-grotesk": "^5.3.0",
@@ -91,7 +91,7 @@
 
     "@cacheable/utils": ["@cacheable/utils@2.5.0", "", { "dependencies": { "hashery": "^1.5.1", "keyv": "^5.6.0" } }, "sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA=="],
 
-    "@camply/ui": ["@camply/ui@0.3.0", "", { "peerDependencies": { "react": ">=18", "react-dom": ">=18" } }, "sha512-ULDjbmCsdHnEfiXTqrxjZSsw6oT0whV1IOg8Z6ynuDMhOu8+kkrpezQDGFiphc7uVUN5sKBfu79qqh/7AB4OvQ=="],
+    "@camply/ui": ["@camply/ui@0.4.0", "", { "peerDependencies": { "react": ">=18", "react-dom": ">=18" } }, "sha512-/0LxWamqHSGRbhU/t0+LoBlPr3QD24lMuXJN3MAH3oHzBVykkM+lzuar1X5A9kr352vZkcX7pbhaoJwEAAFWiQ=="],
 
     "@elysiajs/openapi": ["@elysiajs/openapi@1.4.16", "", { "peerDependencies": { "@sinclair/typebox": ">= 0.34.0 < 1", "elysia": ">= 1.4.0", "typescript": ">= 5.0.0" } }, "sha512-kj8RBffE4J6myjm7nPPj6Dw1ujWt45NkdGW5sG9u3T0OfUzKN71s630/LEjajGo5jRZqFF3VHyk40lwXH2AbmQ=="],
 

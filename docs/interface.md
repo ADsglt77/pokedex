@@ -140,8 +140,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   changeant de page (`Shell`, mémoïsée sur le chemin ; le menu du compte lit l'adresse au clic) :
   une frappe dans la recherche du Pokédex coûte 10 à 20 ms au lieu de 80 à 140. La recherche
   Ctrl K n'est montée qu'à sa première ouverture (ses plus de 1 000 commandes coûtaient une
-  soixantaine de millisecondes au démarrage), puis mémoïsée ; la palette de camply rendant toutes
-  ses commandes, ses lignes ont un `content-visibility` (classe interne, `global.css`). `buildPokedex`
+  soixantaine de millisecondes au démarrage), puis mémoïsée ; la palette n'en rend que les 50
+  premières qui correspondent (`limit` de camply), une ligne dit combien d'autres. `buildPokedex`
   reprend les entrées inchangées du Pokédex précédent (la même carte au même statut) : après
   une annulation ou la collection relue du serveur, seules les pochettes changées se redessinent.
   Le tableau des cartes de Valeur (trié par lui, le tri du tableau contrôlé) et la liste d'achats

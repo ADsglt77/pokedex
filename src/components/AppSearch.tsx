@@ -94,6 +94,7 @@ export const AppSearch = memo(function AppSearch({
       open={open}
       onClose={onClose}
       commands={commands}
+      limit={50}
       placeholder="Un Pokémon, une page, une action…"
       emptyMessage="Rien ne correspond : essayez un nom, un numéro ou une page."
       aria-label="Rechercher dans le Pokédex"
