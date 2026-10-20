@@ -2,6 +2,9 @@
 
 Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmarket et l'état des tâches d'ingestion, côté site. Ils viennent de l'API des données (le dépôt `pokedex-data`, sa page `docs/donnees.md` : la règle du prix suivi, l'historique repris, le format des lignes de la liste de souhaits, les tâches). Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
+- Cardmarket : seulement ses fichiers publics (guide des prix, liste des produits), lus par l'API
+  des données ; ses prix peuvent se montrer sans le citer (son accord). Ni scraping, ni API, ni
+  panier.
 - Le chemin : le navigateur demande `/api/prices/…`, `/api/histories`, `/api/wants`, `/api/status`
   au site ; nginx (Vite en développement) les renvoie à l'API des données, sous `/v1`, avec le
   token du site (`deploy/nginx.conf.template`, `vite.config.ts`). Les mêmes adresses

@@ -2,13 +2,20 @@
 
 La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, par l'API des données) et leurs images. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
+- Source : **Pokécardex** seul (octobre 2026 : TCGdex et TCGplayer retirés, ne pas les
+  réintroduire sans demande). Son accord : lire son site, utiliser ses images **hébergées chez
+  nous** (`isSourceImage`), reprendre son historique des prix ; aucun crédit demandé, l'app n'en
+  cite aucune (le pied de page, `SiteDisclaimer`, ne dit que ce que le site n'est pas). Les images
+  de Cardmarket ne s'affichent que sur son site : refusées.
 - Une carte (`PokemonCard`) : id `manual:<uuid>`, ses Pokémon (`dexIds`), une référence (vide à la
   saisie : le nom de la carte chez Cardmarket, sinon le nom du Pokémon), son image (`image` :
   celle du catalogue en deux tailles (un chemin du site), ou l'adresse
   collée, `small` = `large` ; `null` sans image),
   son id Cardmarket (`cardmarket`) et sa page chez Cardmarket (`page`), tous deux facultatifs ;
-  sans page notée, le lien « Voir sur Cardmarket » se fait par l'id (`cardmarketPage`). Il
-  ouvre les offres en japonais, Near Mint au moins (`?language=7&minCondition=2`).
+  sans page notée, le lien « Voir sur Cardmarket » se fait par l'id (`cardmarketPage` :
+  `/fr/Pokemon/Products?idProduct=…`, vérifié par l'utilisateur ; `/Products/Singles?idProduct=`
+  ne marche pas), le seul lien construit vers Cardmarket. Il ouvre les offres en japonais, Near
+  Mint au moins (`?language=7&minCondition=2`, sauf les filtres qu'une page collée fixe déjà).
   Une par Pokémon : on la corrige (« Modifier la carte », même id, son statut et ses achats la
   suivent) ou on la retire (« Retirer la carte » : avec son statut et son prix payé ; confirmation si elle est possédée ; impossible tant qu'une commande la contient) avant
   d'en ajouter une autre. Si un fichier importé en a plusieurs, la première compte.
