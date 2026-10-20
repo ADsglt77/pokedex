@@ -4,14 +4,17 @@ import { loadStatus } from '@/lib/api'
 import type { JobState, ServerStatus } from '@/types'
 import { DataSection } from './DataSection'
 
-/** Les états qui demandent l'attention de l'utilisateur. */
-const PROBLEM_STATES = new Set<JobState>(['late', 'failed', 'frozen'])
-
 const STATE_LABELS: Record<Extract<JobState, 'late' | 'failed' | 'frozen'>, string> = {
   late: 'en retard',
   failed: 'échec de la dernière mise à jour',
   frozen: 'prix figés',
 }
+
+type ProblemState = keyof typeof STATE_LABELS
+
+const isProblem = <Job extends { state: JobState }>(
+  job: Job,
+): job is Job & { state: ProblemState } => Object.hasOwn(STATE_LABELS, job.state)
 
 /** Silencieux quand tout va bien ; un panneau n'apparaît que si les données posent problème. */
 export function ReferenceSection() {
@@ -37,7 +40,7 @@ function ServerAlert({ status }: { status: Promise<ServerStatus | null> }) {
     )
   }
 
-  const problems = current.jobs.filter((job) => PROBLEM_STATES.has(job.state))
+  const problems = current.jobs.filter(isProblem)
   if (problems.length === 0) return null
 
   const failed = problems.some((job) => job.state === 'failed')
@@ -54,7 +57,7 @@ function ServerAlert({ status }: { status: Promise<ServerStatus | null> }) {
         <ul>
           {problems.map((job) => (
             <li key={job.job}>
-              {job.label} : {STATE_LABELS[job.state as keyof typeof STATE_LABELS]}.
+              {job.label} : {STATE_LABELS[job.state]}.
             </li>
           ))}
         </ul>

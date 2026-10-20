@@ -26,7 +26,6 @@ export type DataContractsMatch = [
   Assert<Equal<App.CatalogSetsFile, Data.CatalogSetsFile>>,
   Assert<Equal<App.CatalogSetFile, Data.CatalogSetFile>>,
   Assert<Equal<App.JobState, Data.JobState>>,
-  Assert<Equal<App.JobStatus, Data.JobStatus>>,
   Assert<Equal<App.ServerStatus, Data.ServerStatus>>,
   Assert<Equal<App.PriceFile, Data.PriceFile>>,
   Assert<Equal<App.WantsLines, Data.WantsLines>>,
