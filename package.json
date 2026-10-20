@@ -9,6 +9,7 @@
     "preview": "bun --bun vite preview",
     "dev:server": "bun --watch server/index.ts",
     "lint": "eslint . && knip",
+    "lint:docker": "eslint . && knip --config knip.docker.json",
     "knip": "knip",
     "contracts": "tsc -p tsconfig.contracts.json",
     "test": "bun test",

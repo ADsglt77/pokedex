@@ -9,7 +9,7 @@ WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 COPY . .
-RUN bun test && bun lint && bun run build
+RUN bun test && bun run lint:docker && bun run build
 
 # 2. Le serveur de l'app (service `server`) : Bun lance le code tel quel ; `tsconfig.json` lui
 #    donne l'alias `@/` vers `src/`, dont il lit les règles. La base vit dans le volume `db`

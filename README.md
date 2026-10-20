@@ -11,7 +11,7 @@ bun install
 bun dev          # serveur de dev Vite
 bun run build    # type-check + build
 bun lint         # ESLint, puis knip (code mort : exports, fichiers, dépendances)
-bun run contracts # vérifie les types partagés avec ../pokedex-data
+bun run contracts # vérifie les types partagés avec ../pokedex-data (facultatif pour le build Docker)
 bun test         # tests de ce qui coûterait de l'argent (chaque fichier de tests/ le dit en tête)
 bun run format   # Prettier
 ```
