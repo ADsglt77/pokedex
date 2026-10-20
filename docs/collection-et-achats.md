@@ -70,10 +70,9 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     l'import et le serveur acceptent (`isDay`) : « 05/10/26 », l'an 26, est refusé. Les filtres de
     la liste sont dans l'adresse (`docs/interface.md`) ; les réglages de l'assistant (prochaine
     commande) sont gardés par la page, l'onglet caché étant démonté ;
-  - l'export contient `shopping` (un export plus ancien, sans lui, s'importe et garde les achats
-    en place). Un import demande toujours confirmation ; un fichier abîmé (enregistrement ou bloc
-    d'achats illisible : image, montant en texte, état de commande, date ou jour qui n'existe pas
-    ou d'avant l'an 100, remboursé plus grand que la commande, commande sans id ou en double, carte
+  - l'export contient `shopping`. Un import demande toujours confirmation ; un fichier abîmé
+    (enregistrement ou bloc d'achats illisible ou absent : image, montant en texte, état de
+    commande, date ou jour qui n'existe pas ou d'avant l'an 100, remboursé plus grand que la commande, commande sans id ou en double, carte
     d'un Pokémon hors du Pokédex ou sans clé `image` (« Modifier la carte » planterait), id Cardmarket
     que la saisie refuserait (0, négatif, plus de 9 chiffres…), quantité qui n'est pas un entier
     de 1 ou plus, texte qui n'en est pas un, lien…) est refusé (`lib/transfer.ts`), comme par le

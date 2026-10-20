@@ -103,7 +103,6 @@ export interface CollectionExportFile {
   schemaVersion: 1
   exportedAt: string
   collection: CollectionData
-  /** Absent des exports faits avant le module d'achats (l'import le tolère). */
   shopping: ShoppingData
 }
 

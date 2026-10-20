@@ -17,7 +17,7 @@ const sentence = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(
 
 /**
  * Reprendre un export : le fichier est lu et résumé, puis, après confirmation, il remplace la
- * collection et les achats (s'il en contient).
+ * collection et les achats.
  */
 export function ImportSection() {
   const act = useCollectionAction()
@@ -63,7 +63,7 @@ export function ImportSection() {
       id="importer"
       title="Importer"
       titleRef={title}
-      description="Reprenez une collection exportée depuis ce Pokédex, ici ou dans un autre navigateur. Elle remplace votre collection actuelle, ainsi que vos achats si le fichier en contient."
+      description="Reprenez une collection exportée depuis ce Pokédex, ici ou dans un autre navigateur. Elle remplace votre collection et vos achats actuels."
     >
       <FileUpload
         label="Fichier d’export"
@@ -88,9 +88,7 @@ export function ImportSection() {
           )}
           <SummaryLedger summary={summarize(imported.collection)} />
           <p className="muted">
-            {imported.shopping
-              ? `Achats : ${plural(imported.shopping.orders.length, 'commande', 'commandes')}.`
-              : 'Ce fichier date d’avant le module d’achats : vos commandes et votre budget actuels sont conservés.'}
+            Achats : {plural(imported.shopping.orders.length, 'commande', 'commandes')}.
           </p>
           <div className={styles.buttons}>
             <Button onClick={() => setConfirming(true)}>Importer</Button>
@@ -109,9 +107,8 @@ export function ImportSection() {
         onConfirm={runImport}
       >
         <p>
-          Votre collection sera remplacée par celle du fichier, ainsi que vos achats s’il en
-          contient. Vous pourrez annuler juste après l’import ; au-delà, seul un export vous
-          permettra de les retrouver.
+          Votre collection et vos achats seront remplacés par ceux du fichier. Vous pourrez annuler
+          juste après l’import ; au-delà, seul un export vous permettra de les retrouver.
         </p>
       </ConfirmDialog>
     </DataSection>

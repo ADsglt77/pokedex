@@ -5,7 +5,7 @@
 
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
-import type { CollectionData, CollectionDocument, ShoppingData } from '@/types'
+import type { CollectionDocument } from '@/types'
 
 export const currentDocument = (): CollectionDocument => ({
   collection: useCollectionStore.getState().collection,
@@ -16,11 +16,8 @@ export const currentDocument = (): CollectionDocument => ({
 export const sameDocument = (a: CollectionDocument, b: CollectionDocument) =>
   a.collection === b.collection && a.shopping === b.shopping
 
-/** Remplace la collection et les achats ; sans achats (un export d'avant eux), ils restent. */
-export function replaceDocument(document: {
-  collection: CollectionData
-  shopping: ShoppingData | null
-}) {
+/** Remplace la collection et les achats. */
+export function replaceDocument(document: CollectionDocument) {
   useCollectionStore.getState().replaceCollection(document.collection)
-  if (document.shopping) useShoppingStore.getState().replaceShopping(document.shopping)
+  useShoppingStore.getState().replaceShopping(document.shopping)
 }

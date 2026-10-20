@@ -101,16 +101,20 @@ export const loadStatus = () =>
     ),
   )
 
+/** Ce que l'app a tiré de chaque réponse de `getJson` (`derived`), oublié avec elle. */
+const derivations = new WeakMap<Promise<unknown>, Promise<unknown>>()
+
 /**
- * Ce que l'app tire d'une réponse de l'API (le catalogue lu, les détails par espèce…), calculé
- * une fois par réponse : toujours la même promesse tant que `getJson` rend la même (lue par
- * `use()`), une nouvelle quand la réponse est redemandée après une panne.
+ * Ce que l'app tire de la réponse de `url` (le catalogue lu, les détails par espèce…), calculé une
+ * fois par réponse : toujours la même promesse tant que `getJson` rend la même (lue par `use()`),
+ * une nouvelle quand la réponse est redemandée (panne, `forget`). Un seul calcul par adresse.
  */
-export function derived<T, R>(url: string, compute: (response: T | null) => R) {
-  let last: { response: Promise<T | null>; value: Promise<R> } | null = null
-  return () => {
-    const response = getJson<T>(url)
-    if (last?.response !== response) last = { response, value: settled(response.then(compute)) }
-    return last.value
+export function derived<T, R>(url: string, compute: (response: T | null) => R): Promise<R> {
+  const response = getJson<T>(url)
+  let value = derivations.get(response)
+  if (!value) {
+    value = settled(response.then(compute))
+    derivations.set(response, value)
   }
+  return value as Promise<R>
 }

@@ -183,19 +183,12 @@ function orderName(order: unknown) {
  * lien qui ne serait pas une adresse web. Les mêmes règles pour un fichier importé et pour la
  * collection envoyée au serveur, relues par le navigateur quand le serveur la refuse.
  */
-export function documentProblem({
-  collection,
-  shopping,
-}: {
-  collection: CollectionData
-  shopping: ShoppingData | null
-}): string | null {
+export function documentProblem({ collection, shopping }: CollectionDocument): string | null {
   if (!isUpdatedAt(collection.updatedAt)) return 'la date de la collection est illisible'
   const ownership = firstBad(collection.cards, isOwnership)
   if (ownership) return `le statut de la carte ${ownership[0]} est abîmé`
   const card = firstBad(collection.customCards, isCard)
   if (card) return `la carte « ${cardName(card[1], card[0])} » est abîmée`
-  if (!shopping) return null
   if (!isUpdatedAt(shopping.updatedAt)) return 'la date des achats est illisible'
   const order = firstBad(shopping.orders, isOrder)
   if (order) return `la commande ${orderName(order[1])} est abîmée`
@@ -210,32 +203,23 @@ type Read<T> = { document: T; problem: null } | { document: null; problem: strin
 
 const refusal = (problem: string) => ({ document: null, problem })
 
-/** La collection et ses achats, lus et contrôlés ; les achats peuvent manquer (`optional`). */
-function readParts(
-  collectionValue: unknown,
-  shoppingValue: unknown,
-  optional: boolean,
-): Read<{ collection: CollectionData; shopping: ShoppingData | null }> {
+/** La collection et ses achats, lus et contrôlés. */
+function readParts(collectionValue: unknown, shoppingValue: unknown): Read<CollectionDocument> {
   const collection = readCollection(collectionValue)
   if (!collection) return refusal('ce n’est pas une collection')
   const shopping = readShopping(shoppingValue)
-  if (!shopping && !(optional && shoppingValue === undefined)) {
-    return refusal('ses achats sont illisibles')
-  }
+  if (!shopping) return refusal('ses achats sont illisibles')
   const problem = documentProblem({ collection, shopping })
   return problem ? refusal(problem) : { document: { collection, shopping }, problem: null }
 }
 
-/**
- * Le contenu d'un fichier d'export, ou la raison de son refus (pas un export, ou abîmé).
- * `shopping` est `null` pour un export fait avant le module d'achats (sans bloc `shopping`).
- */
+/** Le contenu d'un fichier d'export, ou la raison de son refus (pas un export, ou abîmé). */
 export function readImport(text: string) {
   const file = parseFile(text)
   if (!isRecord(file) || file.kind !== 'collection-export') {
     return refusal('ce n’est pas un export de collection de ce Pokédex')
   }
-  return readParts(file.collection, file.shopping, true)
+  return readParts(file.collection, file.shopping)
 }
 
 /**
@@ -244,7 +228,5 @@ export function readImport(text: string) {
  */
 export function readSent(value: unknown): Read<CollectionDocument> {
   if (!isRecord(value)) return refusal('ce n’est pas une collection')
-  const { document, problem } = readParts(value.collection, value.shopping, false)
-  if (!document) return refusal(problem)
-  return { document: { collection: document.collection, shopping: document.shopping! }, problem }
+  return readParts(value.collection, value.shopping)
 }

@@ -113,24 +113,16 @@ function readSpeciesCards(file: CatalogFile, speciesId: number): CatalogCard[] {
   )
 }
 
-const speciesLoaders = new Map<number, () => Promise<CatalogCard[] | null>>()
-
 /**
  * Les cartes japonaises d'un Pokémon, des plus récentes aux plus anciennes ; `null` si le catalogue
  * n'est pas disponible (serveur arrêté, base encore vide : redemandé une minute après au plus tôt,
  * `getJson`). Toujours la même promesse pour un Pokémon, lue par `use()`.
  */
-export function loadSpeciesCards(speciesId: number) {
-  let load = speciesLoaders.get(speciesId)
-  if (!load) {
-    load = derived<CatalogFile, CatalogCard[] | null>(
-      `/api/catalog/species/${speciesId}`,
-      (file) => file && readSpeciesCards(file, speciesId),
-    )
-    speciesLoaders.set(speciesId, load)
-  }
-  return load()
-}
+export const loadSpeciesCards = (speciesId: number) =>
+  derived<CatalogFile, CatalogCard[] | null>(
+    `/api/catalog/species/${speciesId}`,
+    (file) => file && readSpeciesCards(file, speciesId),
+  )
 
 /** Une série de la page Catalogue (`/api/catalog/sets`) : ce que disent sa tuile et son en-tête. */
 export interface SetSummary extends CatalogSet {
@@ -155,23 +147,24 @@ export interface CatalogSets {
 export const CATALOG_SETS = '/api/catalog/sets'
 
 /** Les séries de la page Catalogue ; `null` si elles ne sont pas disponibles. */
-export const loadSets = derived<CatalogSetsFile, CatalogSets | null>(
-  CATALOG_SETS,
-  (file) =>
-    file && {
-      blocks: file.blocks,
-      sets: file.sets.map(([id, name, released, logo, count, block, deck]) => ({
-        id,
-        name,
-        year: released.slice(0, 4) || null,
-        released: released || null,
-        logo: logo === 1,
-        count,
-        block: file.blocks[block] ?? null,
-        deck: deck === 1,
-      })),
-    },
-)
+export const loadSets = () =>
+  derived<CatalogSetsFile, CatalogSets | null>(
+    CATALOG_SETS,
+    (file) =>
+      file && {
+        blocks: file.blocks,
+        sets: file.sets.map(([id, name, released, logo, count, block, deck]) => ({
+          id,
+          name,
+          year: released.slice(0, 4) || null,
+          released: released || null,
+          logo: logo === 1,
+          count,
+          block: file.blocks[block] ?? null,
+          deck: deck === 1,
+        })),
+      },
+  )
 
 /** Une carte de la page Catalogue : celle du catalogue, et tout ce qu'on en sait de plus. */
 export interface SetCard extends CatalogCard {
@@ -213,8 +206,6 @@ function readSet(set: SetSummary, file: CatalogSetFile): SetCard[] {
   })
 }
 
-const setLoaders = new Map<string, () => Promise<SetCard[] | null>>()
-
 /** L'adresse des cartes d'une série (oubliée pour « Réessayer », `CatalogPage`). */
 export const setCardsUrl = (set: SetSummary) => `/api/catalog/sets/${encodeURIComponent(set.id)}`
 
@@ -222,17 +213,8 @@ export const setCardsUrl = (set: SetSummary) => `/api/catalog/sets/${encodeURICo
  * Toutes les cartes d'une série, dans son ordre ; `null` si elles ne sont pas disponibles. Chaque
  * série est lue une fois : la même promesse, lue par `use()`.
  */
-export function loadSetCards(set: SetSummary) {
-  let load = setLoaders.get(set.id)
-  if (!load) {
-    load = derived<CatalogSetFile, SetCard[] | null>(
-      setCardsUrl(set),
-      (file) => file && readSet(set, file),
-    )
-    setLoaders.set(set.id, load)
-  }
-  return load()
-}
+export const loadSetCards = (set: SetSummary) =>
+  derived<CatalogSetFile, SetCard[] | null>(setCardsUrl(set), (file) => file && readSet(set, file))
 
 /**
  * La carte du catalogue d'une référence (« Herbizarre (OR1 2) »), lue dans sa série ; `null` si le

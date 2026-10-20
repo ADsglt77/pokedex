@@ -151,8 +151,8 @@ describe('import', () => {
     expect(reimport([...ORDER, 'lines'], [line('a', 12), line('b', 3)])).not.toBeNull()
   })
 
-  test('un export d’avant le module d’achats garde les achats en place', () => {
-    expect(reimport(['shopping'])?.shopping).toBeNull()
+  test('un fichier sans achats est refusé', () => {
+    expect(reimport(['shopping'])).toBeNull()
   })
 
   test('une commande reçue avec une carte gratuite et un port de 2 centimes se réimporte', () => {

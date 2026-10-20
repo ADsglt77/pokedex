@@ -57,7 +57,8 @@ export const cardTitle = (card: PokemonCard) =>
  * si le serveur ne répond pas (redemandé une minute après au plus tôt, `getJson`). Toujours la
  * même promesse, lue par `use()`.
  */
-export const loadSpeciesDetails = derived<SpeciesDetailsFile, Map<number, PokemonSpeciesDetails>>(
-  '/api/species/details',
-  (file) => new Map((file?.details ?? []).map((entry) => [entry.id, entry])),
-)
+export const loadSpeciesDetails = () =>
+  derived<SpeciesDetailsFile, Map<number, PokemonSpeciesDetails>>(
+    '/api/species/details',
+    (file) => new Map((file?.details ?? []).map((entry) => [entry.id, entry])),
+  )
