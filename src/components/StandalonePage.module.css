@@ -1,0 +1,25 @@
+/* Une page seule, hors de la coquille, au rythme des autres pages : la marque en tête, le pied de
+   page en bas de l'écran. */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-block);
+  min-height: 100svh;
+  padding-block: var(--space-panel) var(--space-block);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.main {
+  flex: 1;
+}
+
+.footer {
+  color: var(--camply-text-muted-2);
+  font-size: var(--text-xs);
+}

@@ -1,29 +1,9 @@
-/* Le Pokédex public : une page seule, hors de la coquille, au rythme des autres pages. */
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-block);
-  min-height: 100svh;
-  padding-block: var(--space-panel) var(--space-block);
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-/* Se connecter, créer un compte : côte à côte, l'un sous l'autre s'il le faut. */
+/* Le Pokédex public (une page seule, `StandalonePage`). Se connecter, créer un compte : côte à côte, l'un sous l'autre s'il le faut. */
 .actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: var(--camply-space-2);
-}
-
-.main {
-  flex: 1;
 }
 
 .layout {
@@ -91,9 +71,4 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--camply-space-3);
-}
-
-.footer {
-  color: var(--camply-text-muted-2);
-  font-size: var(--text-xs);
 }

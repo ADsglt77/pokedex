@@ -1,25 +1,15 @@
 import { Button, EmptyState, RadialProgress, SegmentedControl, Skeleton, Stat } from '@camply/ui'
-import {
-  CloudOff,
-  Flag,
-  House,
-  Layers,
-  Lock,
-  LogIn,
-  SearchX,
-  UserPlus,
-  Wallet,
-} from '@camply/ui/icons'
+import { Flag, House, Layers, Lock, LogIn, SearchX, UserPlus, Wallet } from '@camply/ui/icons'
 import { Suspense, use, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { ChartPeriodControl } from '@/components/ChartParts'
-import { Logo } from '@/components/Logo'
 import { Panel } from '@/components/Panel'
 import { PokedexGrid } from '@/components/PokedexGrid'
 import { ProgressRuler } from '@/components/ProgressRuler'
 import { RegionList } from '@/components/RegionList'
-import { SiteDisclaimer } from '@/components/SiteDisclaimer'
+import { StandalonePage } from '@/components/StandalonePage'
 import { STATUS_ICONS } from '@/components/statusIcons'
+import { Unavailable } from '@/components/Unavailable'
 import { UnlockedChart } from '@/components/UnlockedChart'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { getJson, requestFailed } from '@/lib/api'
@@ -54,11 +44,9 @@ export function VitrinePage() {
   const signedIn = useAccountStore((state) => state.account !== null)
   const pseudo = vitrinePseudo(useParams().pseudo!)
   return (
-    <div className={cx('container', styles.page)}>
-      <meta name="robots" content="noindex" />
-      <header className={styles.header}>
-        <Logo>Pokédex</Logo>
-        {signedIn ? (
+    <StandalonePage
+      actions={
+        signedIn ? (
           <Button asChild size="sm" variant="secondary" leftIcon={<House size={16} />}>
             <Link to="/">Mon Pokédex</Link>
           </Button>
@@ -71,21 +59,18 @@ export function VitrinePage() {
               <Link to="/inscription">Créer un compte</Link>
             </Button>
           </div>
-        )}
-      </header>
-      <main className={styles.main}>
-        {pseudo ? (
-          <Suspense fallback={<VitrineSkeleton />}>
-            <VitrineContent key={pseudo} pseudo={pseudo} />
-          </Suspense>
-        ) : (
-          <Missing />
-        )}
-      </main>
-      <footer className={styles.footer}>
-        <SiteDisclaimer />
-      </footer>
-    </div>
+        )
+      }
+    >
+      <meta name="robots" content="noindex" />
+      {pseudo ? (
+        <Suspense fallback={<VitrineSkeleton />}>
+          <VitrineContent key={pseudo} pseudo={pseudo} />
+        </Suspense>
+      ) : (
+        <Missing />
+      )}
+    </StandalonePage>
   )
 }
 
@@ -146,12 +131,7 @@ function VitrineContent({ pseudo }: { pseudo: string }) {
     <>
       <title>{pageTitle('Pokédex public')}</title>
       <h1 className="visually-hidden">Pokédex public</h1>
-      <EmptyState
-        headingLevel={2}
-        icon={<CloudOff size={22} />}
-        title="Le Pokédex ne peut pas s’afficher"
-        description="Le serveur ne répond pas pour le moment : réessayez dans un instant."
-      />
+      <Unavailable headingLevel={2} title="Le Pokédex ne peut pas s’afficher" />
     </>
   )
 }

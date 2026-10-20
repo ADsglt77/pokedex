@@ -34,7 +34,6 @@
 }
 
 .heading {
-  margin: 0;
   color: var(--camply-text-muted);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -44,9 +43,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(11rem, 40%), 1fr));
   gap: var(--camply-space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
 /* Une extension : son logo, son nom, son code et son année, puis son nombre de cartes. */

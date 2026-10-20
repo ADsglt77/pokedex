@@ -28,12 +28,6 @@
   gap: var(--camply-space-2);
 }
 
-.heading {
-  margin: 0;
-  color: var(--camply-text-strong);
-  font-size: var(--title-sm);
-}
-
 /* Une icône (rareté, type) ou une pastille à côté de son texte. */
 .inline {
   display: inline-flex;

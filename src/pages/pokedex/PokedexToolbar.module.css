@@ -63,16 +63,6 @@
   margin-left: auto;
 }
 
-/* Le nombre de filtres actifs du panneau, sur son bouton. */
-.badge {
-  margin-left: 0.25rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.panel {
-  width: min(18rem, 80vw);
-}
-
 .status {
   display: flex;
   flex-wrap: wrap;

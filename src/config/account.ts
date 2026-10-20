@@ -35,3 +35,25 @@ export const RESERVED_PSEUDOS = [
 
 /** Ce que dit un formulaire sous le champ du pseudo. */
 export const PSEUDO_HINT = `${PSEUDO.min} à ${PSEUDO.max} caractères : lettres sans accent, chiffres, - ou _.`
+
+/** La longueur minimale d'un mot de passe, la même pour le serveur (`server/auth.ts`). */
+export const PASSWORD_MIN = 8
+
+/** Le champ du pseudo d'un formulaire (inscription, Données › Mon compte) : la règle de `PSEUDO`. */
+export const PSEUDO_FIELD = {
+  label: 'Pseudo',
+  autoComplete: 'username',
+  minLength: PSEUDO.min,
+  maxLength: PSEUDO.max,
+  pattern: PSEUDO.pattern,
+  required: true,
+}
+
+/** Le champ d'un nouveau mot de passe (inscription, Données › Mon compte). */
+export const NEW_PASSWORD_FIELD = {
+  hint: `${PASSWORD_MIN} caractères au moins.`,
+  type: 'password',
+  autoComplete: 'new-password',
+  minLength: PASSWORD_MIN,
+  required: true,
+}

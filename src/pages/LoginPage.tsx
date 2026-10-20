@@ -1,6 +1,6 @@
-import { Button, Input } from '@camply/ui'
+import { Input } from '@camply/ui'
 import { LogIn } from '@camply/ui/icons'
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { AuthCard } from '@/components/AuthCard'
 import { refusalMessage } from '@/lib/account'
@@ -24,13 +24,8 @@ export function LoginPage() {
   const navigate = useNavigate()
   const [pseudo, setPseudo] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault()
-    setBusy(true)
-    setError(null)
+  const submit = async () => {
     const problem = await openSession(
       await authCall(() => authClient.signIn.username({ username: pseudo.trim(), password })),
       (refused) =>
@@ -40,16 +35,15 @@ export function LoginPage() {
           'Connexion impossible pour le moment : réessayez plus tard.',
         ),
     )
-    setBusy(false)
-    if (problem) setError(problem)
-    else navigate(returnPath(params.get('retour')), { replace: true })
+    if (!problem) navigate(returnPath(params.get('retour')), { replace: true })
+    return problem
   }
 
   return (
     <AuthCard
       title="Connexion"
       description="Pour ouvrir votre Pokédex : votre collection, vos achats et votre budget, les mêmes sur tous vos appareils."
-      error={error}
+      submit={{ label: 'Se connecter', icon: <LogIn size={16} /> }}
       onSubmit={submit}
       other={{ to: '/inscription', label: 'Pas encore de compte ? En créer un' }}
     >
@@ -68,9 +62,6 @@ export function LoginPage() {
         value={password}
         onChange={(event) => setPassword(event.target.value)}
       />
-      <Button type="submit" fullWidth loading={busy} leftIcon={<LogIn size={16} />}>
-        Se connecter
-      </Button>
     </AuthCard>
   )
 }

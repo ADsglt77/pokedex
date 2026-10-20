@@ -1,6 +1,5 @@
 import { Stat } from '@camply/ui'
 import { Package } from '@camply/ui/icons'
-import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { CollectionValueStat } from '@/components/CollectionValueStat'
 import { SpentThisMonthStat, WishlistStat } from '@/components/ShoppingStats'
@@ -13,15 +12,6 @@ import page from './HomePage.module.css'
 import styles from './Indicators.module.css'
 import { useStatSize } from '@/hooks/useStatSize'
 
-/** Une statistique qui mène à sa page. */
-function StatLink({ to, children }: { to: string; children: ReactNode }) {
-  return (
-    <Link to={to} className={styles.statLink}>
-      {children}
-    </Link>
-  )
-}
-
 /** Valeur, budget du mois, liste d'achats, commandes en cours : chacun mène à sa page. */
 export function Indicators() {
   const statSize = useStatSize()
@@ -30,16 +20,16 @@ export function Indicators() {
 
   return (
     <div className={cx('stat-grid', page.wide)}>
-      <StatLink to="/valeur">
+      <Link to="/valeur" className={styles.statLink}>
         <CollectionValueStat label="Valeur de ma collection" />
-      </StatLink>
-      <StatLink to={shoppingUrl({ view: 'budget' })}>
+      </Link>
+      <Link to={shoppingUrl({ view: 'budget' })} className={styles.statLink}>
         <SpentThisMonthStat />
-      </StatLink>
-      <StatLink to={shoppingUrl()}>
+      </Link>
+      <Link to={shoppingUrl()} className={styles.statLink}>
         <WishlistStat />
-      </StatLink>
-      <StatLink to={shoppingUrl({ view: 'commandes' })}>
+      </Link>
+      <Link to={shoppingUrl({ view: 'commandes' })} className={styles.statLink}>
         <Stat
           size={statSize}
           label="Commandes en cours"
@@ -47,7 +37,7 @@ export function Indicators() {
           value={formatInteger(pendingCount(orders))}
           hint={late > 0 ? `dont ${formatInteger(late)} en retard` : 'Aucune en retard'}
         />
-      </StatLink>
+      </Link>
     </div>
   )
 }

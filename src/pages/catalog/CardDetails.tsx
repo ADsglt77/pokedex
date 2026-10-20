@@ -1,6 +1,14 @@
-import { Badge, Button, DescriptionList, IconButton, Modal, Tag } from '@camply/ui'
+import {
+  Badge,
+  Button,
+  DescriptionList,
+  IconButton,
+  Modal,
+  Tag,
+  type DescriptionItem,
+} from '@camply/ui'
 import { Check, ChevronLeft, ChevronRight, Plus } from '@camply/ui/icons'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CardArt } from '@/components/CardArt'
 import { RarityIcon, TypeIcon } from '@/components/CatalogIcons'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -141,7 +149,7 @@ export function CardDetails({
         />
         <div className={styles.info}>
           <section className={styles.facts}>
-            <h3 className={styles.heading}>La carte</h3>
+            <h3>La carte</h3>
             <DescriptionList items={facts(card, place)} />
           </section>
           <PricePanel
@@ -158,7 +166,7 @@ export function CardDetails({
 /** Ce qu'on sait de la carte, ligne à ligne ; ce qu'on ne sait pas n'a pas de ligne. */
 function facts(card: SetCard, place: CollectionPlace) {
   const pokemon = card.dexIds.length > 0
-  const rows: (Fact | false | '' | null)[] = [
+  const rows: (DescriptionItem | false | '' | null)[] = [
     {
       term: 'Extension',
       description: details(
@@ -216,12 +224,7 @@ function facts(card: SetCard, place: CollectionPlace) {
     card.set.released && { term: 'Sortie au Japon', description: formatDate(card.set.released) },
     pokemon && { term: 'Collection', description: placeText(place) },
   ]
-  return rows.filter((row): row is Fact => !!row)
-}
-
-interface Fact {
-  term: string
-  description: ReactNode
+  return rows.filter((row): row is DescriptionItem => !!row)
 }
 
 /** La carte dans la collection, en une phrase. */

@@ -91,7 +91,7 @@ export function OrdersPanel() {
         />
       ) : (
         <Table
-          className={cx('data-table stack-table', styles.orders)}
+          className={cx('stack-table', styles.orders)}
           data={orders}
           rowKey={(order) => order.id}
           // L'état et « Marquer reçue » juste après la date : sur téléphone, sans faire défiler.

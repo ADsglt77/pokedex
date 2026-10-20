@@ -50,6 +50,9 @@ interface Place {
   icon: ComponentType<IconProps>
 }
 
+/** Le lien des achats, qui seul signale les commandes en retard (`LateBadge`). */
+const SHOPPING = shoppingUrl()
+
 /** La navigation, par usage : la collection, puis ce qui coûte. Données est à part (réglages). */
 const GROUPS: { label: string; places: Place[] }[] = [
   {
@@ -63,7 +66,7 @@ const GROUPS: { label: string; places: Place[] }[] = [
   {
     label: 'Achats et valeur',
     places: [
-      { to: shoppingUrl(), label: 'Achats', icon: ShoppingCart },
+      { to: SHOPPING, label: 'Achats', icon: ShoppingCart },
       { to: '/valeur', label: 'Valeur', icon: ChartLine },
     ],
   },
@@ -244,7 +247,7 @@ const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pok
           >
             <Icon size={20} aria-hidden="true" />
             <span>{label}</span>
-            <LateBadge to={to} className={styles.tabBadge} />
+            {to === SHOPPING && <LateBadge className={styles.tabBadge} />}
           </Link>
         ))}
       </nav>
@@ -272,14 +275,9 @@ function NavigationProgress() {
   return <div className={styles.navigating} role="progressbar" aria-label="Chargement de la page" />
 }
 
-/**
- * Les commandes en retard, sur le lien des achats (barre latérale et barre d'onglets) : rien
- * ailleurs, ni sans retard.
- */
-function LateBadge({ to, className }: { to: string; className?: string }) {
-  const late = useShoppingStore((state) =>
-    to === shoppingUrl() ? latePendingOrders(state.shopping.orders, today()).length : 0,
-  )
+/** Les commandes en retard, sur le lien des achats (barre latérale, barre d'onglets) ; rien sinon. */
+function LateBadge({ className }: { className?: string }) {
+  const late = useShoppingStore((state) => latePendingOrders(state.shopping.orders, today()).length)
   if (late === 0) return null
   return (
     <Badge size="sm" tone="warn" className={className}>
@@ -300,7 +298,7 @@ function SideLink({ place, pathname }: { place: Place; pathname: string }) {
     >
       <Icon size={18} aria-hidden="true" />
       <span>{label}</span>
-      <LateBadge to={to} className={styles.sideBadge} />
+      {to === SHOPPING && <LateBadge className={styles.sideBadge} />}
     </Link>
   )
 }

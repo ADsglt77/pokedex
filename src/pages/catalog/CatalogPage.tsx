@@ -1,5 +1,5 @@
 import { Button, Card, EmptyState, Input, Skeleton, Stack } from '@camply/ui'
-import { CloudOff, Funnel, Search } from '@camply/ui/icons'
+import { Funnel, Search } from '@camply/ui/icons'
 import {
   Suspense,
   use,
@@ -16,6 +16,7 @@ import { useSearchParams } from 'react-router'
 import { CardFilters } from '@/components/CardFilters'
 import { CatalogGrid, CatalogGridSkeleton, CatalogTile } from '@/components/CatalogTile'
 import { PageHeader } from '@/components/PageHeader'
+import { Unavailable } from '@/components/Unavailable'
 import { ENERGY_TYPE, TRAINER_TYPES } from '@/config/catalog'
 import { forget } from '@/lib/api'
 import {
@@ -105,21 +106,16 @@ function useRetry(url: string) {
 function CatalogContent() {
   const retry = useRetry(CATALOG_SETS)
   const catalog = use(loadSets())
-  return catalog ? <SetBrowser catalog={catalog} /> : <Unavailable {...retry} />
+  return catalog ? <SetBrowser catalog={catalog} /> : <CatalogUnavailable retry={retry} />
 }
 
-function Unavailable({ retrying, onRetry }: { retrying: boolean; onRetry: () => void }) {
+/** Les extensions, ou les cartes de l'une d'elles, sans réponse de l'API. */
+function CatalogUnavailable({ retry }: { retry: ReturnType<typeof useRetry> }) {
   return (
-    <EmptyState
+    <Unavailable
       headingLevel={2}
-      icon={<CloudOff size={22} />}
       title="Le catalogue n’est pas disponible pour le moment"
-      description="Le serveur ne répond pas, ou ses données ne sont pas encore prêtes."
-      actions={
-        <Button loading={retrying} onClick={onRetry}>
-          Réessayer
-        </Button>
-      }
+      retry={retry}
     />
   )
 }
@@ -167,7 +163,7 @@ function SetBrowser({ catalog }: { catalog: CatalogSets }) {
 function SetCards({ set }: { set: SetSummary }) {
   const retry = useRetry(setCardsUrl(set))
   const cards = use(loadSetCards(set))
-  return cards ? <CardBrowser cards={cards} /> : <Unavailable {...retry} />
+  return cards ? <CardBrowser cards={cards} /> : <CatalogUnavailable retry={retry} />
 }
 
 /** « 168 Pokémon, 37 dresseurs et 5 énergies · 45 secrètes » : ce que compte l'extension. */

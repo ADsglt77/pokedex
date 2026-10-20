@@ -99,7 +99,7 @@ export function BudgetPanel() {
       >
         <Table
           bordered={false}
-          className={cx('data-table stack-table', styles.months)}
+          className={cx('stack-table', styles.months)}
           data={months}
           rowKey={(row) => row.key}
           emptyState="Aucune commande enregistrée."
@@ -135,7 +135,7 @@ export function BudgetPanel() {
       <Panel title="Par fournisseur" flush>
         <Table
           bordered={false}
-          className={cx('data-table stack-table', styles.suppliers)}
+          className={cx('stack-table', styles.suppliers)}
           data={suppliers}
           rowKey={(row) => row.key}
           emptyState="Aucune commande enregistrée."

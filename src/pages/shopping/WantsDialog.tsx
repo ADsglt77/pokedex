@@ -1,7 +1,8 @@
-import { Button, EmptyState, Modal, Spinner, Stack, Textarea } from '@camply/ui'
-import { CloudOff, Copy, RotateCw } from '@camply/ui/icons'
+import { Button, Modal, Stack, Textarea } from '@camply/ui'
+import { Copy } from '@camply/ui/icons'
 import { Suspense, use, useId, useRef, useState, useTransition } from 'react'
 import { CardmarketLink } from '@/components/CardmarketLink'
+import { Unavailable } from '@/components/Unavailable'
 import { useNotify } from '@/hooks/useNotify'
 import { loadWantsLines } from '@/lib/api'
 import { copyText } from '@/lib/clipboard'
@@ -87,20 +88,7 @@ function WantsContent({
 
   if (!lines) {
     return (
-      <EmptyState
-        icon={<CloudOff size={22} />}
-        title="Les lignes ne peuvent pas être préparées"
-        description="Le serveur ne répond pas pour le moment : réessayez dans un instant."
-        actions={
-          <Button
-            variant="secondary"
-            leftIcon={retrying ? <Spinner size={16} /> : <RotateCw size={16} />}
-            onClick={onRetry}
-          >
-            Réessayer
-          </Button>
-        }
-      />
+      <Unavailable title="Les lignes ne peuvent pas être préparées" retry={{ retrying, onRetry }} />
     )
   }
 

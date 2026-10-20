@@ -1,0 +1,9 @@
+/* Le nombre de filtres actifs, sur le bouton. */
+.badge {
+  margin-left: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.panel {
+  width: min(20rem, 85vw);
+}

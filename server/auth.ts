@@ -30,7 +30,7 @@ import { getMigrations } from 'better-auth/db/migration'
 import { username, USERNAME_ERROR_CODES } from 'better-auth/plugins'
 import type { Database } from 'bun:sqlite'
 import { Elysia, type Context } from 'elysia'
-import { PSEUDO } from '@/config/account'
+import { PASSWORD_MIN, PSEUDO } from '@/config/account'
 import { isPseudo } from '@/lib/account'
 import { MINUTE } from '@/lib/time'
 import type { AccountState } from '@/types'
@@ -137,7 +137,7 @@ export async function createAuth(db: Database) {
     database: db,
     baseURL: process.env.BETTER_AUTH_URL,
     secret: process.env.BETTER_AUTH_SECRET,
-    emailAndPassword: { enabled: true },
+    emailAndPassword: { enabled: true, minPasswordLength: PASSWORD_MIN },
     // Personne ne connaît les adresses des comptes : la connexion se fait par le pseudo.
     disabledPaths: ['/sign-in/email'],
     plugins: [

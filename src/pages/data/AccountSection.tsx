@@ -5,7 +5,7 @@ import { focusAfter } from '@/lib/focus'
 import { useNavigate } from 'react-router'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExportCollectionButton } from '@/components/ExportCollectionButton'
-import { PSEUDO, PSEUDO_HINT } from '@/config/account'
+import { NEW_PASSWORD_FIELD, PSEUDO_FIELD, PSEUDO_HINT } from '@/config/account'
 import { useNotify } from '@/hooks/useNotify'
 import { authCall, authClient } from '@/lib/auth'
 import { PSEUDO_RESERVED, refusalMessage, reservedPseudo } from '@/lib/account'
@@ -73,13 +73,8 @@ function NameForm({ current }: { current: string }) {
     <form onSubmit={submit}>
       <Stack gap={3} align="start">
         <Input
-          label="Pseudo"
+          {...PSEUDO_FIELD}
           hint={`${PSEUDO_HINT} Le titre de votre Pokédex public (« Le Pokédex de … ») et son adresse.`}
-          autoComplete="username"
-          minLength={PSEUDO.min}
-          maxLength={PSEUDO.max}
-          pattern={PSEUDO.pattern}
-          required
           value={name}
           onChange={(event) => setName(event.target.value.trim())}
         />
@@ -156,12 +151,8 @@ function PasswordForm() {
           onChange={(event) => setCurrent(event.target.value)}
         />
         <Input
+          {...NEW_PASSWORD_FIELD}
           label="Nouveau mot de passe"
-          hint="8 caractères au moins."
-          type="password"
-          autoComplete="new-password"
-          minLength={8}
-          required
           value={next}
           onChange={(event) => setNext(event.target.value)}
         />

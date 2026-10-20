@@ -1,17 +1,7 @@
-import {
-  Badge,
-  Button,
-  IconButton,
-  Input,
-  Kbd,
-  Popover,
-  Select,
-  Stack,
-  Tag,
-  Toggle,
-} from '@camply/ui'
-import { ArrowDown01, ArrowDown10, Search, SlidersHorizontal, X } from '@camply/ui/icons'
+import { Button, IconButton, Input, Kbd, Select, Tag, Toggle } from '@camply/ui'
+import { ArrowDown01, ArrowDown10, Search, X } from '@camply/ui/icons'
 import { useEffect, type RefObject } from 'react'
+import { FiltersPopover } from '@/components/FiltersPopover'
 import { ProgressRuler } from '@/components/ProgressRuler'
 import {
   GENERATION_OPTIONS,
@@ -174,50 +164,35 @@ export function PokedexToolbar({
         </div>
 
         <div className={styles.actions}>
-          <Popover
-            placement="bottom-end"
-            trigger={
-              <Button
-                variant="secondary"
-                size="sm"
-                leftIcon={<SlidersHorizontal size={15} />}
-                aria-label={`Filtres${panelCount ? ` (${plural(panelCount, 'actif', 'actifs')})` : ''}`}
-              >
-                Filtres
-                {panelCount > 0 && (
-                  <Badge variant="solid" size="sm" className={styles.badge}>
-                    {panelCount}
-                  </Badge>
-                )}
-              </Button>
-            }
+          <FiltersPopover
+            label={`Filtres${panelCount ? ` (${plural(panelCount, 'actif', 'actifs')})` : ''}`}
+            active={panelCount}
+            size="sm"
           >
-            <Stack gap={3} className={styles.panel}>
-              <Select
-                label="Génération"
-                size="sm"
-                options={GENERATION_OPTIONS}
-                value={filters.generation ? String(filters.generation) : ''}
-                onChange={(value) =>
-                  setFilters({ generation: value ? (Number(value) as GenerationId) : null })
-                }
-              />
-              <Select
-                label="Type"
-                size="sm"
-                options={TYPE_OPTIONS}
-                value={filters.type ?? ''}
-                onChange={(type) => setFilters({ type: type || null })}
-              />
-              <Select
-                label="Carte"
-                size="sm"
-                options={CARD_OPTIONS}
-                value={filters.card ?? ''}
-                onChange={(card) => setFilters({ card: card || null })}
-              />
-            </Stack>
-          </Popover>
+            <Select
+              label="Génération"
+              size="sm"
+              options={GENERATION_OPTIONS}
+              value={filters.generation ? String(filters.generation) : ''}
+              onChange={(value) =>
+                setFilters({ generation: value ? (Number(value) as GenerationId) : null })
+              }
+            />
+            <Select
+              label="Type"
+              size="sm"
+              options={TYPE_OPTIONS}
+              value={filters.type ?? ''}
+              onChange={(type) => setFilters({ type: type || null })}
+            />
+            <Select
+              label="Carte"
+              size="sm"
+              options={CARD_OPTIONS}
+              value={filters.card ?? ''}
+              onChange={(card) => setFilters({ card: card || null })}
+            />
+          </FiltersPopover>
           <IconButton
             label="Numéros décroissants"
             size="sm"

@@ -214,18 +214,14 @@ img {
 
 /* Un tableau de données (`Table` de camply) : toute la largeur, chiffres alignés. Positionné : un
    titre de colonne masqué (`visually-hidden`) reste dans la zone qui défile, sans élargir la page
-   sur téléphone. */
-.data-table {
-  position: relative;
-  width: 100%;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Un tableau qui devient une liste de fiches quand il est étroit (téléphone) : chaque ligne est
+   sur téléphone. Il devient une liste de fiches quand il est étroit (téléphone) : chaque ligne est
    une grille, dont la page place les cellules (`grid-area`) ; une valeur sans en-tête y montre son
    libellé (`.stack-label`, caché sinon). Classes internes de camply (pas une API) : à revérifier
    après une mise à jour. */
 .stack-table {
+  position: relative;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
   container: table / inline-size;
 }
 

@@ -1,7 +1,9 @@
-import { Badge, Button, EmptyState, Input, Popover, Select, Stack } from '@camply/ui'
-import { ListChecks, Search, SearchX, SlidersHorizontal } from '@camply/ui/icons'
+import { Button, EmptyState, Input, Select, Stack } from '@camply/ui'
+import { ListChecks, Search } from '@camply/ui/icons'
 import { useDeferredValue, useMemo, useRef } from 'react'
 import { Link } from 'react-router'
+import { FiltersPopover } from '@/components/FiltersPopover'
+import { NoMatch } from '@/components/NoMatch'
 import { GENERATION_OPTIONS } from '@/config/pokedex'
 import { useFollowLinks } from '@/hooks/useFollowLinks'
 import { useGrowingList } from '@/hooks/useGrowingList'
@@ -12,7 +14,6 @@ import {
   type WishlistFilters,
   type WishlistSort,
 } from '@/lib/filters'
-import { focusAfter } from '@/lib/focus'
 import { plural, toOptions } from '@/lib/format'
 import { filterWishlist, type WishRow } from '@/lib/wishlist'
 import type { GenerationId } from '@/types'
@@ -107,28 +108,13 @@ export function WishlistPanel({
           onChange={(event) => set({ search: event.target.value })}
         />
         {compact ? (
-          <Popover
-            placement="bottom-end"
-            trigger={
-              <Button
-                variant="secondary"
-                leftIcon={<SlidersHorizontal size={15} />}
-                aria-label={`Filtres et tri${filters.generation ? ' (1 filtre actif)' : ''}`}
-                className={styles.filtersButton}
-              >
-                Filtres
-                {filters.generation && (
-                  <Badge variant="solid" size="sm">
-                    1
-                  </Badge>
-                )}
-              </Button>
-            }
+          <FiltersPopover
+            label={`Filtres et tri${filters.generation ? ' (1 filtre actif)' : ''}`}
+            active={filters.generation ? 1 : 0}
+            className={styles.filtersButton}
           >
-            <Stack gap={3} className={styles.filtersPanel}>
-              {selects}
-            </Stack>
-          </Popover>
+            {selects}
+          </FiltersPopover>
         ) : (
           selects
         )}
@@ -139,17 +125,10 @@ export function WishlistPanel({
       </p>
 
       {shown.length === 0 ? (
-        <EmptyState
-          headingLevel={2}
-          icon={<SearchX size={22} />}
+        <NoMatch
           title="Aucune carte ne correspond à ces filtres"
-          description="Essayez une autre recherche, ou élargissez les filtres."
-          // Le message et son bouton disparaissent : le focus va à la recherche.
-          actions={
-            <Button onClick={() => focusAfter(() => set(DEFAULT_WISHLIST_FILTERS), searchField)}>
-              Réinitialiser les filtres
-            </Button>
-          }
+          onReset={() => set(DEFAULT_WISHLIST_FILTERS)}
+          search={searchField}
         />
       ) : (
         // Le clic de ses liens se lit ici, une fois pour toute la liste.

@@ -1,21 +1,5 @@
-/* Les mentions légales : la marque et le retour en tête, puis un texte à la largeur d'une lecture. */
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-block);
-  min-height: 100svh;
-  padding-block: var(--space-panel) var(--space-block);
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
+/* Les mentions légales (une page seule, `StandalonePage`) : un texte à la largeur d'une lecture. */
 .main {
-  flex: 1;
   max-width: 44rem;
 }
 
@@ -28,7 +12,6 @@
 
 .section h3 {
   margin-top: var(--camply-space-2);
-  font-size: var(--title-sm);
 }
 
 .section ul {
@@ -36,9 +19,4 @@
   flex-direction: column;
   gap: var(--camply-space-2);
   padding-left: 1.25rem;
-}
-
-.footer {
-  color: var(--camply-text-muted-2);
-  font-size: var(--text-xs);
 }

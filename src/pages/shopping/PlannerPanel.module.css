@@ -4,7 +4,6 @@
   display: grid;
   grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
   gap: var(--space-block);
-  padding-top: var(--space-block);
 }
 
 /* Une Card de camply, qui reste visible pendant qu'on parcourt le plan. */

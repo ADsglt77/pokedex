@@ -69,4 +69,6 @@ Domain components shared by several pages (card art, possession mark, pokédex t
 ruler, price chart) live in `src/components/`; a component used by one page lives in that page's
 folder (e.g. `TypeChip` in `src/pages/pokemon/`). The only generic wrappers allowed here are those
 camply lacks: `ConfirmDialog`, `PageHeader`, `Panel` (a page block: `Card` + titled head +
-actions), `ExternalLink`, `EuroInput`/`EuroField`. Anything else generic belongs in camply.
+actions), `ExternalLink`, `EuroInput`/`EuroField`, and the app's shared pieces built on camply
+(`StandalonePage`, `FiltersPopover`, the `EmptyState`s `Unavailable` and `NoMatch`). Anything
+else generic belongs in camply.

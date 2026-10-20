@@ -83,7 +83,7 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
     <div className="growing">
       <Table
         bordered={false}
-        className={cx('data-table stack-table', styles.cardsTable)}
+        className={cx('stack-table', styles.cardsTable)}
         data={rows.slice(0, limit)}
         rowKey={(row) => row.id}
         sort={sort}
@@ -166,7 +166,7 @@ export function CompletionTable({
   return (
     <Table
       bordered={false}
-      className={cx('data-table stack-table', styles.completion)}
+      className={cx('stack-table', styles.completion)}
       data={rows}
       rowKey={(row) => row.generation.id}
       columns={[

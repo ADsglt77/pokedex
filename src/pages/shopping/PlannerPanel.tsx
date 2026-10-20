@@ -13,6 +13,7 @@ import {
 import { Copy, Receipt, Sparkles } from '@camply/ui/icons'
 import { useDeferredValue, useId, useMemo, useRef, useState, type RefObject } from 'react'
 import { spentThisMonth } from '@/lib/budget'
+import { cx } from '@/lib/cx'
 import { keepFocusInList } from '@/lib/focus'
 import { formatEuro, plural, today } from '@/lib/format'
 import { cents, newOrder } from '@/lib/orders'
@@ -126,7 +127,7 @@ export function PlannerPanel({
   }
 
   return (
-    <div className={styles.planner}>
+    <div className={cx(page.panel, styles.planner)}>
       <Card className={styles.plannerOptions}>
         <Stack as="section" gap={5} aria-label="Réglages du plan">
           <Slider

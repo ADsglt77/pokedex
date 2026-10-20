@@ -30,7 +30,8 @@ interface Todo {
   hint: string
   to: string
   icon: ComponentType<IconProps>
-  tone?: 'warn'
+  /** Une alerte (commandes en retard), pas une simple tâche. */
+  warn?: boolean
 }
 
 /** Les cartes à compléter, comptées par les filtres du Pokédex (la liste y mène). */
@@ -112,7 +113,7 @@ export function TodoPanel() {
           : `En cours depuis plus de ${LATE_AFTER_DAYS} jours : réclamez-les aux vendeurs`,
       to: shoppingUrl({ view: 'commandes' }),
       icon: Clock,
-      tone: 'warn',
+      warn: true,
     })
   }
 
@@ -120,10 +121,10 @@ export function TodoPanel() {
     <Panel title="À faire" description="Ce qui attend une action de votre part.">
       {todos.length > 0 ? (
         <ul className={styles.todos}>
-          {todos.map(({ key, label, hint, to, icon: Icon, tone }) => (
+          {todos.map(({ key, label, hint, to, icon: Icon, warn }) => (
             <li key={key}>
               <Link to={to} className={styles.todo}>
-                <span className={cx(styles.todoIcon, tone && styles[tone])}>
+                <span className={cx(styles.todoIcon, warn && styles.warn)}>
                   <Icon size={16} aria-hidden="true" />
                 </span>
                 <span className={styles.todoText}>

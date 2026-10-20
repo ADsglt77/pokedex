@@ -1,13 +1,13 @@
-import { Button, EmptyState } from '@camply/ui'
-import { Layers, SearchX } from '@camply/ui/icons'
+import { Button } from '@camply/ui'
+import { Layers } from '@camply/ui/icons'
 import { useDeferredValue, useMemo, useRef, useState } from 'react'
 import { Link, useNavigationType } from 'react-router'
+import { NoMatch } from '@/components/NoMatch'
 import { PageHeader } from '@/components/PageHeader'
 import { useFollowLinks } from '@/hooks/useFollowLinks'
 import { usePokedex } from '@/hooks/usePokedex'
 import { usePokedexFilters } from '@/hooks/usePokedexFilters'
 import { DEFAULT_FILTERS, filterEntries, POSSESSIONS, type PossessionFilter } from '@/lib/filters'
-import { focusAfter } from '@/lib/focus'
 import { formatInteger, pageTitle, plural } from '@/lib/format'
 import { PokedexGrid } from '@/components/PokedexGrid'
 import { PokedexToolbar } from './PokedexToolbar'
@@ -121,17 +121,10 @@ export function PokedexPage() {
         />
       </div>
       {visible.length === 0 && (
-        <EmptyState
-          headingLevel={2}
-          icon={<SearchX size={22} />}
+        <NoMatch
           title="Aucun Pokémon ne correspond à ces filtres"
-          description="Essayez une autre recherche, ou élargissez les filtres."
-          // Le message et son bouton disparaissent : le focus va à la recherche.
-          actions={
-            <Button onClick={() => focusAfter(resetFilters, search)}>
-              Réinitialiser les filtres
-            </Button>
-          }
+          onReset={resetFilters}
+          search={search}
         />
       )}
     </div>

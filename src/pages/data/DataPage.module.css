@@ -132,7 +132,7 @@
   color: var(--camply-danger);
 }
 
-/* Le registre (`.amounts`) : une ligne par type de donnée, le compte à droite. */
+/* Le registre (`SummaryLedger`) : une ligne par type de donnée, le compte à droite. */
 .ledger {
   max-width: 30rem;
 }
