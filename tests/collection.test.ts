@@ -307,6 +307,9 @@ describe('les comptes : chacun le sien', () => {
     for (const to of ['Cynthia-1', 'Cynthia-2', 'Cynthia-3', 'Cynthia-4']) {
       const response = await authCall('update-user', { name: to, username: to }, cynthia.cookie)
       expect(response.status).toBe(200)
+      // `released_at` est à la milliseconde : deux changements dans la même ne seraient plus
+      // rangés (`ORDER BY released_at`), et les 3 gardés tirés au hasard.
+      await Bun.sleep(5)
     }
     // Quittés : cynthia, -1, -2, -3 ; seuls les 3 derniers restent réservés.
     expect((await createAccount('cynthia-1')).response.status).toBe(400)
