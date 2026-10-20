@@ -8,7 +8,7 @@
  *   n'écrase jamais sa collection) et `baseVersion` la version du serveur, et rend `{ version }`
  *   (`CollectionSaved`) ; sinon 409 : l'appareil relit la version du serveur, qu'il n'écrase jamais. Le document est contrôlé aux règles d'un fichier importé
  *   (`readSent` ; 400 sinon, la règle en cause au journal).
- * Sans session : 401 ; jamais gardé en cache (`no-store`), ni par le navigateur ni par Cloudflare
+ * Sans session : 401 ; jamais gardé en cache (`no-store`), ni par le navigateur ni par un relais
  * (macro `auth`, `auth.ts`).
  */
 

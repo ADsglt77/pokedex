@@ -1,17 +1,13 @@
-/**
- * Ce que disent les mentions légales (`LegalPage`) et qui n'est pas dans le code : l'hébergeur du
- * site et l'adresse de contact. À remplir avant la mise en ligne (README, liste de mise en ligne) ;
- * `null` : la page dit « à compléter ».
- */
 export const LEGAL: {
-  /**
-   * L'hébergeur du VPS, son nom et son adresse : un particulier qui ne publie pas son identité donne
-   * les siens (il lui a donné la sienne).
-   */
-  host: { name: string; address: string } | null
+  /** L'hébergeur du VPS : les coordonnées publiques exigées dans les mentions légales. */
+  host: { name: string; address: string; phone: string }
   /** L'adresse de contact, publique, pour toute question, et les demandes sur les données. */
-  contact: string | null
+  contact: string
 } = {
-  host: null,
-  contact: null,
+  host: {
+    name: 'OVH SAS',
+    address: '2 rue Kellermann, 59100 Roubaix, France',
+    phone: '1007 (depuis la France) ou +33 9 72 10 10 07',
+  },
+  contact: 'contact@pokecodex.fr',
 }

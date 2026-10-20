@@ -192,9 +192,9 @@ export async function createAuth(db: Database) {
         },
       },
     },
-    // Derrière le tunnel Cloudflare et nginx (qui n'écoute que sur la machine), l'adresse du
-    // visiteur est dans cet en-tête : les limites valent pour lui, pas pour le tunnel.
-    advanced: { ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] } },
+    // Caddy est le seul point d'entrée public et remplace cet en-tête avant de joindre nginx : les
+    // limites valent pour le visiteur, pas pour le proxy local.
+    advanced: { ipAddress: { ipAddressHeaders: ['x-forwarded-for'] } },
     // En production, par visiteur : 10 tentatives de création de compte et 10 changements de pseudo
     // par heure ; 5 tentatives de connexion, de changement du mot de passe ou de suppression du
     // compte par minute ; 100 requêtes pour le reste.

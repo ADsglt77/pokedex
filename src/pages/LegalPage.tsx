@@ -8,9 +8,6 @@ import { LEGAL } from '@/config/legal'
 import { pageTitle } from '@/lib/format'
 import styles from './LegalPage.module.css'
 
-/** Ce qui manque encore (`config/legal.ts`), à remplir avant la mise en ligne. */
-const TO_FILL = 'à compléter avant la mise en ligne'
-
 /**
  * `/mentions-legales` : les mentions légales et la confidentialité, hors de la coquille, pour tous
  * (visiteur ou connecté) : l'éditeur, l'hébergeur et le contact (`config/legal.ts`), les droits
@@ -30,7 +27,7 @@ export function LegalPage() {
     >
       <title>{pageTitle('Mentions légales et confidentialité')}</title>
       <PageHeader title="Mentions légales et confidentialité">
-        Mise à jour le 19 octobre 2026.
+        Mise à jour le 20 octobre 2026.
       </PageHeader>
 
       <section className={styles.section} aria-labelledby="editeur">
@@ -40,10 +37,11 @@ export function LegalPage() {
           Comme la loi le permet à un particulier, son identité n’est pas publiée : elle est connue
           de l’hébergeur.
         </p>
-        <p>Hébergeur : {LEGAL.host ? `${LEGAL.host.name}, ${LEGAL.host.address}` : TO_FILL}.</p>
         <p>
-          Contact :{' '}
-          {LEGAL.contact ? <a href={`mailto:${LEGAL.contact}`}>{LEGAL.contact}</a> : TO_FILL}.
+          Hébergeur : {LEGAL.host.name}, {LEGAL.host.address} — téléphone : {LEGAL.host.phone}.
+        </p>
+        <p>
+          Contact : <a href={`mailto:${LEGAL.contact}`}>{LEGAL.contact}</a>.
         </p>
       </section>
 
@@ -90,8 +88,8 @@ export function LegalPage() {
         </p>
         <h3>Qui y a accès</h3>
         <p>
-          L’éditeur du site, et l’hébergeur qui fait tourner son serveur. Le trafic passe par
-          Cloudflare, Inc. (États-Unis), qui l’achemine et le protège, et voit donc les adresses IP.
+          L’éditeur du site et OVHcloud, qui héberge le serveur en France. OVHcloud a accès aux
+          informations techniques nécessaires à l’hébergement, notamment les adresses IP.
         </p>
         <h3>Combien de temps</h3>
         <p>

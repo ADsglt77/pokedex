@@ -9,12 +9,16 @@
 proxy_cache_path /var/cache/nginx/images levels=1:2 keys_zone=images:10m max_size=4g
                  inactive=90d use_temp_path=off;
 
-# Par visiteur : l'adresse que donne le tunnel Cloudflare (`cf-connecting-ip`), la seule qui le
-# distingue (une requête sans elle, en local, n'est pas limitée). Les routes publiques coûteuses de
-# l'API (jusqu'à une seconde de calcul pour les historiques de 1 025 cartes, sur la seule boucle
-# du serveur) et la connexion : un visiteur ne peut pas bloquer le serveur, ni noyer son journal.
-limit_req_zone $http_cf_connecting_ip zone=api_heavy:10m rate=2r/s;
-limit_req_zone $http_cf_connecting_ip zone=api_auth:10m rate=2r/s;
+# Par visiteur : l'adresse que Caddy écrit dans `x-forwarded-for` avant de joindre nginx. Caddy
+# ignore l'en-tête reçu du public, donc un visiteur ne peut pas choisir cette clé. Sans Caddy (en
+# local), nginx utilise l'adresse de la connexion. Les routes publiques coûteuses de l'API et la
+# connexion sont ainsi limitées par visiteur.
+map $http_x_forwarded_for $visitor_ip {
+    ""      $binary_remote_addr;
+    default $http_x_forwarded_for;
+}
+limit_req_zone $visitor_ip zone=api_heavy:10m rate=2r/s;
+limit_req_zone $visitor_ip zone=api_auth:10m rate=2r/s;
 limit_req_status 429;
 
 # Les robots d'aperçu des messageries (Discord, WhatsApp…) qui lisent un lien partagé vers le Pokédex
@@ -128,7 +132,7 @@ server {
     # Routage côté client : /pokedex, /pokemon/25… reçoivent index.html, toujours revalidé
     # pour qu'un déploiement soit vu tout de suite.
     # Les aperçus de partage veulent l'adresse complète de leur image : celle du site demandé
-    # (le tunnel le sert en https).
+    # (Caddy le sert en https).
     location / {
         if ($vitrine_preview) {
             rewrite ^/([A-Za-z0-9_-]+)$ /api/vitrine/$1/apercu last;

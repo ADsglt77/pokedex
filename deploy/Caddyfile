@@ -1,0 +1,11 @@
+{
+	email contact@pokecodex.fr
+}
+
+pokecodex.fr {
+	reverse_proxy 127.0.0.1:8080
+}
+
+www.pokecodex.fr {
+	redir https://pokecodex.fr{uri} permanent
+}

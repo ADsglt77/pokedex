@@ -20,6 +20,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://pokecodex.fr
     steps:
       # Sans empreinte, l'action se connecterait à n'importe quel hôte qui répond à l'adresse : elle
       # lui donnerait la clé SSH. Le déploiement s'arrête donc tant que le secret manque.

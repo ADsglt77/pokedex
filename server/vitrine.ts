@@ -124,7 +124,7 @@ async function dataPrices(ids: number[]): Promise<PriceFile | null> {
 
 /**
  * Une réponse JSON et son ETag, tiré de son contenu : un visiteur qui revient sur un Pokédex
- * inchangé reçoit un 304, sans corps (un relais, Cloudflare, peut affaiblir l'ETag en `W/"…"` :
+ * inchangé reçoit un 304, sans corps (un relais peut affaiblir l'ETag en `W/"…"` :
  * c'est le même).
  */
 function serveJson(request: Request, body: unknown) {

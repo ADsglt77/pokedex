@@ -88,20 +88,20 @@ dans le navigateur, pas d'usage hors ligne) et vous suit d'un appareil à l'autr
 connecté à la fois (se connecter ailleurs déconnecte le précédent). Chaque modification part
 aussitôt ; si le serveur ne répond pas, le menu du compte le dit et elle repart à son retour.
 
-## Déploiement (VPS + tunnel Cloudflare)
+## Déploiement (VPS + Caddy)
 
 ### La liste de mise en ligne
 
 - [ ] **Avant tout** : exporter sa collection depuis le site actuel (Réglages › Sauvegarde › Exporter).
-- [ ] Sur le VPS : Docker, `git` et le tunnel Cloudflare (`cloudflared`).
+- [ ] Sur le VPS : Docker, `git` et Caddy ; les ports 22, 80 et 443 autorisés par le pare-feu.
 - [ ] L'API des données d'abord : le réseau `pokedex-net`, son clone, son `.env` (le token du
       site), ses conteneurs et ses cartes (son README).
 - [ ] Le clone en SSH, avec une clé de déploiement en lecture seule (étape 1 plus bas).
 - [ ] Le fichier `.env` : l'adresse publique en https, la clé des sessions et le token de l'API des
       données (étape 2).
-- [ ] Les mentions légales : l'hébergeur (nom, adresse) et une adresse de contact publique, dans
-      `src/config/legal.ts` (sans eux, la page `/mentions-legales` dit « à compléter »).
-- [ ] `docker compose up -d --build`, puis le tunnel vers `http://localhost:8080` (étape 3).
+- [ ] L'adresse publique `contact@pokecodex.fr` reçoit bien les messages ; les coordonnées OVH sont
+      dans `src/config/legal.ts`.
+- [ ] `docker compose up -d --build`, puis Caddy vers `http://127.0.0.1:8080` (étape 3).
 - [ ] Votre compte (`/inscription`), puis l'import de l'export d'avant (Réglages › Sauvegarde › Importer) :
       connecté, la collection part sur le serveur.
 - [ ] Les secrets GitHub du déploiement, `VPS_FINGERPRINT` compris (plus bas).
@@ -131,8 +131,8 @@ du serveur (avec leur cause). Pour le
 suivre : `docker compose logs -f server` (en développement, le terminal de
 `bun run dev:server`).
 
-Les services (`pokedex` : le site, nginx, sur `127.0.0.1:8080`, joignable seulement par le
-tunnel ; `server` : les comptes, les collections et leurs sauvegardes) et leurs volumes :
+Les services (`pokedex` : le site, nginx, sur `127.0.0.1:8080`, joignable seulement par Caddy ;
+`server` : les comptes, les collections et leurs sauvegardes) et leurs volumes :
 `docs/deploiement.md`. Les tâches d'ingestion (de nouvelles cartes…) : le README de l'API des
 données.
 
@@ -159,17 +159,18 @@ collections ; `backups`).
    chmod 600 .env
    docker compose up -d --build
    ```
-3. Publier le site par le tunnel : un nom d'hôte public (par exemple `pokedex.ton-domaine.fr`)
-   vers `http://localhost:8080`. Dans le tableau de bord Zero Trust (Networks › Tunnels › le
-   tunnel › Public hostname), ou dans le `config.yml` de cloudflared, avant la règle finale :
-   ```yaml
-   ingress:
-     - hostname: pokedex.ton-domaine.fr
-       service: http://localhost:8080
-     - service: http_status:404
+3. Dans la zone DNS OVH, remplacer l'adresse de redirection par l'IPv4 du VPS : un enregistrement
+   `A` pour `pokecodex.fr`, puis un `CNAME` `www` vers `pokecodex.fr.`. Garder les enregistrements
+   `MX` et SPF si la messagerie OVH est utilisée. Une fois le DNS propagé, installer le Caddyfile
+   fourni et le recharger :
+   ```sh
+   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
+   sudo caddy validate --config /etc/caddy/Caddyfile
+   sudo systemctl reload caddy
+   curl -I https://pokecodex.fr
    ```
-   Si cloudflared tourne lui-même dans Docker, mettre les deux conteneurs sur un même réseau et
-   viser `http://pokedex:80`.
+   Caddy obtient et renouvelle le certificat TLS, redirige HTTP vers HTTPS et relaie le site vers
+   `127.0.0.1:8080`. Ce port reste inaccessible depuis Internet.
 4. Créer votre compte : `/inscription` (pseudo, mot de passe), comme tout le monde. Gardez bien le
    mot de passe : le site n'envoie pas d'e-mail, il n'y a pas de « mot de passe oublié » ; il se
    change dans Réglages › Compte & partage › Mon compte, en donnant l'actuel.
@@ -191,9 +192,7 @@ dans le dépôt (Settings › Secrets and variables › Actions) :
 | `VPS_PORT` | port SSH, seulement s'il n'est pas 22 |
 | `VPS_FINGERPRINT` | empreinte de la clé d'hôte du VPS, pour ne parler qu'à lui : la sortie de `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub \| cut -d ' ' -f2` (`SHA256:…`). Obligatoire : sans elle, le déploiement s'arrête |
 
-Le port SSH doit être joignable depuis GitHub. S'il ne passe que par le tunnel (Cloudflare
-Access), ce workflow ne peut pas s'y connecter : il faut alors un runner GitHub auto-hébergé sur
-le VPS.
+Le port SSH doit être joignable depuis GitHub pour que ce workflow puisse se connecter.
 
 La clé de déploiement donne un shell à un membre du groupe `docker`, autant dire l'administration
 du VPS : réservez-la au déploiement, dans `~/.ssh/authorized_keys`, en tête de sa ligne (la même

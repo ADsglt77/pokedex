@@ -34,7 +34,7 @@ USER bun
 CMD ["bun", "server/index.ts"]
 
 # 3. Le site : nginx sert dist/, renvoie /api/ au serveur, et les données et les images à l'API
-#    des données (avec le token du site). Le tunnel Cloudflare du VPS pointe sur ce conteneur.
+#    des données (avec le token du site). Caddy pointe sur son port local, publié par Compose.
 FROM nginx:1.28-alpine AS web
 # Un gabarit, rempli au démarrage avec le token (`DATA_API_TOKEN`, `compose.yaml`).
 COPY deploy/nginx.conf.template /etc/nginx/templates/default.conf.template

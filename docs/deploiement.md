@@ -2,19 +2,22 @@
 
 Le VPS, Docker, nginx, les services et les sauvegardes. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
-VPS derrière un tunnel Cloudflare, à côté de l'API des données (le dépôt `pokedex-data`, ses
-propres conteneurs, à installer d'abord : son README). Les deux partagent un réseau Docker,
-`pokedex-net`, créé une fois à la main ; l'API n'y publie aucun port : seuls le nginx et le
-serveur du site la joignent, à `http://data-api:3001`, avec le token du site (`DATA_API_TOKEN`).
+VPS publié directement par Caddy, à côté de l'API des données (le dépôt `pokedex-data`, ses propres
+conteneurs, à installer d'abord : son README). Caddy écoute publiquement sur 80 et 443, gère le
+certificat de `pokecodex.fr`, puis relaie vers `127.0.0.1:8080`. Le port du site reste donc local au
+VPS. Les deux applications partagent un réseau Docker, `pokedex-net`, créé une fois à la main ;
+l'API n'y publie aucun port : seuls le nginx et le serveur du site la joignent, à
+`http://data-api:3001`, avec le token du site (`DATA_API_TOKEN`).
 
 Qui fait quoi (le détail est dans l'en-tête de chaque fichier) :
 
 | Fichier | Rôle |
 |---|---|
 | `Dockerfile` | Trois images, Bun et nginx figés sur leur version mineure : `build` (tests, ESLint, knip, puis `dist/` : un échec arrête le déploiement, l'ancien conteneur reste en ligne), `server` (Bun lance `server/` tel quel, avec `src/` et `tsconfig.json` pour l'alias `@/`, sans droits d'administrateur), `web` (nginx sert `dist/`). Seules les dépendances du serveur sont en `dependencies`, celles de l'app en `devDependencies` |
-| `deploy/nginx.conf.template` | nginx : les routes du client (`index.html`), les données et `/images/` à l'API des données (sous `/v1`, avec le token, sans les cookies ; les images gardées sur son disque), le reste de `/api/` au serveur, les limites par visiteur (`cf-connecting-ip`), la compression et les caches. Un gabarit, rempli du token au démarrage, vérifié à la construction (`nginx -t`) |
+| `deploy/Caddyfile` | Le point d'entrée public : HTTPS automatique pour `pokecodex.fr`, redirection de `www`, puis relais vers le port local 8080 |
+| `deploy/nginx.conf.template` | nginx : les routes du client (`index.html`), les données et `/images/` à l'API des données (sous `/v1`, avec le token, sans les cookies ; les images gardées sur son disque), le reste de `/api/` au serveur, les limites par visiteur (`x-forwarded-for`, posé par Caddy), la compression et les caches. Un gabarit, rempli du token au démarrage, vérifié à la construction (`nginx -t`) |
 | `deploy/security-headers.conf` | Les en-têtes de sécurité de chaque réponse (HSTS, politique de sécurité du contenu…) |
-| `compose.yaml` | Les services : `pokedex` (le site, sur `127.0.0.1:${POKEDEX_PORT:-8080}`, que publie le tunnel) et `server` (volumes `db` et `backups`, secrets du `.env` : les comptes, `docs/compte-et-synchronisation.md`), tous deux sur `pokedex-net` ; journaux limités, aucun privilège gagné. Le journal du serveur : `docker compose logs -f server` |
+| `compose.yaml` | Les services : `pokedex` (le site, sur `127.0.0.1:${POKEDEX_PORT:-8080}`, derrière Caddy) et `server` (volumes `db` et `backups`, secrets du `.env` : les comptes, `docs/compte-et-synchronisation.md`), tous deux sur `pokedex-net` ; journaux limités, aucun privilège gagné. Le journal du serveur : `docker compose logs -f server` |
 | `server/backups.ts` | La copie quotidienne d'`app.db` (30 gardées, vérifiées, écrites sous un nom provisoire) : à copier aussi hors du VPS (README) |
 | `.github/workflows/deploy.yml`, `deploy/deploy.sh` | Le déploiement (lancé à la main pour l'instant : son en-tête) : SSH sur le VPS (`VPS_FINGERPRINT` exigée), `git pull --ff-only`, `docker compose build --pull` puis `up -d` ; le site et l'API doivent répondre dans la minute ; les images d'avant restent une semaine (retour arrière : README) |
 
@@ -34,7 +37,7 @@ Les variables d'environnement :
 | `HOST` | `127.0.0.1` | `server` | L'adresse d'écoute ; `0.0.0.0` dans le conteneur (`Dockerfile`), que nginx joint |
 | `DATA_DIR` | `.data` (`/data` dans Docker) | `server` | La base SQLite |
 | `BACKUP_DIR` | `<DATA_DIR>/backups` (`/backups`) | `server` | Les sauvegardes |
-| `POKEDEX_PORT` | `8080` | `compose.yaml` | Le port local du site, que publie le tunnel |
+| `POKEDEX_PORT` | `8080` | `compose.yaml` | Le port local du site, que joint Caddy |
 | `NO_COLOR` | aucun | `server` | Un journal sans couleurs |
 
 Le serveur tourne sans droits d'administrateur (`USER bun`, `Dockerfile` : les points de montage

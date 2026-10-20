@@ -19,7 +19,7 @@
  *   (`vitrine.ts`), les sauvegardes d'`app.db` (`backups.ts`).
  * Pas les requêtes une à une : seulement ce qui se passe.
  * Au démarrage, une Poké Ball en pixel art (`banner`). Jamais un mot de passe ; l'adresse du
- * visiteur quand le tunnel la donne (`cf-connecting-ip`). Ce qu'un visiteur peut provoquer à
+ * visiteur quand Caddy la donne (`x-forwarded-for`). Ce qu'un visiteur peut provoquer à
  * volonté (une connexion refusée, une visite) : une ligne par visiteur et par minute au plus
  * (`journalOnce`). Sans couleurs avec `NO_COLOR` (la convention des terminaux).
  */
@@ -106,6 +106,13 @@ export const safeText = (text: string) => escapeControls(cut(text))
 export const reasonOf = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
 /**
+ * L'adresse posée par Caddy avant nginx. Caddy ignore la valeur reçue du visiteur et écrit la
+ * sienne ; le premier élément reste le client si un autre relais de confiance est ajouté plus tard.
+ */
+const requestIp = (request?: Request) =>
+  request?.headers.get('x-forwarded-for')?.split(',', 1)[0]?.trim() || undefined
+
+/**
  * `carte="Pikachu ex (SV8 033)"` : entre guillemets, échappée comme en JSON, dès qu'il y a une
  * espace, un guillemet, un `=` ou un caractère de contrôle. Une valeur peut venir d'un visiteur
  * (le pseudo d'une connexion refusée) : un retour à la ligne lui ferait écrire une
@@ -138,7 +145,7 @@ export function journal(
 ) {
   const all: NonNullable<JournalEntry['details']> = {
     ...details,
-    ip: request?.headers.get('cf-connecting-ip') ?? undefined,
+    ip: requestIp(request),
   }
   const rest = Object.entries(all)
     .filter((entry): entry is [string, string | number] => entry[1] !== undefined)
@@ -148,12 +155,12 @@ export function journal(
 }
 
 /**
- * Le visiteur d'une requête, pour compter ses actions : son adresse (`cf-connecting-ip`), ramenée
- * à son réseau /64 pour une IPv6 (un fournisseur en donne des milliards à chacun) ; `''` sans tunnel
+ * Le visiteur d'une requête, pour compter ses actions : son adresse (`x-forwarded-for`), ramenée à
+ * son réseau /64 pour une IPv6 (un fournisseur en donne des milliards à chacun) ; `''` sans proxy
  * (en développement).
  */
 export function visitorOf(request?: Request) {
-  const ip = request?.headers.get('cf-connecting-ip') ?? ''
+  const ip = requestIp(request) ?? ''
   if (!ip.includes(':')) return ip
   const [head = '', tail = ''] = ip.split('::')
   const left = head ? head.split(':') : []
