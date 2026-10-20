@@ -1,8 +1,6 @@
 import { RadialProgress } from '@camply/ui'
 import { Panel } from '@/components/Panel'
 import { ProgressRuler } from '@/components/ProgressRuler'
-import { RegionList } from '@/components/RegionList'
-import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { usePokedex } from '@/hooks/usePokedex'
 import { cx } from '@/lib/cx'
 import { formatInteger, plural, unlockedOf } from '@/lib/format'
@@ -28,15 +26,12 @@ function progressSentence(progress: Progress) {
   ]
 }
 
-/** La progression : l'anneau, la phrase, et la réglette des générations (une liste sur téléphone). */
+/** La progression : l'anneau, la phrase et la réglette compacte des générations. */
 export function ProgressPanel() {
   const { progress, generations } = usePokedex()
   const collection = useCollectionStore((state) => state.collection)
   const { ordered } = summarize(collection)
   const [unlockedText, remainingText] = progressSentence(progress)
-  // Sur téléphone, la réglette n'est qu'une image : la liste des régions mène au Pokédex.
-  const narrow = useMediaQuery('(max-width: 40rem)')
-
   return (
     <Panel title="Progression">
       <div className={styles.progress}>
@@ -62,10 +57,9 @@ export function ProgressPanel() {
           )}
         </div>
       </div>
-      <div inert={narrow} className={styles.ruler}>
+      <div className={styles.ruler}>
         <ProgressRuler generations={generations} />
       </div>
-      {narrow && <RegionList generations={generations} />}
     </Panel>
   )
 }

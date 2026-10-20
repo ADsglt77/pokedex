@@ -11,6 +11,7 @@ bun install
 bun dev          # serveur de dev Vite
 bun run build    # type-check + build
 bun lint         # ESLint, puis knip (code mort : exports, fichiers, dépendances)
+bun run contracts # vérifie les types partagés avec ../pokedex-data
 bun test         # tests de ce qui coûterait de l'argent (chaque fichier de tests/ le dit en tête)
 bun run format   # Prettier
 ```
@@ -45,16 +46,15 @@ bun run format   # Prettier
   et par fournisseur.
 - **Comptes** : chacun crée le sien (`/inscription`), un pseudo et un mot de passe, sans e-mail
   (pas de mot de passe oublié) ; le pseudo, le mot de passe et la suppression du compte dans
-  Données › Mon compte.
+  Réglages › Compte & partage › Mon compte.
 - **Pokédex public** : celui de chaque compte, à son adresse (`/pseudo`, toujours public), en
   lecture seule : progression, régions, valeur au prix du jour, courbe et classeur. Jamais les prix
   payés, les commandes ni le budget. Le reste du site demande d'être connecté.
 - **Thème** : sombre (gris foncé et jaune) ou clair (blanc pastel et rouge), au bouton de la
   barre ; sans choix, celui du système.
-- **Données** : la collection et les images à chercher pour les cartes qui n'en ont pas, le compte
-  (pseudo, mot de passe), l'adresse du Pokédex public, export / import (achats compris),
-  effacement, et l'état des données du serveur (le rythme et la dernière réussite de chaque tâche,
-  jour des prix, tâche en échec ou en retard).
+- **Réglages** : trois groupes — compte et Pokédex public, sauvegarde (contenu, export et import,
+  achats compris), puis actions avancées. L'état du serveur reste invisible quand tout va bien et
+  n'apparaît qu'en cas de retard, d'échec ou d'indisponibilité.
 
 Les données (espèces, catalogue des cartes japonaises, images, prix Cardmarket et leur
 historique) viennent de **l'API des données**, un dépôt à part (`pokedex-data`) : privée, sans
@@ -78,7 +78,8 @@ DATA_API_TOKEN=…            # le token « pokedex » de l'API des données
 ```
 
 Un visiteur arrive sur la connexion ; `/inscription` crée un compte (pseudo, mot de passe). Pseudo
-et mot de passe se changent ensuite dans Données › Mon compte, où le compte se supprime aussi. La
+et mot de passe se changent ensuite dans Réglages › Compte & partage › Mon compte, où le compte
+se supprime aussi. La
 documentation de l'API (Elysia, OpenAPI) est à `http://localhost:5173/api/docs`, en développement
 seulement.
 
@@ -91,7 +92,7 @@ aussitôt ; si le serveur ne répond pas, le menu du compte le dit et elle repar
 
 ### La liste de mise en ligne
 
-- [ ] **Avant tout** : exporter sa collection depuis le site actuel (Données › Exporter).
+- [ ] **Avant tout** : exporter sa collection depuis le site actuel (Réglages › Sauvegarde › Exporter).
 - [ ] Sur le VPS : Docker, `git` et le tunnel Cloudflare (`cloudflared`).
 - [ ] L'API des données d'abord : le réseau `pokedex-net`, son clone, son `.env` (le token du
       site), ses conteneurs et ses cartes (son README).
@@ -101,7 +102,7 @@ aussitôt ; si le serveur ne répond pas, le menu du compte le dit et elle repar
 - [ ] Les mentions légales : l'hébergeur (nom, adresse) et une adresse de contact publique, dans
       `src/config/legal.ts` (sans eux, la page `/mentions-legales` dit « à compléter »).
 - [ ] `docker compose up -d --build`, puis le tunnel vers `http://localhost:8080` (étape 3).
-- [ ] Votre compte (`/inscription`), puis l'import de l'export d'avant (Données › Importer) :
+- [ ] Votre compte (`/inscription`), puis l'import de l'export d'avant (Réglages › Sauvegarde › Importer) :
       connecté, la collection part sur le serveur.
 - [ ] Les secrets GitHub du déploiement, `VPS_FINGERPRINT` compris (plus bas).
 - [ ] Les sauvegardes copiées hors du VPS chaque nuit (section Sauvegardes).
@@ -171,7 +172,7 @@ collections ; `backups`).
    viser `http://pokedex:80`.
 4. Créer votre compte : `/inscription` (pseudo, mot de passe), comme tout le monde. Gardez bien le
    mot de passe : le site n'envoie pas d'e-mail, il n'y a pas de « mot de passe oublié » ; il se
-   change dans Données › Mon compte, en donnant l'actuel.
+   change dans Réglages › Compte & partage › Mon compte, en donnant l'actuel.
 
 **Ensuite, à chaque déploiement** (`.github/workflows/deploy.yml`, lancé à la main depuis l'onglet
 Actions tant que le domaine n'est pas prêt ; son en-tête dit comment le relancer à chaque push sur

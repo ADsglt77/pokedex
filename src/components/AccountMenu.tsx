@@ -40,7 +40,7 @@ const STATUS: Record<SaveStatus, { label: string; icon: typeof CloudCheck; text:
   refused: {
     label: 'Envoi refusé',
     icon: CloudAlert,
-    text: 'Le serveur refuse cette collection. Exportez-la depuis la page Données pour la garder.',
+    text: 'Le serveur refuse cette collection. Exportez-la depuis les Réglages pour la garder.',
   },
 }
 
@@ -65,7 +65,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   // Un refus, avec sa raison : « … : la carte « SV2a 165 » est abîmée. »
   const text =
     status === 'refused' && refusal
-      ? `Le serveur refuse cette collection : ${refusal}. Exportez-la depuis la page Données pour la garder.`
+      ? `Le serveur refuse cette collection : ${refusal}. Exportez-la depuis les Réglages pour la garder.`
       : STATUS[status].text
   const leave = async () => {
     setLeaving(true)

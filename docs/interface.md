@@ -46,7 +46,7 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   seulement, de jaune en sombre, de rouge en clair), `.shortcut` (un raccourci clavier, `Kbd`,
   masqué sur écran tactile seul). Une liste « libellé : montant » est une `DescriptionList`
   `layout="split"` de camply (le libellé prend la place, le montant à droite en chiffres alignés :
-  le décompte d'une collection sur la page Données, `SummaryLedger`, les totaux d'une commande). Une page : `PageHeader`
+  le décompte d'une collection dans Réglages, `SummaryLedger`, les totaux d'une commande). Une page : `PageHeader`
   (titre, phrase, actions à droite), puis ses blocs en `Panel` (une `Card` de camply : titre `h2`, phrase, actions, contenu ; `flush`
   pour un tableau bord à bord, `Table bordered={false}` ; pas une région nommée : trop de points de
   repère) ; statistiques par deux, par quatre quand la page a 50rem (`.stat-grid` ; compactes sur
@@ -62,13 +62,14 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   pour « 4 cartes », et un « — » s'efface, `.stack-hidden`) : commandes, budget, « Mes cartes »,
   « Pour compléter ». Navigation (`AppShell`) : à partir de 64rem, une
   barre latérale collée (Collection : Accueil, Pokédex, Catalogue ; Achats et valeur : Achats,
-  Valeur ; la progression ; Données et le compte en pied) ; en dessous, une barre en haut (nom,
-  recherche, Données, thème, compte en icône) et cinq onglets en bas ; le bouton du thème est aussi
+  Valeur ; la progression ; Réglages et le compte en pied) ; en dessous, une barre en haut (nom,
+  recherche, Réglages, thème, compte en icône) et cinq onglets en bas ; le bouton du thème est aussi
   en pied de la barre latérale. Partout, la recherche
   (`AppSearch`, Ctrl/⌘ K, la palette de camply) : les pages, quelques actions (exporter, importer) et les 1 025 Pokémon (noms français, anglais, japonais, numéro ; groupe
   « Espèces » : la palette cherche aussi dans le nom du groupe, « Pokémon » ferait tout trouver à
   « poké »). L'accueil est un
-  tableau de bord (dès qu'il y a une carte ou une commande) : progression (anneau, réglette des
+  tableau de bord (dès qu'il y a une carte ou une commande) : un seul appel principal vers le
+  Pokédex, progression (anneau, réglette compacte des
   régions), « À faire » (commandes en retard,
   cartes à compléter, une TAG TEAM comptée une fois, chacune vers sa liste filtrée : `shoppingUrl`,
   `pokedexUrl`), indicateurs
@@ -87,15 +88,15 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   en tuiles serrées (10 colonnes sur un écran de 1440 px, 3 sur téléphone) ; la fiche d'une carte,
   pleine page : l'image à gauche, qui reste à l'écran quand le reste défile, ce qu'on sait de la
   carte et son prix à droite (l'une sous l'autre sous 48rem) ; dans le pied, les flèches des
-  cartes voisines et l'ajout, qui passe dessous s'il ne tient pas. Données : un sommaire (collé à
-  gauche sur grand écran) et un panneau par section, deux colonnes sur très grand écran dans
-  l'ordre du sommaire (la collection à gauche, le compte et le Pokédex public à droite ; l'export
-  et l'import côte à côte ; les données du serveur et l'effacement sur
-  toute la largeur), l'effacement sur fond teinté de rouge. Valeur : ses panneaux l'un sous
+  cartes voisines et l'ajout, qui passe dessous s'il ne tient pas. Réglages : un sommaire (collé à
+  gauche sur grand écran) vers trois groupes — Compte & partage, Sauvegarde, Avancé — dont les
+  panneaux passent sur deux colonnes sur très grand écran. Le serveur n'y apparaît qu'en cas de
+  problème ; l'effacement garde son fond teinté de rouge. Valeur : ses panneaux l'un sous
   l'autre. La fiche d'un Pokémon :
-  fil d'Ariane (Pokédex › région › nom), puis la carte, collée à l'écran (sa largeur suit la
+  fil d'Ariane (Pokédex › région › nom) et Pokémon voisins, puis la carte, collée à l'écran (sa largeur suit la
   page : `cqi`), et ses panneaux (statut et prix payé, prix Cardmarket, « Dans le Pokédex ») : sur
-  deux colonnes dès que la fiche a la place (la carte et ses statuts à gauche, son prix à droite),
+  deux colonnes dès que la fiche a la place (la carte et ses statuts à gauche, son prix à droite) ;
+  le lien vers le prochain Pokémon sans carte vient après les actions de la carte,
   « Dans le Pokédex » à part sur grand écran ;
   seul effet appuyé de l'app, la carte en grand suit la souris et la lumière y glisse
   (`CardStage` : variables CSS, sans rendu React ; ni au toucher ni en mouvement réduit). Un lien
@@ -166,7 +167,7 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   d'une carte est préparée dès que le pointeur ou le focus arrive sur « Modifier la carte » (sur
   une fiche sans carte, quand le navigateur est libre), et une roue dit son ouverture si elle
   tarde. Le client Better Auth non plus (`lib/auth.ts`, à part de `lib/account.ts` que lit le
-  démarrage) : seules la connexion, l'inscription et Données › Mon compte l'importent, la
+  démarrage) : seules la connexion, l'inscription et Réglages › Mon compte l'importent, la
   déconnexion le charge à la demande. Une donnée chargée à la demande et lue par `use()` passe par
   `settled` : sans lui, React retient l'affichage environ 300 ms à chaque ouverture (fenêtre
   d'ajout, catalogue). La fiche d'un Pokémon sans carte prépare ses cartes du catalogue pendant que

@@ -53,7 +53,7 @@ interface Place {
 /** Le lien des achats, qui seul signale les commandes en retard (`LateBadge`). */
 const SHOPPING = shoppingUrl()
 
-/** La navigation, par usage : la collection, puis ce qui coûte. Données est à part (réglages). */
+/** La navigation, par usage : la collection, puis ce qui coûte. Les réglages sont à part. */
 const GROUPS: { label: string; places: Place[] }[] = [
   {
     label: 'Collection',
@@ -71,8 +71,8 @@ const GROUPS: { label: string; places: Place[] }[] = [
     ],
   },
 ]
-const DATA: Place = { to: '/donnees', label: 'Données', icon: Database }
-/** La barre d'onglets du téléphone : cinq au plus, Données passe dans la barre du haut. */
+const DATA: Place = { to: '/donnees', label: 'Réglages', icon: Database }
+/** La barre d'onglets du téléphone : cinq au plus, Réglages passe dans la barre du haut. */
 const TABS = GROUPS.flatMap((group) => group.places)
 
 /** La page ouverte : la fiche d'un Pokémon fait partie du Pokédex. */
@@ -206,7 +206,7 @@ const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pok
             </IconButton>
             <IconButton
               asChild
-              label="Données et sauvegarde"
+              label="Réglages"
               variant={isCurrent(DATA.to, pathname) ? 'soft' : 'ghost'}
             >
               <Link to={DATA.to} aria-current={isCurrent(DATA.to, pathname) ? 'page' : undefined}>

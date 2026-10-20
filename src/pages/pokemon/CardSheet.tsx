@@ -1,9 +1,11 @@
 import { Button } from '@camply/ui'
-import { Plus } from '@camply/ui/icons'
+import { ArrowRight, Plus } from '@camply/ui/icons'
 import { useEffect, useState, type Ref } from 'react'
+import { Link } from 'react-router'
 import { Panel } from '@/components/Panel'
 import { PricePanel } from '@/components/PricePanel'
 import { loadSpeciesCards } from '@/lib/card-catalog'
+import { speciesPath } from '@/lib/filters'
 import { details, statusCaption } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
 import { otherSpeciesNames } from '@/lib/species'
@@ -19,10 +21,12 @@ import styles from './CardSheet.module.css'
 export function CardSheet({
   view,
   species,
+  nextWithoutCard,
   titleRef,
 }: {
   view: CardView
   species: PokemonSpecies
+  nextWithoutCard: PokemonSpecies | null
   titleRef: Ref<HTMLHeadingElement>
 }) {
   const { card } = view
@@ -39,6 +43,15 @@ export function CardSheet({
         titleRef={titleRef}
       >
         <CardActions view={view} species={species} />
+        {nextWithoutCard && (
+          <div className={styles.next}>
+            <Button asChild variant="soft" size="sm" rightIcon={<ArrowRight size={16} />}>
+              <Link to={speciesPath(nextWithoutCard.id)}>
+                Suivant sans carte : {nextWithoutCard.names.fr}
+              </Link>
+            </Button>
+          </div>
+        )}
       </Panel>
       <PricePanel
         card={card}

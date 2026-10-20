@@ -18,6 +18,7 @@ Bun seulement (pas npm/pnpm/yarn). `bun dev` (Vite : données → API 3001, rest
 serveur 3000), `bun run dev:server`, et `bun run dev` dans `../pokedex-data` (même token :
 `DATA_API_TOKEN`, README). `bun run build` (pas `bun build`). Après chaque changement : `bun lint`
 (ESLint + knip), `bun test`, `bun run format`.
+Quand un type partagé avec l'API change : `bun run contracts` (exige `../pokedex-data`).
 
 ## Règles
 

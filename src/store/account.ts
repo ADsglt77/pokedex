@@ -174,7 +174,7 @@ export async function openSession(
  */
 export const markExpired = () => setStatus('expired')
 
-/** Le pseudo vient de changer (Données › Mon compte) : l'adresse du Pokédex public aussi. */
+/** Le pseudo vient de changer (Réglages › Mon compte) : l'adresse du Pokédex public aussi. */
 export function renameAccount(name: string) {
   const { account } = useAccountStore.getState()
   if (!account) return
@@ -216,7 +216,7 @@ export async function signOut() {
   return true
 }
 
-/** Le compte vient d'être supprimé (Données › Mon compte) : comme à la déconnexion. */
+/** Le compte vient d'être supprimé (Réglages › Mon compte) : comme à la déconnexion. */
 export const accountDeleted = leave
 
 // Une demi-seconde après chaque modification.

@@ -104,11 +104,12 @@ export function LegalPage() {
         </p>
         <h3>Vos droits</h3>
         <ul>
-          <li>Obtenir vos données : Données › Exporter, un fichier de votre collection.</li>
+          <li>Obtenir vos données : Réglages › Sauvegarde › Exporter.</li>
           <li>
-            Les corriger : tout se modifie dans le site, votre pseudo dans Données › Mon compte.
+            Les corriger : tout se modifie dans le site, votre pseudo dans Réglages › Compte &
+            partage › Mon compte.
           </li>
-          <li>Les effacer : Données › Mon compte › Supprimer mon compte.</li>
+          <li>Les effacer : Réglages › Compte & partage › Mon compte.</li>
           <li>
             Pour toute autre demande, l’adresse de contact plus haut ; et en cas de désaccord, une
             réclamation auprès de la{' '}

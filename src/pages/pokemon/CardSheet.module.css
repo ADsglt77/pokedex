@@ -6,6 +6,10 @@
   min-width: 0;
 }
 
+.next {
+  margin-top: var(--camply-space-4);
+}
+
 /* Une fiche assez large : la carte et ses statuts à gauche, son prix à droite, plutôt qu'une
    longue colonne à moitié vide. La largeur est celle du corps de la fiche (`.body`). */
 @container (min-width: 38rem) {

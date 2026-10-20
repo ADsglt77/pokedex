@@ -113,7 +113,7 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
   (une source qui ne l'a pas : 404, la carte de substitution). Une adresse collée du serveur
   d'images de la source est refusée à la saisie, et jamais affichée (`isSourceImage` : son accord,
   jamais une image affichée depuis chez elle ; une carte qui en garde une montre la carte de
-  substitution, jusqu'à ce qu'elle soit corrigée). Données › « Chercher
+  substitution, jusqu'à ce qu'elle soit corrigée). Réglages › Sauvegarde › « Chercher
   les images » cherche d'un coup celles des cartes sans image. `findCardImage` (`lib/card-catalog.ts`) : l'image du catalogue pour
   cette référence (lue dans sa série : `/api/catalog/sets`, puis `/api/catalog/sets/<code>`), sinon celle que la référence désigne, si elle se charge (sans réponse en 10 s :
   absente, pour ne pas bloquer l'enregistrement) ; la saisie le dit, sans nommer de source (aucun

@@ -38,7 +38,7 @@ const PLACES = [
   { label: 'Commandes', to: shoppingUrl({ view: 'commandes' }), icon: Receipt },
   { label: 'Budget', to: shoppingUrl({ view: 'budget' }), icon: Wallet },
   { label: 'Valeur de la collection', to: '/valeur', icon: ChartLine },
-  { label: 'Données et sauvegarde', to: '/donnees', icon: Database },
+  { label: 'Réglages', to: '/donnees', icon: Database },
   { label: 'Importer une collection', to: '/donnees#importer', icon: Upload },
 ]
 

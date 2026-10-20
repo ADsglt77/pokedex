@@ -5,54 +5,50 @@
   gap: var(--space-block);
 }
 
-.sections {
+.groups {
   display: grid;
   gap: var(--space-block);
   max-width: 50rem;
 }
 
-/* Grand écran : deux colonnes plutôt qu'une bande étroite et du vide, dans l'ordre du sommaire. La
-   collection à gauche, le compte et le Pokédex public à droite ; l'export et l'import côte à côte ;
-   les données du serveur et l'effacement sur toute la largeur. */
+.group {
+  display: grid;
+  gap: var(--camply-space-4);
+  scroll-margin-top: var(--camply-space-6);
+}
+
+.groupHead {
+  display: grid;
+  gap: var(--camply-space-1);
+}
+
+.groupHead h2 {
+  font-size: var(--text-xl);
+}
+
+.groupHead p {
+  max-width: 62ch;
+  color: var(--camply-text-muted);
+}
+
+.groupGrid {
+  display: grid;
+  gap: var(--space-block);
+}
+
+/* Grand écran : les panneaux d'un même groupe peuvent se lire côte à côte. */
 @container page (min-width: 84rem) {
-  .sections {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-areas:
-      'collection compte'
-      'collection public'
-      'exporter importer'
-      'reference reference'
-      'effacer effacer';
-    align-items: start;
+  .groups {
     max-width: 104rem;
   }
 
-  .sections > [id='collection'] {
-    grid-area: collection;
+  .groupGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
   }
 
-  .sections > [id='compte'] {
-    grid-area: compte;
-  }
-
-  .sections > [id='public'] {
-    grid-area: public;
-  }
-
-  .sections > [id='exporter'] {
-    grid-area: exporter;
-  }
-
-  .sections > [id='importer'] {
-    grid-area: importer;
-  }
-
-  .sections > [id='reference'] {
-    grid-area: reference;
-  }
-
-  .sections > [id='effacer'] {
-    grid-area: effacer;
+  #sauvegarde .groupGrid > [id='collection'] {
+    grid-column: 1 / -1;
   }
 }
 
@@ -124,7 +120,7 @@
   background: color-mix(in srgb, var(--camply-danger) 5%, var(--camply-surface));
 }
 
-.section.danger h2 {
+.section.danger h3 {
   color: var(--camply-danger);
 }
 
@@ -163,16 +159,4 @@
 
 .preview h3 {
   font-size: var(--text-md);
-}
-
-/* L'état des données : une ligne par source, son badge puis sa phrase. */
-.jobs {
-  width: 100%;
-}
-
-.job {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--camply-space-1) var(--camply-space-2);
 }

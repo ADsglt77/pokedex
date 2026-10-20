@@ -1,5 +1,5 @@
 import { Button } from '@camply/ui'
-import { Grid3x3, Layers } from '@camply/ui/icons'
+import { Grid3x3 } from '@camply/ui/icons'
 import { Link } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { monthOf } from '@/lib/budget'
@@ -36,14 +36,9 @@ export function HomePage() {
       <PageHeader
         title="Mon Pokédex"
         actions={
-          <>
-            <Button asChild variant="secondary" leftIcon={<Layers size={16} />}>
-              <Link to="/catalogue">Choisir des cartes</Link>
-            </Button>
-            <Button asChild leftIcon={<Grid3x3 size={16} />}>
-              <Link to="/pokedex">Ouvrir le Pokédex</Link>
-            </Button>
-          </>
+          <Button asChild leftIcon={<Grid3x3 size={16} />}>
+            <Link to="/pokedex">Ouvrir le Pokédex</Link>
+          </Button>
         }
       >
         {thisMonth > 0

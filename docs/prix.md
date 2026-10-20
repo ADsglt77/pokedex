@@ -53,14 +53,10 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   « Modification en masse » de Cardmarket (japonais, Near Mint). 2 demandes par seconde et par
   visiteur au plus (nginx). L'app la demande à chaque ouverture de la fenêtre (`loadWantsLines`,
   par `fetchFresh` : sans cache, 10 s au plus) ; sans réponse, elle propose de réessayer.
-- État des données (page Données › Données du serveur, `ReferenceSection`) : ce que rend
-  `/api/status`, demandé à chaque ouverture de la page (`loadStatus`, `lib/api.ts`) : chaque tâche
-  de l'API des données, dans son ordre, avec son nom, son rythme (« Toutes les 6 h », « À la
-  demande »), son état (à jour ; en retard, deux intervalles sans réussite, jamais pour une tâche à
-  la demande ; en échec, le dernier passage, sa cause n'étant que dans le journal de l'API : elle
-  peut nommer une source, et tout le monde peut avoir un compte ; jamais passée ; prix figés, le
-  guide de Cardmarket inchangé depuis plus de deux jours) et ses dates, et le jour des prix. L'état
-  est calculé par l'API : le site n'a ni la liste des tâches ni leurs règles. Sans réponse :
-  « l'état des données est inconnu ». `/api/health` (la surveillance) : celui de l'API des données.
+- État des données (Réglages › Avancé, `ReferenceSection`) : `/api/status` est demandé à
+  chaque ouverture (`loadStatus`, `lib/api.ts`). Aucun panneau n'est affiché quand tout va bien ;
+  seuls un retard, un échec, des prix figés ou une absence de réponse produisent une alerte avec
+  l'action à tenter. L'état reste calculé par l'API : le site n'a ni la liste des tâches ni leurs
+  règles. `/api/health` (la surveillance) : celui de l'API des données.
   Dans le formulaire d'une carte, un id Cardmarket n'est pas mis en doute tant que les prix
   manquent tous.

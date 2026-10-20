@@ -21,7 +21,7 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   (`LoginPage`), le pseudo (n'importe quelles majuscules) et le mot de passe (`signIn.username`) ;
   elle ramène à la page d'où l'on venait (`?retour=`, filtres compris ; seulement une adresse du
   site : même origine, `/\exemple.fr` refusé).
-  Données › Mon compte (`AccountSection`) : le pseudo (`updateUser`, `name` et `username` ensemble ;
+  Réglages › Compte & partage › Mon compte (`AccountSection`) : le pseudo (`updateUser`, `name` et `username` ensemble ;
   l'adresse du Pokédex public change avec lui, l'ancienne ne mène plus à rien), le mot de passe
   (`changePassword`, l'actuel exigé, les autres sessions fermées) et la suppression du compte
   (`deleteUser`, son mot de passe exigé ; après une confirmation qui propose l'export) : sa
@@ -69,7 +69,7 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   ids de ces cartes, avec le token), `null` sans carte possédée, sans guide des prix ou l'API muette
   (la valeur est alors « — », et une ligne au journal par minute au plus) ; un ETag tiré du compte,
   de son contenu (`serveJson`) : un visiteur qui revient sur un Pokédex inchangé reçoit un 304.
-  Données › Pokédex public en donne l'adresse (`vitrinePath`). Un lien partagé (Discord,
+  Réglages › Compte & partage › Pokédex public en donne l'adresse (`vitrinePath`). Un lien partagé (Discord,
   WhatsApp…) a son aperçu : nginx envoie les robots d'aperçu (`map $vitrine_preview` sur
   toute adresse d'un seul segment, `deploy/nginx.conf.template`) à `/api/vitrine/<pseudo>/apercu`, une page
   faite par le serveur (l'aperçu du site pour une page du site ou un pseudo à personne)

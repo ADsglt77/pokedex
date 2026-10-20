@@ -49,7 +49,6 @@ function SpeciesPage({ entry }: { entry: PokedexEntry }) {
         species={species}
         previous={getSpecies(species.id - 1)}
         next={getSpecies(species.id + 1)}
-        nextWithoutCard={nextWithoutCard}
       />
 
       <div className={styles.layout}>
@@ -76,7 +75,13 @@ function SpeciesPage({ entry }: { entry: PokedexEntry }) {
           <div className={styles.columns}>
             {/* Une clé par carte : une saisie en cours ne passe pas d'une carte à l'autre. */}
             {card ? (
-              <CardSheet key={card.card.id} view={card} species={species} titleRef={sheetTitle} />
+              <CardSheet
+                key={card.card.id}
+                view={card}
+                species={species}
+                nextWithoutCard={nextWithoutCard}
+                titleRef={sheetTitle}
+              />
             ) : (
               <EmptySheet species={species} titleRef={sheetTitle} />
             )}

@@ -1,5 +1,4 @@
-import { Breadcrumbs, Button } from '@camply/ui'
-import { ArrowRight } from '@camply/ui/icons'
+import { Breadcrumbs } from '@camply/ui'
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { pokedexHref } from '@/hooks/usePokedexFilters'
@@ -14,15 +13,13 @@ interface SpeciesNavProps {
   species: PokemonSpecies
   previous: PokemonSpecies | null
   next: PokemonSpecies | null
-  /** Le prochain Pokémon sans carte, pour en ajouter à la suite ; `null` s'il n'y en a plus. */
-  nextWithoutCard: PokemonSpecies | null
 }
 
 /**
- * Où l'on est (Pokédex, filtres conservés › région › Pokémon), Pokémon voisins (aussi au clavier, ← et
- * →) et prochain Pokémon sans carte.
+ * Où l'on est (Pokédex, filtres conservés › région › Pokémon) et les Pokémon voisins
+ * (aussi au clavier, ← et →).
  */
-export function SpeciesNav({ species, previous, next, nextWithoutCard }: SpeciesNavProps) {
+export function SpeciesNav({ species, previous, next }: SpeciesNavProps) {
   const navigate = useNavigate()
 
   // ← et → changent de Pokémon, sauf dans un champ ou une fenêtre ouverte, ou quand un réglage s'en
@@ -63,13 +60,6 @@ export function SpeciesNav({ species, previous, next, nextWithoutCard }: Species
             { label: species.names.fr },
           ]}
         />
-        {nextWithoutCard && (
-          <Button asChild variant="soft" size="sm" rightIcon={<ArrowRight size={16} />}>
-            <Link to={speciesPath(nextWithoutCard.id)}>
-              Suivant sans carte : {nextWithoutCard.names.fr}
-            </Link>
-          </Button>
-        )}
       </div>
       <nav aria-label="Pokémon voisins" className={styles.neighbours}>
         <Neighbour species={previous} rel="prev" edge="Début du Pokédex" />
