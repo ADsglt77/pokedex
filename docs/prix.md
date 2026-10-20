@@ -7,9 +7,8 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   panier.
 - Le chemin : le navigateur demande `/api/prices/…`, `/api/histories`, `/api/wants`, `/api/status`
   au site ; nginx (Vite en développement) les renvoie à l'API des données, sous `/v1`, avec le
-  token du site (`deploy/nginx.conf.template`, `vite.config.ts`). Les mêmes adresses
-  qu'auparavant : le code et le préchargement n'en savent rien. Les réponses
-  portent leur ETag (304 tant que les prix n'ont pas changé) ; leur forme est celle de
+  token du site (`deploy/nginx.conf.template`, `vite.config.ts`) : le code du site n'en sait rien.
+  Les réponses portent leur ETag (304 tant que les prix n'ont pas changé) ; leur forme est celle de
   `src/types.ts`, copie du contrat de l'API (`contract.ts`).
 - Prix du jour : l'app demande ceux des seules cartes qu'elle affiche (`GET /api/prices?ids=…` :
   celles de la collection, d'une extension du catalogue, d'un Pokémon, un id saisi ; le jour, et
@@ -21,7 +20,7 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   cartes, `null` tant que la réponse de ces cartes n'est pas arrivée ; une carte dont le prix est
   connu n'est pas redemandée (une carte ajoutée : une demande pour elle seule), sauf au retour sur
   une page restée ouverte plus de 6 h, où tout ce qui est affiché est redemandé (`refreshPrices` :
-  les prix d'avant restent affichés en attendant). Une demande en panne compte comme une panne
+  ceux déjà affichés le restent en attendant). Une demande en panne compte comme une panne
   passagère (« — », jamais « Sans prix »). L'historique d'une carte se charge à la demande
   (`/api/prices/<id>`, 404 sans historique) : la courbe de sa fiche, le nom affiché dans le
   formulaire pour vérifier l'id saisi (au départ du champ). Le Pokédex public d'un compte reçoit

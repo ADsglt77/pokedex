@@ -58,9 +58,9 @@ bun run format   # Prettier
 
 Les données (espèces, catalogue des cartes japonaises, images, prix Cardmarket et leur
 historique) viennent de **l'API des données**, un dépôt à part (`pokedex-data`) : privée, sans
-token aucune donnée. Le navigateur ne parle qu'au site, aux mêmes adresses qu'avant (`/api/…`,
-`/images/…`) : nginx (Vite en développement) renvoie celles des données à l'API, avec le token du
-site, que le navigateur ne voit jamais. Aucune adresse de la source n'apparaît dans le navigateur :
+token aucune donnée. Le navigateur ne parle qu'au site (`/api/…`, `/images/…`) : nginx (Vite en
+développement) renvoie les adresses des données à l'API, avec le token du site, que le navigateur
+ne voit jamais. Aucune adresse de la source n'apparaît dans le navigateur :
 les images ont des chemins neutres (`/images/cards/SV2A/166-md.webp`). Le serveur de l'app
 (`server/`, Elysia et SQLite) garde les comptes et les collections. Seule une image à l'adresse
 collée se charge ailleurs ; pas celles de Cardmarket, qui ne s'affichent que sur son site.

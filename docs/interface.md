@@ -108,9 +108,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   plus bas, moyenne ; pour un total, ce qu'il a gagné et son rythme par semaine). Aucun point
   inventé : un jour sans prix n'en a pas ; un total (`fromZero`) part de zéro. Cardmarket ne publie
   que le guide du jour (aucune archive) : l'historique vient du relevé quotidien de l'API des
-  données, et des 180 jours d'avant repris de Pokécardex (sa tâche `history`), au même prix suivi. Les
-  nombres formatés gardent une espace insécable visible (`spaced`, `lib/format.ts` : l'espace fine
-  de `Intl` manque à certaines polices ; une part : `formatShare`, « 12,5 % »).
+  données, et, pour les 180 jours qui le précèdent, de Pokécardex (sa tâche `history`), au même
+  prix suivi. Les nombres formatés gardent une espace insécable visible (`spaced`, `lib/format.ts` :
+  l'espace fine de `Intl` manque à certaines polices ; une part : `formatShare`, « 12,5 % »).
 - Installation : le site s'installe sur téléphone et ordinateur (`public/manifest.webmanifest`,
   icônes de `public/icons` et `public/apple-touch-icon.png`, dessinées d'après `favicon.svg`). Pas
   de service worker ni d'usage hors ligne (décision de l'utilisateur, octobre 2026 : la collection
@@ -142,8 +142,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   Ctrl K n'est montée qu'à sa première ouverture (ses plus de 1 000 commandes coûtaient une
   soixantaine de millisecondes au démarrage), puis mémoïsée ; la palette de camply rendant toutes
   ses commandes, ses lignes ont un `content-visibility` (classe interne, `global.css`). `buildPokedex`
-  reprend les entrées inchangées du Pokédex d'avant (la même carte au même statut) : après une
-  annulation ou la collection relue du serveur, seules les pochettes changées se redessinent.
+  reprend les entrées inchangées du Pokédex précédent (la même carte au même statut) : après
+  une annulation ou la collection relue du serveur, seules les pochettes changées se redessinent.
   Le tableau des cartes de Valeur (trié par lui, le tri du tableau contrôlé) et la liste d'achats
   sont dessinés au fur et à mesure (`useGrowingList` : Valeur 151 ms → 60 à l'ouverture, Achats 254
   → 53). Un montant au prix du jour (`PricedValue`, des centaines par page) lit la réponse des prix
@@ -162,16 +162,16 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   ouverture (`lazy`, `router.tsx` : une
   route parente sans chemin porte une seule fois la page d'erreur et l'attente, vide, d'une page
   ouverte directement) ; sur un réseau lent, une barre fine en haut le dit (`NavigationProgress`,
-  `AppShell` : le `Progress` indéterminé de camply, sans fond, montré après 0,3 s). La fenêtre d'une carte est préparée dès que le pointeur ou le
-  focus arrive sur « Modifier la carte » (sur une fiche sans carte, quand le navigateur est libre),
-  et une roue dit son ouverture si elle tarde. Le client Better Auth non plus (`lib/auth.ts`, à
-  part de `lib/account.ts` que lit le démarrage) : seules la connexion, l'inscription et
-  Données › Mon compte l'importent, la déconnexion le charge à la demande. Une
-  donnée chargée à la demande et lue par `use()` passe par `settled` : sans lui, React retient
-  l'affichage environ 300 ms à chaque ouverture (fenêtre d'ajout, catalogue). La fiche d'un
-  Pokémon sans carte prépare ses cartes du catalogue pendant que le navigateur est libre (les
-  siennes seulement, `/api/catalog/species/<n°>` : moins de 1 Ko compressé en moyenne, 7 pour
-  Pikachu, au lieu des 275 Ko du catalogue entier d'avant). La page Catalogue ne charge que la liste
+  `AppShell` : le `Progress` indéterminé de camply, sans fond, montré après 0,3 s). La fenêtre
+  d'une carte est préparée dès que le pointeur ou le focus arrive sur « Modifier la carte » (sur
+  une fiche sans carte, quand le navigateur est libre), et une roue dit son ouverture si elle
+  tarde. Le client Better Auth non plus (`lib/auth.ts`, à part de `lib/account.ts` que lit le
+  démarrage) : seules la connexion, l'inscription et Données › Mon compte l'importent, la
+  déconnexion le charge à la demande. Une donnée chargée à la demande et lue par `use()` passe par
+  `settled` : sans lui, React retient l'affichage environ 300 ms à chaque ouverture (fenêtre
+  d'ajout, catalogue). La fiche d'un Pokémon sans carte prépare ses cartes du catalogue pendant que
+  le navigateur est libre (les siennes seulement, `/api/catalog/species/<n°>` : moins de 1 Ko
+  compressé en moyenne, 7 pour Pikachu). La page Catalogue ne charge que la liste
   des séries (`/api/catalog/sets`, environ 8 Ko compressés) puis les cartes de l'extension montrée
   (`/api/catalog/sets/<code>`), chacune une fois, et leurs seuls prix. Les longues listes
   du catalogue (les cartes d'une extension ou d'un Pokémon, jusqu'à 382 pour Pikachu ; les plus de
@@ -180,17 +180,16 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   bas de la liste) : mesuré en production (octobre 2026), la fenêtre des extensions s'ouvre en
   40 à 80 ms au lieu de 270 à 490, et se ferme en une dizaine de millisecondes au lieu de 250 à
   430 (démonter des centaines de tuiles coûtait autant que les dessiner). Le piège à focus de
-  camply ne mesure que les bords d'une fenêtre (depuis la 0.3 ; avant, chaque bouton à chaque Tab,
-  d'où l'absence de `content-visibility` sur les années de `SetPicker`). Le bouton « Changer d'extension » porte lui-même l'état de sa fenêtre
-  (`SetPicker`) : l'ouvrir ne redessine pas la page et ses cartes. Changer l'ordre des extensions
-  passe en arrière-plan (`startTransition`). Les deux grandes fenêtres (le choix d'une extension,
-  l'ajout d'une carte) sont pleine page (`Modal size="full"`) : seul leur contenu défile, leur
-  titre et leurs boutons restent à l'écran (camply), la recherche des extensions reste en haut
-  (`position: sticky; top: 0`) et prend le focus à l'ouverture (`initialFocus`). Dans la fenêtre
-  d'ajout, la fonction qui choisit une carte est la même d'un rendu à l'autre (`fill` de
-  `useCardDraft`, `pick` de `CardForm`) : les tuiles, mémoïsées, ne se redessinent pas à chaque
-  sélection ; et les prix d'autres cartes que celles de la collection (`usePrices(ids)`) ne suivent
-  pas la collection.
+  camply ne mesure que les bords d'une fenêtre, pas chaque bouton à chaque Tab. Le bouton
+  « Changer d'extension » porte lui-même l'état de sa fenêtre (`SetPicker`) : l'ouvrir ne
+  redessine pas la page et ses cartes. Changer l'ordre des extensions passe en arrière-plan
+  (`startTransition`). Les deux grandes fenêtres (le choix d'une extension, l'ajout d'une carte)
+  sont pleine page (`Modal size="full"`) : seul leur contenu défile, leur titre et leurs boutons
+  restent à l'écran (camply), la recherche des extensions reste en haut (`position: sticky; top: 0`)
+  et prend le focus à l'ouverture (`initialFocus`). Dans la fenêtre d'ajout, la fonction qui choisit
+  une carte est la même d'un rendu à l'autre (`fill` de `useCardDraft`, `pick` de `CardForm`) : les
+  tuiles, mémoïsées, ne se redessinent pas à chaque sélection ; et les prix d'autres cartes que
+  celles de la collection (`usePrices(ids)`) ne suivent pas la collection.
 - Focus et annonces : une action qui retire ou désactive son propre bouton (« Réinitialiser » les
   filtres ou un filtre retiré dans le Pokédex, « Tout afficher » du catalogue, « Retirer les
   filtres » de raretés et de types, l'aperçu d'un import, « Effacer », « Chercher les images »

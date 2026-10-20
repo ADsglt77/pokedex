@@ -1,7 +1,6 @@
 /**
  * La liste d'achats : la carte de chaque Pokémon qui n'est ni possédée ni commandée. Choisir une
- * carte suffit à dire qu'on la veut : ni priorité, ni prix maximum, ni note (une ancienne version
- * en avait, carte par carte ; retirés en octobre 2026, à la demande de l'utilisateur).
+ * carte suffit à dire qu'on la veut : toutes sont voulues autant (`docs/collection-et-achats.md`).
  */
 
 import { speciesOf } from '@/lib/species'

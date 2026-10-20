@@ -13,10 +13,9 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   `emptyShopping`, `lib/orders.ts`) :
   - la liste d'achats n'est pas enregistrée : c'est la carte de chaque Pokémon ni possédée ni
     commandée (`wishlistRows`, une TAG TEAM une fois), toutes voulues autant (décision de
-    l'utilisateur, octobre 2026 : choisir la carte suffit ; plus de « À acheter » carte par carte, ni
-    priorité, ni prix maximum, ni note). Le lien vers
-    Cardmarket est `cardmarketPage` : la page notée, sinon l'id. La prochaine commande
-    (`planPurchase`, `purchase-planner`) ne lit qu'elle : elle y prend les moins chères d'abord,
+    l'utilisateur, octobre 2026 : choisir la carte suffit). Le lien vers Cardmarket est
+    `cardmarketPage` : la page notée, sinon l'id. La prochaine commande (`planPurchase`,
+    `purchase-planner`) ne lit qu'elle : elle y prend les moins chères d'abord,
     une par Pokémon, dans le budget, port réservé ; on peut en retirer ou en ajouter à la main.
     Après « Enregistrer comme commande », l'assistant repart de ses réglages par défaut (le budget :
     le reste du mois, cette commande comprise) ;
@@ -46,7 +45,7 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     une commande reçue (ligne retirée, commande annulée ou supprimée) reste possédée, sans la date
     ni le prix payé que la commande lui avait donnés : ceux d'une autre commande reçue qui la
     contient (réception, prix de revient), sinon aucun. Une commande reçue ne repasse pas « en
-    cours » (le formulaire ne le propose plus : `canBePending`) : ses cartes resteraient possédées
+    cours » (le formulaire ne le propose pas : `canBePending`) : ses cartes resteraient possédées
     avec sa date et son prix payé sans plus porter son effet ; au prochain enregistrement, elles
     passeraient pour possédées avant elle (« Déjà possédée avant cette commande »), son remboursé
     ne changerait plus leur prix payé, et l'annuler ou la supprimer leur laisserait sa date et son
@@ -95,3 +94,6 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   (`store/account.ts`). « Annuler » se lance aussi par Ctrl+Z (⌘Z) tant que son toast est affiché.
 - « Annuler » (`useCollectionAction`) rétablit collection et achats d'avant, et refuse si quelque
   chose a changé depuis : une modification ultérieure n'est jamais effacée.
+- Retirés à la demande de l'utilisateur, à ne pas réintroduire sans demande : les statuts
+  « souhaitée » et « À acheter » d'une carte ; la priorité, le prix maximum et la note d'une
+  carte de la liste d'achats.
