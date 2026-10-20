@@ -66,10 +66,6 @@
   scrollbar-width: none;
 }
 
-.toc ul::-webkit-scrollbar {
-  display: none;
-}
-
 .toc a {
   display: block;
   padding: 0.375rem 0.75rem;

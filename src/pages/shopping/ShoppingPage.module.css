@@ -13,10 +13,6 @@
   scrollbar-width: none;
 }
 
-.tabList::-webkit-scrollbar {
-  display: none;
-}
-
 .tabList > * {
   flex: none;
   white-space: nowrap;
