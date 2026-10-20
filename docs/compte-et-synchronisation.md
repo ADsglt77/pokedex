@@ -48,8 +48,9 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   relecture de la collection au retour de la page consommerait le renouvellement du jour ; sans lui, le
   navigateur garderait l'ancien cookie et il faudrait se reconnecter au bout de 60 jours). Les
   réponses de ces routes ne sont jamais gardées en cache (`no-store`, macro `auth`). Une
-  modification venue d'une autre origine est refusée (403), sur `/api/auth/*` aussi : un autre site
-  ne connecte pas un visiteur à un compte qu'il ne connaît pas (testé). En production,
+  modification (ni `GET` ni `HEAD`) venue d'une autre origine est refusée (403), sur toute adresse
+  du serveur, `/api/auth/*` compris : un autre site ne connecte pas un visiteur à un compte qu'il ne
+  connaît pas (testé). En production,
   par visiteur (`cf-connecting-ip`) : 10 tentatives de création de compte et 10 changements de
   pseudo par heure, 5 tentatives
   de connexion, de changement du mot de passe ou de suppression du compte par minute ; devant,
@@ -133,10 +134,10 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   place de la sienne : rien n'est écrasé, sa dernière modification est perdue, et le menu du compte
   le dit (« Rechargée »). Accepté, la réponse donne `{ version }` ; le document passe les contrôles
   d'un import (`readSent` : refusé, la règle en cause au journal). Une modification d'une autre
-  origine est refusée (403) avant même la lecture de son corps (`parse` de la macro `auth`,
-  `ForeignOrigin` : pas de 422 qui renverrait ce qui a été envoyé), et notée au journal (une fois
-  par minute) : elle dit un réglage à revoir (`BETTER_AUTH_URL`) ou une tentative depuis un autre
-  site. Sans réponse, ou une panne passagère (502 pendant un redémarrage), la modification attend
+  origine est refusée (403) avant la recherche de la route et la lecture de son corps (un seul
+  crochet `onRequest` dans `accountRoutes`, qui vaut pour toute l'app, adresses inconnues comprises :
+  pas de 422 qui renverrait ce qui a été envoyé ; testé), et notée au journal (une fois par minute) :
+  elle dit un réglage à revoir (`BETTER_AUTH_URL`) ou une tentative depuis un autre site. Sans réponse, ou une panne passagère (502 pendant un redémarrage), la modification attend
   (« Hors ligne ») : elle repart 30 s plus tard, au retour du réseau ou de la page, et quitter la
   page le demande d'abord (`beforeunload`). Un refus pour de bon (400 et 422 : un document qui ne
   passe pas les contrôles ; 413 : plus de 5 Mo ; 403 : une origine refusée) donne « Envoi refusé »,

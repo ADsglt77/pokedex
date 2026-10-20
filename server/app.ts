@@ -3,16 +3,16 @@
  * (espèces, catalogue, prix, images : l'API des données, que nginx et Vite joignent eux-mêmes).
  * Chaque domaine est un plugin : le compte (`auth.ts`), la collection synchronisée
  * (`collection.ts`), ce que le navigateur signale au journal (`journal.ts`), le Pokédex public
- * (`vitrine.ts`). Les paramètres et
- * les corps des requêtes sont validés par leurs schémas (422 sinon ; 413 au-delà de 5 Mo). Une
- * adresse inconnue : 404 sans corps ; une erreur imprévue : dans le journal, et 500 sans corps. En
- * développement, la documentation de l'API est à `/api/docs`.
+ * (`vitrine.ts`). Une modification venue d'une autre origine : 403 avant tout le reste (`auth.ts`).
+ * Les paramètres et les corps des requêtes sont validés par leurs schémas (422 sinon ; 413 au-delà
+ * de 5 Mo). Une adresse inconnue : 404 sans corps ; une erreur imprévue : dans le journal, et 500
+ * sans corps. En développement, la documentation de l'API est à `/api/docs`.
  */
 
 import { openapi } from '@elysiajs/openapi'
 import type { Database } from 'bun:sqlite'
 import { Elysia } from 'elysia'
-import { accountRoutes, ForeignOrigin, type Accounts } from './auth'
+import { accountRoutes, type Accounts } from './auth'
 import { collectionRoutes } from './collection'
 import { journal, journalRoutes } from './journal'
 import { vitrineRoutes } from './vitrine'
@@ -47,10 +47,6 @@ export function createApp({ app, accounts }: AppContext) {
       .onError(({ code, error, request }) => {
         if (code === 'NOT_FOUND') {
           return new Response(null, { status: 404, headers: { 'Cache-Control': 'no-cache' } })
-        }
-        // Une modification d'une autre origine, arrêtée avant la lecture de son corps (`auth.ts`).
-        if (code === 'PARSE' && error.cause instanceof ForeignOrigin) {
-          return new Response(null, { status: 403, headers: { 'Cache-Control': 'no-store' } })
         }
         if (code === 'VALIDATION' || code === 'PARSE' || typeof code === 'number') return
         const { pathname } = new URL(request.url)

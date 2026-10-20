@@ -281,21 +281,17 @@ function journalAuth(
 }
 
 /**
- * Une modification venue d'une autre origine (le cookie part avec toute requête vers le site) :
- * refusée dès la lecture du corps, avant même de le lire (`parse` de la macro `auth`), puis
- * répondue 403 par `app.ts`.
- */
-export class ForeignOrigin extends Error {}
-
-/**
  * Le compte dans l'API (`/api/…`) :
+ * - une modification (ni `GET` ni `HEAD`) venue d'une autre origine (le cookie part avec toute
+ *   requête vers le site) : 403 sans corps, avant la recherche de la route et la lecture du corps
+ *   (pas de 422 qui renverrait ce qui a été envoyé). Le crochet `onRequest` vaut pour toute l'app
+ *   une fois ce plugin utilisé : une adresse inconnue aussi ;
  * - `/api/auth/*` : Better Auth (création du compte, connexion, déconnexion, session, pseudo, mot
- *   de passe, suppression) ; une modification d'une autre origine, refusée (403) ;
+ *   de passe, suppression) ;
  * - `GET /api/account` : `AccountState`, qui est connecté sur ce navigateur (`null` : personne) :
  *   une seule requête au démarrage ;
- * - la macro `auth` des routes réservées au compte : 401 sans session, 403 pour une modification
- *   venue d'une autre origine (le cookie part avec toute requête vers le site), jamais en cache ;
- *   la route reçoit `user`.
+ * - la macro `auth` des routes réservées au compte : 401 sans session, jamais en cache ; la route
+ *   reçoit `user`.
  */
 export function accountRoutes({ auth, origin }: Accounts) {
   /**
@@ -338,10 +334,14 @@ export function accountRoutes({ auth, origin }: Accounts) {
     return true
   }
   return new Elysia({ name: 'account' })
+    .onRequest(({ request }) =>
+      foreign(request)
+        ? new Response(null, { status: 403, headers: { 'Cache-Control': 'no-store' } })
+        : undefined,
+    )
     .all(
       '/auth/*',
-      async ({ request, status }) => {
-        if (foreign(request)) return status(403, null)
+      async ({ request }) => {
         // Pour le journal, l'adresse comme la lit Better Auth (« /update-user/ » aussi).
         const path = new URL(request.url).pathname.replace(/\/{2,}/g, '/').replace(/\/$/, '')
         if (!WATCHED.test(path)) return auth.handler(request)
@@ -373,14 +373,8 @@ export function accountRoutes({ auth, origin }: Accounts) {
     )
     .macro({
       auth: {
-        // Avant de lire le corps (jusqu'à 5 Mo) et de le valider : une autre origine est refusée
-        // d'emblée (`ForeignOrigin`, 403), sans un 422 qui renverrait ce qu'elle a envoyé.
-        parse({ request }) {
-          if (foreign(request)) throw new ForeignOrigin()
-        },
         async resolve({ request, set, status }) {
           set.headers['cache-control'] = 'no-store'
-          if (foreign(request)) return status(403, null)
           const session = await sessionOf(request, set)
           return session ? { user: session.user } : status(401, null)
         },

@@ -1,8 +1,9 @@
 /**
  * La garde du serveur contre l'écrasement (`server/collection.ts`) : un appareil qui envoie une
  * collection partie d'une version dépassée (un autre onglet, un autre appareil l'a changée), ou en
- * avance (la base restaurée), est refusé (409), et la version du serveur reste telle quelle ; sans session, ou d'un
- * autre site, rien ne passe ; un document abîmé est refusé (400). Une erreur ici écraserait les
+ * avance (la base restaurée), est refusé (409), et la version du serveur reste telle quelle ; sans
+ * session rien ne passe, ni d'un autre site (une modification, sur toute adresse, avant même la
+ * lecture de son corps ; une lecture, si) ; un document abîmé est refusé (400). Une erreur ici écraserait les
  * commandes d'un autre appareil. Chaque compte ne touche qu'à sa collection, et la sienne part avec
  * lui. Et ce que montre le Pokédex public d'un compte (`/api/vitrine/<pseudo>`) : ce qu'il
  * laisserait passer serait public. Le serveur entier (`createApp`), sur des bases neuves dans le
@@ -217,6 +218,64 @@ describe('/api/collection : jamais une version écrasée', () => {
       ).status,
     ).toBe(401)
     expect(await stored()).toEqual(before)
+  })
+})
+
+describe('d’un autre site : une modification refusée partout, une lecture jamais', () => {
+  const FOREIGN = 'https://autre.exemple'
+
+  test('refusée avant la lecture de son corps (403, sans corps, jamais en cache)', async () => {
+    // Un corps que le serveur ne lit qu'en le demandant : il ne l'est jamais.
+    let read = false
+    const body = new ReadableStream(
+      {
+        pull(controller) {
+          read = true
+          controller.enqueue(new TextEncoder().encode('{}'))
+          controller.close()
+        },
+      },
+      { highWaterMark: 0 },
+    )
+    const request = new Request(`${ORIGIN}/api/collection`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Origin: FOREIGN, Cookie: cookie },
+      body,
+    })
+    const response = await server.handle(request)
+    expect(response.status).toBe(403)
+    expect(response.headers.get('cache-control')).toBe('no-store')
+    expect(await response.text()).toBe('')
+    expect(read).toBe(false)
+    expect(request.bodyUsed).toBe(false)
+  })
+
+  test('une adresse inconnue aussi : 403, quand le site y aurait un 404', async () => {
+    const post = (path: string, origin?: string) =>
+      server.handle(
+        new Request(`${ORIGIN}${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(origin && { Origin: origin }) },
+          body: '{}',
+        }),
+      )
+    expect((await post('/api/inconnue', FOREIGN)).status).toBe(403)
+    expect((await post('/inconnue', FOREIGN)).status).toBe(403)
+    // Sans origine : une modification n'en vient pas du site.
+    expect((await post('/api/inconnue')).status).toBe(403)
+    expect((await post('/api/inconnue', ORIGIN)).status).toBe(404)
+  })
+
+  test('les lectures passent, sans origine ou d’ailleurs : le contrôle de santé, un Pokédex public', async () => {
+    const get = (path: string, headers: Record<string, string> = {}) =>
+      server.handle(new Request(`${ORIGIN}${path}`, { headers }))
+    for (const headers of [{}, { Origin: FOREIGN }] as Record<string, string>[]) {
+      const account = await get('/api/account', headers)
+      expect(account.status).toBe(200)
+      expect(await account.json()).toEqual({ user: null })
+      expect((await get('/api/vitrine/sacha', headers)).status).toBe(200)
+      expect((await get('/api/collection', { ...headers, Cookie: cookie })).status).toBe(200)
+    }
   })
 })
 
