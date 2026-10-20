@@ -354,24 +354,16 @@
   }
 }
 
-/* Une page chargée à la demande, sur un réseau lent (`NavigationProgress`) : une barre fine en haut
-   de l'écran, montrée après un instant (une navigation rapide ne la fait pas clignoter). */
+/* Une page chargée à la demande, sur un réseau lent (`NavigationProgress`, le `Progress`
+   indéterminé de camply) : une barre fine en haut de l'écran, sans fond, montrée après un instant
+   (une navigation rapide ne la fait pas clignoter). */
 .navigating {
+  --camply-progress-height: 3px;
+  --camply-progress-track: transparent;
   position: fixed;
   inset: 0 0 auto;
   z-index: 200;
-  height: 3px;
-  overflow: hidden;
   animation: navigating-in 0s 0.3s both;
-}
-
-.navigating::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  width: 40%;
-  background: var(--camply-accent);
-  animation: navigating 1.2s ease-in-out infinite;
 }
 
 @keyframes navigating-in {
@@ -380,14 +372,5 @@
   }
   to {
     opacity: 1;
-  }
-}
-
-@keyframes navigating {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(250%);
   }
 }

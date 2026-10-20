@@ -272,7 +272,7 @@ const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pok
 function NavigationProgress() {
   const busy = useNavigation().state !== 'idle'
   if (!busy) return null
-  return <div className={styles.navigating} role="progressbar" aria-label="Chargement de la page" />
+  return <Progress size="sm" aria-label="Chargement de la page" className={styles.navigating} />
 }
 
 /** Les commandes en retard, sur le lien des achats (barre latérale, onglets) ; rien sinon. */

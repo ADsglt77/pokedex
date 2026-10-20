@@ -162,7 +162,7 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   ouverture (`lazy`, `router.tsx` : une
   route parente sans chemin porte une seule fois la page d'erreur et l'attente, vide, d'une page
   ouverte directement) ; sur un réseau lent, une barre fine en haut le dit (`NavigationProgress`,
-  `AppShell`, montrée après 0,3 s). La fenêtre d'une carte est préparée dès que le pointeur ou le
+  `AppShell` : le `Progress` indéterminé de camply, sans fond, montré après 0,3 s). La fenêtre d'une carte est préparée dès que le pointeur ou le
   focus arrive sur « Modifier la carte » (sur une fiche sans carte, quand le navigateur est libre),
   et une roue dit son ouverture si elle tarde. Le client Better Auth non plus (`lib/auth.ts`, à
   part de `lib/account.ts` que lit le démarrage) : seules la connexion, l'inscription et
