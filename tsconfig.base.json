@@ -1,6 +1,6 @@
 {
-  // Les options communes à l'app, au serveur et aux tests, et à `vite.config.ts` ; chacun ajoute ses
-  // `lib`, `types` et `include`.
+  // Les options communes à l'app (`tsconfig.app.json`) et à ce que lance Bun (`tsconfig.bun.json`) ;
+  // chacun ajoute ses `lib`, `types` et `include`.
   "compilerOptions": {
     // Le défaut de TypeScript 6, écrit pour qui lit ce fichier.
     "strict": true,
