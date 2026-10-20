@@ -77,7 +77,7 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
 - Le Pokédex public de chaque compte (`/pseudo`, `VitrinePage` ; à la demande de l'utilisateur,
   octobre 2026) : **toujours public** (plus de réglage : la colonne `public` de `collections` est
   retirée). Toute adresse d'un seul segment qui n'est pas une page du site y mène (la route
-  `:pseudo`, `vitrinePseudo`, `lib/filters.ts`) : les premiers segments des adresses du site sont
+  `:pseudo`, `isPseudo`, `lib/account.ts`) : les premiers segments des adresses du site sont
   des pseudos réservés (`RESERVED_PSEUDOS`, `config/account.ts` : refusés à l'inscription et au
   changement de pseudo, testé ; une nouvelle page de premier niveau s'y ajoute ; un compte qui
   porterait déjà son nom n'y a jamais son Pokédex : le serveur ne cherche qu'un pseudo possible,

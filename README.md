@@ -245,9 +245,9 @@ docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/restore:ro" 
 docker compose up -d
 ```
 
-Après une restauration d'`app.db`, les appareils le voient : chaque version de la collection porte
-une empreinte tirée de son contenu (pas seulement son numéro, qui peut revenir), et un appareil qui
-avait une version plus récente demande laquelle garder.
+Après une restauration d'`app.db`, un appareil resté sur une version plus récente voit son
+prochain envoi refusé (409) : il relit celle du serveur, la restaurée, et sa dernière modification
+est perdue (`docs/compte-et-synchronisation.md`).
 
 Le serveur garde aussi, dans `app.db`, une version remplacée de la collection par heure pendant
 30 jours (table `collection_versions`, compressée) : de quoi revenir en arrière après une erreur,

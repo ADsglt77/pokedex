@@ -67,8 +67,7 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   en pied de la barre latérale. Partout, la recherche
   (`AppSearch`, Ctrl/⌘ K, la palette de camply) : les pages, quelques actions (exporter, importer) et les 1 025 Pokémon (noms français, anglais, japonais, numéro ; groupe
   « Espèces » : la palette cherche aussi dans le nom du groupe, « Pokémon » ferait tout trouver à
-  « poké »). L'avertissement
-  de l'app (le stockage refusé, `.notice`) s'aligne sur le conteneur des pages. L'accueil est un
+  « poké »). L'accueil est un
   tableau de bord (dès qu'il y a une carte ou une commande) : progression (anneau, réglette des
   régions), « À faire » (commandes en retard,
   cartes à compléter, une TAG TEAM comptée une fois, chacune vers sa liste filtrée : `shoppingUrl`,

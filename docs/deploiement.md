@@ -7,70 +7,20 @@ propres conteneurs, à installer d'abord : son README). Les deux partagent un r�
 `pokedex-net`, créé une fois à la main ; l'API n'y publie aucun port : seuls le nginx et le
 serveur du site la joignent, à `http://data-api:3001`, avec le token du site (`DATA_API_TOKEN`).
 
-`Dockerfile` (Bun figé sur sa version mineure, `oven/bun:1.3-alpine`, comme nginx), trois cibles :
-`build` (Bun lance les tests, ESLint et knip, puis construit `dist/`), `server` (Bun lance
-`server/` tel quel, avec `src/` et `tsconfig.json` pour l'alias `@/` ; `NODE_ENV=production`,
-`HOST=0.0.0.0` ; son `package.json` vient de `build` : un test en échec arrête aussi cette image ;
-seules les dépendances du serveur, `elysia`, `@elysiajs/openapi` et `better-auth`, sont en
-`dependencies`, celles de l'app en `devDependencies`) et `web` (nginx sert `dist/` ; sa
-configuration est un gabarit, `deploy/nginx.conf.template`, que l'image remplit au démarrage avec
-le token, seulement les variables de son environnement, celles de nginx restant telles quelles ;
-elle est vérifiée à la construction, remplie d'un token d'essai, `nginx -t` : une faute arrête la
-construction, l'ancien conteneur reste en ligne).
+Qui fait quoi (le détail est dans l'en-tête de chaque fichier) :
 
-`deploy/nginx.conf.template` : une route inconnue reçoit `index.html`, le routage étant côté
-client ; les données (`/api/species`, `/api/catalog/…`, `/api/prices/…`, `/api/histories`,
-`/api/wants`, `/api/status`, `/api/health`) vont à l'API des données, sous `/v1`, avec le token
-(`proxy_set_header Authorization`) et sans les cookies du navigateur ; le reste de `/api/` va au
-service `server` (les adresses des deux redemandées au DNS de Docker, `resolver` : un conteneur
-redémarré change d'adresse) ; `/images/` vient de l'API des données (`/v1/images/`), gardé sur le
-disque de nginx (`proxy_cache`, 4 Go au plus, perdu à la reconstruction du conteneur : l'API
-redonne les images sans rien télécharger ; deux demandes d'une image pas encore gardée n'en font
-qu'une, `proxy_cache_lock` ; une absence n'est pas gardée) et un an par les navigateurs
-(`immutable`) ; par visiteur (`cf-connecting-ip`, la seule adresse qui le distingue derrière le
-tunnel), 2 requêtes par seconde pour les routes coûteuses (`/api/histories`, `/api/wants` : 10
-d'un coup) et pour la connexion (`/api/auth/` : 20 d'un coup), 429 au-delà ; une ligne de requête
-jusqu'à 16 Ko (`large_client_header_buffers` : les 1 025 ids d'une collection) ; un fichier
-manquant de `/assets/` répond 404 ; `/assets/` en cache un an ; compression gzip niveau 6,
-réponses de l'API comprises (`gzip_proxied` ; les réponses précalculées arrivent déjà compressées,
-en gzip), des tampons d'1 Mo pour les réponses de l'API
-(`proxy_buffers`) ; version de nginx masquée (`server_tokens off`) et en-têtes de sécurité sur
-chaque réponse (`deploy/security-headers.conf` : HSTS un an, `nosniff`, `Referrer-Policy`,
-`X-Frame-Options`, `Permissions-Policy`, la politique de sécurité du contenu : scripts, requêtes et
-polices du site seulement, plus les polices que Vite intègre en `data:`, images aussi en https
-pour une adresse collée, styles en ligne acceptés ; inclus aussi dans chaque `location` qui pose
-ses propres en-têtes, nginx n'héritant pas alors de ceux du serveur).
+| Fichier | Rôle |
+|---|---|
+| `Dockerfile` | Trois images, Bun et nginx figés sur leur version mineure : `build` (tests, ESLint, knip, puis `dist/` : un échec arrête le déploiement, l'ancien conteneur reste en ligne), `server` (Bun lance `server/` tel quel, avec `src/` et `tsconfig.json` pour l'alias `@/`, sans droits d'administrateur), `web` (nginx sert `dist/`). Seules les dépendances du serveur sont en `dependencies`, celles de l'app en `devDependencies` |
+| `deploy/nginx.conf.template` | nginx : les routes du client (`index.html`), les données et `/images/` à l'API des données (sous `/v1`, avec le token, sans les cookies ; les images gardées sur son disque), le reste de `/api/` au serveur, les limites par visiteur (`cf-connecting-ip`), la compression et les caches. Un gabarit, rempli du token au démarrage, vérifié à la construction (`nginx -t`) |
+| `deploy/security-headers.conf` | Les en-têtes de sécurité de chaque réponse (HSTS, politique de sécurité du contenu…) |
+| `compose.yaml` | Les services : `pokedex` (le site, sur `127.0.0.1:${POKEDEX_PORT:-8080}`, que publie le tunnel) et `server` (volumes `db` et `backups`, secrets du `.env` : les comptes, `docs/compte-et-synchronisation.md`), tous deux sur `pokedex-net` ; journaux limités, aucun privilège gagné. Le journal du serveur : `docker compose logs -f server` |
+| `server/backups.ts` | La copie quotidienne d'`app.db` (30 gardées, vérifiées, écrites sous un nom provisoire) : à copier aussi hors du VPS (README) |
+| `.github/workflows/deploy.yml`, `deploy/deploy.sh` | Le déploiement (lancé à la main pour l'instant : son en-tête) : SSH sur le VPS (`VPS_FINGERPRINT` exigée), `git pull --ff-only`, `docker compose build --pull` puis `up -d` ; le site et l'API doivent répondre dans la minute ; les images d'avant restent une semaine (retour arrière : README) |
 
-`compose.yaml` (journaux limités à 3 × 10 Mo par service ; `init` pour `server`, qui transmet
-l'arrêt ; aucun service ne gagne de droits en cours de route, `no-new-privileges`, et celui de Bun
-n'en garde aucun, `cap_drop: [ALL]` ; `server` est sain tant que `/api/account` répond,
-`healthcheck`, que montre `docker compose ps`) :
-- `pokedex` : le site sur `127.0.0.1:${POKEDEX_PORT:-8080}`, que le tunnel publie ; sur les
-  réseaux `default` et `pokedex-net` ; le token de l'API des données (`DATA_API_TOKEN`) ;
-- `server` : les comptes et les collections (`app.db`, volume `db`) et leurs sauvegardes (volume
-  `backups`) ; sur les réseaux `default` et `pokedex-net` (les prix d'un Pokédex public :
-  `DATA_API_URL`) ; ses secrets (`BETTER_AUTH_URL`, l'adresse publique en https,
-  `BETTER_AUTH_SECRET`, `DATA_API_TOKEN`) viennent du `.env` du clone (ignoré par git) : sans eux,
-  docker compose refuse de démarrer (les comptes : `docs/compte-et-synchronisation.md`). Son
-  journal (`server/journal.ts` : connexions, cartes, commandes, exports, sauvegardes…) :
-  `docker compose logs -f server`.
-
-Sauvegardes (`server/backups.ts`, volume `backups`) : le serveur copie `app.db` chaque jour (au
-démarrage puis chaque heure, celle du jour si elle manque ; 30 gardées), par `VACUUM INTO` pendant
-qu'il tourne, vérifiée (`PRAGMA quick_check`) et écrite sous un nom provisoire (`tmp-…`) avant de
-prendre sa place : une copie hors du VPS qui passerait pendant l'écriture n'emporte jamais un
-fichier à moitié écrit. Elles sont sur le disque du VPS : à copier ailleurs aussi (README). Les
-données de référence et leur historique ont les leurs, dans l'API des données. Les volumes `db`
-(vos collections) et `backups` sont irremplaçables : jamais `docker compose down -v`.
-
-`.github/workflows/deploy.yml` : lancé à la main tant que le domaine n'est pas prêt (le push sur
-`main` à remettre, voir son en-tête), SSH sur le VPS (action épinglée sur un commit, empreinte
-d'hôte `VPS_FINGERPRINT`, exigée : sans elle, le déploiement s'arrête ; 30 min au plus),
-`git pull --ff-only` puis `deploy/deploy.sh` : `docker compose build --pull`, `up -d
---remove-orphans`, puis la page et l'API du serveur doivent répondre dans la minute (sinon le
-déploiement échoue, en rouge) ; les images d'avant restent une semaine, pour un retour arrière
-rapide (README). La clé SSH de déploiement peut être réservée à cette seule commande
-(`authorized_keys`, README). Marche à suivre complète et liste de mise en ligne : README.
+Les volumes `db` (les collections) et `backups` sont irremplaçables : **jamais
+`docker compose down -v`**. Les données de référence et leur historique sont sauvegardés par l'API
+des données. Marche à suivre complète et liste de mise en ligne : README.
 
 Les variables d'environnement :
 
