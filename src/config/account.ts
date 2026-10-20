@@ -39,7 +39,7 @@ export const PSEUDO_HINT = `${PSEUDO.min} à ${PSEUDO.max} caractères : lettres
 /** La longueur minimale d'un mot de passe, la même pour le serveur (`server/auth.ts`). */
 export const PASSWORD_MIN = 8
 
-/** Le champ du pseudo d'un formulaire (inscription, Données › Mon compte) : la règle de `PSEUDO`. */
+/** Le champ du pseudo (inscription, Données › Mon compte) : la règle de `PSEUDO`. */
 export const PSEUDO_FIELD = {
   label: 'Pseudo',
   autoComplete: 'username',

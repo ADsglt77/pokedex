@@ -29,8 +29,8 @@ export default defineConfig(({ mode }) => {
         '/images/': data,
         '/api': API,
       },
-      // Les bases du serveur (et son cache) ne font pas partie de l'app : les surveiller
-      // ralentirait Vite.
+      // La base du serveur et ses sauvegardes (`.data`) ne font pas partie de l'app : les
+      // surveiller ralentirait Vite.
       watch: { ignored: ['**/.data/**'] },
       // Les pages préparées dès le démarrage, pas à leur première ouverture (Achats, Valeur… sont
       // chargées à la demande : sans cela, leur première visite attend leur transformation).

@@ -275,7 +275,7 @@ function NavigationProgress() {
   return <div className={styles.navigating} role="progressbar" aria-label="Chargement de la page" />
 }
 
-/** Les commandes en retard, sur le lien des achats (barre latérale, barre d'onglets) ; rien sinon. */
+/** Les commandes en retard, sur le lien des achats (barre latérale, onglets) ; rien sinon. */
 function LateBadge({ className }: { className?: string }) {
   const late = useShoppingStore((state) => latePendingOrders(state.shopping.orders, today()).length)
   if (late === 0) return null

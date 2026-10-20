@@ -16,7 +16,7 @@ export interface WishRow {
   card: PokemonCard
   /** Prix indicatif (Cardmarket) ; `null` sans prix. */
   price: number | null
-  /** Écart du prix avec sa moyenne sur 30 jours (−0,18 : 18 % en dessous) ; `null` sans les deux. */
+  /** Écart avec le prix d'il y a 30 jours (−0,18 : 18 % moins cher) ; `null` sans ce prix. */
   change30: number | null
 }
 

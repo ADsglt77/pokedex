@@ -60,7 +60,11 @@ export interface PokemonCard {
   dexIds: number[]
   /** « Bulbizarre (SV2a 166) » : son nom, puis le code de l'extension et le numéro (d'où l'image). */
   reference: string
-  /** Son image : chez Pokécardex en deux tailles, ou l'adresse collée (la même pour les deux) ; `null` sans image. */
+  /**
+   * Son image, en deux tailles : servie par le site à un chemin neutre
+   * (`/images/cards/SV2A/166-md.webp`, `lib/card-images.ts`), ou l'adresse collée (la même pour
+   * les deux) ; `null` sans image.
+   */
   image: CardImage | null
   /** Id du produit Cardmarket (`idProduct`), pour son prix et le lien vers sa page. */
   cardmarket?: number

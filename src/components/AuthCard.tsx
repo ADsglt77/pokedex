@@ -10,9 +10,9 @@ import styles from './AuthCard.module.css'
  * Une page du compte (connexion, inscription), hors de la coquille : son `<main>`, la marque
  * (logo et nom) au-dessus d'une carte seule, centrée, son titre (le `h1` de la page) et son
  * chapeau, puis son formulaire (`children`, ses champs) et son bouton (`submit`), et le lien
- * vers l'autre page (`other`) ; dessous, le pied de page (les mentions légales). `onSubmit` envoie
- * le formulaire et rend ce qui l'a refusé, montré au-dessus des champs, ou `null` ; le bouton est en
- * chargement jusque-là.
+ * vers l'autre page (`other`) ; dessous, le pied de page (les mentions légales). `onSubmit`
+ * envoie le formulaire et rend ce qui l'a refusé, montré au-dessus des champs, ou `null` ; le
+ * bouton est en chargement jusque-là.
  */
 export function AuthCard({
   title,
