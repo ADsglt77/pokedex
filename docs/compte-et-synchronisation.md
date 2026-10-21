@@ -15,9 +15,12 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   adresse) et un mot de passe (8 caractères au moins). Pas de mot de passe oublié : le mot de passe
   perdu, le compte l'est aussi (l'inscription et Mon compte le disent). Les mentions légales et la
   confidentialité (`/mentions-legales`, `LegalPage`, liées du pied de chaque page,
-  `SiteDisclaimer`) disent ce que le site garde, pourquoi, combien de temps et qui le voit : à tenir
-  à jour avec le serveur ; l'hébergeur et le contact viennent de `config/legal.ts`, à remplir avant
-  la mise en ligne. Se connecter : `/connexion`
+  `SiteDisclaimer`) disent ce que le site garde, pourquoi et sur quelle base légale (le service
+  demandé ; l'intérêt légitime pour le journal), combien de temps, qui le voit (le serveur est au
+  Canada, hors de l'Union européenne : la décision d'adéquation), ce qu'une image collée révèle
+  (l'adresse IP de qui la voit, à son site) et comment s'opposer ou limiter : à tenir à jour avec
+  le serveur ; le site, l'hébergeur, où est le serveur et le contact viennent de `config/legal.ts`.
+  Se connecter : `/connexion`
   (`LoginPage`), le pseudo (n'importe quelles majuscules) et le mot de passe (`signIn.username`) ;
   elle ramène à la page d'où l'on venait (`?retour=`, filtres compris ; seulement une adresse du
   site : même origine, `/\exemple.fr` refusé).

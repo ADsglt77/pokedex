@@ -14,9 +14,11 @@
   margin-top: var(--camply-space-2);
 }
 
+/* Des listes à puces (celles de l'app n'en ont pas, `global.css`) : lues comme des listes. */
 .section ul {
   display: flex;
   flex-direction: column;
   gap: var(--camply-space-2);
   padding-left: 1.25rem;
+  list-style: disc;
 }
