@@ -110,10 +110,17 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
   déduit du code de la référence (série en majuscules sans tiret, SV-P → SVP ; numéro sans zéro),
   sans certitude. La collection garde ces chemins (`isFoundImage` : une image retrouvée, qui suit
   la référence) ; aucun ne nomme la source. Une image absente est copiée à la demande par l'API
-  (une source qui ne l'a pas : 404, la carte de substitution). Une adresse collée du serveur
-  d'images de la source est refusée à la saisie, et jamais affichée (`isSourceImage` : son accord,
+  (une source qui ne l'a pas : 404, la carte de substitution). Une adresse collée de chez la
+  source (son site ou ses serveurs d'images) est refusée à la saisie, et jamais affichée (`isSourceImage` : son accord,
   jamais une image affichée depuis chez elle ; une carte qui en garde une montre la carte de
-  substitution, jusqu'à ce qu'elle soit corrigée). Réglages › Sauvegarde › « Chercher
+  substitution, jusqu'à ce qu'elle soit corrigée). Le code que reçoit le navigateur ne la nomme
+  pas : `isSourceImage` compare l'empreinte (FNV-1a sur 32 bits, `fingerprint`) du nom de domaine
+  de l'adresse, et de chacun de ses domaines parents, à celles des domaines de Pokécardex
+  (`SOURCE_DOMAINS`) : `0xdef02a18` pokecardex.com (son site, `www.` compris : un domaine parent),
+  `0x6e583970` pokecardex.b-cdn.net (ses logos et icônes), `0x82cad49f` pokecardex-scans.b-cdn.net
+  (ses scans ; les adresses que lit l'API des données, `src/images.ts` de son dépôt). Un nouveau
+  domaine de la source s'y ajoute par son empreinte, jamais par son nom ; après `bun run build`, le
+  nom ne doit apparaître nulle part dans `dist/`. Réglages › Sauvegarde › « Chercher
   les images » cherche d'un coup celles des cartes sans image. `findCardImage` (`lib/card-catalog.ts`) : l'image du catalogue pour
   cette référence (lue dans sa série : `/api/catalog/sets`, puis `/api/catalog/sets/<code>`), sinon celle que la référence désigne, si elle se charge (sans réponse en 10 s :
   absente, pour ne pas bloquer l'enregistrement) ; la saisie le dit, sans nommer de source (aucun
