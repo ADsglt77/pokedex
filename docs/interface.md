@@ -19,9 +19,13 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   `--dark-icon-filter` : les icônes de rareté noires, inversées en sombre ; `--link` et
   `--chart-*` : en clair, liens et courbes à l'encre, liens soulignés de rouge, pour que le rouge
   reste la marque et l'action principale, pas une alerte ; le choix d'un `SegmentedControl` y est un
-  bouton blanc en relief). Le logo est une Poké Ball plate (`Logo`, `AppShell` ; couleurs
-  `--brand-*`, les mêmes dans les deux thèmes), la même que l'icône de l'onglet
-  (`public/favicon.svg`).
+  bouton blanc en relief). Le site s'appelle **PokéCodex** (cette graphie) : le nom à côté du logo
+  (la coquille, les pages seules, celles du compte, la page d'erreur), le titre des onglets
+  (« Pikachu – PokéCodex », `pageTitle`), le manifeste et l'aperçu d'un lien (`index.html`,
+  `SITE_SUMMARY` de `server/vitrine.ts`). « Mon Pokédex » n'est que le Pokédex de l'utilisateur :
+  le titre de l'accueil, le bouton du Pokédex public pour qui est connecté. Le logo est une Poké
+  Ball plate (`Logo`, `AppShell` ; couleurs `--brand-*`, les mêmes dans les deux thèmes), la même
+  que l'icône de l'onglet (`public/favicon.svg`).
 - Filtres du Pokédex dans l'adresse : `q` (raccourci « / »), `generation`, `type`, `possession` (`owned` : débloqués,
   `missing` : à débloquer, `ordered`), `card` (`with` : avec carte, `without` : sans ;
   à compléter : `no-image`, `no-cardmarket`, `no-paid` : possédée sans prix payé), `order=desc` ;
@@ -100,8 +104,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   « Dans le Pokédex » à part sur grand écran ;
   seul effet appuyé de l'app, la carte en grand suit la souris et la lumière y glisse
   (`CardStage` : variables CSS, sans rendu React ; ni au toucher ni en mouvement réduit). Un lien
-  partagé a son aperçu (`og:` dans `index.html`, l'icône pour image ; celui du Pokédex public, son
-  titre et sa progression). Les
+  partagé a son aperçu (`og:` dans `index.html`, l'adresse du site et l'icône pour image ; celui du
+  Pokédex public, son titre et sa progression). Les
   courbes (`PriceChart`, `lib/chart.ts`) vont jour par jour, sur la période choisie (7 jours,
   30 jours, 1 an, tout ; 7 jours au moins, l'axe la couvre en entier) : Valeur › Évolution (valeur
   de la collection, Pokémon débloqués, dépenses cumulées depuis le début de la période) et le prix

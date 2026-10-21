@@ -423,14 +423,14 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
     // site, jamais celui d'un compte.
     const preview = await server.handle(new Request(`${ORIGIN}/api/vitrine/connexion/apercu`))
     expect(preview.status).toBe(200)
-    expect(await preview.text()).toContain('<title>Mon Pokédex</title>')
+    expect(await preview.text()).toContain('<title>PokéCodex</title>')
     // Un compte qui porterait une adresse du site (créé avant qu'elle ne le devienne) : son
     // Pokédex n'y est jamais montré.
     const misty = await createAccount('Misty')
     app.query('UPDATE "user" SET username = ? WHERE id = ?').run('pokedex', misty.user!.id)
     expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/pokedex`))).status).toBe(404)
     const hidden = await server.handle(new Request(`${ORIGIN}/api/vitrine/pokedex/apercu`))
-    expect(await hidden.text()).toContain('<title>Mon Pokédex</title>')
+    expect(await hidden.text()).toContain('<title>PokéCodex</title>')
   })
 
   test('sans session : les cartes, jamais un prix payé, une commande ni un statut « commandée »', async () => {

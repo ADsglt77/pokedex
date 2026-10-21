@@ -29,19 +29,8 @@
   text-decoration: none;
 }
 
-.brandMine {
-  color: var(--camply-text-muted);
-  font-weight: 600;
-}
-
 /* La barre du haut d'un petit téléphone : le logo et quatre boutons tiennent sur 320 px. Sous
-   24rem, « Mon » s'efface ; sous 22.5rem, le nom aussi, mais il reste lu (`.visually-hidden`). */
-@media (max-width: 23.99rem) {
-  .brandMine {
-    display: none;
-  }
-}
-
+   22.5rem, le nom s'efface, mais il reste lu (`.visually-hidden`). */
 @media (max-width: 22.49rem) {
   .brandName {
     position: absolute;

@@ -3,23 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Mon Pokédex de cartes Pokémon japonaises." />
+    <meta
+      name="description"
+      content="Un Pokédex de cartes Pokémon japonaises : une carte par Pokémon, à collectionner."
+    />
     <meta name="theme-color" content="#141414" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- Installable sur téléphone et ordinateur (manifeste, icônes ; iOS : son icône à lui). -->
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <!-- L'aperçu d'un lien partagé (Discord, WhatsApp…) ; nginx rend l'adresse de l'image complète. -->
+    <!-- L'aperçu d'un lien partagé (Discord, WhatsApp…), celui du site : le même que fait le
+         serveur pour les robots d'aperçu (`SITE_SUMMARY`, `server/vitrine.ts`) ; nginx rend
+         l'adresse de l'image complète. -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Mon Pokédex" />
-    <meta property="og:title" content="Mon Pokédex" />
+    <meta property="og:site_name" content="PokéCodex" />
+    <meta property="og:title" content="PokéCodex" />
     <meta
       property="og:description"
-      content="Un Pokédex de cartes Pokémon japonaises : une carte par Pokémon."
+      content="Un Pokédex de cartes Pokémon japonaises : une carte par Pokémon, à collectionner."
     />
+    <meta property="og:url" content="https://pokecodex.fr/" />
     <meta property="og:image" content="/icons/icon-512.png" />
     <meta name="twitter:card" content="summary" />
-    <title>Mon Pokédex</title>
+    <title>PokéCodex</title>
     <!-- Le thème, avant le premier affichage : un script bloquant, mais un fichier du site. -->
     <script src="/theme.js"></script>
     <!-- Les espèces, que l'app attend avant tout affichage (`main.tsx`) : demandées dès maintenant,

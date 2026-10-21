@@ -63,9 +63,12 @@ export function vitrineSummary(owner: string, collection: CollectionData) {
   }
 }
 
-/** L'aperçu d'une adresse qui n'est pas un Pokédex public : celui du site. */
+/**
+ * L'aperçu d'une adresse qui n'est pas un Pokédex public : celui du site, PokéCodex (le même que
+ * dans `index.html`).
+ */
 const SITE_SUMMARY = {
-  title: 'Mon Pokédex',
+  title: 'PokéCodex',
   description: 'Un Pokédex de cartes Pokémon japonaises : une carte par Pokémon, à collectionner.',
 }
 
@@ -211,7 +214,7 @@ export function vitrineRoutes(app: Database, origin: string) {
           `<meta property="${property}" content="${escape(content)}">`
         const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${escape(title)}</title>${[
           meta('og:type', 'website'),
-          meta('og:site_name', 'Mon Pokédex'),
+          meta('og:site_name', 'PokéCodex'),
           meta('og:title', title),
           meta('og:description', description),
           meta('og:url', url),

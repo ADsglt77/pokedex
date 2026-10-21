@@ -21,7 +21,7 @@ export function StandalonePage({
   return (
     <div className={cx('container', styles.page)}>
       <header className={styles.header}>
-        <Logo>Pokédex</Logo>
+        <Logo>PokéCodex</Logo>
         {actions}
       </header>
       <main className={cx(styles.main, className)}>{children}</main>

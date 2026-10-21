@@ -44,7 +44,7 @@ export function AuthCard({
   return (
     <main className={styles.page}>
       <title>{pageTitle(title)}</title>
-      <Logo>Mon Pokédex</Logo>
+      <Logo>PokéCodex</Logo>
       <Card padding="lg" className={styles.card}>
         <CardHeader>
           <CardTitle headingLevel={1} className={styles.title}>

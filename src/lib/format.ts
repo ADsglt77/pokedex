@@ -167,5 +167,5 @@ export function statusCaption(status: CardStatus | null, acquiredAt: string | nu
 export const toOptions = <T extends string>(labels: Record<T, string>) =>
   (Object.entries(labels) as [T, string][]).map(([value, label]) => ({ value, label }))
 
-/** Titre de l'onglet : « Pikachu – Mon Pokédex ». */
-export const pageTitle = (name?: string) => (name ? `${name} – Mon Pokédex` : 'Mon Pokédex')
+/** Titre de l'onglet : « Pikachu – PokéCodex », le nom du site. */
+export const pageTitle = (name?: string) => (name ? `${name} – PokéCodex` : 'PokéCodex')

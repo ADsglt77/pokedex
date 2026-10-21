@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Mon Pokédex",
-  "short_name": "Pokédex",
-  "description": "Mon Pokédex de cartes Pokémon japonaises.",
+  "name": "PokéCodex",
+  "short_name": "PokéCodex",
+  "description": "Un Pokédex de cartes Pokémon japonaises : une carte par Pokémon, à collectionner.",
   "lang": "fr",
   "start_url": "/",
   "scope": "/",
