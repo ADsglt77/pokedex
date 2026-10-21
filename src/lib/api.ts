@@ -2,7 +2,9 @@
  * La lecture de l'API du site (`/api/…`, `server/app.ts` ; les données de référence : l'API des
  * données, que nginx joint) : les espèces, le catalogue, les prix et leur historique, les lignes
  * d'une liste de souhaits Cardmarket, l'état des tâches de l'API des données. Facultative, sauf les
- * espèces (`main.tsx`) : sans serveur, ou base encore vide, l'app s'affiche sans ces données.
+ * espèces pour la coquille et le Pokédex public (`router.tsx`) : sans serveur, ou base encore vide,
+ * l'app s'affiche sans ces données, et la connexion, l'inscription et les mentions légales sans
+ * rien d'elle.
  */
 
 import { settled } from '@/lib/settled'

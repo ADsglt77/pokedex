@@ -126,7 +126,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   légales ; les autres adresses de l'app, le Pokédex public de chaque compte compris, reçoivent
   `X-Robots-Tag: noindex` de nginx (`docs/deploiement.md`), et `public/robots.txt` écarte `/api/`.
 - Performance (mesurer en production, `bun run build` puis `bun run preview` : `bun dev` est 3 à 4
-  fois plus lent ; mesuré en octobre 2026 sur une collection de 1 025 cartes, avant → après) : le
+  fois plus lent ; mesuré en octobre 2026 sur une collection de 1 025 cartes, avant → après) : au
+  démarrage, rien n'attend le script (le compte préchargé par `index.html`, les espèces par nginx
+  quand le navigateur a une session : `bun run preview` n'a pas ce second préchargement ; une
+  fois le compte connu, elles partent avec la collection, `signIn`), et la connexion, l'inscription
+  et les mentions légales ne demandent pas les espèces (`docs/compte-et-synchronisation.md`). Le
   Pokédex affiche 1 025 pochettes. Seules celles à l'écran sont dessinées (`content-visibility`, de
   même pour la liste d'achats et les cartes du catalogue), et une génération hors de l'écran ne
   compte pas dans la mise en page (`content-visibility` sur la section, sa hauteur estimée d'après

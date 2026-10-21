@@ -1,4 +1,4 @@
-import { Button, EmptyState, ToastProvider } from '@camply/ui'
+import { ToastProvider } from '@camply/ui'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router/dom'
@@ -14,8 +14,8 @@ import '@fontsource/space-grotesk/latin-700.css'
 import '@camply/ui/styles.css'
 import './styles/theme.css'
 import './styles/global.css'
+import { PokedexUnavailable } from './components/PokedexUnavailable'
 import { loadAccount } from './lib/account'
-import { loadSpecies } from './lib/species'
 import { createRouter } from './router'
 import { signIn } from './store/account'
 
@@ -37,12 +37,13 @@ addEventListener('vite:preloadError', (event) => {
 const root = createRoot(document.getElementById('root')!)
 
 // Point d'entrée : polices, styles camply, le thème (ses couleurs redéfinies), puis ceux de l'app.
-// Les espèces viennent du serveur avant tout affichage (toutes les pages en ont besoin), avec qui
-// est connecté (personne : la connexion, ou le Pokédex public), puis sa collection ; puis
-// notifications et routeur. D'ici là, `#root` montre le logo (`index.html`, qui demande aussi les
-// espèces et le compte avant ce script).
-Promise.all([loadSpecies(), loadAccount()]).then(async ([species, account]) => {
-  const loaded = species && account !== undefined && (!account || (await signIn(account)))
+// Qui est connecté vient du serveur avant tout affichage (personne : la connexion, ou le Pokédex
+// public), puis sa collection (et ses espèces, en même temps : `signIn`) ; puis notifications et
+// routeur. D'ici là, `#root` montre le logo (`index.html`, qui demande aussi le compte avant ce
+// script). Les espèces, l'API des données, ne sont attendues que par les pages qui les montrent
+// (`router.tsx`) : la connexion, l'inscription et les mentions légales s'affichent sans elles.
+loadAccount().then(async (account) => {
+  const loaded = account !== undefined && (!account || (await signIn(account)))
   root.render(
     <StrictMode>
       {loaded ? (
@@ -50,14 +51,7 @@ Promise.all([loadSpecies(), loadAccount()]).then(async ([species, account]) => {
           <RouterProvider router={createRouter()} />
         </ToastProvider>
       ) : (
-        <main className="container">
-          <EmptyState
-            title="Le Pokédex ne peut pas s’afficher"
-            description="Le serveur ne répond pas, ou ses données ne sont pas encore prêtes (premier démarrage). Réessayez dans un instant."
-            headingLevel={2}
-            actions={<Button onClick={() => location.reload()}>Réessayer</Button>}
-          />
-        </main>
+        <PokedexUnavailable />
       )}
     </StrictMode>,
   )

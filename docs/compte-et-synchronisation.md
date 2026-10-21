@@ -46,10 +46,16 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
 - **L'app ne s'ouvre que connecté** (décision de l'utilisateur, octobre 2026) : le compte connecté
   du store (`account` : son id et son pseudo ; `null` : personne, `store/account.ts`), fixé au
   démarrage avant le routeur (`loadAccount` lit `GET /api/account?demarrage`, qui dit qui est
-  connecté ; `index.html` le précharge, avec les espèces, sans attendre le script ; et `main.tsx`
-  lit alors sa collection, `signIn` ; sans réponse du serveur en 15 s, « Le Pokédex ne peut pas
-  s'afficher »), puis à la connexion et à la création du compte (`signIn`, d'après la réponse de
-  Better Auth : la page attend la collection avant d'ouvrir l'app) et à la déconnexion. Le
+  connecté ; `index.html` le précharge, sans attendre le script ; et `main.tsx` lit alors sa
+  collection, `signIn` ; sans réponse du serveur en 15 s, « Le Pokédex ne peut pas s'afficher »,
+  `PokedexUnavailable`), puis à la connexion et à la création du compte (`signIn`, d'après la
+  réponse de Better Auth : la page attend la collection avant d'ouvrir l'app) et à la
+  déconnexion. Les espèces (l'API des données) ne sont attendues que par la coquille et le Pokédex
+  public (`needSpecies`, le chargement de leur route, `router.tsx` ; sans elles, « Le Pokédex ne
+  peut pas s'afficher », par `ErrorPage`) : la connexion, l'inscription et les mentions légales
+  s'affichent sans l'API des données, et un visiteur ne les télécharge pas. Connecté, elles sont
+  demandées avec la collection (`signIn`), et nginx les fait précharger avec la page quand le
+  navigateur a une session (`Link`, d'après le cookie de Better Auth). Le
   routeur, le menu du compte et le Pokédex public lisent le store (`account`), jamais `useSession`
   de Better Auth, qui redemande la session à chaque montage. Pas connecté, `/`
   mène à `/connexion` et toute autre page de la coquille à `/connexion?retour=…` (`appLoader`,

@@ -45,6 +45,16 @@ map $request_uri $robots {
     "~^/(connexion|inscription|mentions-legales)?(\?|$)" "";
 }
 
+# Les espèces, que la coquille de l'app attend (`router.tsx`) : préchargées avec la page quand le
+# navigateur a une session (le cookie de Better Auth, `__Secure-` en https), sans attendre le
+# script (`Link`, comme une balise `preload` de `index.html` ; `crossorigin` : la même demande que
+# le `fetch` de l'app). Jamais pour un visiteur : la connexion s'en passe. Une valeur vide : pas
+# d'en-tête.
+map $http_cookie $species_preload {
+    default "";
+    "~better-auth\.session_token=" "</api/species>; rel=preload; as=fetch; crossorigin";
+}
+
 server {
     listen 80;
     root /usr/share/nginx/html;
@@ -196,13 +206,14 @@ server {
 
     # La page de l'app, pour toute adresse de l'app (`location /`, plus bas) : toujours revalidée,
     # pour qu'un déploiement soit vu tout de suite (sa date gardée malgré `sub_filter`, pour un
-    # 304) ; hors des moteurs de recherche, sauf les pages publiques (`$robots`). Les aperçus de
-    # partage veulent l'adresse complète de leur image : celle du site demandé (Caddy le sert en
-    # https).
+    # 304) ; hors des moteurs de recherche, sauf les pages publiques (`$robots`) ; les espèces
+    # préchargées pour qui a une session (`$species_preload`). Les aperçus de partage veulent
+    # l'adresse complète de leur image : celle du site demandé (Caddy le sert en https).
     location = /index.html {
         include /etc/nginx/security-headers.conf;
         add_header Cache-Control "no-cache";
         add_header X-Robots-Tag $robots;
+        add_header Link $species_preload;
         sub_filter 'property="og:image" content="/' 'property="og:image" content="https://$host/';
         sub_filter_last_modified on;
     }

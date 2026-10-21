@@ -1,8 +1,9 @@
 import type { ComponentType } from 'react'
-import { createBrowserRouter, redirect, type LoaderFunctionArgs } from 'react-router'
+import { createBrowserRouter, data, redirect, type LoaderFunctionArgs } from 'react-router'
 import { AppShell } from '@/components/AppShell'
 import { isPseudo, loginPath } from '@/lib/account'
 import { getJson } from '@/lib/api'
+import { loadSpecies } from '@/lib/species'
 import { ErrorPage } from '@/pages/ErrorPage'
 import { HomePage } from '@/pages/home/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
@@ -11,13 +12,25 @@ import { PokemonPage } from '@/pages/pokemon/PokemonPage'
 import { useAccountStore } from '@/store/account'
 
 /**
+ * Les espèces (l'API des données), avant une page qui les montre : la coquille, un Pokédex public.
+ * Sans elles, « Le Pokédex ne peut pas s'afficher » (503, `ErrorPage`). La connexion,
+ * l'inscription et les mentions légales s'en passent.
+ */
+async function needSpecies() {
+  if (!(await loadSpecies())) throw data(null, { status: 503 })
+}
+
+/**
  * Les pages de l'app : connecté seulement. Un visiteur arrive sur la connexion ; une autre page (un
  * lien gardé, une session expirée) y mène aussi, et elle y ramène.
  */
-function appLoader({ request }: LoaderFunctionArgs) {
-  if (useAccountStore.getState().account) return null
-  const { pathname, search } = new URL(request.url)
-  return redirect(pathname === '/' ? '/connexion' : loginPath(pathname + search))
+async function appLoader({ request }: LoaderFunctionArgs) {
+  if (!useAccountStore.getState().account) {
+    const { pathname, search } = new URL(request.url)
+    return redirect(pathname === '/' ? '/connexion' : loginPath(pathname + search))
+  }
+  await needSpecies()
+  return null
 }
 
 /** Une page chargée à la demande : son module, et le nom de son composant. */
@@ -34,8 +47,9 @@ const page = <M,>(module: Promise<M>, name: keyof M) =>
  * d'erreur (une erreur d'affichage remplace toute la page, coquille comprise, par ErrorPage) et
  * l'attente du premier chargement. L'accueil, le Pokédex et les fiches sont dans le premier
  * chargement ; les autres pages, plus lourdes (achats, valeur…), sont chargées à leur première
- * ouverture (`page`). Créé une fois le compte connu (`main.tsx`) : le routeur lit la page ouverte
- * dès sa création.
+ * ouverture (`page`). La coquille et le Pokédex public attendent les espèces (`needSpecies`), pas
+ * les autres pages. Créé une fois le compte connu (`main.tsx`) : le routeur lit la page ouverte dès
+ * sa création.
  */
 export const createRouter = () =>
   createBrowserRouter([
@@ -58,11 +72,13 @@ export const createRouter = () =>
         },
         {
           path: ':pseudo',
-          // Ses données demandées en même temps que la page, pas après elle (`getJson` garde la
-          // réponse, que la page lit).
-          loader: ({ params }) => {
+          // Ses données demandées en même temps que la page et les espèces, pas après elles
+          // (`getJson` garde la réponse, que la page lit).
+          loader: async ({ params }) => {
             const pseudo = params.pseudo!
-            if (isPseudo(pseudo)) void getJson(`/api/vitrine/${pseudo}`)
+            if (!isPseudo(pseudo)) return null
+            void getJson(`/api/vitrine/${pseudo}`)
+            await needSpecies()
             return null
           },
           lazy: () => page(import('@/pages/VitrinePage'), 'VitrinePage'),

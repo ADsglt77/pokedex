@@ -1,7 +1,7 @@
 /**
  * Les 1 025 espèces, données par l'API des données (`/api/species`, d'après PokéAPI) avant
- * le premier affichage (`main.tsx`), et leurs détails à la demande. Les cartes, elles, sont celles
- * que l'utilisateur ajoute (`customCards`).
+ * la première page qui les montre (la coquille, un Pokédex public : `router.tsx`), et leurs
+ * détails à la demande. Les cartes, elles, sont celles que l'utilisateur ajoute (`customCards`).
  */
 
 import { derived, getJson } from '@/lib/api'

@@ -16,6 +16,7 @@ import { create } from 'zustand'
 import { forget } from '@/lib/api'
 import { emptyCollection } from '@/lib/collection'
 import { emptyShopping } from '@/lib/orders'
+import { loadSpecies } from '@/lib/species'
 import { documentProblem, readCollection, readShopping } from '@/lib/transfer'
 import { useCollectionStore } from '@/store/collection'
 import { currentDocument, replaceDocument } from '@/store/document'
@@ -154,10 +155,12 @@ const forgetVitrine = (name: string) => forget(`/api/vitrine/${name.toLowerCase(
 /**
  * Connecté (démarrage, connexion, création du compte) : ce qu'un autre compte (une session
  * expirée) laissait en mémoire part d'abord, envois en attente compris ; puis la collection du
- * compte est lue, et le compte n'est posé qu'une fois elle lue ; `false` sans elle.
+ * compte est lue, et le compte n'est posé qu'une fois elle lue ; `false` sans elle. Les espèces,
+ * que la coquille attendra (`router.tsx`), sont demandées en même temps.
  */
 export async function signIn(account: AccountUser) {
   await leave()
+  void loadSpecies()
   if (!(await inTurn(load))) return false
   forgetVitrine(account.name)
   useAccountStore.setState({ account, status: 'saved', refusal: null })

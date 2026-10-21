@@ -28,12 +28,12 @@
     <title>PokéCodex</title>
     <!-- Le thème, avant le premier affichage : un script bloquant, mais un fichier du site. -->
     <script src="/theme.js"></script>
-    <!-- Les espèces, que l'app attend avant tout affichage (`main.tsx`) : demandées dès maintenant,
-         sans attendre le script. `crossorigin` : la même demande que le `fetch` de `getJson`
-         (`lib/api.ts` : mode cors, cookies du site seulement), sinon le navigateur la referait. -->
-    <link rel="preload" href="/api/species" as="fetch" crossorigin />
-    <!-- Le compte (qui est connecté), que l'app attend aussi (`loadAccount`) : demandé dès
-         maintenant. -->
+    <!-- Le compte (qui est connecté), que l'app attend avant tout affichage (`loadAccount`,
+         `main.tsx`) : demandé dès maintenant, sans attendre le script. `crossorigin` : la même
+         demande que son `fetch` (mode cors, cookies du site seulement), sinon le navigateur la
+         referait. Les espèces, elles, ne servent qu'une fois connecté (et au Pokédex public) :
+         nginx les fait précharger quand le navigateur a une session (l'en-tête `Link`,
+         `deploy/nginx.conf.template`) ; un visiteur sur la connexion ne les télécharge pas. -->
     <link rel="preload" href="/api/account?demarrage" as="fetch" crossorigin />
     <!-- Les polices du texte et des titres, que le navigateur ne découvrirait qu'au premier
          affichage (le texte changerait alors de police sous les yeux). -->
