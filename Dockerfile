@@ -28,7 +28,8 @@ COPY src src
 ENV NODE_ENV=production HOST=0.0.0.0 DATA_DIR=/data BACKUP_DIR=/backups
 # Sans droits d'administrateur (l'utilisateur `bun` de l'image) : une faille du serveur ne donnerait
 # pas la main sur le conteneur. Les points de montage lui appartiennent, et un volume neuf en hérite
-# (un volume créé avant, par un conteneur administrateur : voir le README).
+# (un volume créé avant, par un conteneur administrateur : `docker compose run --rm --no-deps
+# --user root --cap-add CHOWN server chown -R bun:bun /data /backups`).
 RUN mkdir -p /data /backups && chown bun:bun /data /backups
 USER bun
 CMD ["bun", "server/index.ts"]
