@@ -180,8 +180,8 @@ Actions ; son en-tête dit comment le lancer à chaque push sur `main`) : GitHub
 en SSH, fait `git pull` et reconstruit le conteneur. La construction lance d'abord `bun test`,
 `bun lint` et `nginx -t`, et rafraîchit les images de base ; si elle échoue, test compris,
 l'ancienne version reste en ligne. Une fois les conteneurs redémarrés, le workflow vérifie que le
-site et son API répondent (en rouge sinon). Secrets à créer dans le dépôt (Settings › Secrets and
-variables › Actions) :
+site et son API répondent, en local puis à https://pokecodex.fr, à travers Caddy (en rouge
+sinon). Secrets à créer dans le dépôt (Settings › Secrets and variables › Actions) :
 
 | Secret | Valeur |
 |---|---|
@@ -218,7 +218,8 @@ restrict,command="cd /home/moi/pokedex && git pull --ff-only && sh deploy/deploy
 Protégez aussi le workflow par un « Environment » GitHub avec un relecteur obligatoire.
 
 **Revenir à la version d'avant** (un déploiement en rouge, une erreur vue après coup) : les images
-d'avant restent une semaine (`deploy/deploy.sh`), la reconstruction est donc rapide.
+d'avant et leur cache de construction restent une semaine (`deploy/deploy.sh`), la reconstruction
+est donc rapide.
 
 ```sh
 git log --oneline -5

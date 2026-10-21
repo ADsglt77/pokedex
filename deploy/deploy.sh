@@ -1,7 +1,7 @@
 #!/bin/sh
 # Le déploiement sur le VPS, une fois le code à jour (`git pull --ff-only`), lancé par le workflow
 # `.github/workflows/deploy.yml` (ou par la clé de déploiement restreinte : README) : reconstruit et
-# redémarre les conteneurs, puis vérifie que le site répond.
+# redémarre les conteneurs, puis vérifie que le site répond, en local puis à son adresse publique.
 set -e
 cd "$(dirname "$0")/.."
 
@@ -27,6 +27,15 @@ if [ -z "$ok" ]; then
   exit 1
 fi
 
-# Les images d'avant restent une semaine : un retour arrière se reconstruit vite (README, « Revenir
-# à la version d'avant »).
+# Puis par son adresse publique, à travers Caddy (son certificat, son relais vers le port local) :
+# un Caddyfile cassé ou un certificat périmé font aussi échouer le déploiement.
+if ! curl -fsS -o /dev/null https://pokecodex.fr/api/account; then
+  echo "Le site ne répond pas à https://pokecodex.fr (voir Caddy : systemctl status caddy)."
+  exit 1
+fi
+
+# Les images d'avant et le cache de leur construction restent une semaine : un retour arrière se
+# reconstruit vite (README, « Revenir à la version d'avant ») ; plus vieux, ils remplissaient le
+# disque.
 docker image prune -f --filter until=168h
+docker builder prune -f --filter until=168h
