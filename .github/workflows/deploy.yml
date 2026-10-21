@@ -1,7 +1,7 @@
 # Lancé à la main (onglet Actions de GitHub, « Run workflow ») : le VPS récupère le code et
 # reconstruit le conteneur. Si la construction échoue, l'ancien conteneur continue de tourner.
-# Le domaine n'est pas encore prêt : quand il le sera, remettre le déploiement à chaque push sur
-# main en ajoutant, au-dessus de `workflow_dispatch` :
+# Le site est en ligne, à https://pokecodex.fr. Pour déployer à chaque push sur main, ajouter
+# au-dessus de `workflow_dispatch` :
 #   push:
 #     branches: [main]
 name: Déploiement

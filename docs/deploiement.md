@@ -41,8 +41,10 @@ Les variables d'environnement :
 | `NO_COLOR` | aucun | `server` | Un journal sans couleurs |
 
 Le serveur tourne sans droits d'administrateur (`USER bun`, `Dockerfile` : les points de montage
-lui appartiennent). Les commandes du README qui copient vers ou depuis un dossier du VPS passent
-`--user root` (et rendent `app.db` à `bun` après une restauration). nginx sert le manifeste de
+lui appartiennent), et sans aucun droit (`cap_drop: ALL`, `compose.yaml`) : même `--user root`, un
+conteneur n'écrirait pas dans un dossier du VPS. Le README sort donc les sauvegardes par
+`docker compose cp`, au nom de qui le lance, et les restaure en `bun`, à qui la base appartient
+(pas de `chown`). nginx sert le manifeste de
 l'app avec son type (`location = /manifest.webmanifest`) et rend complète l'adresse de l'image
 d'aperçu (`sub_filter` sur `og:image`, d'après le nom demandé), sans perdre la date de la page
 (`sub_filter_last_modified` : un navigateur qui la revalide reçoit un 304).

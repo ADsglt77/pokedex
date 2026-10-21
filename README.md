@@ -1,10 +1,10 @@
-# Pokédex
+# PokéCodex
 
-Pokédex personnel de cartes Pokémon japonaises : pour chacun des 1 025 Pokémon, on ajoute la
-carte que l'on veut (sa référence, d'où son image est retrouvée, et son id Cardmarket pour suivre
-son prix) ; le Pokémon se débloque quand on la possède. React + Vite + TypeScript, interface
-[`@camply/ui`](https://www.npmjs.com/package/@camply/ui) ; espèces, cartes, images et prix relus
-par l'API des données, un dépôt à part (plus bas).
+Un Pokédex personnel de cartes Pokémon japonaises, en ligne à https://pokecodex.fr : pour chacun
+des 1 025 Pokémon, on ajoute la carte que l'on veut (sa référence, d'où son image est retrouvée,
+et son id Cardmarket pour suivre son prix) ; le Pokémon se débloque quand on la possède. React +
+Vite + TypeScript, interface [`@camply/ui`](https://www.npmjs.com/package/@camply/ui) ; espèces,
+cartes, images et prix relus par l'API des données, un dépôt à part (plus bas).
 
 ```sh
 bun install
@@ -107,7 +107,7 @@ aussitôt ; si le serveur ne répond pas, le menu du compte le dit et elle repar
 - [ ] Les secrets GitHub du déploiement, `VPS_FINGERPRINT` compris (plus bas).
 - [ ] Les sauvegardes copiées hors du VPS chaque nuit (section Sauvegardes).
 - [ ] La surveillance : un service gratuit (UptimeRobot, Healthchecks…) qui demande
-      `https://votre-domaine/api/health` toutes les 5 minutes et vous écrit s'il ne répond plus
+      `https://pokecodex.fr/api/health` toutes les 5 minutes et vous écrit s'il ne répond plus
       200 (voir plus bas).
 - [ ] Sur téléphone, « Ajouter à l'écran d'accueil » : le site s'ouvre comme une application
       (il demande le réseau).
@@ -153,16 +153,16 @@ collections ; `backups`).
    refuse de démarrer) : l'adresse publique du site, en https, la clé qui signe les sessions, et le
    token du site pour l'API des données (celui de son `API_TOKENS`, `pokedex:<token>`).
    ```sh
-   echo "BETTER_AUTH_URL=https://pokedex.ton-domaine.fr" > .env
+   echo "BETTER_AUTH_URL=https://pokecodex.fr" > .env
    echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
    echo "DATA_API_TOKEN=<le token du site>" >> .env
    chmod 600 .env
    docker compose up -d --build
    ```
-3. Dans la zone DNS OVH, remplacer l'adresse de redirection par l'IPv4 du VPS : un enregistrement
-   `A` pour `pokecodex.fr`, puis un `CNAME` `www` vers `pokecodex.fr.`. Garder les enregistrements
-   `MX` et SPF si la messagerie OVH est utilisée. Une fois le DNS propagé, installer le Caddyfile
-   fourni et le recharger :
+3. Dans la zone DNS OVH, remplacer l'adresse de redirection par l'IPv4 du VPS : deux
+   enregistrements `A`, l'un pour `pokecodex.fr`, l'autre pour `www.pokecodex.fr` (Caddy le
+   redirige). Garder les enregistrements `MX` et SPF si la messagerie OVH est utilisée. Une fois
+   le DNS propagé, installer le Caddyfile fourni et le recharger :
    ```sh
    sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
    sudo caddy validate --config /etc/caddy/Caddyfile
@@ -176,18 +176,18 @@ collections ; `backups`).
    change dans Réglages › Compte & partage › Mon compte, en donnant l'actuel.
 
 **Ensuite, à chaque déploiement** (`.github/workflows/deploy.yml`, lancé à la main depuis l'onglet
-Actions tant que le domaine n'est pas prêt ; son en-tête dit comment le relancer à chaque push sur
-`main`) : GitHub se connecte au VPS en SSH, fait `git pull` et reconstruit le conteneur. La
-construction lance d'abord `bun test`, `bun lint` et `nginx -t`, et rafraîchit les images de base ;
-si elle échoue, test compris, l'ancienne version reste en ligne. Une fois les conteneurs
-redémarrés, le workflow vérifie que le site et son API répondent (en rouge sinon). Secrets à créer
-dans le dépôt (Settings › Secrets and variables › Actions) :
+Actions ; son en-tête dit comment le lancer à chaque push sur `main`) : GitHub se connecte au VPS
+en SSH, fait `git pull` et reconstruit le conteneur. La construction lance d'abord `bun test`,
+`bun lint` et `nginx -t`, et rafraîchit les images de base ; si elle échoue, test compris,
+l'ancienne version reste en ligne. Une fois les conteneurs redémarrés, le workflow vérifie que le
+site et son API répondent (en rouge sinon). Secrets à créer dans le dépôt (Settings › Secrets and
+variables › Actions) :
 
 | Secret | Valeur |
 |---|---|
 | `VPS_HOST` | adresse du VPS |
 | `VPS_USER` | utilisateur SSH, membre du groupe `docker` |
-| `VPS_SSH_KEY` | clé privée dédiée au déploiement (sa clé publique dans `~/.ssh/authorized_keys` du VPS) |
+| `VPS_SSH_KEY` | clé privée propre au déploiement de ce dépôt, **jamais celle de l'API des données** (sa clé publique dans `~/.ssh/authorized_keys` du VPS, avec sa commande imposée : plus bas) |
 | `VPS_PATH` | dossier du clone, par exemple `/home/moi/pokedex` |
 | `VPS_PORT` | port SSH, seulement s'il n'est pas 22 |
 | `VPS_FINGERPRINT` | empreinte de la clé d'hôte du VPS, pour ne parler qu'à lui : la sortie de `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub \| cut -d ' ' -f2` (`SHA256:…`). Obligatoire : sans elle, le déploiement s'arrête |
@@ -195,10 +195,27 @@ dans le dépôt (Settings › Secrets and variables › Actions) :
 Le port SSH doit être joignable depuis GitHub pour que ce workflow puisse se connecter.
 
 La clé de déploiement donne un shell à un membre du groupe `docker`, autant dire l'administration
-du VPS : réservez-la au déploiement, dans `~/.ssh/authorized_keys`, en tête de sa ligne (la même
-commande que le workflow, le dossier du clone à adapter) :
-`restrict,command="cd /home/moi/pokedex && git pull --ff-only && sh deploy/deploy.sh"`, et
-protégez le workflow par un « Environment » GitHub avec un relecteur obligatoire.
+du VPS : **une clé par dépôt**, chacune réservée à son déploiement dans `~/.ssh/authorized_keys`
+par une commande imposée en tête de sa ligne. SSH lance alors cette commande-là, quoi que demande
+le workflow : la clé du site ne déploie que le site, celle de l'API des données (son README, sa
+propre ligne) que l'API. Les deux dépôts ne partagent donc jamais `VPS_SSH_KEY` : une clé commune
+n'aurait qu'une commande, et déploierait l'un avec le secret de l'autre. Une clé à part, tirée hors
+du VPS :
+
+```sh
+ssh-keygen -t ed25519 -N '' -C deploy-pokedex -f deploy-pokedex
+# deploy-pokedex : le secret VPS_SSH_KEY de ce dépôt (puis effacer le fichier)
+# deploy-pokedex.pub : sa ligne dans ~/.ssh/authorized_keys du VPS, précédée de sa commande
+```
+
+Sa ligne (la même commande que le workflow, le dossier du clone à adapter), à côté de celle de
+l'API des données :
+
+```
+restrict,command="cd /home/moi/pokedex && git pull --ff-only && sh deploy/deploy.sh" ssh-ed25519 AAAA… deploy-pokedex
+```
+
+Protégez aussi le workflow par un « Environment » GitHub avec un relecteur obligatoire.
 
 **Revenir à la version d'avant** (un déploiement en rouge, une erreur vue après coup) : les images
 d'avant restent une semaine (`deploy/deploy.sh`), la reconstruction est donc rapide.
@@ -218,13 +235,15 @@ et les collections, 30 jours gardés). Chaque copie est vérifiée (`PRAGMA quic
 sous un nom provisoire (`tmp-…`) avant de prendre sa place : une copie en cours n'est jamais prise
 pour une sauvegarde. Les données de référence et l'historique des prix ont les leurs, dans l'API
 des données (son README). Ce volume est sur le même disque que la base : copiez-le aussi
-ailleurs. Pour en sortir les fichiers (dans `./sauvegardes`, que git ignore, vidé d'abord : il ne
-garde que ce qu'a le volume ; `--user root` : les conteneurs tournent sans droits
-d'administrateur, ce dossier du VPS ne leur appartient pas) :
+ailleurs. Pour en sortir les fichiers, dans `./sauvegardes` (que git ignore ; vidé d'abord, il ne
+garde que ce qu'a le volume, sans une copie en cours d'écriture), avec `docker compose cp`, qui les
+écrit au nom de l'utilisateur qui le lance. Le conteneur ne le pourrait pas, même `--user root` :
+il n'a aucun droit (`cap_drop: ALL`), ni d'écrire dans un dossier du VPS qui ne lui appartient
+pas, ni de changer un propriétaire.
 
 ```sh
 rm -rf sauvegardes && mkdir sauvegardes
-docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/out" server sh -c 'cp /backups/app-* /out/'
+docker compose cp server:/backups/. sauvegardes/ && rm -f sauvegardes/tmp-*
 ```
 
 Chaque nuit, hors du VPS, avec `rclone` (configuré une fois, `rclone config`, vers un stockage à
@@ -233,15 +252,16 @@ déploiement (`crontab -e`), ici à 4 h 30, le dossier du clone à adapter. Le s
 90 jours (`rclone delete --min-age 90d`) :
 
 ```sh
-30 4 * * * cd /home/moi/pokedex && rm -rf sauvegardes && mkdir sauvegardes && docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/out" server sh -c 'cp /backups/app-* /out/' && rclone copy sauvegardes distant:pokedex-sauvegardes && rclone delete --min-age 90d distant:pokedex-sauvegardes
+30 4 * * * cd /home/moi/pokedex && rm -rf sauvegardes && mkdir sauvegardes && docker compose cp server:/backups/. sauvegardes/ && rm -f sauvegardes/tmp-* && rclone copy sauvegardes distant:pokedex-sauvegardes && rclone delete --min-age 90d distant:pokedex-sauvegardes
 ```
 
 **Restaurer une sauvegarde** : arrêter le serveur, remettre la copie à la place de la base, sans
-les fichiers `-wal` et `-shm` de l'ancienne, puis redémarrer :
+les fichiers `-wal` et `-shm` de l'ancienne, puis redémarrer. En tant que `bun`, l'utilisateur
+du conteneur, à qui appartiennent la base et son dossier (pas de `chown`) :
 
 ```sh
 docker compose stop server
-docker compose run --rm --no-deps --user root -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/app.db-wal /data/app.db-shm && cp /restore/app-AAAA-MM-JJ.db /data/app.db && chown bun:bun /data/app.db'
+docker compose run --rm --no-deps -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/app.db-wal /data/app.db-shm && cp /restore/app-AAAA-MM-JJ.db /data/app.db'
 docker compose up -d
 ```
 
