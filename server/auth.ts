@@ -6,8 +6,8 @@
  *   `username` : la connexion, l'adresse du Pokédex public `/sacha`). Pas d'e-mail : le site n'en
  *   envoie pas et n'en garde pas (Better Auth en exige une : chaque compte reçoit une adresse sans
  *   boîte, `<uuid>@pokedex.invalid`, que personne ne connaît) ; pas de mot de passe oublié, donc.
- * - Le pseudo et le mot de passe se changent dans l'app (Données › Mon compte) ; le compte s'y
- *   supprime, avec son mot de passe, et sa collection part avec lui. Les derniers pseudos qu'un
+ * - Le pseudo et le mot de passe se changent dans l'app (Réglages › Compte & partage › Mon
+ *   compte) ; le compte s'y supprime, avec son mot de passe, et sa collection part avec lui. Les derniers pseudos qu'un
  *   compte a quittés (changés, ou compte supprimé) ne sont jamais repris par un autre
  *   (`PSEUDO_TRIGGERS`) : un lien partagé vers `/pseudo` ne mène jamais au Pokédex d'un autre. Les
  *   adresses du site (`RESERVED_PSEUDOS`) ne sont à personne.

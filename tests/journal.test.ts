@@ -1,3 +1,11 @@
+/**
+ * Le visiteur d'une requête (`visitorOf`, `server/journal.ts`), derrière Caddy : la clé qui limite
+ * le journal par visiteur (`journalOnce` : les connexions refusées, les visites d'un Pokédex
+ * public). Fausse, tous les visiteurs n'en feraient qu'un (les lignes de l'un tairaient celles des
+ * autres), ou un seul en ferait des milliers (une adresse IPv6 par requête : un afflux ferait
+ * tourner le journal de Docker, qui effacerait les connexions).
+ */
+
 import { describe, expect, test } from 'bun:test'
 import { visitorOf } from '../server/journal'
 
