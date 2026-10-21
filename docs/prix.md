@@ -13,7 +13,8 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
 - Prix du jour : l'app demande ceux des seules cartes qu'elle affiche (`GET /api/prices?ids=…` :
   celles de la collection, d'une extension du catalogue, d'un Pokémon, un id saisi ; le jour, et
   une clé par carte demandée, `[prix, plus bas, prix d'il y a 30 jours]` ou `null` sans prix ce
-  jour ; 1 025 ids au plus ; 404 tant que le guide n'a jamais été lu). Le prix suivi est la règle de Pokécardex (la tendance pour une série de moins de
+  jour ; 1 025 ids au plus ; 404 tant que le guide n'a jamais été lu ; avec le catalogue, 10 demandes
+  par seconde et par visiteur, 300 d'un coup, nginx). Le prix suivi est la règle de Pokécardex (la tendance pour une série de moins de
   31 jours, la moyenne sur 30 jours ensuite) ; « Ce qui bouge » (Valeur) et la fiche comparent au
   prix d'il y a 30 jours (`priceChange`, `lib/prices.ts`). Côté navigateur (`store/prices.ts`), les
   réponses s'ajoutent : `usePrices()` rend les prix de la collection, `usePrices(ids)` ceux d'autres

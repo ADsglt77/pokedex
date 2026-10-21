@@ -121,7 +121,10 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   de service worker ni d'usage hors ligne (décision de l'utilisateur, octobre 2026 : la collection
   n'est gardée que par le serveur). Une page restée ouverte pendant un déploiement, qui charge une
   page à la demande dont le fichier n'existe plus, se recharge avec la nouvelle version
-  (`vite:preloadError`, `main.tsx` ; une fois par minute au plus).
+  (`vite:preloadError`, `main.tsx` ; une fois par minute au plus). Les moteurs de recherche
+  n'indexent que les pages publiques : l'accueil, la connexion, l'inscription et les mentions
+  légales ; les autres adresses de l'app, le Pokédex public de chaque compte compris, reçoivent
+  `X-Robots-Tag: noindex` de nginx (`docs/deploiement.md`), et `public/robots.txt` écarte `/api/`.
 - Performance (mesurer en production, `bun run build` puis `bun run preview` : `bun dev` est 3 à 4
   fois plus lent ; mesuré en octobre 2026 sur une collection de 1 025 cartes, avant → après) : le
   Pokédex affiche 1 025 pochettes. Seules celles à l'écran sont dessinées (`content-visibility`, de

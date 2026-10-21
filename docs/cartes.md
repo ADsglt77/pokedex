@@ -105,7 +105,9 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
   (`rarityIcon` ; les noires, `DARK_RARITY_ICONS`, inversées sur le thème sombre,
   `--dark-icon-filter` ; une rareté sans icône, « FUR », s'écrit en texte), les sprites et
   illustrations des Pokémon (`spriteUrl`, `artworkUrl`). nginx les renvoie à l'API et les garde sur
-  son disque (`proxy_cache`) ; le navigateur, un an, sans redemande (`immutable`). Le catalogue
+  son disque (`proxy_cache`) ; le navigateur, un an, sans redemande (`immutable`) ; seules les pages
+  du site les affichent (`Cross-Origin-Resource-Policy`), 20 par seconde et par visiteur, 1 100 d'un
+  coup (de quoi charger tout le Pokédex, `docs/deploiement.md`). Le catalogue
   donne le rang de l'image de chaque carte ; pour une référence hors du catalogue, `cardImage` la
   déduit du code de la référence (série en majuscules sans tiret, SV-P → SVP ; numéro sans zéro),
   sans certitude. La collection garde ces chemins (`isFoundImage` : une image retrouvée, qui suit

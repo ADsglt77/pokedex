@@ -75,7 +75,7 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   faite par le serveur (l'aperçu du site pour une page du site ou un pseudo à personne)
   avec le titre et la progression (`vitrineSummary`, testé : rien d'autre que le pseudo et le
   nombre de Pokémon débloqués). Une page seule, hors de la coquille, en lecture seule et pas
-  indexée (`noindex`) : la progression, les régions (la réglette n'y est qu'une image, `linked`
+  indexée (`noindex` dans la page, et l'en-tête `X-Robots-Tag` de nginx) : la progression, les régions (la réglette n'y est qu'une image, `linked`
   faux, et pas un lien vers le Pokédex, qui demande d'être connecté ; sur téléphone, leur liste),
   la valeur au prix du jour, la courbe des Pokémon débloqués et le classeur (débloqués en couleur,
   cartes choisies grisées ; les pochettes ne mènent pas aux fiches, celles du visiteur). Le serveur

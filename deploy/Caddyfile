@@ -6,6 +6,9 @@ pokecodex.fr {
 	reverse_proxy 127.0.0.1:8080
 }
 
+# La redirection vers le site, avec le même HSTS que lui (`deploy/security-headers.conf`, posé par
+# nginx) : `www` aussi en https seulement.
 www.pokecodex.fr {
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
 	redir https://pokecodex.fr{uri} permanent
 }
