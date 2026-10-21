@@ -82,7 +82,7 @@ export function ImportSection() {
 
       {imported && (
         <div className={styles.preview}>
-          <h3>Contenu du fichier</h3>
+          <h4>Contenu du fichier</h4>
           {updatedAt && (
             <p className="muted">Collection modifiée pour la dernière fois le {updatedAt}.</p>
           )}
