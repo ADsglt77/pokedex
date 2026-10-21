@@ -181,7 +181,7 @@ export async function openSession(
   if (error || !data) return failure(error ?? { status: 0 })
   return (await signIn({ id: data.user.id, name: data.user.name }))
     ? null
-    : 'Connecté, mais votre collection n’a pas pu être lue : réessayez dans un instant.'
+    : 'Connecté, mais votre collection n’a pas pu être lue\u00a0: réessayez dans un instant.'
 }
 
 /**

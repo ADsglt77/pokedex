@@ -111,7 +111,7 @@ function Missing() {
         headingLevel={2}
         icon={<SearchX size={22} />}
         title="Rien à cette adresse"
-        description="Ni une page du site, ni le Pokédex d’un compte : vérifiez l’adresse (un pseudo a pu changer, ou un compte être supprimé)."
+        description="Ni une page du site, ni le Pokédex d’un compte&nbsp;: vérifiez l’adresse (un pseudo a pu changer, ou un compte être supprimé)."
         actions={
           <Button asChild>
             <Link to="/">Revenir à l’accueil</Link>
@@ -181,7 +181,7 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
           <title>{heading}</title>
           <h1 className={styles.title}>{heading}</h1>
           <p className="muted">
-            Une carte par Pokémon : {unlockedOf(progress, 'Pokémon')}.
+            Une carte par Pokémon&nbsp;: {unlockedOf(progress, 'Pokémon')}.
             {updated && ` Mis à jour le ${updated}.`}
           </p>
         </div>

@@ -24,8 +24,8 @@ export function ErrorPage() {
         <Logo>PokéCodex</Logo>
       </div>
       <PageHeader title="Quelque chose s’est mal passé">
-        L’affichage de cette page a échoué. Recharger la page règle souvent le problème ; votre
-        collection, elle, ne risque rien.
+        L’affichage de cette page a échoué. Recharger la page règle souvent le problème&#8239;;
+        votre collection, elle, ne risque rien.
       </PageHeader>
       <Stack gap={5} align="start">
         <Stack direction="horizontal" gap={3} wrap>
@@ -34,13 +34,13 @@ export function ErrorPage() {
           </Button>
           <Button asChild variant="ghost">
             <Link to="/donnees" reloadDocument>
-              Ouvrir les données
+              Ouvrir les réglages
             </Link>
           </Button>
         </Stack>
         {message && (
           <p className="muted">
-            Détail de l’erreur : <code>{message}</code>
+            Détail de l’erreur&nbsp;: <code>{message}</code>
           </p>
         )}
       </Stack>

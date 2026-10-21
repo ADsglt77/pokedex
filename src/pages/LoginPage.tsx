@@ -32,7 +32,7 @@ export function LoginPage() {
         refusalMessage(
           { 401: 'Pseudo ou mot de passe incorrect.' },
           refused,
-          'Connexion impossible pour le moment : réessayez plus tard.',
+          'Connexion impossible pour le moment\u00a0: réessayez plus tard.',
         ),
     )
     if (!problem) navigate(returnPath(params.get('retour')), { replace: true })
@@ -42,10 +42,10 @@ export function LoginPage() {
   return (
     <AuthCard
       title="Connexion"
-      description="Pour ouvrir votre Pokédex : votre collection, vos achats et votre budget, les mêmes sur tous vos appareils."
+      description="Pour ouvrir votre Pokédex&nbsp;: votre collection, vos achats et votre budget, les mêmes sur tous vos appareils."
       submit={{ label: 'Se connecter', icon: <LogIn size={16} /> }}
       onSubmit={submit}
-      other={{ to: '/inscription', label: 'Pas encore de compte ? En créer un' }}
+      other={{ to: '/inscription', label: 'Pas encore de compte\u202f? En créer un' }}
     >
       <Input
         label="Pseudo"

@@ -34,7 +34,7 @@ export const RESERVED_PSEUDOS = [
 ]
 
 /** Ce que dit un formulaire sous le champ du pseudo. */
-export const PSEUDO_HINT = `${PSEUDO.min} à ${PSEUDO.max} caractères : lettres sans accent, chiffres, - ou _.`
+export const PSEUDO_HINT = `${PSEUDO.min} à ${PSEUDO.max} caractères\u00a0: lettres sans accent, chiffres, - ou _.`
 
 /** La longueur minimale d'un mot de passe, la même pour le serveur (`server/auth.ts`). */
 export const PASSWORD_MIN = 8

@@ -10,7 +10,7 @@ import { PSEUDO, RESERVED_PSEUDOS } from '@/config/account'
 import type { AccountState, AccountUser } from '@/types'
 
 /** Trop de tentatives (`server/auth.ts`) : la réponse 429 du serveur. */
-const TOO_MANY_ATTEMPTS = 'Trop de tentatives : réessayez un peu plus tard.'
+const TOO_MANY_ATTEMPTS = 'Trop de tentatives\u00a0: réessayez un peu plus tard.'
 
 /**
  * Le message d'un refus du serveur : un pseudo déjà pris (le code du refus de Better Auth), son
@@ -23,14 +23,14 @@ export const refusalMessage = (
   otherwise: string,
 ) =>
   code === 'USERNAME_IS_ALREADY_TAKEN'
-    ? 'Ce pseudo est déjà pris : choisissez-en un autre.'
+    ? 'Ce pseudo est déjà pris\u00a0: choisissez-en un autre.'
     : (messages[status] ?? (status === 429 ? TOO_MANY_ATTEMPTS : otherwise))
 
 /** Un pseudo réservé au site (le premier segment d'une de ses adresses : `RESERVED_PSEUDOS`) ? */
 export const reservedPseudo = (value: string) => RESERVED_PSEUDOS.includes(value.toLowerCase())
 
 /** Ce que dit un formulaire d'un pseudo réservé. */
-export const PSEUDO_RESERVED = 'Ce pseudo est une adresse du site : choisissez-en un autre.'
+export const PSEUDO_RESERVED = 'Ce pseudo est une adresse du site\u00a0: choisissez-en un autre.'
 
 const PSEUDO_RULE = new RegExp(`^${PSEUDO.pattern}$`)
 

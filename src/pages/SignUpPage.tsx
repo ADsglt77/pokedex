@@ -31,7 +31,7 @@ export function SignUpPage() {
             400: `Vérifiez le pseudo (${PSEUDO_HINT}) et le mot de passe (${PASSWORD_MIN} caractères au moins).`,
           },
           refused,
-          'Création impossible pour le moment : réessayez plus tard.',
+          'Création impossible pour le moment\u00a0: réessayez plus tard.',
         ),
     )
     if (!problem) navigate('/', { replace: true })
@@ -41,10 +41,10 @@ export function SignUpPage() {
   return (
     <AuthCard
       title="Créer un compte"
-      description="Votre Pokédex de cartes japonaises : votre collection, vos achats et votre budget, les mêmes sur tous vos appareils (un seul connecté à la fois), et un Pokédex public à partager."
+      description="Votre Pokédex de cartes japonaises&nbsp;: votre collection, vos achats et votre budget, les mêmes sur tous vos appareils (un seul connecté à la fois), et un Pokédex public à partager."
       submit={{ label: 'Créer mon compte', icon: <UserPlus size={16} /> }}
       onSubmit={submit}
-      other={{ to: '/connexion', label: 'Déjà un compte ? Se connecter' }}
+      other={{ to: '/connexion', label: 'Déjà un compte\u202f? Se connecter' }}
     >
       <Input
         {...PSEUDO_FIELD}
@@ -55,7 +55,7 @@ export function SignUpPage() {
       <Input
         {...NEW_PASSWORD_FIELD}
         label="Mot de passe"
-        hint={`${NEW_PASSWORD_FIELD.hint} Le site n’envoie pas d’e-mail : sans votre mot de passe, le compte ne se récupère pas.`}
+        hint={`${NEW_PASSWORD_FIELD.hint} Le site n’envoie pas d’e-mail\u00a0: sans votre mot de passe, le compte ne se récupère pas.`}
         value={password}
         onChange={(event) => setPassword(event.target.value)}
       />

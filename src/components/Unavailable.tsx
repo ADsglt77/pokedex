@@ -20,7 +20,7 @@ export function Unavailable({
       headingLevel={headingLevel}
       icon={<CloudOff size={22} />}
       title={title}
-      description="Le serveur ne répond pas pour le moment : réessayez dans un instant."
+      description="Le serveur ne répond pas pour le moment&nbsp;: réessayez dans un instant."
       actions={
         retry && (
           <Button
