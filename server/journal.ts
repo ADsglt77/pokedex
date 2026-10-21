@@ -107,7 +107,8 @@ export const reasonOf = (error: unknown) => (error instanceof Error ? error.mess
 
 /**
  * L'adresse posée par Caddy avant nginx. Caddy ignore la valeur reçue du visiteur et écrit la
- * sienne ; le premier élément reste le client si un autre relais de confiance est ajouté plus tard.
+ * sienne, seule (l'invariant, et ce qu'exigerait un second relais : `advanced.ipAddress` de
+ * `auth.ts`) ; le premier élément resterait le visiteur si un relais de confiance ajoutait le sien.
  */
 const requestIp = (request?: Request) =>
   request?.headers.get('x-forwarded-for')?.split(',', 1)[0]?.trim() || undefined

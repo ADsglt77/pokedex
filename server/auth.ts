@@ -192,8 +192,15 @@ export async function createAuth(db: Database) {
         },
       },
     },
-    // Caddy est le seul point d'entrée public et remplace cet en-tête avant de joindre nginx : les
-    // limites valent pour le visiteur, pas pour le proxy local.
+    // L'adresse du visiteur, pour les limites de Better Auth (`rateLimit`) : `x-forwarded-for`.
+    // Invariant : cet en-tête ne porte qu'une adresse. Caddy, seul point d'entrée public, remplace
+    // celle reçue du public par celle du visiteur (`deploy/Caddyfile`), et nginx la transmet telle
+    // quelle (jamais `$proxy_add_x_forwarded_for`). Better Auth ne lit qu'une adresse seule : une
+    // liste (« visiteur, relais ») lui donne `null`, et tous les visiteurs partageraient alors un
+    // seul compteur (cinq connexions par minute pour tout le site). Un second relais qui ajouterait
+    // son adresse (un CDN, nginx qui ajoute la sienne) exige donc ici `trustedProxies` : ses
+    // adresses (ou leur réseau), que Better Auth retire de la fin de la liste. Pas avant : elles ne
+    // sont pas connues. `visitorOf` (`journal.ts`) lit, lui, la première adresse de la liste.
     advanced: { ipAddress: { ipAddressHeaders: ['x-forwarded-for'] } },
     // En production, par visiteur : 10 tentatives de création de compte et 10 changements de pseudo
     // par heure ; 5 tentatives de connexion, de changement du mot de passe ou de suppression du

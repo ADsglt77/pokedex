@@ -2,6 +2,10 @@
 	email contact@pokecodex.fr
 }
 
+# Le site, relayé vers nginx. `X-Forwarded-For` : l'adresse du visiteur, seule (Caddy ne se fie à
+# aucun relais, pas de `trusted_proxies` : il remplace celle reçue du public). nginx et le serveur
+# en dépendent (`server/auth.ts`, `advanced.ipAddress`) : un relais de plus devant Caddy changerait
+# cet en-tête.
 pokecodex.fr {
 	reverse_proxy 127.0.0.1:8080
 }

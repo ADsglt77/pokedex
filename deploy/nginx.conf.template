@@ -11,7 +11,8 @@ proxy_cache_path /var/cache/nginx/images levels=1:2 keys_zone=images:10m max_siz
 
 # Par visiteur : l'adresse que Caddy écrit dans `x-forwarded-for` avant de joindre nginx. Caddy
 # ignore l'en-tête reçu du public, donc un visiteur ne peut pas choisir cette clé. Sans Caddy (en
-# local), nginx utilise l'adresse de la connexion. Les routes publiques coûteuses de l'API, la
+# local), nginx utilise l'adresse de la connexion. nginx transmet l'en-tête au serveur tel quel,
+# une seule adresse (jamais `$proxy_add_x_forwarded_for` : `server/auth.ts`, `advanced.ipAddress`). Les routes publiques coûteuses de l'API, la
 # connexion et les images sont ainsi limitées par visiteur ; au-delà, 429. Chaque limite est loin
 # de ce que demande une visite (comptée à côté de chacune, plus bas).
 map $http_x_forwarded_for $visitor_ip {
