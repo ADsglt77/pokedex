@@ -56,8 +56,12 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   par `fetchFresh` : sans cache, 10 s au plus) ; sans réponse, elle propose de réessayer.
 - État des données (Réglages › Avancé, `ReferenceSection`) : `/api/status` est demandé à
   chaque ouverture (`loadStatus`, `lib/api.ts`). Aucun panneau n'est affiché quand tout va bien ;
-  seuls un retard, un échec, des prix figés ou une absence de réponse produisent une alerte avec
-  l'action à tenter. L'état reste calculé par l'API : le site n'a ni la liste des tâches ni leurs
-  règles. `/api/health` (la surveillance) : celui de l'API des données.
+  seuls un retard, un échec, des prix figés ou une absence de réponse produisent une alerte,
+  « Données du site », écrite pour l'utilisateur (tout compte la voit) : « Certaines données
+  peuvent ne pas être à jour », ce qui est touché, réessayer plus tard ; aucune consigne
+  d'exploitation (relancer une tâche, vérifier un service : l'affaire de l'administrateur, par la
+  surveillance et le journal de l'API). L'état reste calculé par l'API : le site n'a ni la liste
+  des tâches ni leurs règles ; il écarte seulement les sauvegardes de l'API (`backups`), qui ne
+  touchent rien de ce qu'il montre. `/api/health` (la surveillance) : celui de l'API des données.
   Dans le formulaire d'une carte, un id Cardmarket n'est pas mis en doute tant que les prix
   manquent tous.
