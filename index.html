@@ -35,8 +35,10 @@
          nginx les fait précharger quand le navigateur a une session (l'en-tête `Link`,
          `deploy/nginx.conf.template`) ; un visiteur sur la connexion ne les télécharge pas. -->
     <link rel="preload" href="/api/account?demarrage" as="fetch" crossorigin />
-    <!-- Les polices du texte et des titres, que le navigateur ne découvrirait qu'au premier
-         affichage (le texte changerait alors de police sous les yeux). -->
+    <!-- Les polices des premières pages, que le navigateur ne découvrirait qu'au premier affichage
+         (le texte changerait alors de police sous les yeux) : le texte (Manrope 400), les champs
+         et les boutons (Manrope 600), le nom du site et les titres des cartes (Space Grotesk 700).
+         Les autres graisses (`main.tsx`) se chargent quand une page les emploie. -->
     <link
       rel="preload"
       href="/node_modules/@fontsource/manrope/files/manrope-latin-400-normal.woff2"
@@ -46,7 +48,14 @@
     />
     <link
       rel="preload"
-      href="/node_modules/@fontsource/space-grotesk/files/space-grotesk-latin-600-normal.woff2"
+      href="/node_modules/@fontsource/manrope/files/manrope-latin-600-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/node_modules/@fontsource/space-grotesk/files/space-grotesk-latin-700-normal.woff2"
       as="font"
       type="font/woff2"
       crossorigin

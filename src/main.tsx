@@ -3,12 +3,13 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router/dom'
 // Le jeu latin seul : il couvre le français (œ, €, ’, « », l'espace fine insécable) ; les autres
-// (cyrillique, grec, vietnamien, latin étendu) alourdiraient le CSS qui bloque l'affichage.
+// (cyrillique, grec, vietnamien, latin étendu) alourdiraient le CSS qui bloque l'affichage. Les
+// graisses que l'app emploie, et elles seules (celles de camply comprises) : Manrope, le texte, en
+// 400, 500, 600 et 700 (`strong`) ; Space Grotesk, les titres et les chiffres, en 600 et 700.
 import '@fontsource/manrope/latin-400.css'
 import '@fontsource/manrope/latin-500.css'
 import '@fontsource/manrope/latin-600.css'
 import '@fontsource/manrope/latin-700.css'
-import '@fontsource/space-grotesk/latin-500.css'
 import '@fontsource/space-grotesk/latin-600.css'
 import '@fontsource/space-grotesk/latin-700.css'
 import '@camply/ui/styles.css'

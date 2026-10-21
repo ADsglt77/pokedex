@@ -130,7 +130,10 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   démarrage, rien n'attend le script (le compte préchargé par `index.html`, les espèces par nginx
   quand le navigateur a une session : `bun run preview` n'a pas ce second préchargement ; une
   fois le compte connu, elles partent avec la collection, `signIn`), et la connexion, l'inscription
-  et les mentions légales ne demandent pas les espèces (`docs/compte-et-synchronisation.md`). Le
+  et les mentions légales ne demandent pas les espèces (`docs/compte-et-synchronisation.md`). Les
+  polices : seules les graisses que l'app emploie (`main.tsx` : Manrope 400 à 700, Space Grotesk 600
+  et 700 ; une graisse absente prendrait la plus proche, sans le dire), et celles des premières
+  pages préchargées (`index.html` : Manrope 400 et 600, Space Grotesk 700). Le
   Pokédex affiche 1 025 pochettes. Seules celles à l'écran sont dessinées (`content-visibility`, de
   même pour la liste d'achats et les cartes du catalogue), et une génération hors de l'écran ne
   compte pas dans la mise en page (`content-visibility` sur la section, sa hauteur estimée d'après

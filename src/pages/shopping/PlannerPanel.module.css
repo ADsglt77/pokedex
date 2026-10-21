@@ -30,7 +30,10 @@
   line-height: 1.1;
 }
 
+/* « sur 120,00 € » : du texte, dans la police du texte (Space Grotesk n'est chargée qu'en 600 et
+   700, `main.tsx`). */
 .planTotal :global(.muted) {
+  font-family: var(--camply-font-sans);
   font-size: 1rem;
   font-weight: 400;
 }
