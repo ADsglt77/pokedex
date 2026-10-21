@@ -7,8 +7,9 @@
  * ailleurs entre-temps (un autre onglet, un autre appareil), le serveur la refuse (409) et l'app
  * relit la sienne, sans rien écraser ; il porte aussi le compte d'où il vient : parti juste après
  * une connexion à un autre compte, le serveur le refuse (401). Au retour sur la page, la collection est relue, si rien
- * n'attend d'être envoyé. Sans connexion, l'app ne s'ouvre pas : on voit la connexion, ou le
- * Pokédex public d'un compte (`router.tsx`).
+ * n'attend d'être envoyé ; une modification faite pendant cette lecture n'est pas écrasée (`load`).
+ * Sans connexion, l'app ne s'ouvre pas : on voit la connexion, ou le Pokédex public d'un compte
+ * (`router.tsx`).
  */
 
 import { create } from 'zustand'
@@ -67,12 +68,19 @@ const call = (method: 'GET' | 'PUT', body?: string) =>
     signal: AbortSignal.timeout(15_000),
   }).catch(() => null)
 
-/** Relit la collection du serveur, à la place de celle en mémoire ; `false` sans réponse. */
+/**
+ * Relit la collection du serveur, à la place de celle en mémoire ; `false` sans réponse (ou la
+ * session fermée : `expired`). Une modification faite pendant la lecture (au retour sur la page)
+ * n'est pas écrasée : la collection en mémoire reste, et l'envoi qui attend part de la version
+ * d'avant (changée ailleurs entre-temps, le serveur la refuse, 409, et elle est relue).
+ */
 async function load() {
+  const before = edits
   const response = await call('GET')
   if (response?.status === 401) setStatus('expired')
   if (!response?.ok) return false
   const body = (await response.json()) as CollectionResponse
+  if (edits !== before) return true
   version = body.version
   saved = edits
   loading = true
@@ -86,6 +94,13 @@ async function load() {
 }
 
 let retry: ReturnType<typeof setTimeout> | undefined
+
+/** Sans réponse, ou une panne passagère (502 pendant un redémarrage) : l'envoi repart dans 30 s. */
+function retryLater() {
+  setStatus('offline')
+  clearTimeout(retry)
+  retry = setTimeout(save, 30_000)
+}
 
 /** Envoie la collection, si une modification attend. */
 async function push() {
@@ -102,15 +117,13 @@ async function push() {
     if (edits === saved) setStatus('saved')
     return
   }
-  // Sans réponse, ou une panne passagère (502 pendant un redémarrage) : elle repartira.
-  if (!response || response.status >= 500) {
-    setStatus('offline')
-    clearTimeout(retry)
-    retry = setTimeout(save, 30_000)
-    return
-  }
+  if (!response || response.status >= 500) return retryLater()
   if (response.status === 409) {
-    if (await load()) setStatus('reloaded')
+    // La version du serveur, relue à la place de celle d'ici ; une modification faite pendant la
+    // lecture part encore (`load`). Sans réponse, l'envoi repartira : refusé, puis relu.
+    if (await load()) {
+      if (!hasUnsavedChanges()) setStatus('reloaded')
+    } else if (useAccountStore.getState().status !== 'expired') retryLater()
     return
   }
   if (response.status === 401) return setStatus('expired')

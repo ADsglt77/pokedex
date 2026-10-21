@@ -108,7 +108,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   serveur entier avec 401, 403, une mise à jour, la version remplacée gardée et un document refusé
   (400), `tests/collection.test.ts`. Après un 409, le navigateur relit la version du serveur, à la
   place de la sienne : rien n'est écrasé, sa dernière modification est perdue, et le menu du compte
-  le dit (« Rechargée »). Accepté, la réponse donne `{ version }` ; le document passe les contrôles
+  le dit (« Rechargée ») ; sans réponse à cette relecture, « Hors ligne », et l'envoi repart 30 s
+  plus tard (refusé, puis relu). Accepté, la réponse donne `{ version }` ; le document passe les contrôles
   d'un import (`readSent` : refusé, la règle en cause au journal). Une modification d'une autre
   origine est refusée (403, plus haut) ; au journal, elle dit un réglage à revoir
   (`BETTER_AUTH_URL`) ou une tentative depuis un autre site. Sans réponse, ou une panne passagère
@@ -117,7 +118,9 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   Un refus pour de bon (400 et 422 : un document qui ne passe pas les contrôles ; 413 : plus de
   5 Mo ; 403 : une origine refusée) donne « Envoi refusé », avec sa raison (la règle en cause, relue
   par le navigateur avec le même code, `documentProblem`) ; rien ne repart tout seul. Au retour sur
-  la page, le document est relu (changé sur un autre appareil), si rien n'attend d'être envoyé. Le
+  la page, le document est relu (changé sur un autre appareil), si rien n'attend d'être envoyé ;
+  une modification faite pendant cette relecture n'est pas écrasée : elle part, depuis la version
+  d'avant (changée ailleurs entre-temps : refusée, 409, puis relue, comme plus haut). Le
   serveur garde une version remplacée par heure, 30 jours (`collection_versions`, à reprendre à la
   main). « Annuler », l'import, « Effacer » sont des modifications comme les autres. Le compte
   (`AccountMenu`, en pied de la barre latérale, ou en icône dans la barre du haut sur petit écran ;
