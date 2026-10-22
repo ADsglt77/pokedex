@@ -5,7 +5,7 @@ import { cx } from '@/lib/cx'
 import styles from './SetLogo.module.css'
 
 /**
- * Le logo japonais d'une série, dans une boîte de taille fixe ; son code si Pokécardex n'en a pas,
+ * Le logo d'une série, dans une boîte de taille fixe ; son code si Pokécardex n'en a pas,
  * ou s'il ne se charge pas. Décoratif : le nom de la série est écrit à côté.
  */
 export function SetLogo({
@@ -17,7 +17,7 @@ export function SetLogo({
   size: 'md' | 'hd'
   className?: string
 }) {
-  const src = setLogo(set.id, size)
+  const src = setLogo(set.language, set.id, size)
   // Retenu par adresse : la même boîte peut montrer une autre série.
   const [failed, setFailed] = useState<string | null>(null)
   return (

@@ -4,6 +4,7 @@ import { useState, type RefObject } from 'react'
 import { useCollectionAction, useNotify } from '@/hooks/useNotify'
 import { findCardImage } from '@/lib/card-catalog'
 import { referenceCode } from '@/lib/card-code'
+import { cardLanguage } from '@/lib/collection'
 import { focusAfter } from '@/lib/focus'
 import { plural } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'
@@ -26,14 +27,16 @@ export function MissingImages({ title }: { title: RefObject<HTMLElement | null> 
 
   const search = async () => {
     setSearching(true)
-    // Quatre à la fois : l'API des données copie chaque image à sa première demande.
+    // Quatre à la fois : chaque recherche charge une image.
     const images: (CardImage | null)[] = []
     try {
       for (let start = 0; start < candidates.length; start += 4) {
         const batch = candidates.slice(start, start + 4)
         images.push(
           ...(await Promise.all(
-            batch.map((card) => findCardImage(card.reference, { retry: true })),
+            batch.map((card) =>
+              findCardImage(card.reference, { lang: cardLanguage(card), retry: true }),
+            ),
           )),
         )
       }

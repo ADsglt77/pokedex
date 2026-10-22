@@ -43,7 +43,12 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
   nombre de cartes, rang de son bloc dans `blocks` (-1 : aucun), 1 pour un deck]`, et les blocs
   dans l'ordre du menu ; `/api/catalog/sets/<code>`, toutes les cartes d'une série dans son ordre,
   chacune `{ number, printed, name, en, de, dexIds, cardmarket, image, rarity, type, illustrator,
-  versions }`, et leurs raretés. Les types
+  versions }`, et leurs raretés. Les cartes françaises ont les mêmes trois réponses, de même forme,
+  sous `/api/catalog/fr/…` (`species/<n°>`, `sets`, `sets/<code>`) : le site les charge par langue
+  (`CardLanguage`, `'ja'` ou `'fr'` : `loadSpeciesCards(n°, langue)`, `loadSets(langue)`, la
+  langue d'une série est `CatalogSet.language`), et la clé d'une carte du catalogue est « SV2A 166 »
+  en japonais, « fr MEG 1 » en français (un même code de série existe dans les deux langues) ;
+  l'interface ne montre pour l'instant que le japonais. Les types
   sont numérotés sans être nommés par la source : leurs noms sont dans `CARD_TYPES`
   (`src/config/catalog.ts` : 1 Plante, 2 Eau, 3 Feu, 4 Électrique, 5 Psy, 6 Obscurité, 7 Métal,
   8 Combat, 9 Dragon, 10 Incolore, 11 Fée ; les catégories des dresseurs, 12 Stade, 13 Dresseur
@@ -88,8 +93,8 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
   l'un d'eux a déjà la sienne, elle la remplace après confirmation : l'ancienne part avec son statut
   et son prix payé (une carte TAG TEAM reste celle de ses autres Pokémon : `removeCard`) ; pas si
   une commande la retient et qu'elle quitterait tous ses Pokémon (le bouton est désactivé, la fiche
-  dit pourquoi : le registre tiendrait mal). Déjà la leur (le même code dans la référence ou le même
-  id Cardmarket : `isCatalogCard`) : « Dans votre collection », qui reçoit le focus après l'ajout.
+  dit pourquoi : le registre tiendrait mal). Déjà la leur (de la même langue, avec le même code dans la
+  référence ou le même id Cardmarket : `isCatalogCard`) : « Dans votre collection », qui reçoit le focus après l'ajout.
   Annoncé avec « Annuler ». Les dresseurs, les énergies et les cartes dont Pokécardex ne donne pas
   les Pokémon (« Togepi, Mélo et Toudoudou-GX ») n'ont pas de bouton. Filtres de rareté et de type
   (`CardFilters`, demandés par l'utilisateur, octobre 2026) : des pastilles à icône, chacune avec le
@@ -98,10 +103,12 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
   qui n'offrirait qu'un choix n'est pas montré ; changer d'extension les retire, avec la recherche.
   Ce sont des filtres que l'utilisateur choisit : rien n'est trié ni écarté seul.
 - Images (`lib/card-images.ts`) : copiées et servies par l'API des données (sa page
-  `docs/donnees.md` : leurs sources, la tâche `images`, la copie à la demande), aux chemins neutres
+  `docs/donnees.md` : leurs sources, la tâche `images`), aux chemins neutres
   que demande le navigateur : `/images/cards/<série>/<rang>-<md|hd>.webp` (`catalogImage` : `md`
-  pour la grille, `hd` pour la fiche), `/images/sets/<série>-<md|hd>.webp` (le logo japonais d'une
-  série, `setLogo`), `/images/types/<n>.webp` (`typeIcon`), `/images/rarities/<n>.webp`
+  pour la grille, `hd` pour la fiche), `/images/sets/<série>-<md|hd>.webp` (le logo d'une série,
+  `setLogo`) ; ceux des cartes françaises sous `fr/` (`/images/cards/fr/<série>/<rang>-…`,
+  `/images/sets/fr/<série>-…` : un même code de série existe dans les deux langues), ceux du japonais
+  inchangés ; `/images/types/<n>.webp` (`typeIcon`), `/images/rarities/<n>.webp`
   (`rarityIcon` ; les noires, `DARK_RARITY_ICONS`, inversées sur le thème sombre,
   `--dark-icon-filter` ; une rareté sans icône, « FUR », s'écrit en texte), les sprites et
   illustrations des Pokémon (`spriteUrl`, `artworkUrl`). nginx les renvoie à l'API et les garde sur
@@ -109,10 +116,10 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
   du site les affichent (`Cross-Origin-Resource-Policy`), 20 par seconde et par visiteur, 1 100 d'un
   coup (de quoi charger tout le Pokédex, `docs/deploiement.md`). Le catalogue
   donne le rang de l'image de chaque carte ; pour une référence hors du catalogue, `cardImage` la
-  déduit du code de la référence (série en majuscules sans tiret, SV-P → SVP ; numéro sans zéro),
-  sans certitude. La collection garde ces chemins (`isFoundImage` : une image retrouvée, qui suit
-  la référence) ; aucun ne nomme la source. Une image absente est copiée à la demande par l'API
-  (une source qui ne l'a pas : 404, la carte de substitution). Une adresse collée de chez la
+  déduit de la langue et du code de la référence (série en majuscules sans tiret, SV-P → SVP ;
+  numéro sans zéro), sans certitude. La collection garde ces chemins (`isFoundImage` : une image retrouvée, qui suit
+  la référence) ; aucun ne nomme la source. L'API ne copie aucune image à la demande, la tâche
+  `images` les copie toutes d'avance : une image absente répond 404 (la carte de substitution). Une adresse collée de chez la
   source (son site ou ses serveurs d'images) est refusée à la saisie, et jamais affichée (`isSourceImage` : son accord,
   jamais une image affichée depuis chez elle ; une carte qui en garde une montre la carte de
   substitution, jusqu'à ce qu'elle soit corrigée). Le code que reçoit le navigateur ne la nomme
@@ -124,7 +131,8 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
   domaine de la source s'y ajoute par son empreinte, jamais par son nom ; après `bun run build`, le
   nom ne doit apparaître nulle part dans `dist/`. Réglages › Sauvegarde › « Chercher
   les images » cherche d'un coup celles des cartes sans image. `findCardImage` (`lib/card-catalog.ts`) : l'image du catalogue pour
-  cette référence (lue dans sa série : `/api/catalog/sets`, puis `/api/catalog/sets/<code>`), sinon celle que la référence désigne, si elle se charge (sans réponse en 10 s :
+  cette référence, dans la langue donnée (celle de la carte, `cardLanguage` ; lue dans sa série :
+  `/api/catalog/sets`, puis `/api/catalog/sets/<code>`, sous `fr/` en français), sinon celle que la référence désigne, si elle se charge (sans réponse en 10 s :
   absente, pour ne pas bloquer l'enregistrement) ; la saisie le dit, sans nommer de source (aucun
   crédit dans l'app, à la demande de l'utilisateur, octobre 2026 : CLAUDE.md). Un échec
   est redemandé à l'enregistrement (panne passagère), et une image déjà enregistrée reste si elle

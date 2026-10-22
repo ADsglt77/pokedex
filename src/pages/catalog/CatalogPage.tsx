@@ -20,7 +20,7 @@ import { Unavailable } from '@/components/Unavailable'
 import { ENERGY_TYPE, TRAINER_TYPES } from '@/config/catalog'
 import { forget } from '@/lib/api'
 import {
-  CATALOG_SETS,
+  catalogSetsUrl,
   loadSetCards,
   loadSets,
   setCardsUrl,
@@ -104,8 +104,8 @@ function useRetry(url: string) {
 }
 
 function CatalogContent() {
-  const retry = useRetry(CATALOG_SETS)
-  const catalog = use(loadSets())
+  const retry = useRetry(catalogSetsUrl('ja'))
+  const catalog = use(loadSets('ja'))
   return catalog ? <SetBrowser catalog={catalog} /> : <CatalogUnavailable retry={retry} />
 }
 

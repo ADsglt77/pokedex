@@ -3,7 +3,7 @@ import { findCardImage, type CatalogCard } from '@/lib/card-catalog'
 import { isFoundImage, isSourceImage } from '@/lib/card-images'
 import { referenceCode } from '@/lib/card-code'
 import { isCardmarketImage, parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
-import { newCardId } from '@/lib/collection'
+import { cardLanguage, newCardId } from '@/lib/collection'
 import { focusFirstError } from '@/lib/focus'
 import { parseLink } from '@/lib/format'
 import { loadPriceHistory } from '@/store/prices'
@@ -20,6 +20,8 @@ const hasFoundImage = (card: PokemonCard) => card.image !== null && isFoundImage
 export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLElement | null>) {
   // Tiré une fois : deux clics sur « Enregistrer » écrivent la même carte, pas deux.
   const [id] = useState(() => card?.id ?? newCardId())
+  // La langue de la carte à corriger (japonaise pour une nouvelle) : où son image est cherchée.
+  const language = card ? cardLanguage(card) : 'ja'
   const [image, setImage] = useState(() =>
     card?.image && !hasFoundImage(card) ? card.image.large : '',
   )
@@ -89,7 +91,7 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
     const stale = changedId && typed === previous?.name
     const stalePage = changedId && page.trim() === initial.page
     const search = !image.trim() && referenceCode(typed) !== null
-    const found = search ? await findCardImage(typed, { retry: true }) : null
+    const found = search ? await findCardImage(typed, { lang: language, retry: true }) : null
     // L'image gardée (`kept`), pas si la référence n'était que le nom de l'ancien id : elle devient
     // celle d'une autre carte.
     const picture = pasted ?? found ?? (stale ? null : kept)
@@ -135,6 +137,8 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
   }
 
   return {
+    /** La langue de la carte : celle où son image est cherchée (`findCardImage`). */
+    language,
     image,
     setImage,
     /** L'image de l'adresse collée, si elle est lisible. */

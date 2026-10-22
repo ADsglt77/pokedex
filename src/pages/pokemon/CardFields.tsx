@@ -6,6 +6,7 @@ import { findCardImage } from '@/lib/card-catalog'
 import { formatEuro } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
 import { loadPriceHistory, usePrices, usePricesMissing } from '@/store/prices'
+import type { CardLanguage } from '@/types'
 import styles from './CardFields.module.css'
 
 /**
@@ -55,7 +56,11 @@ export function CardFields({
         <div role="status">
           {draft.lookup !== null && (
             <Suspense fallback={<p className="muted">Recherche de l’image…</p>}>
-              <FoundImage reference={draft.lookup} kept={draft.kept !== null} />
+              <FoundImage
+                reference={draft.lookup}
+                language={draft.language}
+                kept={draft.kept !== null}
+              />
             </Suspense>
           )}
         </div>
@@ -108,7 +113,10 @@ function Preview({
   speciesId: number
   searching?: boolean
 }) {
-  const found = searching || draft.lookup === null ? null : use(findCardImage(draft.lookup))
+  const found =
+    searching || draft.lookup === null
+      ? null
+      : use(findCardImage(draft.lookup, { lang: draft.language }))
   const image = draft.pasted ?? found ?? draft.kept
   return (
     <figure className={styles.preview}>
@@ -123,8 +131,16 @@ function Preview({
 }
 
 /** L'image retrouvée d'après la référence, ou rien. `kept` : l'image actuelle reste. */
-function FoundImage({ reference, kept }: { reference: string; kept: boolean }) {
-  const image = use(findCardImage(reference))
+function FoundImage({
+  reference,
+  language,
+  kept,
+}: {
+  reference: string
+  language: CardLanguage
+  kept: boolean
+}) {
+  const image = use(findCardImage(reference, { lang: language }))
   if (image) {
     return <p className={styles.check}>Image trouvée d’après la référence : vérifiez l’aperçu.</p>
   }

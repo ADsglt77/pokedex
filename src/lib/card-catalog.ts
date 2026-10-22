@@ -1,5 +1,7 @@
 /**
- * Le catalogue des cartes japonaises, que l'API des données construit d'après Pokécardex :
+ * Le catalogue des cartes japonaises et françaises, que l'API des données construit d'après
+ * Pokécardex ; les mêmes réponses dans les deux langues, aux mêmes adresses pour le japonais, sous
+ * `/api/catalog/fr/…` pour le français :
  * - `/api/catalog/species/<n°>` : les cartes d'un Pokémon, des plus récentes aux plus anciennes,
  *   avec leur rareté, leur type et leurs séries (nom, date de sortie, logo) ; chargées par la
  *   fenêtre d'ajout, et préparées d'avance par la fiche d'un Pokémon sans carte (quand le
@@ -14,19 +16,32 @@ import { CARD_TYPES } from '@/config/catalog'
 import { derived } from '@/lib/api'
 import { codeKey, numberKey, referenceCode, setKey } from '@/lib/card-code'
 import { cardImage, catalogImage } from '@/lib/card-images'
+import { cardLanguage } from '@/lib/collection'
 import { settled } from '@/lib/settled'
 import { getSpecies } from '@/lib/species'
-import type { CardImage, CatalogFile, CatalogSetFile, CatalogSetsFile, PokemonCard } from '@/types'
+import type {
+  CardImage,
+  CardLanguage,
+  CatalogFile,
+  CatalogSetFile,
+  CatalogSetsFile,
+  PokemonCard,
+} from '@/types'
+
+/** Le début des adresses du catalogue d'une langue. */
+const catalogPath = (lang: CardLanguage) => (lang === 'fr' ? '/api/catalog/fr' : '/api/catalog')
 
 /** Une série du catalogue. */
 export interface CatalogSet {
-  /** Son code chez Pokécardex : « SV2A ». */
+  /** Sa langue : celle de ses cartes. */
+  language: CardLanguage
+  /** Son code chez Pokécardex : « SV2A » (le même code peut exister dans les deux langues). */
   id: string
   /** Son nom : « Pokémon Card 151 ». */
   name: string
   /** Son année de sortie ; `null` si Pokécardex ne la donne pas. */
   year: string | null
-  /** Son logo japonais est chez nous (`setLogo`), ou pas encore cherché ; faux si aucun. */
+  /** Son logo est chez nous (`setLogo`), ou pas encore cherché ; faux si aucun. */
   logo: boolean
 }
 
@@ -39,7 +54,7 @@ export interface Rarity {
 
 /** Une carte du catalogue : de quoi la montrer et la reprendre dans la saisie. */
 export interface CatalogCard {
-  /** « SV2A 166 » : la série et le numéro, uniques. */
+  /** « SV2A 166 » : la série et le numéro, uniques ; « fr MEG 1 » pour une carte française. */
   key: string
   /** « 166 » : le numéro, sans la série. */
   number: string
@@ -81,24 +96,24 @@ function toCard<S extends CatalogSet>(
   const { number, dexIds } = row
   const name = cardName(row.name, dexIds)
   return {
-    key: `${set.id} ${number}`,
+    key: `${set.language === 'fr' ? 'fr ' : ''}${set.id} ${number}`,
     number,
     set,
     dexIds,
     cardmarket: row.cardmarket || undefined,
     reference: `${name} (${set.id} ${number})`,
-    image: row.image ? catalogImage(set.id, row.image) : null,
+    image: row.image ? catalogImage(set.language, set.id, row.image) : null,
     rarity,
     type: CARD_TYPES.has(type) ? type : null,
   }
 }
 
 /** Les cartes d'un Pokémon, d'après sa réponse (`/api/catalog/species/<n°>`). */
-function readSpeciesCards(file: CatalogFile, speciesId: number): CatalogCard[] {
+function readSpeciesCards(file: CatalogFile, speciesId: number, lang: CardLanguage): CatalogCard[] {
   const sets = new Map(
     Object.entries(file.sets).map(([id, [name, released, logo]]) => [
       id,
-      { id, name, year: released.slice(0, 4) || null, logo: logo === 1 },
+      { language: lang, id, name, year: released.slice(0, 4) || null, logo: logo === 1 },
     ]),
   )
   const rarities = readRarities(file.rarities)
@@ -114,19 +129,19 @@ function readSpeciesCards(file: CatalogFile, speciesId: number): CatalogCard[] {
 }
 
 /**
- * Les cartes japonaises d'un Pokémon, des plus récentes aux plus anciennes ; `null` si le catalogue
- * n'est pas disponible (serveur arrêté, base encore vide : redemandé une minute après au plus tôt,
- * `getJson`). Toujours la même promesse pour un Pokémon, lue par `use()`.
+ * Les cartes d'un Pokémon dans cette langue, des plus récentes aux plus anciennes ; `null` si le
+ * catalogue n'est pas disponible (serveur arrêté, base encore vide : redemandé une minute après au
+ * plus tôt, `getJson`). Toujours la même promesse pour un Pokémon et une langue, lue par `use()`.
  */
-export const loadSpeciesCards = (speciesId: number) =>
+export const loadSpeciesCards = (speciesId: number, lang: CardLanguage) =>
   derived<CatalogFile, CatalogCard[] | null>(
-    `/api/catalog/species/${speciesId}`,
-    (file) => file && readSpeciesCards(file, speciesId),
+    `${catalogPath(lang)}/species/${speciesId}`,
+    (file) => file && readSpeciesCards(file, speciesId, lang),
   )
 
 /** Une série de la page Catalogue (`/api/catalog/sets`) : ce que disent sa tuile et son en-tête. */
 export interface SetSummary extends CatalogSet {
-  /** Sa sortie au Japon (YYYY-MM-DD) ; `null` si inconnue. */
+  /** Sa sortie, au Japon ou en France selon sa langue (YYYY-MM-DD) ; `null` si inconnue. */
   released: string | null
   /** Ses cartes au catalogue, dresseurs et énergies compris. */
   count: number
@@ -143,17 +158,18 @@ export interface CatalogSets {
   blocks: string[]
 }
 
-/** L'adresse des séries du catalogue (oubliée pour « Réessayer », `CatalogPage`). */
-export const CATALOG_SETS = '/api/catalog/sets'
+/** L'adresse des séries du catalogue d'une langue (oubliée pour « Réessayer », `CatalogPage`). */
+export const catalogSetsUrl = (lang: CardLanguage) => `${catalogPath(lang)}/sets`
 
-/** Les séries de la page Catalogue ; `null` si elles ne sont pas disponibles. */
-export const loadSets = () =>
+/** Les séries de la page Catalogue, dans cette langue ; `null` si elles ne sont pas disponibles. */
+export const loadSets = (lang: CardLanguage) =>
   derived<CatalogSetsFile, CatalogSets | null>(
-    CATALOG_SETS,
+    catalogSetsUrl(lang),
     (file) =>
       file && {
         blocks: file.blocks,
         sets: file.sets.map(([id, name, released, logo, count, block, deck]) => ({
+          language: lang,
           id,
           name,
           year: released.slice(0, 4) || null,
@@ -207,7 +223,8 @@ function readSet(set: SetSummary, file: CatalogSetFile): SetCard[] {
 }
 
 /** L'adresse des cartes d'une série (oubliée pour « Réessayer », `CatalogPage`). */
-export const setCardsUrl = (set: SetSummary) => `/api/catalog/sets/${encodeURIComponent(set.id)}`
+export const setCardsUrl = (set: SetSummary) =>
+  `${catalogPath(set.language)}/sets/${encodeURIComponent(set.id)}`
 
 /**
  * Toutes les cartes d'une série, dans son ordre ; `null` si elles ne sont pas disponibles. Chaque
@@ -217,26 +234,27 @@ export const loadSetCards = (set: SetSummary) =>
   derived<CatalogSetFile, SetCard[] | null>(setCardsUrl(set), (file) => file && readSet(set, file))
 
 /**
- * La carte du catalogue d'une référence (« Herbizarre (OR1 2) »), lue dans sa série ; `null` si le
- * catalogue ne l'a pas (ou n'est pas disponible).
+ * La carte du catalogue d'une référence (« Herbizarre (OR1 2) ») dans cette langue, lue dans sa
+ * série ; `null` si le catalogue ne l'a pas (ou n'est pas disponible).
  */
-async function catalogCard(reference: string): Promise<SetCard | null> {
+async function catalogCard(reference: string, lang: CardLanguage): Promise<SetCard | null> {
   const code = referenceCode(reference)
   if (!code) return null
-  const set = (await loadSets())?.sets.find((known) => setKey(known.id) === setKey(code.set))
+  const set = (await loadSets(lang))?.sets.find((known) => setKey(known.id) === setKey(code.set))
   const cards = set ? await loadSetCards(set) : null
   return cards?.find((card) => numberKey(card.number) === numberKey(code.number)) ?? null
 }
 
 /**
- * Une carte de la collection est-elle celle-ci du catalogue ? Le même code (série et numéro) dans
- * sa référence, ou le même id Cardmarket.
+ * Une carte de la collection est-elle celle-ci du catalogue ? De la même langue, avec le même code
+ * (série et numéro) dans sa référence, ou le même id Cardmarket.
  */
 export function isCatalogCard(card: PokemonCard, listed: CatalogCard) {
   const code = referenceCode(card.reference)
   return (
-    (code !== null && codeKey(code) === codeKey({ set: listed.set.id, number: listed.number })) ||
-    (listed.cardmarket !== undefined && card.cardmarket === listed.cardmarket)
+    cardLanguage(card) === listed.set.language &&
+    ((code !== null && codeKey(code) === codeKey({ set: listed.set.id, number: listed.number })) ||
+      (listed.cardmarket !== undefined && card.cardmarket === listed.cardmarket))
   )
 }
 
@@ -276,29 +294,34 @@ const loads = (image: CardImage) =>
   })
 
 /**
- * L'image de la carte, si elle se charge (l'API des données la copie à la première demande) :
- * celle que le catalogue donne à cette référence, sinon celle que la référence désigne
- * (`cardImage`) ; `null` si la source ne l'a pas. La même promesse pour la
- * même référence (ce qu'attend `use`). `retry`, au moment d'enregistrer, redemande une image qui a
- * échoué : une panne passagère ne doit pas compter pour une image absente. Sans réponse en 10 s,
- * elle compte pour absente : l'enregistrement, qui l'attend, ne reste pas bloqué.
+ * L'image de la carte dans cette langue, si elle se charge (l'API des données ne copie plus rien à
+ * la demande : une image est chez nous, ou ne l'est pas) : celle que le catalogue donne à cette
+ * référence, sinon celle que la référence désigne (`cardImage`) ; `null` sans image. La même
+ * promesse pour la même langue et la même référence (ce qu'attend `use`). `retry`, au moment
+ * d'enregistrer, redemande une image qui a échoué : une panne passagère ne doit pas compter pour
+ * une image absente. Sans réponse en 10 s, elle compte pour absente : l'enregistrement, qui
+ * l'attend, ne reste pas bloqué.
  */
-export function findCardImage(reference: string, { retry = false } = {}) {
-  let promise = found.get(reference)
-  if (!promise || (retry && missing.has(reference))) {
+export function findCardImage(
+  reference: string,
+  { lang, retry = false }: { lang: CardLanguage; retry?: boolean },
+) {
+  const key = `${lang} ${reference}`
+  let promise = found.get(key)
+  if (!promise || (retry && missing.has(key))) {
     promise = settled(
-      catalogCard(reference).then(async (listed) => {
+      catalogCard(reference, lang).then(async (listed) => {
         // Une carte du catalogue sans image : rien à chercher.
-        const image = listed ? listed.image : cardImage(reference)
+        const image = listed ? listed.image : cardImage(reference, lang)
         if (image && (await loads(image))) {
-          missing.delete(reference)
+          missing.delete(key)
           return image
         }
-        if (image) missing.add(reference)
+        if (image) missing.add(key)
         return null
       }),
     )
-    found.set(reference, promise)
+    found.set(key, promise)
   }
   return promise
 }

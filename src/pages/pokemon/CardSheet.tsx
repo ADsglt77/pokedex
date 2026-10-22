@@ -79,7 +79,7 @@ export function EmptySheet({
   useEffect(() => {
     const load = () => {
       void import('./CardForm')
-      void loadSpeciesCards(species.id)
+      void loadSpeciesCards(species.id, 'ja')
     }
     if ('requestIdleCallback' in window) requestIdleCallback(load, { timeout: 2000 })
     else setTimeout(load, 1000)

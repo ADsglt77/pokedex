@@ -51,7 +51,7 @@ export function CatalogPicker({
   view: PickerView
   onView: (view: PickerView) => void
 }) {
-  const listed = use(loadSpeciesCards(species.id))
+  const listed = use(loadSpeciesCards(species.id, 'ja'))
   const ids = useMemo(() => (listed ?? []).flatMap((card) => card.cardmarket ?? []), [listed])
   const prices = usePrices(ids)
   const missing = usePricesMissing(ids)
