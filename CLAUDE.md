@@ -1,6 +1,7 @@
 # CLAUDE.md
 
-Pokédex personnel de cartes Pokémon **japonaises** : pour chacun des 1 025 Pokémon, la carte que
+Pokédex personnel de cartes Pokémon **japonaises et françaises** (le catalogue français : à venir) :
+pour chacun des 1 025 Pokémon, la carte que
 l'utilisateur choisit (catalogue ou saisie : référence → image, id Cardmarket → prix). Un Pokémon
 est « débloqué » quand sa carte est possédée. Comptes pseudo + mot de passe, sans e-mail ; sans
 connexion : la connexion et le Pokédex public de chaque compte (`/pseudo`).
@@ -29,8 +30,8 @@ Quand un type partagé avec l'API change : `bun run contracts` (exige `../pokede
   règles de la collection, garde du serveur, Pokédex public, schéma ; l'en-tête de chaque fichier
   dit ce qu'il couvre. Pas de tests d'interface.
 - **L'utilisateur choisit les cartes** : aucune détection, sélection ni classement automatique,
-  seulement les aides demandées (`docs/cartes.md`). Cartes japonaises seulement, **Pokécardex**
-  seule source. Ne rien réintroduire sans demande.
+  seulement les aides demandées (`docs/cartes.md`). Cartes japonaises et françaises seulement,
+  **Pokécardex** seule source. Ne rien réintroduire sans demande.
 - **Anonyme** : l'app ne cite aucune source ; rien de ce que voit le navigateur ne la nomme
   (images hébergées chez nous, chemins neutres `/images/cards/SV2A/166-md.webp`, token jamais
   côté navigateur).
