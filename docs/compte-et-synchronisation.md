@@ -88,7 +88,7 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   faux, et pas un lien vers le Pokédex, qui demande d'être connecté ; sur téléphone, leur liste),
   la valeur au prix du jour, la courbe des Pokémon débloqués et le classeur (débloqués en couleur,
   cartes choisies grisées ; les pochettes ne mènent pas aux fiches, celles du visiteur). Le serveur
-  ne montre que les cartes (sans leur page notée) et les possessions avec leur date
+  ne montre que les cartes (avec leur langue, sans leur page notée) et les possessions avec leur date
   (`shownCollection`, testé) : jamais un prix payé, une commande, le budget, la liste d'achats ni
   le statut « commandée » ; une collection vide tant qu'aucun appareil n'a rien envoyé. Il montre
   la version que le serveur a reçue. La page la lit une fois (`getJson`, gardée pour la vie de la

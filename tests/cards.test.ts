@@ -1,11 +1,12 @@
 /**
  * Retirer la carte d'un Pokémon : une carte TAG TEAM, achetée une fois, reste aux autres. Et les
  * règles de la collection et des commandes ne modifient jamais ce qu'elles reçoivent : « Annuler »
- * remet l'état d'avant, qu'une règle qui le modifierait aurait déjà changé.
+ * remet l'état d'avant, qu'une règle qui le modifierait aurait déjà changé. Enfin, la langue d'une
+ * carte (absente : japonaise), qui la suit quand on la détache d'un Pokémon.
  */
 
 import { describe, expect, test } from 'bun:test'
-import { removeCard, saveCard, setCardStatus, setPaidPrice } from '@/lib/collection'
+import { cardLanguage, removeCard, saveCard, setCardStatus, setPaidPrice } from '@/lib/collection'
 import { applyOrder, isInAnOrder } from '@/lib/orders'
 import type { CollectionData } from '@/types'
 import { card, collectionWith, line, NOW, order, ownership } from './fixtures'
@@ -27,6 +28,16 @@ describe('retirer une carte', () => {
     const data = removeCard(withCard([25]), 'a', 25, NOW)
     expect(data.customCards.a).toBeUndefined()
     expect(data.cards.a).toBeUndefined()
+  })
+})
+
+describe('la langue d’une carte', () => {
+  test('absente : japonaise ; « fr » : française, y compris détachée d’un de ses Pokémon', () => {
+    expect(cardLanguage(card('a', [25]))).toBe('ja')
+    const french = card('a', [25, 644], { language: 'fr' })
+    expect(cardLanguage(french)).toBe('fr')
+    const data = { ...collectionWith(), customCards: { a: french } }
+    expect(cardLanguage(removeCard(data, 'a', 25, NOW).customCards.a!)).toBe('fr')
   })
 })
 

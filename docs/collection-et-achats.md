@@ -8,6 +8,13 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   à la lecture (`readCollection` : `schemaVersion`, `updatedAt`, `cards` et `customCards` ; de même
   `readShopping` pour les achats). La page Valeur montre ce que les commandes ont coûté en tout
   (« Dépensé en tout »).
+- Langue d'une carte (`PokemonCard.language`) : `'fr'` pour une carte française ; absente, elle est
+  japonaise (`cardLanguage`, `lib/collection.ts`), si bien que les collections et les exports
+  d'avant restent japonais, sans migration. Le japonais n'a qu'une écriture, l'absence :
+  `isCard` (`lib/transfer.ts`, pour un fichier importé comme pour l'envoi au serveur) n'accepte que
+  l'absence ou `'fr'`, et refuse `'ja'` ou toute autre langue (testé). Le Pokédex public recopie la
+  langue (`shownCollection`, testé) : sans elle, une carte française y passerait pour japonaise
+  (mauvaise image, mauvais lien).
 - Achats (`/achats`, `ShoppingData`, à part de la collection dans le document : elle garde son
   format ; ceux d'un nouveau venu, aucune commande et le budget par défaut :
   `emptyShopping`, `lib/orders.ts`) :

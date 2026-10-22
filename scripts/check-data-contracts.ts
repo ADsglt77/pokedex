@@ -20,6 +20,7 @@ export type DataContractsMatch = [
   Assert<Equal<App.GenerationId, Data.GenerationId>>,
   Assert<Equal<App.PokemonSpecies, Data.PokemonSpecies>>,
   Assert<Equal<App.PokemonSpeciesDetails, Data.PokemonSpeciesDetails>>,
+  Assert<Equal<App.CardLanguage, Data.CardLanguage>>,
   Assert<Equal<App.SpeciesFile, Data.SpeciesFile>>,
   Assert<Equal<App.SpeciesDetailsFile, Data.SpeciesDetailsFile>>,
   Assert<Equal<App.CatalogFile, Data.CatalogFile>>,

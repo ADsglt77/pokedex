@@ -38,6 +38,18 @@ describe('shownCollection', () => {
     expect(JSON.stringify(shown)).not.toContain('cardmarket.com')
   })
 
+  test('la langue d’une carte française reste (sans elle, l’image et le lien seraient japonais)', () => {
+    const french = {
+      ...collection,
+      customCards: { a: card('a', [25], { language: 'fr' }), b: card('b', [1]) },
+    }
+    const { a, b } = shownCollection(french).customCards
+    expect(a).toStrictEqual(card('a', [25], { language: 'fr' }))
+    // Une japonaise ne gagne pas de champ : l'absence reste son seul écrit.
+    expect(b).toStrictEqual(card('b', [1]))
+    expect(b).not.toHaveProperty('language')
+  })
+
   test('l’image : ses deux adresses seulement, rien de ce qu’un fichier y aurait glissé', () => {
     const image = { small: 'https://exemple.fr/s.png', large: 'https://exemple.fr/l.png' }
     const withExtra = {

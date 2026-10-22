@@ -110,7 +110,9 @@ const isOwnership = (ownership: Record<string, unknown>) =>
 
 /**
  * Une carte, rangée sous son id (l'app la retrouve par sa clé et l'enregistre sous son id : deux
- * différents la dédoubleraient), d'au moins un Pokémon du Pokédex (elle n'y aurait pas de place).
+ * différents la dédoubleraient), d'au moins un Pokémon du Pokédex (elle n'y aurait pas de place), de
+ * langue française (`'fr'`) ou sans langue : le japonais n'a qu'une écriture, l'absence (un « ja »
+ * ferait deux écritures d'une même langue).
  */
 const isCard = (card: Record<string, unknown>, key: string) =>
   card.id === key &&
@@ -122,7 +124,8 @@ const isCard = (card: Record<string, unknown>, key: string) =>
     (isRecord(card.image) && isText(card.image.small) && isText(card.image.large))) &&
   // Comme à la saisie : un id 0, négatif ou trop long ferait un lien et une requête de prix vains.
   isOptional(card.cardmarket, (id) => readCardmarketId(String(id)) === id) &&
-  isOptional(card.page, (page) => isText(page) && parseCardmarketLink(page as string) !== null)
+  isOptional(card.page, (page) => isText(page) && parseCardmarketLink(page as string) !== null) &&
+  isOptional(card.language, (language) => language === 'fr')
 
 const isLine = (line: Record<string, unknown>) =>
   isText(line.cardId) &&

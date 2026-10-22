@@ -2,13 +2,13 @@
  * Le Pokédex public de chaque compte (`/pseudo` sur le site), toujours montré.
  * - `GET /api/vitrine/<pseudo>`, sans session (le pseudo sans tenir compte des majuscules ; 404
  *   s'il n'est à personne) : `{ owner, collection, prices }` (`VitrineData`), le pseudo du compte
- *   et sa collection, réduite à ce qui se montre : ses cartes (référence, image, id Cardmarket pour
- *   la valeur au prix du jour ; pas leur page) et, pour celles possédées, la date d'obtention (pas
- *   le prix payé). Rien des achats : ni commandes, ni budget, ni statut « commandée ». Une
- *   collection vide tant qu'aucun appareil n'a rien envoyé. Avec elle, les prix du jour de ses
- *   seules cartes possédées, demandés à l'API des données (`dataPrices`), dans la forme de
- *   `/api/prices` (`null` sans guide des prix, ou l'API muette : la page s'affiche sans valeur) :
- *   la page n'en montre que la valeur, sans charger ceux de toutes les cartes.
+ *   et sa collection, réduite à ce qui se montre : ses cartes (référence, image, langue, id
+ *   Cardmarket pour la valeur au prix du jour ; pas leur page) et, pour celles possédées, la date
+ *   d'obtention (pas le prix payé). Rien des achats : ni commandes, ni budget, ni statut
+ *   « commandée ». Une collection vide tant qu'aucun appareil n'a rien envoyé. Avec elle, les prix
+ *   du jour de ses seules cartes possédées, demandés à l'API des données (`dataPrices`), dans la
+ *   forme de `/api/prices` (`null` sans guide des prix, ou l'API muette : la page s'affiche sans
+ *   valeur) : la page n'en montre que la valeur, sans charger ceux de toutes les cartes.
  * - `GET /api/vitrine/<pseudo>/apercu` : la page que lisent les robots d'aperçu (Discord,
  *   WhatsApp…) quand on partage le lien : « Le Pokédex de … » et sa progression (ils ne lancent pas
  *   le JavaScript de l'app). nginx les y envoie pour toute adresse d'un seul segment
@@ -35,7 +35,7 @@ import { journalOnce, reasonOf, visitorOf } from './journal'
  */
 export function shownCollection(collection: CollectionData): CollectionData {
   const customCards: Record<string, PokemonCard> = {}
-  for (const [id, { dexIds, reference, image, cardmarket }] of Object.entries(
+  for (const [id, { dexIds, reference, image, cardmarket, language }] of Object.entries(
     collection.customCards,
   )) {
     customCards[id] = {
@@ -44,6 +44,8 @@ export function shownCollection(collection: CollectionData): CollectionData {
       reference,
       image: image && { small: image.small, large: image.large },
       ...(cardmarket && { cardmarket }),
+      // Sans elle, une carte française serait montrée japonaise (son image, son lien).
+      ...(language && { language }),
     }
   }
   const cards: Record<string, CardOwnership> = {}

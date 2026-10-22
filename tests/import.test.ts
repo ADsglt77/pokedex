@@ -146,6 +146,19 @@ describe('import', () => {
     expect(reimport(['collection', 'customCards', 'a', 'id'], 'b')).toBeNull()
   })
 
+  test('la langue d’une carte : absente (japonaise) ou « fr » ; « ja » et le reste, refusés', () => {
+    const language = ['collection', 'customCards', 'a', 'language']
+    // Un export d'avant les cartes françaises, sans le champ : japonaises, importées telles quelles.
+    expect(reimport()?.collection.customCards.a).toEqual(card('a', [25]))
+    expect(reimport(language, 'fr')?.collection.customCards.a?.language).toBe('fr')
+    // Le japonais n'a qu'une écriture, l'absence : « ja » donnerait deux cartes d'une même langue.
+    expect(reimport(language, 'ja')).toBeNull()
+    expect(reimport(language, 'de')).toBeNull()
+    expect(reimport(language, 'FR')).toBeNull()
+    expect(reimport(language, 2)).toBeNull()
+    expect(reimport(language, null)).toBeNull()
+  })
+
   test('une commande avec deux lignes d’une même carte est refusée', () => {
     expect(reimport([...ORDER, 'lines'], [line('a', 12), line('a', 3)])).toBeNull()
     expect(reimport([...ORDER, 'lines'], [line('a', 12), line('b', 3)])).not.toBeNull()
@@ -174,6 +187,19 @@ describe('document envoyé au serveur', () => {
 
   test('un document de l’app est accepté tel quel', () => {
     expect(received({ collection, shopping })).toEqual({ collection, shopping })
+  })
+
+  test('une carte française est acceptée ; une langue inconnue, refusée', () => {
+    const withLanguage = (language: unknown) => ({
+      collection: { ...collection, customCards: { a: { ...card('a', [25]), language } } },
+      shopping,
+    })
+    expect(received(withLanguage('fr'))?.collection.customCards.a?.language).toBe('fr')
+    expect(received(withLanguage('ja'))).toBeNull()
+    expect(received(withLanguage('de'))).toBeNull()
+    expect(readSent(JSON.parse(JSON.stringify(withLanguage('de')))).problem).toBe(
+      'la carte « Carte a » est abîmée',
+    )
   })
 
   test('sans achats, il est refusé : ce n’est pas un vieil export', () => {

@@ -3,10 +3,13 @@
  * Elles ne modifient jamais l'objet reçu (« Annuler » repose dessus, voir `useCollectionAction`).
  */
 
-import type { CardStatus, CollectionData, PokemonCard } from '@/types'
+import type { CardLanguage, CardStatus, CollectionData, PokemonCard } from '@/types'
 
 /** L'id d'une carte ajoutée par l'utilisateur (son format est celui de la collection enregistrée). */
 export const newCardId = () => `manual:${crypto.randomUUID()}`
+
+/** La langue d'une carte : française si elle le dit, sinon japonaise (les cartes d'avant). */
+export const cardLanguage = (card: PokemonCard): CardLanguage => card.language ?? 'ja'
 
 /** Une carte ajoutée par l'utilisateur ; `null` si elle n'existe pas (ou plus). */
 export const findCard = (id: string, collection: CollectionData): PokemonCard | null =>
