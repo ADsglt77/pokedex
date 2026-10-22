@@ -41,8 +41,8 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     et dit de les copier avec Ctrl+C.
     Chaque carte du plan a un prix, donc un id Cardmarket. Une carte sans ligne sûre (version ou
     extension incertaine) est listée à part, avec son lien « Voir sur Cardmarket »
-    (`CardmarketLink`) : l'ajouter depuis sa page (« Ajouter à mes souhaits », déjà en japonais,
-    Near Mint par le lien). Un message bleu « Informations » de Cardmarket signale une carte ajoutée
+    (`CardmarketLink`) : l'ajouter depuis sa page (« Ajouter à mes souhaits », déjà dans la langue
+    de la carte, Near Mint par le lien). Un message bleu « Informations » de Cardmarket signale une carte ajoutée
     sans sa version : la retirer de la liste et l'ajouter depuis sa page ;
   - commandes : `applyOrder` (`lib/orders.ts`) reporte chaque enregistrement sur la collection (en
     cours → commandée, reçue → possédée, annulée ou supprimée → l'état d'avant, gardé dans

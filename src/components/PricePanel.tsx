@@ -11,8 +11,11 @@ import { loadPriceHistory, usePrices, usePricesMissing } from '@/store/prices'
 import type { PokemonCard } from '@/types'
 import styles from './PricePanel.module.css'
 
-/** Une carte chez Cardmarket : de quoi trouver son prix, sa page, et nommer sa courbe. */
-type PricedCard = Pick<PokemonCard, 'cardmarket' | 'page' | 'reference'>
+/**
+ * Une carte chez Cardmarket : de quoi trouver son prix, sa page (dans sa langue), et nommer sa
+ * courbe.
+ */
+type PricedCard = Pick<PokemonCard, 'cardmarket' | 'page' | 'reference' | 'language'>
 
 /**
  * La carte chez Cardmarket : son id et sa page, son prix du jour, son évolution et, si le prix

@@ -13,8 +13,11 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
   son id Cardmarket (`cardmarket`) et sa page chez Cardmarket (`page`), tous deux facultatifs ;
   sans page notée, le lien « Voir sur Cardmarket » se fait par l'id (`cardmarketPage` :
   `/fr/Pokemon/Products?idProduct=…`, vérifié par l'utilisateur ; `/Products/Singles?idProduct=`
-  ne marche pas), le seul lien construit vers Cardmarket. Il ouvre les offres en japonais, Near
-  Mint au moins (`?language=7&minCondition=2`, sauf les filtres qu'une page collée fixe déjà).
+  ne marche pas), le seul lien construit vers Cardmarket. Il ouvre les offres dans la langue de la
+  carte, Near Mint au moins : `?language=7&minCondition=2` en japonais, `?language=2&minCondition=2`
+  pour une carte française (`PokemonCard.language`), sauf les filtres qu'une page collée fixe déjà.
+  Le filtre japonais (`language=7`) a été vérifié par l'utilisateur sur cardmarket.com ; le français
+  (`language=2`) est **à faire vérifier** de même.
   Une par Pokémon : on la corrige (« Modifier la carte », même id, son statut et ses achats la
   suivent) ou on la retire (« Retirer la carte » : avec son statut et son prix payé ; confirmation si elle est possédée ; impossible tant qu'une commande la contient) avant
   d'en ajouter une autre. Si un fichier importé en a plusieurs, la première compte.

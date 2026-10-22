@@ -2,8 +2,8 @@
  * Ce que l'utilisateur saisit et qui compte en argent : les montants (lignes de commande, port,
  * frais, remboursé, budget, prix payé), la saisie d'une commande qui les lit (`readDraft`) et l'id
  * Cardmarket d'une carte (d'où son prix). Un montant mal lu fausserait le budget sans rien dire. Et
- * le lien vers Cardmarket : ses offres en japonais, Near Mint au moins (une autre langue, ce serait
- * une autre carte achetée).
+ * le lien vers Cardmarket : ses offres dans la langue de la carte (japonais, ou français pour une
+ * carte française), Near Mint au moins (une autre langue, ce serait une autre carte achetée).
  */
 
 import { describe, expect, test } from 'bun:test'
@@ -179,7 +179,17 @@ describe('cardmarketPage', () => {
     expect(cardmarketPage({})).toBeNull()
   })
 
+  test('une carte française : les offres en français, sur sa page notée comme sur celle de l’id', () => {
+    expect(cardmarketPage({ cardmarket: 851072, language: 'fr' })).toBe(
+      'https://www.cardmarket.com/fr/Pokemon/Products?idProduct=851072&language=2&minCondition=2',
+    )
+    expect(cardmarketPage({ page, language: 'fr' })).toBe(`${page}?language=2&minCondition=2`)
+  })
+
   test('une page collée avec ses propres filtres les garde', () => {
     expect(cardmarketPage({ page: `${page}?language=1` })).toBe(`${page}?language=1&minCondition=2`)
+    expect(cardmarketPage({ page: `${page}?language=1`, language: 'fr' })).toBe(
+      `${page}?language=1&minCondition=2`,
+    )
   })
 })

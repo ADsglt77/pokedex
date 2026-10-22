@@ -6,14 +6,14 @@ import type { PokemonCard } from '@/types'
 import styles from './CardmarketLink.module.css'
 
 /**
- * « Voir sur Cardmarket » : la page de la carte (celle notée, sinon celle de son id), dans un nouvel
- * onglet ; rien sans l'une ni l'autre.
+ * « Voir sur Cardmarket » : la page de la carte (celle notée, sinon celle de son id) avec les offres
+ * dans sa langue, dans un nouvel onglet ; rien sans l'une ni l'autre.
  */
 export function CardmarketLink({
   card,
   className,
 }: {
-  card: Pick<PokemonCard, 'page' | 'cardmarket'>
+  card: Pick<PokemonCard, 'page' | 'cardmarket' | 'language'>
   className?: string
 }) {
   const page = cardmarketPage(card)

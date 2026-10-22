@@ -6,14 +6,15 @@
  */
 
 import { parseLink } from '@/lib/format'
-import type { PokemonCard } from '@/types'
+import type { CardLanguage, PokemonCard } from '@/types'
 
 /**
- * Les filtres des offres, ajoutés à la page d'une carte (choix de l'utilisateur, octobre 2026) : en
- * japonais (`language=7`), Near Mint au moins (`minCondition=2`). Ceux d'une adresse collée qui
- * en porte déjà restent les siens.
+ * Les filtres des offres, ajoutés à la page d'une carte (choix de l'utilisateur, octobre 2026) : la
+ * langue de la carte (`language` : 7 pour le japonais, 2 pour le français, à faire vérifier par
+ * l'utilisateur sur cardmarket.com), Near Mint au moins (`minCondition=2`). Ceux d'une adresse
+ * collée qui en porte déjà restent les siens.
  */
-const OFFER_FILTERS = { language: '7', minCondition: '2' }
+const OFFER_LANGUAGE: Record<CardLanguage, string> = { ja: '7', fr: '2' }
 
 /**
  * La page d'une carte chez Cardmarket, avec les filtres des offres : celle notée (adresse collée),
@@ -21,7 +22,7 @@ const OFFER_FILTERS = { language: '7', minCondition: '2' }
  * (vérifié par l'utilisateur en octobre 2026 ; `/Products/Singles?idProduct=` ne marche pas).
  * `null` sans l'un ni l'autre.
  */
-export function cardmarketPage(card: Pick<PokemonCard, 'page' | 'cardmarket'>) {
+export function cardmarketPage(card: Pick<PokemonCard, 'page' | 'cardmarket' | 'language'>) {
   const page =
     card.page ??
     (card.cardmarket === undefined
@@ -29,7 +30,8 @@ export function cardmarketPage(card: Pick<PokemonCard, 'page' | 'cardmarket'>) {
       : `https://www.cardmarket.com/fr/Pokemon/Products?idProduct=${card.cardmarket}`)
   if (!page) return null
   const url = new URL(page)
-  for (const [name, value] of Object.entries(OFFER_FILTERS)) {
+  const filters = { language: OFFER_LANGUAGE[card.language ?? 'ja'], minCondition: '2' }
+  for (const [name, value] of Object.entries(filters)) {
     if (!url.searchParams.has(name)) url.searchParams.set(name, value)
   }
   return url.href
