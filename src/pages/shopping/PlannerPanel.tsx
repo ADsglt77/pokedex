@@ -280,10 +280,7 @@ export function PlannerPanel({
           <AccordionItem value="how" title="Comment le plan est construit" headingLevel={3}>
             <Stack gap={3}>
               <ol className={page.steps}>
-                <li>
-                  Les cartes de vos Pokémon, ni possédées ni commandées, d’un Pokémon que vous
-                  n’avez pas.
-                </li>
+                <li>Les cartes de vos Pokémon, ni possédées ni commandées.</li>
                 <li>Les cartes sans prix sont mises de côté.</li>
                 <li>Dans l’ordre : vos ajouts à la main, puis le prix le plus bas.</li>
                 <li>

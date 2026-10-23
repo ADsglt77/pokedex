@@ -32,9 +32,10 @@ const SORT_LABELS: Record<WishlistSort, string> = {
 const CARDS_STEP = 40
 
 /**
- * La liste d'achats (`rows`, celle de la page : `useWishlist`) : la carte de chaque Pokémon, ni
- * possédée ni commandée ; chercher, filtrer, trier. Ses filtres sont dans l'adresse, lus et changés
- * par la page (`ShoppingPage`) : ils survivent à l'ouverture d'une fiche et au retour.
+ * La liste d'achats (`rows`, celle de la page : `useWishlist`) : les cartes voulues pour vos
+ * Pokémon, ni possédées ni commandées, chacune une fois ; chercher, filtrer, trier. Ses filtres
+ * sont dans l'adresse, lus et changés par la page (`ShoppingPage`) : ils survivent à l'ouverture
+ * d'une fiche et au retour.
  */
 export function WishlistPanel({
   rows,
@@ -62,7 +63,7 @@ export function WishlistPanel({
         className={page.panel}
         icon={<ListChecks size={22} />}
         title="Rien à acheter pour l’instant"
-        description="Choisissez la carte de vos Pokémon, dans le catalogue ou sur leur fiche : celles que vous n’avez pas encore arrivent ici."
+        description="Choisissez les cartes de vos Pokémon, dans le catalogue ou sur leur fiche : celles que vous n’avez pas encore arrivent ici."
         actions={
           <>
             <Button asChild>

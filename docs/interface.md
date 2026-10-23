@@ -201,8 +201,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   ouverte directement) ; sur un réseau lent, une barre fine en haut le dit (`NavigationProgress`,
   `AppShell` : le `Progress` indéterminé de camply, sans fond, montré après 0,3 s). La fenêtre
   d'une carte est préparée dès que le pointeur ou le focus arrive sur « Modifier la carte » ou
-  « Ajouter une carte » de la liste des cartes (avec les cartes japonaises du Pokémon ; sur une
-  fiche sans carte, quand le navigateur est libre), et une roue dit son ouverture si elle
+  « Ajouter une carte » (`AddCardButton`, avec les cartes japonaises du Pokémon ; sur une fiche
+  sans carte, aussi quand le navigateur est libre), et une roue dit son ouverture si elle
   tarde. Le client Better Auth non plus (`lib/auth.ts`, à part de `lib/account.ts` que lit le
   démarrage) : seules la connexion, l'inscription et Réglages › Mon compte l'importent, la
   déconnexion le charge à la demande. Une donnée chargée à la demande et lue par `use()` passe par

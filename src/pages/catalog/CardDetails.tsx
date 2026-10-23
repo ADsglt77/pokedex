@@ -37,7 +37,7 @@ function useCollectionPlace(card: SetCard) {
   const entries = card.dexIds.map((id) => entryById.get(id)!)
   const mine =
     entries.flatMap(({ cards }) => cards).find((view) => isCatalogCard(view.card, card)) ?? null
-  const holders = entries.filter(({ cards }) => cards.length > 0).map(({ species }) => species.id)
+  const holders = entries.filter(({ cards }) => cards.length > 0)
   return { mine, holders }
 }
 
@@ -215,7 +215,9 @@ function placeText({ mine, holders }: CollectionPlace) {
   if (mine) return `Dans votre collection, ${statusText(mine.status)}.`
   if (!holders.length) return 'Pas encore dans votre collection.'
   const several = holders.length > 1
-  return `${speciesNames(holders)} ${several ? 'ont' : 'a'} déjà des cartes : celle-ci s’y ajoute, à acheter, sans changer ${several ? 'leur' : 'sa'} favorite.`
+  // Un seul Pokémon, avec une seule carte : « une carte » ; sinon « des cartes ».
+  const cards = !several && holders[0]!.cards.length === 1 ? 'une carte' : 'des cartes'
+  return `${speciesNames(holders.map(({ species }) => species.id))} ${several ? 'ont' : 'a'} déjà ${cards} : celle-ci s’y ajoute, à acheter, sans changer ${several ? 'leur' : 'sa'} favorite.`
 }
 
 /**

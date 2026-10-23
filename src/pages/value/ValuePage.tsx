@@ -139,7 +139,7 @@ export function ValuePage() {
         <Panel
           flush
           title="Pour compléter, par génération"
-          description="Pour chaque Pokémon à débloquer, le prix de sa carte ; ceux sans carte, ou dont la carte n’a pas de prix, sont comptés à part. Ceux dont la carte est déjà commandée n’y sont pas : ils comptent dans les commandes."
+          description="Pour chaque Pokémon à débloquer, le prix de sa carte favorite ; ceux sans carte, ou dont la favorite n’a pas de prix, sont comptés à part. Ceux dont une carte est déjà possédée ou commandée n’y sont pas : ils comptent dans la collection ou dans les commandes."
         >
           <CompletionTable rows={completion} priced={priced} />
         </Panel>

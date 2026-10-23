@@ -26,10 +26,10 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   possédée, ou si c'est la favorite d'un Pokémon qui garde d'autres cartes : il faut alors choisir
   la nouvelle favorite ; impossible tant qu'une commande la contient).
   Une carte de plusieurs Pokémon (TAG TEAM : `dexIds` en a plusieurs) est **une seule carte**,
-  achetée une fois (décision de l'utilisateur, octobre 2026) : choisie dans le catalogue, elle va
-  à tous ses Pokémon, sauf à ceux qui l'ont déjà ; déjà dans la collection comme carte d'un autre
-  de ses Pokémon (une TAG TEAM ajoutée avant à certains seulement), elle n'est pas recopiée : ceux
-  qui la reçoivent s'ajoutent à elle (même id) ; son statut et son prix payé valent pour tous ;
+  achetée une fois (décision de l'utilisateur, octobre 2026) : choisie dans la fenêtre d'ajout,
+  elle va à tous ses Pokémon, sauf à ceux qui l'ont déjà ; déjà dans la collection comme carte d'un
+  autre de ses Pokémon (une TAG TEAM ajoutée avant à certains seulement), elle n'est pas recopiée :
+  ceux qui la reçoivent s'ajoutent à elle (même id) ; son statut et son prix payé valent pour tous ;
   elle peut être la favorite de chacun, chacun pour soi ; la valeur, le coût
   pour compléter et la prochaine commande ne la comptent qu'une fois. La retirer d'un de ses
   Pokémon l'en détache seulement (`removeCard` : elle reste aux autres, avec son statut, son prix
@@ -133,9 +133,10 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   langue d'une carte du catalogue). La fiche dit où elle en est (`useCollectionPlace` : `mine`,
   la carte de la collection qui est celle-ci, parmi toutes celles de ses Pokémon ; `holders`,
   ceux qui ont déjà des cartes) : « Pikachu a déjà des cartes : celle-ci s'y ajoute, à acheter,
-  sans changer sa favorite. » (« leur favorite » s'ils sont plusieurs). Déjà dans la collection (de
-  la même langue, avec le même code dans la référence ou le même id Cardmarket : `isCatalogCard`,
-  pour n'importe lequel de ses Pokémon) :
+  sans changer sa favorite. » (« a déjà une carte » s'il n'en a qu'une ; « ont déjà des cartes »,
+  « leur favorite » s'ils sont plusieurs). Déjà dans la collection (de la même langue, avec le même
+  code dans la référence ou le même id Cardmarket : `isCatalogCard`, pour n'importe lequel de ses
+  Pokémon) :
   « Dans votre collection », qui reçoit le focus après l'ajout, et le bouton disparaît : une carte
   du catalogue n'est jamais ajoutée deux fois (une TAG TEAM qu'un seul de ses Pokémon a se donne
   aux autres depuis leur fiche). Annoncé avec « Annuler » : « Carte … ajoutée à Pikachu, à acheter. »

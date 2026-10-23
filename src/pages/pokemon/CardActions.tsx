@@ -1,12 +1,14 @@
 import { Button, ButtonGroup, Radio, RadioGroup, Spinner, Stack, Toggle } from '@camply/ui'
-import { Pencil, Star, Trash2 } from '@camply/ui/icons'
-import { lazy, Suspense, useRef, useState, type ComponentProps } from 'react'
+import { Pencil, Plus, Star, Trash2 } from '@camply/ui/icons'
+import { lazy, Suspense, useEffect, useRef, useState, type ComponentProps } from 'react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EuroInput } from '@/components/EuroInput'
+import { LanguageFlag } from '@/components/LanguageSwitch'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { usePokedex } from '@/hooks/usePokedex'
 import { useCollectionAction } from '@/hooks/useNotify'
-import { isToBuy } from '@/lib/collection'
+import { loadSpeciesCards } from '@/lib/card-catalog'
+import { cardLanguage, isToBuy } from '@/lib/collection'
 import { isInAnOrder } from '@/lib/orders'
 import { cx } from '@/lib/cx'
 import { focusAfter } from '@/lib/focus'
@@ -15,7 +17,7 @@ import { formatEuro, statusLabel } from '@/lib/format'
 import { unlockedWithout, type CardView, type PokedexEntry } from '@/lib/pokedex'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
-import type { CardStatus } from '@/types'
+import type { CardStatus, PokemonSpecies } from '@/types'
 import styles from './CardActions.module.css'
 
 /**
@@ -25,12 +27,61 @@ import styles from './CardActions.module.css'
 const loadCardForm = () => import('./CardForm')
 const CardForm = lazy(() => loadCardForm().then(({ CardForm }) => ({ default: CardForm })))
 
-/** Cette fenêtre, et son attente le temps de son chargement (la fiche s'en sert aussi). */
-export function CardFormWindow(props: ComponentProps<typeof CardForm>) {
+/** Cette fenêtre, et son attente le temps de son chargement. */
+function CardFormWindow(props: ComponentProps<typeof CardForm>) {
   return (
     <Suspense fallback={<Spinner size={16} label="Ouverture de la fenêtre…" />}>
       <CardForm {...props} />
     </Suspense>
+  )
+}
+
+/**
+ * La fenêtre d'ajout et les cartes japonaises du Pokémon (son premier onglet), chargées d'avance :
+ * elle s'ouvre sans attendre.
+ */
+const prepareAddition = (speciesId: number) => {
+  void loadCardForm()
+  void loadSpeciesCards(speciesId, 'ja')
+}
+
+/**
+ * « Ajouter une carte » : le bouton et la fenêtre qu'il ouvre, préparée dès que le pointeur ou le
+ * focus arrive dessus. `compact` : un bouton discret, pour la liste des cartes d'un Pokémon ; sinon
+ * l'action attendue d'un Pokémon sans carte, dont la fenêtre est préparée dès que le navigateur a
+ * le temps (au plus tard 2 s après). Safari n'a pas `requestIdleCallback`.
+ */
+export function AddCardButton({
+  species,
+  compact,
+}: {
+  species: PokemonSpecies
+  compact?: boolean
+}) {
+  const [adding, setAdding] = useState(false)
+  useEffect(() => {
+    if (compact) return
+    const load = () => prepareAddition(species.id)
+    if ('requestIdleCallback' in window) requestIdleCallback(load, { timeout: 2000 })
+    else setTimeout(load, 1000)
+  }, [species.id, compact])
+  const prepare = () => prepareAddition(species.id)
+  return (
+    <>
+      <div>
+        <Button
+          variant={compact ? 'secondary' : undefined}
+          size={compact ? 'sm' : undefined}
+          leftIcon={<Plus size={compact ? 15 : 16} />}
+          onPointerEnter={prepare}
+          onFocus={prepare}
+          onClick={() => setAdding(true)}
+        >
+          Ajouter une carte
+        </Button>
+      </div>
+      {adding && <CardFormWindow species={species} card={null} onClose={() => setAdding(false)} />}
+    </>
   )
 }
 
@@ -257,7 +308,17 @@ export function CardActions({ view, entry }: { view: CardView; entry: PokedexEnt
               <Radio
                 key={other.id}
                 value={other.id}
-                label={other.reference}
+                // `label` est typé `string` dans camply, qui l'écrit tel quel : le drapeau y tient
+                // (comme le segment de `LanguageSwitch`). Un code d'extension existe dans les deux
+                // langues : la référence seule ne suffit pas.
+                label={
+                  (
+                    <>
+                      {other.reference}
+                      <LanguageFlag language={cardLanguage(other)} />
+                    </>
+                  ) as unknown as string
+                }
                 hint={statusLabel(otherStatus)}
               />
             ))}

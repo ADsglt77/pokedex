@@ -96,9 +96,9 @@ export function PokedexPage() {
           </Button>
         }
       >
-        Les {formatInteger(pokedex.progress.total)} Pokémon et leur carte :{' '}
+        Les {formatInteger(pokedex.progress.total)} Pokémon et leur carte favorite :{' '}
         {plural(pokedex.progress.unlocked, 'débloqué', 'débloqués')}. Ouvrez-en un pour lui choisir
-        sa carte.
+        ses cartes.
       </PageHeader>
 
       <PokedexToolbar

@@ -1,12 +1,10 @@
-import { Badge, Button } from '@camply/ui'
-import { Plus, Star } from '@camply/ui/icons'
-import { useState } from 'react'
+import { Badge } from '@camply/ui'
+import { Star } from '@camply/ui/icons'
 import { CardArt } from '@/components/CardArt'
 import { LanguageFlag } from '@/components/LanguageSwitch'
-import { loadSpeciesCards } from '@/lib/card-catalog'
 import { cardLanguage } from '@/lib/collection'
 import type { PokedexEntry } from '@/lib/pokedex'
-import { CardFormWindow } from './CardActions'
+import { AddCardButton } from './CardActions'
 import styles from './CardList.module.css'
 
 /** « ★ Favorite » : la carte que le Pokédex montre pour le Pokémon (la liste, le titre de la fiche). */
@@ -33,13 +31,6 @@ export function CardList({
   onShow: (cardId: string) => void
 }) {
   const { species } = entry
-  const [adding, setAdding] = useState(false)
-  // La fenêtre et les cartes japonaises du Pokémon (son premier onglet), préparées dès que le
-  // pointeur ou le focus arrive sur le bouton : elle s'ouvre sans attendre.
-  const prepare = () => {
-    void import('./CardForm')
-    void loadSpeciesCards(species.id, 'ja')
-  }
 
   return (
     <div className={styles.cards}>
@@ -65,19 +56,7 @@ export function CardList({
           </li>
         ))}
       </ul>
-      <div>
-        <Button
-          variant="secondary"
-          size="sm"
-          leftIcon={<Plus size={15} />}
-          onPointerEnter={prepare}
-          onFocus={prepare}
-          onClick={() => setAdding(true)}
-        >
-          Ajouter une carte
-        </Button>
-      </div>
-      {adding && <CardFormWindow species={species} card={null} onClose={() => setAdding(false)} />}
+      <AddCardButton species={species} compact />
     </div>
   )
 }

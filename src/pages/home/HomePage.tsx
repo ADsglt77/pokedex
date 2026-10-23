@@ -43,7 +43,7 @@ export function HomePage() {
       >
         {thisMonth > 0
           ? `${plural(thisMonth, 'carte obtenue', 'cartes obtenues')} ce mois-ci.`
-          : 'Vos cartes Pokémon japonaises et françaises, une par Pokémon : choisissez-les, obtenez-les, débloquez le Pokédex.'}
+          : 'Vos cartes Pokémon japonaises et françaises, une ou plusieurs par Pokémon, la favorite à l’affiche : choisissez-les, obtenez-les, débloquez le Pokédex.'}
       </PageHeader>
 
       <div className={styles.dashboard}>

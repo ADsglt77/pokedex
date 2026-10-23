@@ -261,7 +261,7 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
           <EmptyState
             icon={<Lock size={22} />}
             title="Aucun Pokémon débloqué pour l’instant"
-            description="Un Pokémon est débloqué quand sa carte est possédée."
+            description="Un Pokémon est débloqué dès qu’une de ses cartes est possédée."
             actions={<Button onClick={() => setShown('all')}>Voir tous les Pokémon</Button>}
           />
         ) : (

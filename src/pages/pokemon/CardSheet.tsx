@@ -1,18 +1,17 @@
 import { Button } from '@camply/ui'
-import { ArrowRight, Plus } from '@camply/ui/icons'
-import { useEffect, useState, type Ref } from 'react'
+import { ArrowRight } from '@camply/ui/icons'
+import type { Ref } from 'react'
 import { Link } from 'react-router'
 import { LanguageFlag } from '@/components/LanguageSwitch'
 import { Panel } from '@/components/Panel'
 import { PricePanel } from '@/components/PricePanel'
-import { loadSpeciesCards } from '@/lib/card-catalog'
 import { cardLanguage } from '@/lib/collection'
 import { speciesPath } from '@/lib/filters'
 import { details, statusCaption } from '@/lib/format'
 import type { CardView, PokedexEntry } from '@/lib/pokedex'
 import { otherSpeciesNames } from '@/lib/species'
 import type { PokemonSpecies } from '@/types'
-import { CardActions, CardFormWindow } from './CardActions'
+import { AddCardButton, CardActions } from './CardActions'
 import { FavoriteBadge } from './CardList'
 import styles from './CardSheet.module.css'
 
@@ -88,29 +87,13 @@ export function EmptySheet({
   species: PokemonSpecies
   titleRef: Ref<HTMLHeadingElement>
 }) {
-  const [adding, setAdding] = useState(false)
-  // La fenêtre d'ajout et ses cartes du catalogue, préparées quand le navigateur a le temps (au plus
-  // tard 2 s après) : elle s'ouvre sans attendre. Safari n'a pas `requestIdleCallback`.
-  useEffect(() => {
-    const load = () => {
-      void import('./CardForm')
-      void loadSpeciesCards(species.id, 'ja')
-    }
-    if ('requestIdleCallback' in window) requestIdleCallback(load, { timeout: 2000 })
-    else setTimeout(load, 1000)
-  }, [species.id])
   return (
     <Panel title="Carte à choisir" titleRef={titleRef}>
       <p className="muted">
         Choisissez la carte que vous voulez pour {species.names.fr} parmi ses cartes japonaises ou
         françaises, avec leur image et leur prix, ou saisissez-la à la main.
       </p>
-      <div>
-        <Button leftIcon={<Plus size={16} />} onClick={() => setAdding(true)}>
-          Ajouter une carte
-        </Button>
-      </div>
-      {adding && <CardFormWindow species={species} card={null} onClose={() => setAdding(false)} />}
+      <AddCardButton species={species} />
     </Panel>
   )
 }
