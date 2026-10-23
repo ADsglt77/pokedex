@@ -320,7 +320,7 @@ describe('les comptes : chacun le sien', () => {
 
   test('un pseudo de deux caractères, oui ; une adresse du site, non', async () => {
     expect((await createAccount('Al')).response.status).toBe(200)
-    for (const pseudo of ['A', 'connexion', 'Pokedex', 'api']) {
+    for (const pseudo of ['A', 'connexion', 'Pokedex', 'Collections', 'api']) {
       expect((await createAccount(pseudo)).response.status).toBe(400)
     }
   })

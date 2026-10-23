@@ -23,6 +23,7 @@ export const RESERVED_PSEUDOS = [
   'mentions-legales',
   'pokedex',
   'pokemon',
+  'collections',
   'valeur',
   'achats',
   'donnees',
