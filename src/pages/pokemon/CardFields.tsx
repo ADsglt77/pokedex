@@ -16,6 +16,12 @@ import styles from './CardFields.module.css'
  */
 const RAW_TEXT = { spellCheck: false, autoCorrect: 'off', autoComplete: 'off' } as const
 
+/** Une référence d'exemple dans chaque langue : le code d'une extension de cette langue. */
+const REFERENCE_EXAMPLE: Record<CardLanguage, string> = {
+  ja: 'Bulbizarre (SV2A 166)',
+  fr: 'Bulbizarre (MEG 001)',
+}
+
 /**
  * Les champs d'une carte : sa langue (japonaise ou française : où son image est cherchée, et quelle
  * offre Cardmarket son lien montre), sa référence (d'où son image est retrouvée), l'adresse de son
@@ -42,7 +48,7 @@ export function CardFields({
         <Input
           {...RAW_TEXT}
           label="Référence"
-          hint="Le nom, puis le code de l’extension et le numéro : « Bulbizarre (SV2A 166) ». Il sert à trouver l’image. Vide : le nom de la carte chez Cardmarket."
+          hint={`Le nom, puis le code de l’extension et le numéro : « ${REFERENCE_EXAMPLE[draft.language]} ». Il sert à trouver l’image. Vide : le nom de la carte chez Cardmarket.`}
           value={draft.reference}
           onChange={(event) => draft.setReference(event.target.value)}
           onBlur={draft.searchImage}
