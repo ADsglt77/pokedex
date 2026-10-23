@@ -1,7 +1,11 @@
 /**
  * Le code d'une carte : le code de la série et le numéro qui finissent sa référence
- * (« Bulbizarre (SV2A 166) »).
+ * (« Bulbizarre (SV2A 166) ») ; et ce qui fait la même carte : même langue, et même code ou même
+ * id Cardmarket (une carte n'existe qu'une fois).
  */
+
+import { cardLanguage } from '@/lib/collection'
+import type { CardLanguage, PokemonCard } from '@/types'
 
 interface CardCode {
   set: string
@@ -28,4 +32,26 @@ export const numberKey = (number: string) =>
 export const setKey = (set: string) => set.toUpperCase().replace(/-/g, '')
 
 /** La clé d'une carte, la même quelle que soit l'écriture de son code : « SV2A 166 », « E1 97 ». */
-export const codeKey = ({ set, number }: CardCode) => `${setKey(set)} ${numberKey(number)}`
+const codeKey = ({ set, number }: CardCode) => `${setKey(set)} ${numberKey(number)}`
+
+/**
+ * La carte de la collection est-elle celle-là : de cette langue, avec ce code (série et numéro)
+ * dans sa référence, ou cet id Cardmarket ?
+ */
+export function isCardOf(
+  card: PokemonCard,
+  language: CardLanguage,
+  code: CardCode | null,
+  cardmarket: number | undefined,
+) {
+  if (cardLanguage(card) !== language) return false
+  const own = referenceCode(card.reference)
+  return (
+    (own !== null && code !== null && codeKey(own) === codeKey(code)) ||
+    (cardmarket !== undefined && card.cardmarket === cardmarket)
+  )
+}
+
+/** Deux cartes de la collection sont-elles la même (`isCardOf`) ? */
+export const sameCard = (a: PokemonCard, b: PokemonCard) =>
+  isCardOf(a, cardLanguage(b), referenceCode(b.reference), b.cardmarket)

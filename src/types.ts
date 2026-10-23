@@ -51,14 +51,16 @@ export interface CardImage {
 
 /**
  * Une carte que veut un Pokémon : c'est l'utilisateur qui l'ajoute ; un Pokémon peut en avoir
- * plusieurs, dont une favorite (`CollectionData.favorites`).
+ * plusieurs, dont une favorite (`CollectionData.favorites`). Ou une case d'une collection
+ * d'extension (`SeriesCollection`).
  */
 export interface PokemonCard {
   /** `manual:<uuid>`. */
   id: string
   /**
    * Les Pokémon dont c'est une carte : plusieurs pour une carte TAG TEAM, achetée une fois, qui les
-   * débloque tous (choisie dans le catalogue, elle va à chacun).
+   * débloque tous (choisie dans le catalogue, elle va à chacun) ; aucun pour un dresseur ou une
+   * énergie (une case d'une collection d'extension).
    */
   dexIds: number[]
   /** « Bulbizarre (SV2a 166) » : son nom, puis le code de l'extension et le numéro (d'où l'image). */
@@ -79,6 +81,29 @@ export interface PokemonCard {
    * qu'une écriture, l'absence.
    */
   language?: 'fr'
+  /**
+   * Une case d'une collection d'extension pas encore obtenue : pas encore une carte de ses Pokémon
+   * (ni au Pokédex, ni sur leur fiche, jamais favorite). Possédée une fois (statut, réception d'une
+   * commande : `obtain`), le champ disparaît pour de bon.
+   */
+  seriesOnly?: true
+}
+
+/**
+ * Une collection d'extension : toutes les cartes d'une extension dans une langue (Pokémon,
+ * dresseurs, énergies), une case par carte (une Reverse est la même case).
+ */
+export interface SeriesCollection {
+  /** Le code de l'extension au catalogue : « M6A ». */
+  set: string
+  /** `'fr'` pour une extension française ; absente, elle est japonaise (comme une carte). */
+  language?: 'fr'
+  /** Son nom au catalogue, gardé pour l'afficher sans le recharger. */
+  name: string
+  /** Quand elle a été commencée. */
+  startedAt: string
+  /** Ses cases, dans l'ordre de l'extension : l'id d'une carte de `customCards` chacune. */
+  cards: string[]
 }
 
 /* Données de l'utilisateur : gardées par le serveur (`/api/collection`) et fichier d'export */
@@ -108,6 +133,11 @@ export interface CollectionData {
    * sans carte n'en a pas.
    */
   favorites: Record<number, string>
+  /**
+   * Les collections d'extensions, dans l'ordre où elles ont été commencées ; jamais deux fois la
+   * même extension dans la même langue.
+   */
+  series: SeriesCollection[]
 }
 
 /** Le document d'un compte : la collection et les achats, gardés ensemble par le serveur. */

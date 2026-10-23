@@ -2,14 +2,16 @@
  * Retirer la carte d'un Pokémon : une carte TAG TEAM, achetée une fois, reste aux autres. La carte
  * favorite d'un Pokémon (la première d'office, ensuite son choix) : elle suit les cartes qu'on
  * ajoute, qu'on retire ou qu'on corrige, un Pokémon qui a des cartes en ayant toujours une, jamais
- * celle d'un autre. Et les règles de la collection et des commandes ne modifient jamais ce qu'elles
- * reçoivent : « Annuler » remet l'état d'avant, qu'une règle qui le modifierait aurait déjà changé.
- * Enfin, la langue d'une carte (absente : japonaise), qui la suit quand on la détache d'un Pokémon.
+ * celle d'un autre. Et les règles de la collection, des commandes et des collections
+ * d'extensions ne modifient jamais ce qu'elles reçoivent : « Annuler » remet l'état d'avant,
+ * qu'une règle qui le modifierait aurait déjà changé. Enfin, la langue d'une carte (absente :
+ * japonaise), qui la suit quand on la détache d'un Pokémon.
  */
 
 import { describe, expect, test } from 'bun:test'
 import {
   cardLanguage,
+  obtain,
   removeCard,
   saveCard,
   setCardStatus,
@@ -17,6 +19,7 @@ import {
   setPaidPrice,
 } from '@/lib/collection'
 import { applyOrder, isInAnOrder } from '@/lib/orders'
+import { removeSeries, startSeries } from '@/lib/series'
 import type { CollectionData } from '@/types'
 import { card, collectionWith, line, NOW, order, ownership, withCards } from './fixtures'
 
@@ -110,7 +113,7 @@ describe('la langue d’une carte', () => {
 })
 
 describe('les règles ne modifient pas ce qu’elles reçoivent (« Annuler »)', () => {
-  test('statut, prix payé, carte enregistrée, retirée, favorite, commande reportée', () => {
+  test('statut, prix payé, carte enregistrée, retirée, favorite, commande, extension', () => {
     const owned = collectionWith({ a: ownership('owned', { paidPrice: 42.5 }) })
     const data = withCards(owned, card('a', [25, 644]), card('b', [25]))
     const before = structuredClone(data)
@@ -123,8 +126,19 @@ describe('les règles ne modifient pas ce qu’elles reçoivent (« Annuler »)'
     const placed = order({ lines: [line('a', 12)] })
     const placedBefore = structuredClone(placed)
     applyOrder(data, null, placed, [], NOW)
+    const start = { set: 'M6A', language: 'ja', name: 'Méga Rêve ex' } as const
+    const slot = card('s', [1], { reference: 'Bulbizarre (M6A 001)', seriesOnly: true })
+    const slots = [slot, card('t', [25], { reference: 'Pikachu (M6A 025)', seriesOnly: true })]
+    const slotsBefore = structuredClone(slots)
+    const started = startSeries(data, start, slots, NOW)
+    const startedBefore = structuredClone(started)
+    obtain(started, ['s'])
+    removeSeries(setCardStatus(started, slot, 'ordered', NOW), 'M6A', 'ja', [], NOW)
+    removeSeries(started, 'M6A', 'ja', [], NOW)
     expect(data).toEqual(before)
     expect(placed).toEqual(placedBefore)
+    expect(slots).toEqual(slotsBefore)
+    expect(started).toEqual(startedBefore)
   })
 
   test('une carte d’une commande (en cours, reçue ou annulée) : retenue', () => {

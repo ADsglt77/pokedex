@@ -8,8 +8,12 @@ import type { CardLanguage, CardStatus, CollectionData, PokemonCard } from '@/ty
 /** L'id d'une carte ajoutée par l'utilisateur (son format est celui de la collection enregistrée). */
 export const newCardId = () => `manual:${crypto.randomUUID()}`
 
-/** La langue d'une carte : française si elle le dit, sinon japonaise (les cartes d'avant). */
-export const cardLanguage = (card: PokemonCard): CardLanguage => card.language ?? 'ja'
+/**
+ * La langue d'une carte (ou d'une collection d'extension) : française si elle le dit, sinon
+ * japonaise (les cartes d'avant).
+ */
+export const cardLanguage = (card: Pick<PokemonCard, 'language'>): CardLanguage =>
+  card.language ?? 'ja'
 
 /** Une carte ajoutée par l'utilisateur ; `null` si elle n'existe pas (ou plus). */
 export const findCard = (id: string, collection: CollectionData): PokemonCard | null =>
@@ -21,11 +25,12 @@ export const emptyCollection = (): CollectionData => ({
   cards: {},
   customCards: {},
   favorites: {},
+  series: [],
 })
 
 /**
  * Le statut d'une carte ; `null` le retire, prix payé compris. Le prix payé suit la carte de
- * commandée à possédée.
+ * commandée à possédée. Possédée, une case d'extension devient une carte de ses Pokémon (`obtain`).
  */
 export function setCardStatus(
   data: CollectionData,
@@ -38,7 +43,29 @@ export function setCardStatus(
     const acquiredAt = status === 'owned' ? now : null
     cards[card.id] = { status, updatedAt: now, acquiredAt, paidPrice: previous?.paidPrice }
   }
-  return { ...data, cards, updatedAt: now }
+  const updated = { ...data, cards, updatedAt: now }
+  return status === 'owned' ? obtain(updated, [card.id]) : updated
+}
+
+/**
+ * Des cartes obtenues (possédées) : celles qui sont des cases d'extension (`seriesOnly`) le
+ * perdent pour de bon et deviennent des cartes de leurs Pokémon, favorites de ceux qui n'en ont
+ * pas. Les autres, et un id sans carte, ne changent rien. `updatedAt` est celui de l'appelant ;
+ * sans case obtenue, la même collection.
+ */
+export function obtain(data: CollectionData, cardIds: Iterable<string>): CollectionData {
+  const obtained = [...cardIds].flatMap((id) => {
+    const card = data.customCards[id]
+    if (!card?.seriesOnly) return []
+    const { seriesOnly, ...kept } = card
+    return [kept]
+  })
+  if (obtained.length === 0) return data
+  return {
+    ...data,
+    customCards: { ...data.customCards, ...Object.fromEntries(obtained.map((c) => [c.id, c])) },
+    favorites: completeFavorites(data.favorites, obtained),
+  }
 }
 
 /** Le prix payé d'une carte suivie ; `undefined` l'efface. Inchangé : la même collection. */
@@ -56,14 +83,17 @@ export function setPaidPrice(
 
 /**
  * Les favorites, complétées : chaque Pokémon de ces cartes qui n'a pas de favorite reçoit la
- * première d'entre elles qui le porte ; celles qui existent ne changent pas. Une nouvelle table.
+ * première d'entre elles qui le porte ; celles qui existent ne changent pas. Une case d'extension
+ * pas encore obtenue (`seriesOnly`) n'est pas encore une carte de ses Pokémon : elle n'en donne
+ * pas. Une nouvelle table.
  */
 export function completeFavorites(
   favorites: Record<number, string>,
   cards: Iterable<PokemonCard>,
 ): Record<number, string> {
   const completed = { ...favorites }
-  for (const { id, dexIds } of cards) {
+  for (const { id, dexIds, seriesOnly } of cards) {
+    if (seriesOnly) continue
     for (const dexId of dexIds) completed[dexId] ??= id
   }
   return completed

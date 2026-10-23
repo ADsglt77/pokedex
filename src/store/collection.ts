@@ -5,7 +5,9 @@
 
 import { create } from 'zustand'
 import * as rules from '@/lib/collection'
-import type { AddAs, CardStatus, CollectionData, PokemonCard } from '@/types'
+import * as series from '@/lib/series'
+import { useShoppingStore } from '@/store/shopping'
+import type { AddAs, CardLanguage, CardStatus, CollectionData, PokemonCard } from '@/types'
 
 interface CollectionStore {
   collection: CollectionData
@@ -19,6 +21,19 @@ interface CollectionStore {
    * `favorite` remplace la sienne si c'en était la favorite et qu'il garde d'autres cartes.
    */
   removeCard: (cardId: string, speciesId: number, favorite?: string) => void
+  /**
+   * Commence la collection d'une extension avec ses cases (une nouvelle carte `seriesOnly` par
+   * carte de l'extension, dans son ordre) : les cartes déjà dans le compte sont reprises.
+   */
+  startSeries: (
+    start: { set: string; language: CardLanguage; name: string },
+    slots: PokemonCard[],
+  ) => void
+  /**
+   * Supprime la collection d'une extension : ses cartes possédées, commandées ou dans une commande
+   * (celles du magasin des achats) restent.
+   */
+  removeSeries: (set: string, language: CardLanguage) => void
   /** Remplace toute la collection : lue sur le serveur, import, effacement. */
   replaceCollection: (collection: CollectionData) => void
 }
@@ -39,6 +54,13 @@ export const useCollectionStore = create<CollectionStore>()((set, get) => {
       update((collection, now) => rules.setFavorite(collection, speciesId, cardId, now)),
     removeCard: (cardId, speciesId, favorite) =>
       update((collection, now) => rules.removeCard(collection, cardId, speciesId, now, favorite)),
+    startSeries: (start, slots) =>
+      update((collection, now) => series.startSeries(collection, start, slots, now)),
+    removeSeries: (code, language) =>
+      update((collection, now) => {
+        const { orders } = useShoppingStore.getState().shopping
+        return series.removeSeries(collection, code, language, orders, now)
+      }),
     replaceCollection: (collection) => set({ collection }),
   }
 })

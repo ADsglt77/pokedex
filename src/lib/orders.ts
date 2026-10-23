@@ -6,6 +6,7 @@
  */
 
 import { DEFAULT_BUDGET, SUPPLIER_LABELS } from '@/config/shopping'
+import { obtain } from '@/lib/collection'
 import { formatDate } from '@/lib/format'
 import { daysBetween } from '@/lib/time'
 import type {
@@ -167,7 +168,8 @@ const noonOf = (day: string) => new Date(`${day}T12:00:00`).toISOString()
  *   réception, son prix de revient), sinon aucun (elles n'étaient pas possédées avant) ;
  * - les cartes d'une commande en cours deviennent « commandée », sauf si elles sont déjà possédées ;
  * - les cartes d'une commande reçue deviennent « possédée », datées du jour de réception (une date
- *   de réception corrigée les suit) ;
+ *   de réception corrigée les suit) ; une case d'extension devient une carte de ses Pokémon
+ *   (`obtain`) ;
  * - une carte déjà possédée avant la commande (doublon) n'est jamais modifiée ;
  * - le prix payé est le prix de revient (port, frais et remboursé répartis).
  */
@@ -238,7 +240,13 @@ export function applyOrder(
   const changed = Object.keys({ ...cards, ...collection.cards }).some(
     (cardId) => cards[cardId] !== collection.cards[cardId],
   )
-  return changed ? { ...collection, cards, updatedAt: now } : collection
+  const updated = changed ? { ...collection, cards, updatedAt: now } : collection
+  // Reçues, les cases d'extension deviennent des cartes de leurs Pokémon.
+  const received = active?.state === 'received' ? active.lines : []
+  return obtain(
+    updated,
+    received.map((line) => line.cardId),
+  )
 }
 
 /** Même état, à la date de modification près : rien à réécrire. */

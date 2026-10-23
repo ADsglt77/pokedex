@@ -107,9 +107,11 @@ const statusOf = (views: readonly CardView[]) =>
  * redessinent pas.
  */
 export function buildPokedex(collection: CollectionData, previous?: Pokedex): Pokedex {
-  // Les cartes de chaque Pokémon, dans l'ordre d'ajout.
+  // Les cartes de chaque Pokémon, dans l'ordre d'ajout ; une case d'extension pas encore obtenue
+  // n'en est pas encore une.
   const cardsBySpecies = new Map<number, PokemonCard[]>()
   for (const card of Object.values(collection.customCards)) {
+    if (card.seriesOnly) continue
     for (const id of card.dexIds) {
       const cards = cardsBySpecies.get(id)
       if (cards) cards.push(card)

@@ -14,8 +14,9 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   de ses cartes ; un Pokémon sans carte n'en a pas. Une carte TAG TEAM peut être la favorite de
   chacun de ses Pokémon, chacun pour soi. Qui la choisit : la première carte d'un Pokémon l'est
   d'office (`saveCard`, par `completeFavorites` : pour une carte de plusieurs Pokémon, chacun de ceux
-  qui n'en ont pas encore) ; ensuite, seul l'utilisateur la change (`setFavorite`, une carte à la
-  fois pour un Pokémon, les autres Pokémon n'y changent rien) : l'app ne la choisit jamais, rien
+  qui n'en ont pas encore ; une case d'extension, au moment où elle devient une de ses cartes :
+  `obtain`) ; ensuite, seul l'utilisateur la change (`setFavorite`, une carte à la fois pour un
+  Pokémon, les autres Pokémon n'y changent rien) : l'app ne la choisit jamais, rien
   n'est proposé quand une carte est obtenue. Retirer la favorite d'un Pokémon (`removeCard`) : si
   le Pokémon garde d'autres cartes, l'appelant désigne la nouvelle favorite (paramètre `favorite`) ;
   sans autre carte, il n'a plus de favorite. Une carte TAG TEAM retirée d'un Pokémon reste la
@@ -29,12 +30,49 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   favorite qui n'est pas l'id d'une carte du document portant ce Pokémon (« la carte favorite du
   Pokémon n° 25 n’est pas une de ses cartes » : une carte d'un autre Pokémon, une carte absente, une
   clé qui n'est pas un numéro). Testé (`tests/import.test.ts`).
+- Collections d'extensions (`CollectionData.series`, `lib/series.ts`) : une collection, ce sont
+  toutes les cartes d'une extension dans une langue (Pokémon, dresseurs, énergies, secrètes ; une
+  Reverse est la même case), une case par carte, dans l'ordre de l'extension
+  (`SeriesCollection.cards` : l'id d'une carte de `customCards` chacune). `set` est le code de
+  l'extension au catalogue (« M6A »), `language` absente pour une japonaise (comme une carte),
+  `name` son nom au catalogue, gardé pour l'afficher sans le recharger, `startedAt` le jour où elle
+  a été commencée. Plusieurs collections, japonaises et françaises mélangées, dans l'ordre où elles
+  ont été commencées ; jamais deux fois la même extension dans la même langue (`findSeries`). Un
+  dresseur ou une énergie est une carte sans Pokémon (`dexIds` vide).
+  - Commencer (`startSeries`) : une carte n'existe qu'une fois. Une carte déjà dans le compte, de
+    même langue et de même code (extension et numéro) ou de même id Cardmarket (`sameCard`,
+    `lib/card-code.ts`, la règle d'`isCatalogCard`), est reprise comme sa case, telle quelle
+    (statut, achats, place au Pokédex). Une case chacune (jamais deux fois le même id dans une
+    collection) : celle de son code d'abord, sinon celle de son id Cardmarket, car deux cartes d'une
+    extension ont parfois le même id Cardmarket au catalogue (« AR 94 » et « AR AR7 » en
+    français). Une japonaise n'est jamais la case d'une extension française. Une case pas encore
+    obtenue d'une autre collection n'est jamais reprise : deux extensions ont parfois une carte de
+    même id Cardmarket (« SC2 012 », « SC-C 012 »), et supprimer la première collection la
+    retirerait à la seconde. Les autres cases sont ajoutées marquées `seriesOnly` : pas encore des
+    cartes de leurs Pokémon, ni au Pokédex (`buildPokedex` les saute), ni sur leur fiche, jamais
+    favorites (`completeFavorites` les saute). Commencer une extension ne remplit pas
+    le Pokédex ; une case est débloquée quand elle est possédée.
+  - Obtenir (`obtain`, `lib/collection.ts`) : une case possédée, par son statut (`setCardStatus`)
+    ou à la réception d'une commande (`applyOrder`), perd `seriesOnly` pour de bon et devient une
+    carte de ses Pokémon, favorite de ceux qui n'en ont pas (les autres gardent la leur ; un
+    dresseur n'en donne aucune). La quitter (« sans statut ») ne la rend pas à l'extension ;
+    commandée seulement, elle reste une case.
+  - Supprimer (`removeSeries`) : les cartes possédées restent (et donc au Pokédex) ; une case
+    commandée, ou dans une commande quel que soit son état (`isInAnOrder` : le registre ne perd
+    rien), reste comme carte seule (sans `seriesOnly`, favorite de ceux de ses Pokémon qui n'en ont
+    pas) ; les autres cases disparaissent. Une carte de l'extension ajoutée seule, reprise comme
+    case, ne bouge pas.
+  - Progression (`seriesProgress`) : ses cases possédées sur toutes, chacune une fois (une TAG TEAM
+    aussi) ; leur valeur (prix du marché) ; le coût pour la compléter (les cases ni possédées ni
+    commandées) et combien d'entre elles n'ont pas de prix.
+  - Testé (`tests/series.test.ts`) ; ces règles non plus ne modifient pas ce qu'elles reçoivent
+    (`tests/cards.test.ts`).
 - Débloqué : un Pokémon l'est dès qu'une de ses cartes est possédée, quelle qu'elle soit ; sa
   favorite ne décide que de la carte que le Pokédex montre pour lui. Chaque entrée du Pokédex
   (`PokedexEntry`, `buildPokedex`) a sa favorite (`card`), toutes ses cartes dans l'ordre d'ajout
-  (`cards`) et où il en est (`status`) : `owned` si une de ses cartes est possédée, sinon `ordered`
-  si une est commandée, sinon rien ; `unlocked` est `status === 'owned'`. La pochette (en couleur,
-  marque « possédée »), la fiche (« Débloqué : carte possédée ») et le Pokédex public lisent ce
+  (`cards`, sans les cases d'extension pas encore obtenues) et où il en est (`status`) : `owned`
+  si une de ses cartes est possédée, sinon `ordered` si une est commandée, sinon rien ; `unlocked`
+  est `status === 'owned'`. La pochette (en couleur, marque « possédée »), la fiche (« Débloqué : carte possédée ») et le Pokédex public lisent ce
   statut, pas celui de la favorite : une favorite pas encore possédée reste montrée avec son propre
   statut, et le Pokémon n'en est pas moins débloqué. Testé (`tests/pokedex.test.ts`, avec le jour du
   déblocage : celui de la première de ses cartes obtenue).

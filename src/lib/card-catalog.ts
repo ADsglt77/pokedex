@@ -14,9 +14,8 @@
 
 import { CARD_TYPES } from '@/config/catalog'
 import { derived } from '@/lib/api'
-import { codeKey, numberKey, referenceCode, setKey } from '@/lib/card-code'
+import { isCardOf, numberKey, referenceCode, setKey } from '@/lib/card-code'
 import { cardImage, catalogImage } from '@/lib/card-images'
-import { cardLanguage } from '@/lib/collection'
 import { settled } from '@/lib/settled'
 import { getSpecies } from '@/lib/species'
 import type {
@@ -255,14 +254,13 @@ async function catalogCard(reference: string, lang: CardLanguage): Promise<SetCa
  * Une carte de la collection est-elle celle-ci du catalogue ? De la même langue, avec le même code
  * (série et numéro) dans sa référence, ou le même id Cardmarket.
  */
-export function isCatalogCard(card: PokemonCard, listed: CatalogCard) {
-  const code = referenceCode(card.reference)
-  return (
-    cardLanguage(card) === listed.set.language &&
-    ((code !== null && codeKey(code) === codeKey({ set: listed.set.id, number: listed.number })) ||
-      (listed.cardmarket !== undefined && card.cardmarket === listed.cardmarket))
+export const isCatalogCard = (card: PokemonCard, listed: CatalogCard) =>
+  isCardOf(
+    card,
+    listed.set.language,
+    { set: listed.set.id, number: listed.number },
+    listed.cardmarket,
   )
-}
 
 /**
  * La langue d'une carte du catalogue, telle que la porte une carte de la collection
