@@ -21,8 +21,13 @@ bun run format   # Prettier
   d'achats, commandes, dernières cartes) ; trois étapes pour commencer quand la collection est vide.
 - **Recherche** (Ctrl/⌘ K, ou le bouton de la barre) : un Pokémon par son nom ou son numéro, une
   page, une action.
-- **Pokédex** : les 1 025 espèces, recherche (nom fr/en/ja ou numéro, raccourci `/`), filtres
-  partageables dans l'adresse.
+- **Collections** : le Pokédex en première tuile, puis une tuile par extension que vous
+  collectionnez en entier (drapeau, logo, nom, cartes possédées sur toutes, valeur) ; « Nouvelle
+  collection » en commence une, japonaise ou française (l'interrupteur 🇯🇵 / 🇫🇷) : toutes ses
+  cartes, Pokémon, dresseurs et énergies, à débloquer, celles déjà dans votre collection reprises
+  telles quelles.
+- **Pokédex** (depuis Collections) : les 1 025 espèces, recherche (nom fr/en/ja ou numéro,
+  raccourci `/`), filtres partageables dans l'adresse.
 - **Fiche** : toutes les cartes du Pokémon, choisies parmi ses cartes japonaises ou françaises (un
   interrupteur 🇯🇵 / 🇫🇷 ; image, rareté, prix du jour, tri par date ou par prix, filtres de rareté
   et de type) ou saisies à la main, chacune ajoutée sans en remplacer une autre, puis corrigée ou
@@ -36,7 +41,8 @@ bun run format   # Prettier
   (choisie sur son logo), en tuiles serrées, avec une recherche et des filtres de rareté et de
   type ; chaque carte a sa fiche (image en grand, numéro, rareté, type, Pokémon, illustrateur, versions, noms anglais et allemand, prix Cardmarket et sa
   courbe) et, pour une carte Pokémon, « Ajouter à la collection » (à acheter, sans remplacer les
-  cartes que le Pokémon a déjà, ni changer sa favorite).
+  cartes que le Pokémon a déjà, ni changer sa favorite) ; « Commencer la collection » de
+  l'extension montrée (ou « Voir ma collection »).
 - **Valeur** : prix Cardmarket du jour, valeur de la collection (et gain par rapport au prix
   payé), commandes, dépensé en tout, coût pour compléter le Pokédex ; courbes jour par jour (valeur,
   Pokémon débloqués, dépenses) sur 7 jours, 30 jours, 1 an ou tout, avec leurs chiffres.

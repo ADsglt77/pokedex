@@ -69,8 +69,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   place les cellules par `grid-area`, une valeur y montre son libellé, `.stack-label`, `TableCount`
   pour « 4 cartes », et un « — » s'efface, `.stack-hidden`) : commandes, budget, « Mes cartes »,
   « Pour compléter ». Navigation (`AppShell`) : à partir de 64rem, une
-  barre latérale collée (Collection : Accueil, Pokédex, Catalogue ; Achats et valeur : Achats,
-  Valeur ; la progression ; Réglages et le compte en pied) ; en dessous, une barre en haut (nom,
+  barre latérale collée (Collection : Accueil, Collections, Catalogue ; Achats et valeur : Achats,
+  Valeur ; la progression ; Réglages et le compte en pied ; Collections est la page ouverte aussi
+  sur le Pokédex et les fiches, qui s'ouvrent depuis elle) ; en dessous, une barre en haut (nom,
   recherche, Réglages, thème, compte en icône) et cinq onglets en bas ; le bouton du thème est aussi
   en pied de la barre latérale. Partout, la recherche
   (`AppSearch`, Ctrl/⌘ K, la palette de camply) : les pages, quelques actions (exporter, importer) et les 1 025 Pokémon (noms français, anglais, japonais, numéro ; groupe
@@ -86,7 +87,21 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   (valeur, dépensé ce mois-ci, liste d'achats, commandes), dernières cartes obtenues (« Vos cartes
   choisies » tant qu'aucune n'est obtenue : une rangée, de trois cartes sur téléphone à dix sur un
   très grand écran) ; une collection vide y trouve trois étapes pour commencer. La progression et
-  « À faire » côte à côte ont la même hauteur. Le Pokédex : recherche, filtres rapides de
+  « À faire » côte à côte ont la même hauteur. Les Collections (`/collections`,
+  `pages/collections/`) : le Pokédex en première tuile, toujours là (débloqués sur 1 025, et la
+  part), puis une tuile par collection d'extension, dans l'ordre où elles ont été commencées : son
+  logo (demandé à son chemin, sans le catalogue : son code s'il n'y en a pas), son nom et le
+  drapeau de sa langue (`LanguageFlag of="set"`, « Extension japonaise »), son code, « 87 / 230 »
+  et sa barre, sa valeur au prix du jour ; chaque tuile est tout entière le lien de son titre (vers
+  `/pokedex`, ou la page de la collection, `seriesPath` : `/collections/M6A`, `?langue=fr` pour une
+  française). « Nouvelle collection » ouvre la fenêtre des extensions (`SetPicker`, celle de
+  « Changer d'extension » au Catalogue, son bouton réglable) avec l'interrupteur de langue en haut
+  (dans l'adresse de la page, `?langue=fr`) ; une extension déjà commencée dans cette langue y est
+  marquée « Commencée » et mène à sa page ; une autre commence sa collection
+  (`useStartCollection`) : ses cartes chargées (le bouton attend, un second clic ne la commence pas
+  deux fois, le magasin non plus), la collection annoncée avec « Annuler » (« Collection Méga Rêve
+  ex commencée : 230 cartes. »), puis sa page ouverte ; sans ses cartes (l'API ne répond pas) : un
+  message, rien de commencé, et un nouvel essai les redemande. Le Pokédex : recherche, filtres rapides de
   possession avec leur nombre (les autres filtres appliqués), les autres filtres dans un panneau
   (génération, type, carte), chacun rappelé en étiquette retirable ; quand tout ne tient pas sur
   une ligne, les filtres rapides passent dessous (sur téléphone, ils défilent de côté). Achats :
@@ -94,8 +109,10 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   la rangée d'onglets qui défile ; page étroite, les badges des onglets se resserrent. Le
   catalogue : en tête de page l'interrupteur de langue (deux drapeaux SVG dans un
   `SegmentedControl`, `LanguageSwitch`, à droite du titre, dessous sur téléphone), puis un panneau
-  (le logo de l'extension, son nom, sa sortie, son nombre de cartes et son bloc, et « Changer
-  d'extension »), puis la recherche, les filtres de rareté et de type
+  (le logo de l'extension, son nom, sa sortie, son nombre de cartes et son bloc, « Changer
+  d'extension », et « Commencer la collection » de l'extension montrée, comme aux Collections,
+  ou « Voir ma collection » si elle l'est dans cette langue), puis la recherche, les filtres de
+  rareté et de type
   (chacun sur une ligne qui défile de côté sur téléphone), ce que compte l'extension et ses cartes
   en tuiles serrées (10 colonnes sur un écran de 1440 px, 3 sur téléphone) ; la fiche d'une carte,
   pleine page : l'image à gauche, qui reste à l'écran quand le reste défile, ce qu'on sait de la
@@ -226,7 +243,10 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   430 (démonter des centaines de tuiles coûtait autant que les dessiner). Le piège à focus de
   camply ne mesure que les bords d'une fenêtre, pas chaque bouton à chaque Tab. Le bouton
   « Changer d'extension » porte lui-même l'état de sa fenêtre (`SetPicker`) : l'ouvrir ne
-  redessine pas la page et ses cartes. Changer l'ordre des extensions passe en arrière-plan
+  redessine pas la page et ses cartes. La fenêtre lit les extensions de sa langue (`loadSets` :
+  déjà là au Catalogue ; aux Collections, demandées à la première ouverture, puis à l'interrupteur
+  pour l'autre langue, une ébauche le temps qu'elles arrivent, la recherche gardée). Changer
+  l'ordre des extensions passe en arrière-plan
   (`startTransition`). Les deux grandes fenêtres (le choix d'une extension, l'ajout d'une carte)
   sont pleine page (`Modal size="full"`) : seul leur contenu défile, leur titre et leurs boutons
   restent à l'écran (camply), la recherche des extensions reste en haut (`position: sticky; top: 0`)
@@ -249,4 +269,5 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   annoncé (`aria-live`) dans le Pokédex, la liste d'achats, le catalogue, la fenêtre d'ajout et
   celle des extensions. « Annuler » se lance aussi par Ctrl+Z (⌘Z) tant que son toast est affiché
   (`useNotify` ; pas dans un champ, ni avec une fenêtre ouverte) : au clavier, le toast, rendu à la
-  fin de la page, était hors d'atteinte en 12 s. « Catalogue indisponible » propose « Réessayer ».
+  fin de la page, était hors d'atteinte en 12 s. « Catalogue indisponible » (la page,
+  la fenêtre des extensions) propose « Réessayer ».

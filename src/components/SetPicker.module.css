@@ -1,4 +1,5 @@
-/* La recherche et l'ordre en tête, puis les extensions, année par année ou bloc par bloc. */
+/* La recherche et l'ordre en tête (et la langue, aux Collections), puis les extensions, année par
+   année ou bloc par bloc. */
 .picker {
   display: grid;
   gap: var(--camply-space-4);
@@ -92,8 +93,13 @@
   font-size: var(--text-xs);
 }
 
-/* Son nombre de cartes (et « deck »), en bas de la tuile. */
+/* Son nombre de cartes (et « deck »), en bas de la tuile ; à droite, « Commencée » (Collections). */
 .count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
   margin-top: auto;
   padding-top: 0.25rem;
   color: var(--camply-text-muted);

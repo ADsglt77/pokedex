@@ -23,7 +23,8 @@ interface CollectionStore {
   removeCard: (cardId: string, speciesId: number, favorite?: string) => void
   /**
    * Commence la collection d'une extension avec ses cases (une nouvelle carte `seriesOnly` par
-   * carte de l'extension, dans son ordre) : les cartes déjà dans le compte sont reprises.
+   * carte de l'extension, dans son ordre) : les cartes déjà dans le compte sont reprises. Rien si
+   * elle est déjà commencée dans cette langue.
    */
   startSeries: (
     start: { set: string; language: CardLanguage; name: string },
@@ -54,8 +55,12 @@ export const useCollectionStore = create<CollectionStore>()((set, get) => {
       update((collection, now) => rules.setFavorite(collection, speciesId, cardId, now)),
     removeCard: (cardId, speciesId, favorite) =>
       update((collection, now) => rules.removeCard(collection, cardId, speciesId, now, favorite)),
-    startSeries: (start, slots) =>
-      update((collection, now) => series.startSeries(collection, start, slots, now)),
+    startSeries: (start, slots) => {
+      // Jamais deux fois la même extension dans la même langue : un second clic pendant le
+      // chargement de ses cartes ne la recommence pas (chacune de ses cases serait en double).
+      if (series.findSeries(get().collection, start.set, start.language)) return
+      update((collection, now) => series.startSeries(collection, start, slots, now))
+    },
     removeSeries: (code, language) =>
       update((collection, now) => {
         const { orders } = useShoppingStore.getState().shopping

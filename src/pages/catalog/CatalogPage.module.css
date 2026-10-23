@@ -1,5 +1,5 @@
-/* L'extension montrée : son logo à gauche, son nom et ce qu'on en sait au milieu, le bouton qui en
-   change à droite (dessous sur téléphone). */
+/* L'extension montrée : son logo à gauche, son nom et ce qu'on en sait au milieu, ses boutons à
+   droite (changer d'extension, sa collection ; dessous sur téléphone). */
 .head {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -30,8 +30,13 @@
   font-size: var(--text-sm);
 }
 
-.change {
+/* Changer d'extension, et sa collection. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-self: start;
+  gap: var(--camply-space-2);
 }
 
 /* La recherche, puis les filtres de rareté et de type. */
@@ -46,7 +51,7 @@
   max-width: 28rem;
 }
 
-/* Sur un écran étroit, le logo et le nom côte à côte, le bouton dessous, de toute la largeur. */
+/* Sur un écran étroit, le logo et le nom côte à côte, les boutons dessous, de toute la largeur. */
 @media (max-width: 40rem) {
   .head {
     grid-template-columns: auto minmax(0, 1fr);
@@ -58,8 +63,11 @@
     height: 3.5rem;
   }
 
-  .change {
+  .actions {
     grid-column: 1 / -1;
-    justify-self: stretch;
+  }
+
+  .actions > * {
+    flex: 1 1 auto;
   }
 }

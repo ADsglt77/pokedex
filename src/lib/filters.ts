@@ -3,7 +3,8 @@
  * recherche par nom ou numéro. Et les adresses de l'app : le Pokédex filtré (`pokedexUrl`), la
  * fiche d'un Pokémon (`speciesPath`), les onglets des Achats et les filtres de leur liste
  * d'achats (`parseShopping`, `shoppingUrl`), le Pokédex public d'un compte (`vitrinePath`), la
- * langue et l'extension du Catalogue (`catalogLanguage`, `catalogParams`).
+ * langue et l'extension du Catalogue (`catalogLanguage`, `catalogParams`), la page d'une collection
+ * d'extension (`seriesPath`).
  */
 
 import { generationById, POKEMON_TYPES, type Generation } from '@/config/pokedex'
@@ -145,7 +146,10 @@ export function shoppingUrl({ view = 'liste' }: { view?: ShoppingView } = {}) {
   return search ? `/achats?${search}` : '/achats'
 }
 
-/** L'adresse du Catalogue → sa langue (`?langue=fr`) ; sans elle, ou inconnue : le japonais. */
+/**
+ * L'adresse du Catalogue (ou des Collections) → sa langue (`?langue=fr`) ; sans elle, ou inconnue :
+ * le japonais.
+ */
 export const catalogLanguage = (params: URLSearchParams): CardLanguage =>
   params.get('langue') === 'fr' ? 'fr' : 'ja'
 
@@ -158,6 +162,15 @@ export function catalogParams(lang: CardLanguage, set?: string): URLSearchParams
   if (lang === 'fr') params.set('langue', 'fr')
   if (set) params.set('set', set)
   return params
+}
+
+/**
+ * La page de la collection d'une extension : `/collections/M6A`, `/collections/MEG?langue=fr` pour
+ * une française (un même code existe dans les deux langues).
+ */
+export function seriesPath(set: string, language: CardLanguage): string {
+  const search = catalogParams(language).toString()
+  return `/collections/${encodeURIComponent(set)}${search ? `?${search}` : ''}`
 }
 
 /** Sans casse, accent ni ligature : « Nœunœuf » → « noeunoeuf », « Éli » → « eli ». */

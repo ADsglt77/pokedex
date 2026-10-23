@@ -114,7 +114,10 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   bloc ; « Changer d'extension » ouvre la fenêtre pleine page des extensions (`SetPicker` : leurs
   logos, une
   recherche par code ou par nom, rangées par année ou par bloc, dans l'ordre du menu de Pokécardex,
-  leurs extensions puis leurs decks ; chacune avec son nombre de cartes). Puis une recherche (nom
+  leurs extensions puis leurs decks ; chacune avec son nombre de cartes) ; « Commencer la
+  collection » commence celle de l'extension montrée, dans sa langue (toutes ses cartes, à
+  débloquer : `docs/collection-et-achats.md`), puis l'ouvre, ou « Voir ma collection » si elle
+  l'est déjà (`docs/interface.md`). Puis une recherche (nom
   français, anglais ou allemand, numéro, illustrateur), les filtres de rareté et de type (catégories
   des dresseurs et énergies comprises), ce que compte l'extension (« 188 Pokémon, 21 dresseurs et 1
   énergie · 45 secrètes » ; une secrète est numérotée au-delà du nombre imprimé, « 201/165 ») et ses

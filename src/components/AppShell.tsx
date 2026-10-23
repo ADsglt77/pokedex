@@ -2,9 +2,9 @@ import { Badge, IconButton, Kbd, Progress, useCommandPalette } from '@camply/ui'
 import {
   ChartLine,
   Database,
-  Grid3x3,
   House,
   Layers,
+  Library,
   Moon,
   Search,
   ShoppingCart,
@@ -59,7 +59,7 @@ const GROUPS: { label: string; places: Place[] }[] = [
     label: 'Collection',
     places: [
       { to: '/', label: 'Accueil', icon: House },
-      { to: '/pokedex', label: 'Pokédex', icon: Grid3x3 },
+      { to: '/collections', label: 'Collections', icon: Library },
       { to: '/catalogue', label: 'Catalogue', icon: Layers },
     ],
   },
@@ -75,11 +75,14 @@ const DATA: Place = { to: '/donnees', label: 'Réglages', icon: Database }
 /** La barre d'onglets du téléphone : cinq au plus, Réglages passe dans la barre du haut. */
 const TABS = GROUPS.flatMap((group) => group.places)
 
-/** La page ouverte : la fiche d'un Pokémon fait partie du Pokédex. */
+/**
+ * La page ouverte : le Pokédex (et la fiche d'un Pokémon, qui en fait partie) s'ouvre depuis les
+ * Collections, comme la page d'une collection d'extension.
+ */
 const isCurrent = (to: string, path: string) =>
   to === '/'
     ? path === '/'
-    : path.startsWith(to) || (to === '/pokedex' && path.startsWith('/pokemon'))
+    : path.startsWith(to) || (to === '/collections' && /^\/(pokedex|pokemon)(\/|$)/.test(path))
 
 /** Ctrl K, ou ⌘ K sur un Mac. */
 const SEARCH_KEYS = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘ K' : 'Ctrl K'

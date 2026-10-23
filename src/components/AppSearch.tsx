@@ -6,6 +6,7 @@ import {
   Grid3x3,
   House,
   Layers,
+  Library,
   ListChecks,
   Lock,
   Receipt,
@@ -25,6 +26,7 @@ const ICON = 16
 /** Les pages et les vues qu'on ouvre depuis la recherche, dans l'ordre de la navigation. */
 const PLACES = [
   { label: 'Accueil', to: '/', icon: House },
+  { label: 'Collections', to: '/collections', icon: Library },
   { label: 'Pokédex', to: '/pokedex', icon: Grid3x3 },
   { label: 'Pokémon à débloquer', to: pokedexUrl({ possession: 'missing' }), icon: Lock },
   { label: 'Pokémon sans carte', to: pokedexUrl({ card: 'without' }), icon: Grid3x3 },

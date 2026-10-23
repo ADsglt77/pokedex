@@ -1,25 +1,18 @@
 import { Button, Card, EmptyState, Input, Skeleton, Stack } from '@camply/ui'
-import { Funnel, Search } from '@camply/ui/icons'
-import {
-  Suspense,
-  use,
-  useCallback,
-  useDeferredValue,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-  useTransition,
-} from 'react'
+import { ArrowLeftRight, Funnel, Library, Plus, Search } from '@camply/ui/icons'
+import { Suspense, use, useCallback, useDeferredValue, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { CardFilters } from '@/components/CardFilters'
 import { CatalogGrid, CatalogGridSkeleton, CatalogTile } from '@/components/CatalogTile'
 import { LanguageSwitch } from '@/components/LanguageSwitch'
 import { PageHeader } from '@/components/PageHeader'
+import { SetLogo } from '@/components/SetLogo'
+import { SetPicker } from '@/components/SetPicker'
 import { Unavailable } from '@/components/Unavailable'
 import { ENERGY_TYPE, TRAINER_TYPES } from '@/config/catalog'
-import { forget } from '@/lib/api'
+import { useRetry } from '@/hooks/useRetry'
+import { useStartCollection } from '@/hooks/useStartCollection'
 import {
   catalogSetsUrl,
   loadSetCards,
@@ -33,24 +26,25 @@ import {
   type SetCard,
   type SetSummary,
 } from '@/lib/card-catalog'
-import { catalogLanguage, catalogParams, searchForm } from '@/lib/filters'
+import { catalogLanguage, catalogParams, searchForm, seriesPath } from '@/lib/filters'
 import { focusAfter } from '@/lib/focus'
 import { details, formatDate, formatInteger, formatList, pageTitle, plural } from '@/lib/format'
 import { priceText } from '@/lib/prices'
+import { findSeries } from '@/lib/series'
+import { useCollectionStore } from '@/store/collection'
 import { usePrices, usePricesMissing } from '@/store/prices'
 import type { CardLanguage } from '@/types'
 import { CardDetails } from './CardDetails'
-import { SetLogo } from './SetLogo'
-import { SetPicker } from './SetPicker'
 import styles from './CatalogPage.module.css'
 
 /**
  * Le catalogue (`/catalogue?langue=fr&set=MEG`) : toutes les cartes japonaises ou françaises
  * (l'interrupteur `LanguageSwitch`, dans l'adresse : `langue`, le japonais sans elle),
  * extension par extension, Pokémon, dresseurs et énergies. Les extensions se choisissent sur leur
- * logo (`SetPicker`) ; leurs cartes se cherchent (nom, numéro, illustrateur) et se filtrent par
- * rareté et par type. Une carte ouvre sa fiche (`CardDetails`) : tout ce qu'on en sait, son prix,
- * et pour une carte Pokémon, « Ajouter à la collection ».
+ * logo (`SetPicker`), et la collection de celle montrée s'y commence (`SeriesAction`) ; leurs
+ * cartes se cherchent (nom, numéro, illustrateur) et se filtrent par rareté et par type. Une carte
+ * ouvre sa fiche (`CardDetails`) : tout ce qu'on en sait, son prix, et pour une carte Pokémon,
+ * « Ajouter à la collection ».
  */
 export function CatalogPage() {
   const [params, setParams] = useSearchParams()
@@ -103,21 +97,6 @@ function SetCardsSkeleton({ count }: { count: number }) {
   )
 }
 
-/**
- * « Réessayer » une réponse de l'API qui manquait (`url`) : oubliée, puis redemandée ; le message
- * reste, son bouton en chargement, jusqu'à la nouvelle réponse (une transition).
- */
-function useRetry(url: string) {
-  const [, rerender] = useReducer((count: number) => count + 1, 0)
-  const [retrying, startRetry] = useTransition()
-  const onRetry = () =>
-    startRetry(() => {
-      forget(url)
-      rerender()
-    })
-  return { retrying, onRetry }
-}
-
 function CatalogContent({ lang }: { lang: CardLanguage }) {
   const retry = useRetry(catalogSetsUrl(lang))
   const catalog = use(loadSets(lang))
@@ -159,14 +138,18 @@ function SetBrowser({ catalog }: { catalog: CatalogSets }) {
             </p>
           )}
         </div>
-        <SetPicker
-          className={styles.change}
-          language={set.language}
-          sets={catalog.sets}
-          blocks={catalog.blocks}
-          current={set.id}
-          onPick={(setId) => setParams(catalogParams(set.language, setId), { replace: true })}
-        />
+        <div className={styles.actions}>
+          <SetPicker
+            label="Changer d’extension"
+            icon={<ArrowLeftRight size={16} />}
+            language={set.language}
+            current={set.id}
+            onPick={(picked) =>
+              setParams(catalogParams(set.language, picked.id), { replace: true })
+            }
+          />
+          <SeriesAction set={set} />
+        </div>
       </Card>
       {/* Une autre extension : sa recherche et ses filtres repartent de zéro (un même code existe
           dans les deux langues). */}
@@ -174,6 +157,33 @@ function SetBrowser({ catalog }: { catalog: CatalogSets }) {
         <SetCards set={set} />
       </Suspense>
     </Stack>
+  )
+}
+
+/**
+ * La collection de l'extension montrée : « Commencer la collection » (toutes ses cartes, à
+ * débloquer ; puis sa page), ou « Voir ma collection » si elle l'est déjà dans cette langue.
+ */
+function SeriesAction({ set }: { set: SetSummary }) {
+  const started = useCollectionStore(
+    (state) => findSeries(state.collection, set.id, set.language) !== null,
+  )
+  const { startCollection, starting } = useStartCollection()
+  if (started) {
+    return (
+      <Button asChild variant="secondary" leftIcon={<Library size={16} />}>
+        <Link to={seriesPath(set.id, set.language)}>Voir ma collection</Link>
+      </Button>
+    )
+  }
+  return (
+    <Button
+      leftIcon={<Plus size={16} />}
+      loading={starting}
+      onClick={() => void startCollection(set)}
+    >
+      Commencer la collection
+    </Button>
   )
 }
 

@@ -1,0 +1,79 @@
+/* Les tuiles : le Pokédex, puis une par collection d'extension ; autant par rangée que la page en
+   tient (une seule sur un petit téléphone). */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+  gap: var(--camply-space-4);
+}
+
+/* Une tuile (une `Card` de camply) : tout entière le lien de son titre (`.link::after`). */
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--camply-space-2);
+  min-width: 0;
+  padding: var(--space-panel);
+}
+
+/* Le logo de l'extension, ou le dessin du Pokédex, sur son fond : à la même hauteur partout. */
+.art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 5.5rem;
+  margin-bottom: var(--camply-space-2);
+  padding: var(--camply-space-3);
+  border-radius: var(--camply-radius);
+  background: var(--camply-fill-2);
+  color: var(--camply-text-muted);
+}
+
+/* Sans logo, le code de l'extension, à la taille d'un titre. */
+.logo {
+  width: 100%;
+  height: 100%;
+  font-size: var(--title-sm);
+}
+
+.title {
+  font-size: var(--title-sm);
+  line-height: 1.3;
+}
+
+/* Le lien du titre couvre toute la tuile ; son contour de focus est celui de la tuile. */
+.link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--camply-radius-lg);
+}
+
+.link:focus-visible {
+  outline: none;
+}
+
+.link:focus-visible::after {
+  outline: 2px solid var(--camply-accent);
+  outline-offset: 2px;
+}
+
+.meta {
+  color: var(--camply-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* La barre, puis les chiffres, au bas de la tuile : alignés d'une tuile à l'autre. */
+.bar {
+  margin-top: auto;
+  padding-top: var(--camply-space-2);
+}
+
+.figures {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem var(--camply-space-3);
+  font-size: var(--text-sm);
+}

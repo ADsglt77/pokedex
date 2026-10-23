@@ -42,19 +42,26 @@ function Flag({
   )
 }
 
+/** Le nom du petit drapeau, selon ce qu'il accompagne : une carte, ou une extension. */
+const FLAG_NAMES = {
+  card: { ja: 'Carte japonaise', fr: 'Carte française' },
+  set: { ja: 'Extension japonaise', fr: 'Extension française' },
+} satisfies Record<string, Record<CardLanguage, string>>
+
 /**
  * La langue d'une carte, à côté de sa référence : un petit drapeau, à la taille du texte, nommé
  * « Carte japonaise » ou « Carte française » (un même code d'extension existe dans les deux
- * langues : « SVP 001 »).
+ * langues : « SVP 001 ») ; celle d'une collection d'extension, à côté de son nom (`of="set"`),
+ * « Extension japonaise » ou « Extension française ».
  */
-export function LanguageFlag({ language }: { language: CardLanguage }) {
-  return (
-    <Flag
-      language={language}
-      label={language === 'fr' ? 'Carte française' : 'Carte japonaise'}
-      className={styles.inline}
-    />
-  )
+export function LanguageFlag({
+  language,
+  of = 'card',
+}: {
+  language: CardLanguage
+  of?: keyof typeof FLAG_NAMES
+}) {
+  return <Flag language={language} label={FLAG_NAMES[of][language]} className={styles.inline} />
 }
 
 /**

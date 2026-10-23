@@ -53,7 +53,11 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     retirerait à la seconde. Les autres cases sont ajoutées marquées `seriesOnly` : pas encore des
     cartes de leurs Pokémon, ni au Pokédex (`buildPokedex` les saute), ni sur leur fiche, jamais
     favorites (`completeFavorites` les saute). Commencer une extension ne remplit pas
-    le Pokédex ; une case est débloquée quand elle est possédée.
+    le Pokédex ; une case est débloquée quand elle est possédée. Les cases viennent du catalogue,
+    chargé au moment de commencer (`seriesSlot`, `lib/card-catalog.ts` : une nouvelle carte
+    `seriesOnly` par carte de l'extension ; Collections et Catalogue, `useStartCollection`). Le
+    magasin (`store/collection.ts`) ne recommence pas une extension déjà commencée dans cette
+    langue : un second clic pendant le chargement de ses cartes mettrait chaque case en double.
   - Obtenir (`obtain`, `lib/collection.ts`) : une case possédée, par son statut (`setCardStatus`)
     ou à la réception d'une commande (`applyOrder`), perd `seriesOnly` pour de bon et devient une
     carte de ses Pokémon, favorite de ceux qui n'en ont pas (les autres gardent la leur ; un

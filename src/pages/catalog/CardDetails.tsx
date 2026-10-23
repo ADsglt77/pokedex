@@ -15,8 +15,7 @@ import { PricePanel } from '@/components/PricePanel'
 import { CARD_TYPES } from '@/config/catalog'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { usePokedex } from '@/hooks/usePokedex'
-import { isCatalogCard, languageField, type SetCard } from '@/lib/card-catalog'
-import { newCardId } from '@/lib/collection'
+import { cardFromCatalog, isCatalogCard, languageField, type SetCard } from '@/lib/card-catalog'
 import { details, formatDate, formatDexNumber, formatList, statusLabel } from '@/lib/format'
 import { getSpecies, speciesNames } from '@/lib/species'
 import { addCard } from '@/store/collection'
@@ -238,18 +237,7 @@ function AddToCollection({ card, place }: { card: SetCard; place: CollectionPlac
 
   const add = () => {
     act(
-      () =>
-        addCard(
-          {
-            id: newCardId(),
-            dexIds: card.dexIds,
-            reference: card.reference,
-            image: card.image,
-            ...(card.cardmarket !== undefined && { cardmarket: card.cardmarket }),
-            ...languageField(card),
-          },
-          'none',
-        ),
+      () => addCard(cardFromCatalog(card), 'none'),
       `Carte ${card.reference} ajoutée à ${speciesNames(card.dexIds)}, à acheter.`,
     )
     setAdded(true)

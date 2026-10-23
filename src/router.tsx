@@ -93,6 +93,10 @@ export const createRouter = () =>
             { path: 'pokedex', element: null },
             { path: 'pokemon/:id', element: <PokemonPage /> },
             {
+              path: 'collections',
+              lazy: () => page(import('@/pages/collections/CollectionsPage'), 'CollectionsPage'),
+            },
+            {
               path: 'valeur',
               lazy: () => page(import('@/pages/value/ValuePage'), 'ValuePage'),
             },

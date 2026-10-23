@@ -9,13 +9,16 @@
  * - `/api/catalog/sets` et `/api/catalog/sets/<code>` : les séries, puis toutes les cartes d'une
  *   série, dresseurs et énergies compris, avec tout ce qu'on en sait (la page Catalogue) ; elles
  *   donnent aussi l'image exacte d'une carte (`findCardImage`).
- * Aucun tri ni détection : l'utilisateur choisit, l'app ne propose rien seule.
+ * Une carte du catalogue devient une carte de la collection (`cardFromCatalog`), ou une case d'une
+ * collection d'extension (`seriesSlot`). Aucun tri ni détection : l'utilisateur choisit, l'app ne
+ * propose rien seule.
  */
 
 import { CARD_TYPES } from '@/config/catalog'
 import { derived } from '@/lib/api'
 import { isCardOf, numberKey, referenceCode, setKey } from '@/lib/card-code'
 import { cardImage, catalogImage } from '@/lib/card-images'
+import { newCardId } from '@/lib/collection'
 import { settled } from '@/lib/settled'
 import { getSpecies } from '@/lib/species'
 import type {
@@ -268,6 +271,28 @@ export const isCatalogCard = (card: PokemonCard, listed: CatalogCard) =>
  */
 export const languageField = (card: CatalogCard): Pick<PokemonCard, 'language'> =>
   card.set.language === 'fr' ? { language: 'fr' } : {}
+
+/**
+ * Une nouvelle carte de la collection, celle-ci du catalogue : ses Pokémon, sa référence, son
+ * image, son id Cardmarket et sa langue (« Ajouter à la collection » du Catalogue).
+ */
+export const cardFromCatalog = (card: CatalogCard): PokemonCard => ({
+  id: newCardId(),
+  dexIds: card.dexIds,
+  reference: card.reference,
+  image: card.image,
+  ...(card.cardmarket !== undefined && { cardmarket: card.cardmarket }),
+  ...languageField(card),
+})
+
+/**
+ * Une case de la collection d'une extension : la carte du catalogue, pas encore obtenue
+ * (`seriesOnly`). Une carte déjà dans le compte la remplace (`startSeries`, `lib/series.ts`).
+ */
+export const seriesSlot = (card: CatalogCard): PokemonCard => ({
+  ...cardFromCatalog(card),
+  seriesOnly: true,
+})
 
 /** Les raretés et les types choisis pour une grille de cartes ; aucun : tous. */
 export interface CardFilter {
