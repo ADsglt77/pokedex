@@ -7,6 +7,7 @@ import { euroInput, formatEuro } from '@/lib/format'
 import { duplicateReason, unitCosts } from '@/lib/orders'
 import { marketPrice } from '@/lib/prices'
 import { findCard } from '@/lib/collection'
+import { seriesOf } from '@/lib/series'
 import { cardTitle } from '@/lib/species'
 import { useCollectionStore } from '@/store/collection'
 import { usePrices } from '@/store/prices'
@@ -21,8 +22,8 @@ const collator = new Intl.Collator('fr')
 
 /**
  * Les cartes d'une commande (`OrderForm`) : une ligne par carte, sa quantité, son prix, ce qu'elle
- * revient ou le doublon d'une autre commande ; puis l'ajout d'une carte du Pokédex, au prix du
- * marché.
+ * revient ou le doublon d'une autre commande ; puis l'ajout d'une carte du compte (du Pokédex, ou
+ * une case d'une collection d'extension, dresseurs compris), au prix du marché.
  */
 export function OrderLines({
   lines,
@@ -48,7 +49,7 @@ export function OrderLines({
   const list = useRef<HTMLUListElement>(null)
   const cardsTitle = useRef<HTMLHeadingElement>(null)
   const costs = unitCosts(order)
-  // Les cartes du Pokédex qui ne sont pas déjà dans la commande, triées une fois par collection et
+  // Les cartes du compte qui ne sont pas déjà dans la commande, triées une fois par collection et
   // par liste (pas à chaque frappe dans un montant).
   const addable = useMemo(() => {
     const inLines = new Set(lines.map((line) => line.cardId))
@@ -93,6 +94,7 @@ export function OrderLines({
               <li key={line.cardId}>
                 <CardLine
                   card={card}
+                  series={seriesOf(collection, line.cardId)}
                   detail={
                     card &&
                     (duplicate ? (
@@ -139,7 +141,7 @@ export function OrderLines({
       )}
       <Combobox
         label="Ajouter une carte"
-        hint="Une carte de votre Pokédex. Pour une autre, ajoutez-la d’abord sur la fiche de son Pokémon."
+        hint="Une carte de votre Pokédex ou de vos collections d’extensions. Pour une autre, ajoutez-la d’abord sur la fiche de son Pokémon."
         placeholder="Nom ou référence…"
         emptyMessage="Aucune carte trouvée."
         options={addable}

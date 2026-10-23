@@ -1,8 +1,7 @@
 import { Alert, Skeleton, SkeletonText, Stack, Stat } from '@camply/ui'
 import { Flag, Wallet } from '@camply/ui/icons'
 import { Suspense, use, useMemo, useState } from 'react'
-import { Link } from 'react-router'
-import { speciesPath } from '@/lib/filters'
+import { CardSpeciesLink } from '@/components/CardSpeciesLink'
 import { ChartPeriodControl, ChartStats } from '@/components/ChartParts'
 import { CollectionValueStat } from '@/components/CollectionValueStat'
 import { PageHeader } from '@/components/PageHeader'
@@ -274,7 +273,7 @@ function Movers({ cards }: { cards: TrackedCard[] }) {
               <ul className={styles.movers}>
                 {list.map(({ card, price, monthAgo, change }) => (
                   <li key={card.id}>
-                    <Link to={speciesPath(card.dexIds[0]!)}>{card.reference}</Link>
+                    <CardSpeciesLink card={card}>{card.reference}</CardSpeciesLink>
                     <span className={styles.moverPrice}>
                       {formatEuro(price)} <span className={className}>{formatPercent(change)}</span>
                       <span className="muted"> · il y a 30 jours {formatEuro(monthAgo)}</span>

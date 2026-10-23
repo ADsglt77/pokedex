@@ -1,11 +1,11 @@
 /**
- * Les prix Cardmarket : ceux du jour, demandés pour les seules cartes affichées (`/api/prices` :
- * celles de la collection, d'une extension du catalogue, d'un Pokémon, un id saisi), que l'API des
- * données met à jour (sa tâche `prices`), et leur historique (`/api/prices/<id>` pour une carte,
- * `/api/histories` pour la collection). Les réponses s'ajoutent : une carte dont le prix est
- * connu n'est plus redemandée, sauf au retour sur une page restée ouverte plus de 6 h
- * (`refreshPrices`). Facultatifs : sans eux (serveur arrêté, base encore vide), `null`, et l'app
- * s'affiche sans prix.
+ * Les prix Cardmarket : ceux du jour, demandés pour les seules cartes affichées (`/api/prices`, par
+ * paquets de 200 : celles de la collection, d'une extension du catalogue, d'un Pokémon, un id
+ * saisi), que l'API des données met à jour (sa tâche `prices`), et leur historique
+ * (`/api/prices/<id>` pour une carte, `/api/histories` pour la collection). Les réponses
+ * s'ajoutent : une carte dont le prix est connu n'est plus redemandée, sauf au retour sur une page
+ * restée ouverte plus de 6 h (`refreshPrices`). Facultatifs : sans eux (serveur arrêté, base encore
+ * vide), `null`, et l'app s'affiche sans prix.
  */
 
 import { create } from 'zustand'
@@ -53,17 +53,32 @@ const priceUrls = new Set<string>()
 let answeredAt = 0
 
 /**
- * Demande les prix des cartes `ids` qui ne sont pas encore connus ; le serveur répond pour chaque
- * carte (`null` sans prix). Redemandés après une panne (`getJson`, une minute après au plus tôt).
+ * Les ids d'une demande de prix, au plus : une collection en a des milliers (ses extensions), et
+ * l'adresse doit rester courte (l'API des données en accepte 1 025 au plus).
+ */
+const IDS_PER_REQUEST = 200
+
+/**
+ * Demande les prix des cartes `ids` qui ne sont pas encore connus, par paquets de
+ * `IDS_PER_REQUEST` ; le serveur répond pour chaque carte (`null` sans prix). Redemandés après une
+ * panne (`getJson`, une minute après au plus tôt).
  */
 function requestPrices(ids: readonly number[]) {
   const { known, failed } = usePriceStore.getState()
   // Une panne : redemandée (`getJson` attend une minute) à chaque rendu.
   if (requested.get(ids) === known && (!failed.size || !ids.some((id) => failed.has(id)))) return
   requested.set(ids, known)
+  // Triés : quand des paquets entiers arrivent, les autres (en cours, ou en panne) gardent leur
+  // adresse, et ne sont pas redemandés.
   const wanted = [...new Set(ids)].filter((id) => !known.has(id)).sort((a, b) => a - b)
-  if (!wanted.length) return
-  const url = `/api/prices?ids=${wanted.join()}`
+  for (let start = 0; start < wanted.length; start += IDS_PER_REQUEST) {
+    requestBatch(wanted.slice(start, start + IDS_PER_REQUEST))
+  }
+}
+
+/** Demande les prix d'un paquet de cartes, en une demande ; sa réponse s'ajoute aux autres. */
+function requestBatch(batch: readonly number[]) {
+  const url = `/api/prices?ids=${batch.join()}`
   priceUrls.add(url)
   const response = getJson<PriceFile>(url)
   if (followed.has(response)) return
@@ -75,10 +90,10 @@ function requestPrices(ids: readonly number[]) {
       file?.cards
         ? {
             prices: { date: file.date, cards: { ...state.prices?.cards, ...file.cards } },
-            known: new Set([...state.known, ...wanted]),
-            failed: new Set([...state.failed].filter((id) => !wanted.includes(id))),
+            known: new Set([...state.known, ...batch]),
+            failed: new Set([...state.failed].filter((id) => !batch.includes(id))),
           }
-        : { failed: new Set([...state.failed, ...wanted]) },
+        : { failed: new Set([...state.failed, ...batch]) },
     )
   })
 }

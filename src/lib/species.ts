@@ -46,11 +46,16 @@ export const speciesNames = (ids: readonly number[]) =>
 export const otherSpeciesNames = (dexIds: readonly number[], speciesId: number) =>
   speciesNames(dexIds.filter((id) => id !== speciesId))
 
-/** « Pikachu & Zekrom » ; la référence pour une carte sans Pokémon connu. */
+/**
+ * « Pikachu & Zekrom » ; pour une carte sans Pokémon (un dresseur, une énergie), son nom, sa
+ * référence sans le code qui la finit (« Ordonnance du Professeur ») : la référence suit le titre.
+ */
 export const cardTitle = (card: PokemonCard) =>
   speciesOf(card)
     .map((species) => species.names.fr)
-    .join(' & ') || card.reference
+    .join(' & ') ||
+  card.reference.replace(/\s*\([^()]*\)\s*$/, '') ||
+  card.reference
 
 /**
  * Description, taille, poids… (`/api/species/details`), chargés à la première fiche ouverte ; vide

@@ -75,8 +75,9 @@ export function ShoppingPage() {
     <div className="container">
       <title>{pageTitle('Achats')}</title>
       <PageHeader title="Achats">
-        Les cartes de vos Pokémon pas encore obtenues, votre budget et vos commandes. Les prix sont
-        ceux du marché (Cardmarket) : une indication, pas une offre de vendeur.
+        Les cartes de vos Pokémon et de vos collections d’extensions pas encore obtenues, votre
+        budget et vos commandes. Les prix sont ceux du marché (Cardmarket) : une indication, pas une
+        offre de vendeur.
       </PageHeader>
 
       <BudgetOverview />

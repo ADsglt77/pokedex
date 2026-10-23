@@ -26,7 +26,7 @@ export function CollectionSection() {
       titleRef={title}
       description="Enregistrée sur le serveur : la même sur tous vos appareils."
     >
-      {summary.cards === 0 ? (
+      {summary.cards === 0 && summary.series === 0 ? (
         <EmptyState
           align="start"
           icon={<Inbox size={22} />}

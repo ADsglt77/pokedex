@@ -33,9 +33,10 @@ const CARDS_STEP = 40
 
 /**
  * La liste d'achats (`rows`, celle de la page : `useWishlist`) : les cartes voulues pour vos
- * Pokémon, ni possédées ni commandées, chacune une fois ; chercher, filtrer, trier. Ses filtres
- * sont dans l'adresse, lus et changés par la page (`ShoppingPage`) : ils survivent à l'ouverture
- * d'une fiche et au retour.
+ * Pokémon et vos collections d'extensions, ni possédées ni commandées, chacune une fois ;
+ * chercher, filtrer (une carte sans Pokémon n'a pas de génération), trier. Ses filtres sont dans
+ * l'adresse, lus et changés par la page (`ShoppingPage`) : ils survivent à l'ouverture d'une fiche
+ * et au retour.
  */
 export function WishlistPanel({
   rows,

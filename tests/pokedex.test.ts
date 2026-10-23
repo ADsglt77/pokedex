@@ -3,15 +3,16 @@
  * ses cartes, dans l'ordre d'ajout ; il est débloqué dès qu'une de ses cartes est possédée,
  * favorite ou non, sinon « commandé » si l'une l'est ; une carte TAG TEAM est la favorite de chacun
  * de ses Pokémon, chacun pour soi. Une entrée inchangée est reprise telle quelle (les pochettes
- * mémoïsées ne se redessinent pas). Et le jour où un Pokémon est débloqué (`unlockEvents`) : celui
- * de sa première carte obtenue. Une erreur ici dirait « à débloquer » un Pokémon qu'on a, ou
- * l'inverse.
+ * mémoïsées ne se redessinent pas). Une case d'extension pas encore obtenue n'est pas une carte de
+ * son Pokémon, ni du compte des cartes (`summarize`) ; possédée, elle l'est. Et le jour où un
+ * Pokémon est débloqué (`unlockEvents`) : celui de sa première carte obtenue. Une erreur ici dirait
+ * « à débloquer » un Pokémon qu'on a, ou l'inverse.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test'
 import { setCardStatus, setFavorite } from '@/lib/collection'
 import { localDayOf } from '@/lib/format'
-import { buildPokedex, type CardView, unlockEvents } from '@/lib/pokedex'
+import { buildPokedex, type CardView, summarize, unlockEvents } from '@/lib/pokedex'
 import type { CollectionData } from '@/types'
 import { card, collectionWith, loadTestSpecies, NOW, ownership, withCards } from './fixtures'
 
@@ -101,6 +102,39 @@ describe('le Pokédex de plusieurs cartes', () => {
     const owned = buildPokedex(setCardStatus(data, card('b', [25]), 'owned', NOW), first)
     expect(owned.entryById.get(25)).not.toBe(pikachu)
     expect(owned.entryById.get(644)).toBe(zekrom)
+  })
+})
+
+describe('les cases des collections d’extensions', () => {
+  test('une case pas encore obtenue n’est pas une carte de son Pokémon ; possédée, elle l’est', () => {
+    const slot = card('slot', [25], { seriesOnly: true })
+    const data = withCards(
+      collectionWith({ slot: ownership('ordered') }),
+      card('a', [25]),
+      slot,
+      card('trainer', [], { seriesOnly: true }),
+    )
+    const pikachu = entryOf(data, 25)
+    // Commandée, elle ne compte pas pour lui : ni carte, ni « commandé ».
+    expect(ids(pikachu.cards)).toEqual(['a'])
+    expect(pikachu.status).toBeNull()
+    // Les cartes du Pokédex seulement ; la case commandée compte dans les commandées.
+    expect(summarize(data)).toEqual({ cards: 1, owned: 0, ordered: 1, series: 0 })
+
+    const owned = setCardStatus(data, slot, 'owned', NOW)
+    const unlocked = entryOf(owned, 25)
+    expect(ids(unlocked.cards)).toEqual(['a', 'slot'])
+    expect(unlocked.card?.card.id).toBe('a')
+    expect(unlocked.unlocked).toBe(true)
+    expect(summarize(owned)).toEqual({ cards: 2, owned: 1, ordered: 0, series: 0 })
+  })
+
+  test('une collection commencée sans carte du Pokédex : la collection n’est pas vide', () => {
+    const data = {
+      ...withCards(collectionWith(), card('slot', [25], { seriesOnly: true })),
+      series: [{ set: 'M6A', name: 'Méga Rêve ex', startedAt: NOW, cards: ['slot'] }],
+    }
+    expect(summarize(data)).toEqual({ cards: 0, owned: 0, ordered: 0, series: 1 })
   })
 })
 

@@ -17,8 +17,12 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   par seconde et par visiteur, 300 d'un coup, nginx). Le prix suivi est la règle de Pokécardex (la tendance pour une série de moins de
   31 jours, la moyenne sur 30 jours ensuite) ; « Ce qui bouge » (Valeur) et la fiche comparent au
   prix d'il y a 30 jours (`priceChange`, `lib/prices.ts`). Côté navigateur (`store/prices.ts`), les
-  réponses s'ajoutent : `usePrices()` rend les prix de la collection, `usePrices(ids)` ceux d'autres
-  cartes, `null` tant que la réponse de ces cartes n'est pas arrivée ; une carte dont le prix est
+  réponses s'ajoutent : `usePrices()` rend les prix de la collection (toutes ses cartes, les cases
+  de ses collections d'extensions comprises), `usePrices(ids)` ceux d'autres cartes, `null` tant
+  que la réponse de toutes ces cartes n'est pas arrivée ; ils sont demandés par paquets de 200 ids
+  au plus (`requestPrices` : une collection de plusieurs extensions en a des milliers, l'adresse
+  reste courte et sous la limite de l'API ; ids triés, un paquet en cours ou en panne garde son
+  adresse quand d'autres arrivent, et n'est pas redemandé avant l'heure) ; une carte dont le prix est
   connu n'est pas redemandée (une carte ajoutée : une demande pour elle seule), sauf au retour sur
   une page restée ouverte plus de 6 h, où tout ce qui est affiché est redemandé (`refreshPrices` :
   ceux déjà affichés le restent en attendant). Une demande en panne compte comme une panne

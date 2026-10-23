@@ -1,15 +1,15 @@
 /**
- * La liste d'achats : chaque carte de chaque Pokémon qui n'est ni possédée ni commandée, sa favorite
- * ou non. Choisir une carte suffit à dire qu'on la veut : toutes sont voulues autant
- * (`docs/collection-et-achats.md`).
+ * La liste d'achats : chaque carte du compte qui n'est ni possédée ni commandée, celles des
+ * Pokémon (favorites ou non) comme les cases des collections d'extensions (dresseurs et énergies
+ * compris). Choisir une carte, ou commencer une extension, suffit à dire qu'on la veut : toutes
+ * sont voulues autant (`docs/collection-et-achats.md`).
  */
 
 import { speciesOf } from '@/lib/species'
 import { searchForm, searchMatcher, type WishlistFilters, type WishlistSort } from '@/lib/filters'
-import type { PokedexEntry } from '@/lib/pokedex'
 import { isToBuy } from '@/lib/collection'
 import { priceChange, priceOf } from '@/lib/prices'
-import type { PokemonCard, PriceFile } from '@/types'
+import type { CollectionData, PokemonCard, PriceFile, SeriesCollection } from '@/types'
 
 /** Une carte de la liste d'achats, ni possédée ni commandée, prête à afficher et à planifier. */
 export interface WishRow {
@@ -18,27 +18,32 @@ export interface WishRow {
   price: number | null
   /** Écart avec le prix d'il y a 30 jours (−0,18 : 18 % moins cher) ; `null` sans ce prix. */
   change30: number | null
+  /** La collection d'extension dont elle est une case (la première, s'il y en a plusieurs). */
+  series: SeriesCollection | null
 }
 
 /**
- * Toutes les cartes de tous les Pokémon, ni possédées ni commandées, même celles d'un Pokémon déjà
- * débloqué par une autre ; une carte de plusieurs Pokémon (TAG TEAM) une seule fois : on ne
- * l'achète qu'une fois.
+ * Toutes les cartes du compte, ni possédées ni commandées : celles d'un Pokémon déjà débloqué par
+ * une autre comme les cases d'extensions, chacune une fois (une carte TAG TEAM aussi : on ne
+ * l'achète qu'une fois).
  */
-export function wishlistRows(entries: readonly PokedexEntry[], prices: PriceFile | null) {
-  const rows = new Map<string, WishRow>()
-  for (const { cards } of entries) {
-    for (const view of cards) {
-      if (!isToBuy(view) || rows.has(view.card.id)) continue
-      const price = priceOf(prices, view.card)
-      rows.set(view.card.id, {
-        card: view.card,
-        price: price?.price ?? null,
-        change30: price && priceChange(price),
-      })
-    }
+export function wishlistRows(collection: CollectionData, prices: PriceFile | null): WishRow[] {
+  // La collection de chaque case, la première qui la compte (`seriesOf`), lue une fois pour toutes
+  // les cartes : le compte peut en avoir des milliers.
+  const seriesOfCard = new Map<string, SeriesCollection>()
+  for (const series of collection.series) {
+    for (const id of series.cards) if (!seriesOfCard.has(id)) seriesOfCard.set(id, series)
   }
-  return [...rows.values()]
+  return Object.values(collection.customCards).flatMap((card) => {
+    if (!isToBuy({ status: collection.cards[card.id]?.status ?? null })) return []
+    const price = priceOf(prices, card)
+    return {
+      card,
+      price: price?.price ?? null,
+      change30: price && priceChange(price),
+      series: seriesOfCard.get(card.id) ?? null,
+    }
+  })
 }
 
 /** Ce que coûteraient les cartes de la liste ; `unpriced` : celles qui n'ont pas de prix. */
@@ -61,10 +66,15 @@ const SORTS: Record<WishlistSort, (a: WishRow, b: WishRow) => number> = {
   price: (a, b) => ascending(a.price, b.price),
   'price-desc': (a, b) => ascending(negated(a.price), negated(b.price)),
   drop: (a, b) => ascending(a.change30, b.change30),
-  dex: (a, b) => (a.card.dexIds[0] ?? 0) - (b.card.dexIds[0] ?? 0),
+  // Une carte sans Pokémon (un dresseur, une énergie) après les autres.
+  dex: (a, b) => ascending(a.card.dexIds[0] ?? null, b.card.dexIds[0] ?? null),
 }
 
-/** Les cartes qui passent les filtres, dans l'ordre choisi (puis par numéro de Pokédex). */
+/**
+ * Les cartes qui passent les filtres, dans l'ordre choisi (puis par numéro de Pokédex). Une carte
+ * sans Pokémon n'a pas de génération (un filtre de génération l'écarte) et se cherche par sa
+ * référence.
+ */
 export function filterWishlist(rows: readonly WishRow[], filters: WishlistFilters): WishRow[] {
   const matches = searchMatcher(filters.search)
   const needle = searchForm(filters.search)

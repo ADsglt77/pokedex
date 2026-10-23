@@ -35,7 +35,7 @@ export function RecentPanel({ cards }: { cards: RecentCard[] }) {
     >
       <ul className={styles.cards}>
         {cards.map((recent) => {
-          const speciesId = recent.card.dexIds[0]!
+          const [speciesId] = recent.card.dexIds
           const date = formatDate(recent.acquiredAt)
           const deal = !first.has(recent.card.id)
           return (
@@ -58,7 +58,11 @@ export function RecentPanel({ cards }: { cards: RecentCard[] }) {
   )
 }
 
-/** Une carte de l'accueil, qui mène à la fiche de son Pokémon ; `locked` : pas encore obtenue. */
+/**
+ * Une carte de l'accueil, qui mène à la fiche de son Pokémon (`speciesId`) ; une carte sans Pokémon
+ * (un dresseur, une énergie) n'a pas de fiche : elle ne mène nulle part. `locked` : pas encore
+ * obtenue.
+ */
 function CardLink({
   card,
   speciesId,
@@ -67,16 +71,23 @@ function CardLink({
   locked,
 }: {
   card: PokemonCard
-  speciesId: number
+  speciesId: number | undefined
   name: string
   hint: string
   locked?: boolean
 }) {
-  return (
-    <Link to={speciesPath(speciesId)} className={styles.card}>
+  const content = (
+    <>
       <CardArt card={card} speciesId={speciesId} alt="" locked={locked} eager />
       <span className={styles.cardName}>{name}</span>
       <span className="hint">{hint}</span>
+    </>
+  )
+  return speciesId === undefined ? (
+    <span className={styles.card}>{content}</span>
+  ) : (
+    <Link to={speciesPath(speciesId)} className={styles.card}>
+      {content}
     </Link>
   )
 }

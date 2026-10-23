@@ -3,13 +3,14 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { useGrowingList } from '@/hooks/useGrowingList'
 import { cardTitle } from '@/lib/species'
+import { CardSpeciesLink } from '@/components/CardSpeciesLink'
 import { TableCount } from '@/components/TableCount'
 import { cx } from '@/lib/cx'
-import { pokedexUrl, speciesPath } from '@/lib/filters'
+import { pokedexUrl } from '@/lib/filters'
 import { formatEuro, formatEuroChange, statusLabel } from '@/lib/format'
 import type { CompletionCost, TrackedCard } from '@/lib/prices'
 import { type Generation, generationLabel } from '@/config/pokedex'
-import type { CardStatus } from '@/types'
+import type { CardStatus, PokemonCard } from '@/types'
 import styles from './ValuePage.module.css'
 
 const money = (value: number | null) => (value === null ? '—' : formatEuro(value))
@@ -18,8 +19,8 @@ const STATUS_ORDER: Record<CardStatus, number> = { owned: 0, ordered: 1 }
 
 interface CardRow {
   id: string
+  card: PokemonCard
   name: string
-  speciesId: number
   reference: string
   status: CardStatus
   paid: number | null
@@ -65,8 +66,8 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
       sortCards(
         cards.map(({ card, status, paid, value }) => ({
           id: card.id,
+          card,
           name: cardTitle(card),
-          speciesId: card.dexIds[0]!,
           reference: card.reference,
           status,
           paid,
@@ -96,7 +97,7 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
             sortValue: SORT_VALUES.name,
             cell: (row) => (
               <span className={styles.card}>
-                <Link to={speciesPath(row.speciesId)}>{row.name}</Link>
+                <CardSpeciesLink card={row.card}>{row.name}</CardSpeciesLink>
                 <span className="muted">{row.reference}</span>
               </span>
             ),

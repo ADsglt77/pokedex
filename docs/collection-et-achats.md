@@ -98,7 +98,8 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   est `status === 'owned'`. La pochette (en couleur, marque « possédée »), la fiche (« Débloqué : carte possédée ») et le Pokédex public lisent ce
   statut, pas celui de la favorite : une favorite pas encore possédée reste montrée avec son propre
   statut, et le Pokémon n'en est pas moins débloqué. Testé (`tests/pokedex.test.ts`, avec le jour du
-  déblocage : celui de la première de ses cartes obtenue).
+  déblocage : celui de la première de ses cartes obtenue ; une case d'extension commandée ne le dit
+  pas « commandé », possédée elle devient une de ses cartes).
 - Coût pour compléter (Valeur › « Pour compléter le Pokédex », `completionCost`) : pour chaque Pokémon à
   débloquer (`status` nul : aucune de ses cartes n'est possédée ni commandée), le prix de sa
   **favorite**, seule chiffrée ; ses autres cartes ne comptent pas. Un Pokémon sans carte
@@ -115,16 +116,24 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
 - Achats (`/achats`, `ShoppingData`, à part de la collection dans le document : elle garde son
   format ; ceux d'un nouveau venu, aucune commande et le budget par défaut :
   `emptyShopping`, `lib/orders.ts`) :
-  - la liste d'achats n'est pas enregistrée : ce sont toutes les cartes de tous les Pokémon ni
-    possédées ni commandées (`wishlistRows`, chacune une fois : une TAG TEAM une fois), pas seulement
-    les favorites, toutes voulues autant (décision de l'utilisateur, octobre 2026 : choisir la carte
-    suffit) ; les cartes d'un Pokémon déjà débloqué par une autre y restent tant qu'elles ne sont
-    ni commandées ni possédées (testé, `tests/purchase-planner.test.ts`). Le lien vers Cardmarket est
-    `cardmarketPage` : la page notée, sinon l'id. La prochaine commande (`planPurchase`,
-    `purchase-planner`) ne lit qu'elle : elle y prend les moins chères d'abord,
-    une par Pokémon, dans le budget, port réservé ; on peut en retirer ou en ajouter à la main.
-    Après « Enregistrer comme commande », l'assistant repart de ses réglages par défaut (le budget :
-    le reste du mois, cette commande comprise) ;
+  - la liste d'achats n'est pas enregistrée : ce sont toutes les cartes du compte ni possédées ni
+    commandées (`wishlistRows`, lue dans la collection, chacune une fois : une TAG TEAM une fois),
+    celles de tous les Pokémon, pas seulement les favorites, et les cases des collections
+    d'extensions, dresseurs et énergies compris, toutes voulues autant (décision de l'utilisateur,
+    octobre 2026 : choisir la carte, ou commencer l'extension, suffit) ; les cartes d'un Pokémon
+    déjà débloqué par une autre y restent tant qu'elles ne sont ni commandées ni possédées (testé,
+    `tests/purchase-planner.test.ts`). Une case dit sa collection (`WishRow.series`, `seriesOf` : la
+    première, pour une carte obtenue qui l'est de plusieurs), sur sa carte de la liste comme sur sa
+    ligne (prochaine commande, commandes). Une carte sans Pokémon n'a pas de génération (un filtre
+    de génération l'écarte), se cherche par sa référence et vient après les autres au tri par
+    numéro (`filterWishlist`). Le lien vers Cardmarket est `cardmarketPage` : la page notée, sinon
+    l'id. La prochaine commande (`planPurchase`, `purchase-planner`) ne lit qu'elle : elle y prend
+    les moins chères d'abord, dans le budget, port réservé, et une par Pokémon pour les cartes du
+    Pokédex ; une case d'extension pas encore obtenue (`seriesOnly`) n'est pas encore une carte de
+    ses Pokémon : elle est libre de cette règle, ni écartée par une carte du même Pokémon prise
+    avant elle, ni écartant celles prises après (deux cases du même Pokémon sont prises ; testé).
+    On peut en retirer ou en ajouter à la main. Après « Enregistrer comme commande », l'assistant
+    repart de ses réglages par défaut (le budget : le reste du mois, cette commande comprise) ;
   - « Copier pour Cardmarket » (`shopping/WantsDialog`, à côté d'« Enregistrer comme commande… »,
     sous la jauge du total, affiché comme lui dès que la prochaine commande a une carte) en fait
     des lignes pour la liste de
@@ -201,8 +210,11 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     `lib/orders.ts` : la fiche d'un Pokémon) ; les règles de la
     collection et des commandes ne modifient jamais ce qu'elles reçoivent (« Annuler » repose
     dessus ; testé). « Effacer ma
-    collection » efface les cartes, leurs statuts et leurs prix payés ; les commandes et le budget
-    restent.
+    collection » efface les cartes, les collections d'extensions, les statuts et les prix payés ;
+    les commandes et le budget restent. Son décompte (`summarize`, Réglages) : les cartes ajoutées
+    (sans les cases pas encore obtenues, testé dans `tests/pokedex.test.ts`), possédées, commandées
+    (cases comprises) et les collections d'extensions ; une collection qui n'a qu'une extension
+    commencée n'est pas vide.
 - Deux onglets ouverts : chacun envoie ses modifications à partir de la version qu'il a lue ;
   celle d'un onglet en retard est refusée (409) et il relit celle du serveur, sans rien écraser
   (`store/account.ts`). « Annuler » se lance aussi par Ctrl+Z (⌘Z) tant que son toast est affiché.

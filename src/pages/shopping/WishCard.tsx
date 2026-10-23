@@ -13,35 +13,49 @@ import type { WishRow } from '@/lib/wishlist'
 import styles from './WishCard.module.css'
 
 /**
- * Une carte de la liste d'achats : ce qu'elle est, ce qu'elle coûte, où la trouver. Mémoïsée : les
- * lignes de `useWishlist` restent les mêmes d'un filtre à l'autre, seules les nouvelles se rendent.
- * Ses liens vers la fiche sont de simples liens, que la liste fait suivre par le routeur
- * (`useFollowLinks`).
+ * Une carte de la liste d'achats : ce qu'elle est (et la collection d'extension dont elle est une
+ * case), ce qu'elle coûte, où la trouver. Mémoïsée : les lignes de `useWishlist` restent les mêmes
+ * d'un filtre à l'autre, seules les nouvelles se rendent. Ses liens vers la fiche de son Pokémon
+ * sont de simples liens, que la liste fait suivre par le routeur (`useFollowLinks`) ; une carte
+ * sans Pokémon (un dresseur, une énergie) n'en a pas.
  */
 export const WishCard = memo(function WishCard({ row }: { row: WishRow }) {
-  const { card, price, change30 } = row
-  const speciesId = card.dexIds[0]!
+  const { card, price, change30, series } = row
+  const [speciesId] = card.dexIds
+  const path = speciesId === undefined ? null : speciesPath(speciesId)
+  const art = <CardArt card={card} speciesId={speciesId} alt="" />
 
   return (
     <Card as="article" padding="sm" className={styles.wish}>
       {/* La vignette double le lien du titre : cachée au clavier et aux lecteurs d'écran. */}
-      <a href={speciesPath(speciesId)} className={styles.wishArt} tabIndex={-1} aria-hidden="true">
-        <CardArt card={card} speciesId={speciesId} alt="" />
-      </a>
+      {path ? (
+        <a href={path} className={styles.wishArt} tabIndex={-1} aria-hidden="true">
+          {art}
+        </a>
+      ) : (
+        <span className={styles.wishArt}>{art}</span>
+      )}
 
       <div className={styles.wishBody}>
         <header className={styles.wishHead}>
           <h2 className={styles.wishTitle}>
-            <a href={speciesPath(speciesId)} className="quiet-link">
-              {cardTitle(card)}
-            </a>
+            {path ? (
+              <a href={path} className="quiet-link">
+                {cardTitle(card)}
+              </a>
+            ) : (
+              cardTitle(card)
+            )}
           </h2>
-          <span className="muted numeric">{formatDexNumber(speciesId)}</span>
+          {speciesId !== undefined && (
+            <span className="muted numeric">{formatDexNumber(speciesId)}</span>
+          )}
         </header>
         <p className={styles.wishReference}>
           {card.reference}
           <LanguageFlag language={cardLanguage(card)} />
         </p>
+        {series && <p className="hint">Collection {series.name}</p>}
 
         <dl className={styles.wishPrices}>
           <div>

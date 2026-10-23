@@ -156,15 +156,22 @@ export const cardsWithStatus = (collection: CollectionData) =>
   })
 
 export interface CollectionSummary {
-  /** Les cartes ajoutées au Pokédex. */
+  /**
+   * Les cartes ajoutées : celles du Pokédex et les cases d'extensions obtenues, pas celles qui ne
+   * le sont pas encore.
+   */
   cards: number
   owned: number
+  /** Les cartes commandées, les cases d'extensions pas encore obtenues comprises. */
   ordered: number
+  /** Les collections d'extensions commencées. */
+  series: number
 }
 
 /** Ce que contient la collection. */
 export function summarize(data: CollectionData): CollectionSummary {
-  const summary = { cards: Object.keys(data.customCards).length, owned: 0, ordered: 0 }
+  const cards = Object.values(data.customCards).filter((card) => !card.seriesOnly).length
+  const summary = { cards, owned: 0, ordered: 0, series: data.series.length }
   for (const { ownership } of cardsWithStatus(data)) summary[ownership.status]++
   return summary
 }

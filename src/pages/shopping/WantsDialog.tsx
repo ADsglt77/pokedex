@@ -8,6 +8,8 @@ import { loadWantsLines } from '@/lib/api'
 import { copyText } from '@/lib/clipboard'
 import { cardLanguage } from '@/lib/collection'
 import { plural } from '@/lib/format'
+import { seriesOf } from '@/lib/series'
+import { useCollectionStore } from '@/store/collection'
 import type { CardLanguage, PokemonCard, WantsLines } from '@/types'
 import { CardLine } from './CardLine'
 import page from './ShoppingPage.module.css'
@@ -109,6 +111,7 @@ function WantsContent({
 }) {
   const lines = use(request)
   const othersTitle = useId()
+  const collection = useCollectionStore((state) => state.collection)
 
   if (!lines) {
     return (
@@ -156,7 +159,7 @@ function WantsContent({
           <ul className={page.lines}>
             {others.map((card) => (
               <li key={card.id}>
-                <CardLine card={card}>
+                <CardLine card={card} series={seriesOf(collection, card.id)}>
                   <CardmarketLink card={card} />
                 </CardLine>
               </li>

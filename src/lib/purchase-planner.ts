@@ -5,16 +5,19 @@
  * 1. Candidates : les cartes de la liste d'achats, ni possédées ni commandées (`wishlistRows`).
  * 2. Mises à part : celles retirées à la main, et celles sans prix (aucun prix n'est inventé).
  * 3. Ordre : les cartes ajoutées à la main, puis le prix le plus bas.
- * 4. Dans cet ordre, une carte est prise si aucun de ses Pokémon n'est déjà dans le plan et si
- *    elle tient dans le budget, port réservé. Une carte ajoutée à la main est prise même au-delà
- *    du budget, ou si son Pokémon est déjà dans le plan.
+ * 4. Dans cet ordre, une carte est prise si elle tient dans le budget, port réservé, et, pour une
+ *    carte du Pokédex, si aucun de ses Pokémon n'est déjà dans le plan : une case d'extension pas
+ *    encore obtenue (`seriesOnly`) n'est pas encore une carte de ses Pokémon, elle est libre de
+ *    cette règle (ni bloquée, ni bloquante). Une carte ajoutée à la main est prise même au-delà du
+ *    budget, ou si son Pokémon est déjà dans le plan.
  */
 
 import { cents } from '@/lib/orders'
+import type { PokemonCard } from '@/types'
 
 /** Ce que le plan lit d'une carte de la liste d'achats (`WishRow` en a davantage). */
 export interface PlannableCard {
-  card: { id: string; dexIds: number[] }
+  card: Pick<PokemonCard, 'id' | 'dexIds' | 'seriesOnly'>
   price: number | null
 }
 
@@ -82,7 +85,9 @@ export function planPurchase<T extends PlannableCard>(
   const covered = new Set<number>()
   for (const row of priced) {
     const forced = options.forced.has(row.card.id)
-    if (!forced && row.card.dexIds.some((id) => covered.has(id))) {
+    // Les Pokémon dont c'est une carte : aucun pour une case pas encore obtenue.
+    const pokemon = row.card.seriesOnly ? [] : row.card.dexIds
+    if (!forced && pokemon.some((id) => covered.has(id))) {
       plan.covered.push(row)
       continue
     }
@@ -92,7 +97,7 @@ export function planPurchase<T extends PlannableCard>(
     }
     plan.picked.push(row)
     plan.cardsTotal = cents(plan.cardsTotal + row.price)
-    for (const id of row.card.dexIds) covered.add(id)
+    for (const id of pokemon) covered.add(id)
   }
 
   plan.total = plan.picked.length ? cents(plan.cardsTotal + options.shippingReserve) : 0

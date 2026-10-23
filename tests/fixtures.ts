@@ -89,7 +89,13 @@ export const order = (extra: Partial<Order> = {}): Order => ({
   ...extra,
 })
 
-export const wish = (id: string, dexIds: number[], price: number | null): PlannableCard => ({
-  card: { id, dexIds },
+/** Une carte de la liste d'achats ; `extra` : une case d'extension pas encore obtenue. */
+export const wish = (
+  id: string,
+  dexIds: number[],
+  price: number | null,
+  extra: Pick<PokemonCard, 'seriesOnly'> = {},
+): PlannableCard => ({
+  card: { id, dexIds, ...extra },
   price,
 })

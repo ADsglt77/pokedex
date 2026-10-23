@@ -252,7 +252,7 @@ export function PlannerPanel({
               title: 'Pokémon déjà prévu',
               rows: plan.covered,
               empty: 'Aucune carte d’un Pokémon déjà dans le plan.',
-              hint: 'Une seule carte par Pokémon : celle du plan a été préférée (ajoutée à la main, sinon la moins chère).',
+              hint: 'Une seule carte du Pokédex par Pokémon : celle du plan a été préférée (ajoutée à la main, sinon la moins chère).',
               action: addAnyway,
             },
             {
@@ -280,12 +280,16 @@ export function PlannerPanel({
           <AccordionItem value="how" title="Comment le plan est construit" headingLevel={3}>
             <Stack gap={3}>
               <ol className={page.steps}>
-                <li>Les cartes de vos Pokémon, ni possédées ni commandées.</li>
+                <li>
+                  Les cartes de vos Pokémon et de vos collections d’extensions, ni possédées ni
+                  commandées.
+                </li>
                 <li>Les cartes sans prix sont mises de côté.</li>
                 <li>Dans l’ordre : vos ajouts à la main, puis le prix le plus bas.</li>
                 <li>
-                  Une carte est prise si son Pokémon n’est pas déjà dans le plan et si elle tient
-                  dans le budget, port réservé.
+                  Une carte est prise si elle tient dans le budget, port réservé, et, pour une carte
+                  du Pokédex, si son Pokémon n’est pas déjà dans le plan. Les cartes d’une
+                  collection d’extension pas encore obtenues sont prises même si leur Pokémon l’est.
                 </li>
               </ol>
               <p className="muted">
@@ -349,6 +353,7 @@ function PlanList({
         <li key={row.card.id}>
           <CardLine
             card={row.card}
+            series={row.series}
             detail={row.price === null ? 'sans prix' : formatEuro(row.price)}
           >
             {action && (

@@ -4,8 +4,8 @@
  * (`customCards`) : une carte déjà là, la même (`sameCard` : même langue, même code ou même id
  * Cardmarket), est reprise ; les autres sont ajoutées comme cases pas encore obtenues
  * (`seriesOnly`), qui ne remplissent pas le Pokédex. Possédée une fois, une case devient pour de
- * bon une carte de ses Pokémon (`obtain`). Leur progression : cases possédées, valeur, coût pour
- * compléter.
+ * bon une carte de ses Pokémon (`obtain`). La collection d'une carte (`seriesOf`) ; leur
+ * progression : cases possédées, valeur, coût pour compléter.
  */
 
 import { isCardOf, referenceCode, sameCard } from '@/lib/card-code'
@@ -24,6 +24,13 @@ import type {
 /** La collection de cette extension dans cette langue ; `null` si elle n'est pas commencée. */
 export const findSeries = (data: CollectionData, set: string, language: CardLanguage) =>
   data.series.find((series) => series.set === set && cardLanguage(series) === language) ?? null
+
+/**
+ * La collection dont cette carte est une case : la première, pour une carte obtenue qui l'est de
+ * plusieurs ; `null` si elle n'est dans aucune.
+ */
+export const seriesOf = (data: CollectionData, cardId: string) =>
+  data.series.find((series) => series.cards.includes(cardId)) ?? null
 
 /**
  * Commence la collection d'une extension, à la fin des autres, avec ses cases (`slots` : une

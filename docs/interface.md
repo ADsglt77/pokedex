@@ -136,7 +136,13 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   que le guide du jour (aucune archive) : l'historique vient du relevé quotidien de l'API des
   données, et, pour les 180 jours qui le précèdent, de Pokécardex (sa tâche `history`), au même
   prix suivi. Les nombres formatés gardent une espace insécable visible (`spaced`, `lib/format.ts` :
-  l'espace fine de `Intl` manque à certaines polices ; une part : `formatShare`, « 12,5 % »).
+  l'espace fine de `Intl` manque à certaines polices ; une part : `formatShare`, « 12,5 % »). Une
+  carte sans Pokémon (un dresseur, une énergie : une case d'une collection d'extension) se montre
+  partout comme les autres (accueil, Valeur, liste d'achats, prochaine commande, commandes), son
+  nom pour titre (`cardTitle` : sa référence sans son code) et son image, ou une carte de
+  substitution sans dessin d'espèce, mais ne mène à aucune fiche (`CardSpeciesLink` ; sur l'accueil
+  elle ne se soulève pas au survol). Une case d'extension dit sa collection (« Collection Méga Rêve
+  ex » sur la liste d'achats, « collection … » sur sa ligne).
 - Installation : le site s'installe sur téléphone et ordinateur (`public/manifest.webmanifest`,
   icônes de `public/icons` et `public/apple-touch-icon.png`, dessinées d'après `favicon.svg`). Pas
   de service worker ni d'usage hors ligne (décision de l'utilisateur, octobre 2026 : la collection

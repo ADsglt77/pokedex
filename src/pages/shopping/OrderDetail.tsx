@@ -6,6 +6,7 @@ import { ORDER_STATE_LABELS } from '@/config/shopping'
 import { details, formatDate, formatEuro, formatInteger, today } from '@/lib/format'
 import { LATE_AFTER_DAYS, latePendingOrders, supplierLabel, unitCosts } from '@/lib/orders'
 import { findCard } from '@/lib/collection'
+import { seriesOf } from '@/lib/series'
 import { useCollectionStore } from '@/store/collection'
 import type { Order, OrderState } from '@/types'
 import { CardLine } from './CardLine'
@@ -107,7 +108,7 @@ export function OrderDetail({
             )
             return (
               <li key={line.cardId}>
-                <CardLine card={card} detail={detail} />
+                <CardLine card={card} series={seriesOf(collection, line.cardId)} detail={detail} />
               </li>
             )
           })}

@@ -25,14 +25,14 @@ export function EraseSection() {
       title="Effacer ma collection"
       titleRef={title}
       danger
-      description="Supprime de votre compte, sur tous vos appareils, vos cartes ajoutées, leurs statuts et leurs prix payés. Les commandes et le budget sont conservés : ils gardent ce que vous avez dépensé."
+      description="Supprime de votre compte, sur tous vos appareils, vos cartes ajoutées, vos collections d’extensions, leurs statuts et leurs prix payés. Les commandes et le budget sont conservés : ils gardent ce que vous avez dépensé."
     >
       <div>
         <Button
           variant="secondary"
           tone="danger"
           leftIcon={<Trash2 size={16} />}
-          disabled={summary.cards === 0}
+          disabled={summary.cards === 0 && summary.series === 0}
           onClick={() => setConfirming(true)}
         >
           Effacer ma collection

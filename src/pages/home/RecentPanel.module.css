@@ -90,7 +90,8 @@
     opacity 0.25s;
 }
 
-.card:hover > :first-child {
+/* Seule une carte qui mène à une fiche se soulève (pas un dresseur, une énergie). */
+a.card:hover > :first-child {
   transform: translateY(-3px);
 }
 
