@@ -140,10 +140,14 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   d'avant (changée ailleurs entre-temps : refusée, 409, puis relue, comme plus haut). Le
   serveur garde une version remplacée par heure, 30 jours (`collection_versions`, à reprendre à la
   main). Il note au journal ce qui change d'une version à l'autre (`documentChanges`,
-  `server/journal.ts`) : une collection d'extension commencée (« Collection commencée ») ou
-  supprimée (« Collection supprimée ») est **une ligne** (son nom, sa langue, son nombre de cartes),
-  jamais une par case, que des centaines de cartes soient ajoutées ou retirées avec elle ; une case
-  obtenue est « Carte possédée », sans « Carte modifiée » (testé, `tests/journal.test.ts`).
+  `server/journal.ts`), la version d'avant relue comme un fichier (`readCollection` : un document
+  enregistré avant les collections d'extensions n'a pas de `series`, testé sur le serveur entier) :
+  une collection d'extension commencée (« Collection commencée ») ou supprimée (« Collection
+  supprimée ») est **une ligne** (son nom, sa langue, son nombre de cartes), jamais une par case,
+  que des centaines de cartes soient ajoutées ou retirées avec elle (« Collection effacée » ne dit
+  que la perte de vraies cartes : supprimer la dernière collection d'un compte dont rien n'est
+  possédé ni commandé est « Collection supprimée ») ; une case obtenue est « Carte possédée », sans
+  « Carte modifiée » (testé, `tests/journal.test.ts`).
   « Annuler », l'import, « Effacer » sont des modifications comme les autres. Le compte
   (`AccountMenu`, en pied de la barre latérale, ou en icône dans la barre du haut sur petit écran ;
   seulement connecté) montre son pseudo et l'état : enregistrée, enregistrement, hors ligne

@@ -187,6 +187,42 @@ describe('/api/collection : jamais une version écrasée', () => {
     expect(await stored()).toEqual(before)
   })
 
+  test('un document enregistré avant les collections d’extensions (sans `series`) : le suivant est enregistré, et journalisé', async () => {
+    // Écrit directement, comme avant cette livraison : il n'a pas de clé `series`.
+    const old = await createAccount('Veteran')
+    const before = JSON.stringify({
+      ...withCards(collectionWith({ a: ownership('owned') }), card('a', [25])),
+      series: undefined,
+    })
+    expect(before).not.toContain('series')
+    app
+      .query(
+        'INSERT INTO collections (user_id, version, collection, shopping, updated_at) VALUES (?, 1, ?, ?, ?)',
+      )
+      .run(old.user!.id, before, JSON.stringify(emptyShopping()), NOW)
+    // Il commence une collection : le journal la compare à celle d'avant, qui n'en a pas.
+    const next: CollectionDocument = {
+      collection: {
+        ...withCards(
+          collectionWith({ a: ownership('owned') }),
+          card('a', [25]),
+          card('s', [4], { seriesOnly: true }),
+        ),
+        series: [{ set: 'SV2A', name: 'Pokémon Card 151', startedAt: NOW, cards: ['a', 's'] }],
+      },
+      shopping: emptyShopping(),
+    }
+    log.mockClear()
+    const response = await collection(
+      'PUT',
+      { account: old.user!.id, baseVersion: 1, ...next },
+      { Cookie: old.cookie },
+    )
+    expect(response.status).toBe(200)
+    expect((await response.json()) as CollectionSaved).toEqual({ version: 2 })
+    expect(log.mock.calls.flat().join(' ')).toContain('Collection commencée')
+  })
+
   test('envoyé d’un autre site (le cookie part avec toute requête vers le site) : 403', async () => {
     const before = await stored()
     const response = await collection(

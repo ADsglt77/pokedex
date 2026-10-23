@@ -355,7 +355,12 @@ const cardContent = (card: PokemonCard) => JSON.stringify({ ...card, seriesOnly:
  */
 function cardChanges(before: CollectionData, after: CollectionData): JournalEntry[] {
   const removed = Object.keys(before.customCards).filter((id) => !after.customCards[id])
-  if (removed.length > 0 && Object.keys(after.customCards).length === 0) {
+  // Tout effacé : seulement si une vraie carte part. Les cases pas encore obtenues d'une dernière
+  // collection supprimée s'en vont avec elle, que dit sa ligne.
+  if (
+    removed.some((id) => !before.customCards[id]!.seriesOnly) &&
+    Object.keys(after.customCards).length === 0
+  ) {
     const details = { cartes: removed.length }
     return [{ topic: 'collection', level: 'warn', message: 'Collection effacée', details }]
   }

@@ -109,9 +109,25 @@ describe('ce que le journal dit des collections d’extensions', () => {
     expect(changes[0]?.details?.carte).toBe('Bulbizarre (SV2A 001)')
   })
 
-  test('effacer la collection : une ligne, ses collections avec elle', () => {
-    const changes = documentChanges(after, { ...after, collection: emptyCollection() })
+  test('supprimer la seule collection d’un compte dont rien n’est possédé ni commandé : « Collection supprimée »', () => {
+    // Toutes ses cases sont pas encore obtenues : elles partent avec elle, la collection du compte
+    // n'est pas « effacée » pour autant.
+    const removed = removeSeries(started, 'SV2A', 'ja', [], NOW)
+    expect(removed.customCards).toEqual({})
+    const changes = documentChanges(after, { ...after, collection: removed })
     expect(changes).toHaveLength(1)
-    expect(changes[0]).toMatchObject({ message: 'Collection effacée', details: { cartes: 3 } })
+    expect(changes[0]).toMatchObject({
+      level: 'warn',
+      message: 'Collection supprimée',
+      details: { extension: 'Pokémon Card 151', langue: 'ja', cartes: 3 },
+    })
+  })
+
+  test('effacer la collection : une ligne, ses collections avec elle', () => {
+    // Une vraie carte part avec elle : la collection est effacée, et le dit seulement.
+    const withCard = { ...after, collection: saveCard(started, card('x', [25]), NOW) }
+    const changes = documentChanges(withCard, { ...after, collection: emptyCollection() })
+    expect(changes).toHaveLength(1)
+    expect(changes[0]).toMatchObject({ message: 'Collection effacée', details: { cartes: 4 } })
   })
 })

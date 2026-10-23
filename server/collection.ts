@@ -15,8 +15,8 @@
 import type { Database } from 'bun:sqlite'
 import { Elysia, t } from 'elysia'
 import { DAY, HOUR } from '@/lib/time'
-import { readSent } from '@/lib/transfer'
-import type { CollectionData, CollectionSaved, ShoppingData } from '@/types'
+import { readCollection, readSent } from '@/lib/transfer'
+import type { CollectionSaved, ShoppingData } from '@/types'
 import type { accountRoutes } from './auth'
 import { documentChanges, journal } from './journal'
 
@@ -84,9 +84,10 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
         const saved = app.transaction(() => {
           const row = read.get(user.id) as Row | null
           if ((row?.version ?? 0) !== baseVersion) return null
-          // Enregistré après ses contrôles : relu tel quel.
+          // Enregistré après ses contrôles, mais relu comme un fichier : un document d'avant les
+          // collections d'extensions n'a pas de `series`, que le journal compare.
           const previous = row && {
-            collection: JSON.parse(row.collection) as CollectionData,
+            collection: readCollection(JSON.parse(row.collection))!,
             shopping: JSON.parse(row.shopping) as ShoppingData,
           }
           if (row) keep(user.id, row, now)
