@@ -87,8 +87,8 @@ export function EmptySheet({
   return (
     <Panel title="Carte à choisir" titleRef={titleRef}>
       <p className="muted">
-        Choisissez la carte que vous voulez pour {species.names.fr} parmi ses cartes japonaises,
-        avec leur image et leur prix, ou saisissez-la à la main.
+        Choisissez la carte que vous voulez pour {species.names.fr} parmi ses cartes japonaises ou
+        françaises, avec leur image et leur prix, ou saisissez-la à la main.
       </p>
       <div>
         <Button leftIcon={<Plus size={16} />} onClick={() => setAdding(true)}>

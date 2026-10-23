@@ -20,7 +20,8 @@ type PricedCard = Pick<PokemonCard, 'cardmarket' | 'page' | 'reference' | 'langu
 /**
  * La carte chez Cardmarket : son id et sa page, son prix du jour, son évolution et, si le prix
  * payé (`paid`) est noté, l'écart (la fiche d'un Pokémon, une carte du catalogue). `withoutId` :
- * ce qu'il dit d'une carte sans id Cardmarket.
+ * ce qu'il dit d'une carte sans id Cardmarket. Le prix d'une carte française est celui de toutes
+ * les langues (son produit est partagé) : il le dit.
  */
 export function PricePanel({
   card,
@@ -56,18 +57,26 @@ export function PricePanel({
     >
       {price ? (
         <>
-          <Stat
-            variant="plain"
-            label="Prix du marché"
-            value={formatEuro(price.price)}
-            delta={paid === null ? undefined : gainPercent(price.price, paid)}
-            deltaSuffix={'\u00a0%'}
-            hint={details(
-              paid !== null && `payée ${formatEuro(paid)}`,
-              price.low && `au plus bas ${formatEuro(price.low)}`,
-              price.monthAgo && `il y a 30 jours ${formatEuro(price.monthAgo)}`,
+          <div className={styles.price}>
+            <Stat
+              variant="plain"
+              label="Prix du marché"
+              value={formatEuro(price.price)}
+              delta={paid === null ? undefined : gainPercent(price.price, paid)}
+              deltaSuffix={'\u00a0%'}
+              hint={details(
+                paid !== null && `payée ${formatEuro(paid)}`,
+                price.low && `au plus bas ${formatEuro(price.low)}`,
+                price.monthAgo && `il y a 30 jours ${formatEuro(price.monthAgo)}`,
+              )}
+            />
+            {card.language === 'fr' && (
+              <p className={styles.scope}>
+                Prix toutes langues : une carte française partage sa fiche Cardmarket avec les
+                autres langues, surtout des offres en anglais.
+              </p>
             )}
-          />
+          </div>
           <Suspense fallback={<Skeleton height="7rem" />}>
             <PriceHistory card={card} />
           </Suspense>

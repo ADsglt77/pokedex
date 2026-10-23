@@ -31,19 +31,24 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     des lignes pour la liste de
     souhaits de Cardmarket, que l'utilisateur colle lui-même : l'app n'envoie rien à Cardmarket
     (format, version et extension : `/api/wants`, `docs/prix.md`). La fenêtre « Ajouter à ma liste
-    Cardmarket » attend les lignes (« Réessayer » si le serveur ne répond pas), puis donne les
-    étapes : sur Cardmarket, ouvrir sa liste de souhaits, « Ajouter une deck list », coller,
-    « Ajouter » ; « Modification en masse » : japonais, Near Mint (une ligne ne peut pas les
-    porter) ; vérifier le numéro de chaque carte (« Salamèche (sv2a 168) »), puis lancer le
-    « Shopping Wizard », qui choisit les vendeurs les moins chers. Les lignes sont dans un champ en
-    lecture seule ; « Copier » (`copyText`, `lib/clipboard.ts`, comme l'adresse du Pokédex public)
-    dit « N cartes copiées », ou, si le navigateur refuse (hors https aussi), sélectionne les lignes
-    et dit de les copier avec Ctrl+C.
+    Cardmarket » attend les lignes (« Réessayer » si le serveur ne répond pas), puis les donne en
+    deux blocs au plus, « Cartes japonaises » et « Cartes françaises » (un bloc seulement s'il a
+    des cartes : une ligne ne porte pas la langue, et `cardLanguage` classe chaque carte). Chaque
+    bloc a ses étapes : sur Cardmarket, ouvrir sa liste de souhaits, « Ajouter une deck list »,
+    coller, « Ajouter » ; « Modification en masse » : langue japonais ou français selon le bloc,
+    état Near Mint, pour ces cartes ; vérifier le numéro de chaque carte (« Salamèche (sv2a 168) »).
+    Une fois toutes les cartes dans la liste, lancer le « Shopping Wizard », qui choisit les
+    vendeurs les moins chers. Les lignes de chaque bloc sont dans un champ en lecture seule ; son
+    « Copier » (`copyText`, `lib/clipboard.ts`, comme l'adresse du Pokédex public) dit « N cartes
+    japonaises copiées » (ou françaises), ou, si le navigateur refuse (hors https aussi),
+    sélectionne les lignes et dit de les copier avec Ctrl+C.
     Chaque carte du plan a un prix, donc un id Cardmarket. Une carte sans ligne sûre (version ou
-    extension incertaine) est listée à part, avec son lien « Voir sur Cardmarket »
-    (`CardmarketLink`) : l'ajouter depuis sa page (« Ajouter à mes souhaits », déjà dans la langue
-    de la carte, Near Mint par le lien). Un message bleu « Informations » de Cardmarket signale une carte ajoutée
-    sans sa version : la retirer de la liste et l'ajouter depuis sa page ;
+    extension incertaine, de toute langue : l'API n'a pas de ligne pour une carte française dont
+    l'extension n'a pas de nom anglais confirmé) est listée à part, avec son lien « Voir sur
+    Cardmarket » (`CardmarketLink`) : l'ajouter depuis sa page (« Ajouter à mes souhaits », déjà
+    dans la langue de la carte, Near Mint par le lien). Un message bleu « Informations » de
+    Cardmarket signale une carte ajoutée sans sa version : la retirer de la liste et l'ajouter
+    depuis sa page ;
   - commandes : `applyOrder` (`lib/orders.ts`) reporte chaque enregistrement sur la collection (en
     cours → commandée, reçue → possédée, annulée ou supprimée → l'état d'avant, gardé dans
     `OrderLine.previous`, `previousOf`, relu à chaque enregistrement, formulaire comme « Marquer

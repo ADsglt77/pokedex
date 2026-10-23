@@ -6,8 +6,9 @@ import { Unavailable } from '@/components/Unavailable'
 import { useNotify } from '@/hooks/useNotify'
 import { loadWantsLines } from '@/lib/api'
 import { copyText } from '@/lib/clipboard'
+import { cardLanguage } from '@/lib/collection'
 import { plural } from '@/lib/format'
-import type { PokemonCard, WantsLines } from '@/types'
+import type { CardLanguage, PokemonCard, WantsLines } from '@/types'
 import { CardLine } from './CardLine'
 import page from './ShoppingPage.module.css'
 
@@ -17,8 +18,9 @@ type Linked = PokemonCard & { cardmarket: number }
 /**
  * « Copier pour Cardmarket » : les cartes de la prochaine commande en lignes pour « Ajouter une
  * deck list » d'une liste de souhaits Cardmarket (`/api/wants`, de l'API des données), que l'utilisateur
- * colle lui-même avant le Shopping Wizard : l'app n'envoie rien à Cardmarket. Une carte sans ligne
- * sûre (version ou extension incertaine) s'ajoute depuis sa page.
+ * colle lui-même avant le Shopping Wizard : l'app n'envoie rien à Cardmarket. Les lignes sont par
+ * langue, un bloc chacune (une ligne ne porte pas la langue : la « Modification en masse » la règle).
+ * Une carte sans ligne sûre (version ou extension incertaine) s'ajoute depuis sa page.
  */
 export function WantsDialog({
   cards,
@@ -64,6 +66,30 @@ export function WantsDialog({
 /** Un `ref` qui donne le focus à son élément quand il s'affiche (React le rappelle avec `null`). */
 const focusOnMount = (element: HTMLElement | null) => element?.focus()
 
+/**
+ * Les blocs de lignes, dans l'ordre : leur titre, la phrase de ce qui est copié, et la langue que
+ * « Modification en masse » de Cardmarket porte pour ces cartes (« japonais », « français »).
+ */
+const LANGUAGES: readonly {
+  language: CardLanguage
+  title: string
+  copied: [one: string, many: string]
+  bulk: string
+}[] = [
+  {
+    language: 'ja',
+    title: 'Cartes japonaises',
+    copied: ['carte japonaise copiée', 'cartes japonaises copiées'],
+    bulk: 'japonais',
+  },
+  {
+    language: 'fr',
+    title: 'Cartes françaises',
+    copied: ['carte française copiée', 'cartes françaises copiées'],
+    bulk: 'français',
+  },
+]
+
 function WantsContent({
   cards,
   request,
@@ -75,15 +101,13 @@ function WantsContent({
   request: Promise<WantsLines | null>
   retrying: boolean
   /**
-   * Après « Réessayer », dont le bouton disparaît : le focus va à « Copier », sinon (aucune ligne)
-   * au titre des cartes à ajouter depuis leur page.
+   * Après « Réessayer », dont le bouton disparaît : le focus va au premier « Copier », sinon (aucune
+   * ligne) au titre des cartes à ajouter depuis leur page.
    */
   retried: boolean
   onRetry: () => void
 }) {
   const lines = use(request)
-  const notify = useNotify()
-  const field = useRef<HTMLTextAreaElement>(null)
   const othersTitle = useId()
 
   if (!lines) {
@@ -93,57 +117,22 @@ function WantsContent({
   }
 
   const lineOf = (card: Linked) => lines[card.cardmarket] ?? null
-  const ready = cards.flatMap((card) => lineOf(card) ?? [])
+  // Un bloc par langue qui a des lignes ; une carte sans ligne (de toute langue) va à part.
+  const blocks = LANGUAGES.map((block) => ({
+    ...block,
+    lines: cards.flatMap((card) =>
+      cardLanguage(card) === block.language ? (lineOf(card) ?? []) : [],
+    ),
+  })).filter((block) => block.lines.length > 0)
   const others = cards.filter((card) => lineOf(card) === null)
-  const text = ready.join('\n')
-
-  const failed = () => {
-    const textarea = field.current!
-    textarea.focus()
-    textarea.select()
-    notify(
-      'Copie impossible : les lignes sont sélectionnées, copiez-les avec Ctrl+C (⌘C sur Mac).',
-      { tone: 'danger' },
-    )
-  }
-  const copy = () =>
-    copyText(text).then(
-      () => notify(`${plural(ready.length, 'carte copiée', 'cartes copiées')}.`),
-      failed,
-    )
 
   return (
     <Stack gap={5}>
-      {ready.length > 0 && (
-        <Stack gap={4}>
-          <ol className={page.steps}>
-            <li>Sur Cardmarket, ouvrez votre liste de souhaits, puis « Ajouter une deck list ».</li>
-            <li>Collez les lignes ci-dessous, puis « Ajouter ».</li>
-            <li>
-              « Modification en masse » : langue japonais, état Near Mint, pour toutes les cartes
-              (une ligne ne peut pas les porter).
-            </li>
-            <li>
-              Vérifiez que chaque carte a le bon numéro (par exemple « Salamèche (sv2a 168) »), puis
-              lancez le « Shopping Wizard ».
-            </li>
-          </ol>
-          <Textarea
-            ref={field}
-            label="Lignes pour Cardmarket"
-            hint={`${plural(ready.length, 'carte', 'cartes')}, une par ligne.`}
-            readOnly
-            spellCheck={false}
-            // Une rangée de plus : une longue ligne peut passer à la ligne.
-            rows={Math.min(ready.length + 1, 8)}
-            value={text}
-          />
-          <div>
-            <Button leftIcon={<Copy size={16} />} autoFocus={retried} onClick={copy}>
-              Copier
-            </Button>
-          </div>
-        </Stack>
+      {blocks.map((block, index) => (
+        <LinesBlock key={block.language} {...block} autoFocus={retried && index === 0} />
+      ))}
+      {blocks.length > 0 && (
+        <p>Quand toutes les cartes sont dans la liste, lancez le « Shopping Wizard ».</p>
       )}
 
       {others.length > 0 && (
@@ -152,7 +141,7 @@ function WantsContent({
             id={othersTitle}
             // `autoFocus` ne vaut que pour un champ ou un bouton : sans « Copier », le focus vient
             // ici dès l'affichage.
-            ref={retried && ready.length === 0 ? focusOnMount : undefined}
+            ref={retried && blocks.length === 0 ? focusOnMount : undefined}
             tabIndex={-1}
             className={page.formTitle}
           >
@@ -161,7 +150,8 @@ function WantsContent({
           <p>
             Aucune ligne ne désignerait sûrement la bonne carte (une version ou une extension que
             Cardmarket pourrait confondre) : ajoutez chacune depuis sa page Cardmarket, avec «
-            Ajouter à mes souhaits ». Le lien ouvre la page déjà réglée sur japonais, Near Mint.
+            Ajouter à mes souhaits ». Le lien ouvre la page déjà réglée sur la langue de la carte,
+            Near Mint.
           </p>
           <ul className={page.lines}>
             {others.map((card) => (
@@ -175,12 +165,73 @@ function WantsContent({
         </Stack>
       )}
 
-      {ready.length > 0 && (
+      {blocks.length > 0 && (
         <p className={page.note}>
           Un message bleu « Informations » de Cardmarket après « Ajouter » signale une carte ajoutée
           sans sa version : retirez-la de la liste, puis ajoutez-la depuis sa page.
         </p>
       )}
+    </Stack>
+  )
+}
+
+/**
+ * Les lignes des cartes d'une langue, avec les étapes pour les ajouter à la liste de souhaits et
+ * leur « Copier ».
+ */
+function LinesBlock({
+  title,
+  lines,
+  copied,
+  bulk,
+  autoFocus,
+}: (typeof LANGUAGES)[number] & { lines: string[]; autoFocus: boolean }) {
+  const notify = useNotify()
+  const field = useRef<HTMLTextAreaElement>(null)
+  const titleId = useId()
+  const text = lines.join('\n')
+
+  const failed = () => {
+    const textarea = field.current!
+    textarea.focus()
+    textarea.select()
+    notify(
+      'Copie impossible : les lignes sont sélectionnées, copiez-les avec Ctrl+C (⌘C sur Mac).',
+      { tone: 'danger' },
+    )
+  }
+  const copy = () =>
+    copyText(text).then(() => notify(`${plural(lines.length, ...copied)}.`), failed)
+
+  return (
+    <Stack as="section" gap={4} aria-labelledby={titleId}>
+      <h3 id={titleId} className={page.formTitle}>
+        {title} ({lines.length})
+      </h3>
+      <ol className={page.steps}>
+        <li>Sur Cardmarket, ouvrez votre liste de souhaits, puis « Ajouter une deck list ».</li>
+        <li>Collez les lignes ci-dessous, puis « Ajouter ».</li>
+        <li>
+          « Modification en masse » : langue {bulk}, état Near Mint, pour ces cartes (une ligne ne
+          peut pas les porter).
+        </li>
+        <li>Vérifiez que chaque carte a le bon numéro (par exemple « Salamèche (sv2a 168) »).</li>
+      </ol>
+      <Textarea
+        ref={field}
+        label={`Lignes des ${title.toLowerCase()}`}
+        hint={`${plural(lines.length, 'carte', 'cartes')}, une par ligne.`}
+        readOnly
+        spellCheck={false}
+        // Une rangée de plus : une longue ligne peut passer à la ligne.
+        rows={Math.min(lines.length + 1, 8)}
+        value={text}
+      />
+      <div>
+        <Button leftIcon={<Copy size={16} />} autoFocus={autoFocus} onClick={copy}>
+          Copier les {title.toLowerCase()}
+        </Button>
+      </div>
     </Stack>
   )
 }

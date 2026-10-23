@@ -51,9 +51,19 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   Cardmarket : l'utilisateur copie les lignes et les colle lui-même (Achats › Prochaine commande,
   `WantsDialog`, `docs/collection-et-achats.md`), puis lance son « Shopping Wizard ». Ni la langue
   ni l'état ne tiennent dans une ligne : après le collage, l'utilisateur les règle pour toutes avec
-  « Modification en masse » de Cardmarket (japonais, Near Mint). 2 demandes par seconde et par
-  visiteur au plus (nginx). L'app la demande à chaque ouverture de la fenêtre (`loadWantsLines`,
-  par `fetchFresh` : sans cache, 10 s au plus) ; sans réponse, elle propose de réessayer.
+  « Modification en masse » de Cardmarket (japonais ou français selon les cartes, Near Mint) ;
+  l'app sépare donc les lignes par langue de carte (un bloc japonais, un bloc français). Le produit
+  d'une carte française est celui de toutes les langues : sa ligne est celle d'une japonaise (nom
+  anglais, extension en anglais), et `null` tant que le nom anglais de sa série n'est pas confirmé
+  (le cas de bien des séries françaises) : elle s'ajoute alors depuis sa page, déjà sur les offres
+  en français. 2 demandes par seconde et par visiteur au plus (nginx). L'app la demande à chaque
+  ouverture de la fenêtre (`loadWantsLines`, par `fetchFresh` : sans cache, 10 s au plus) ; sans
+  réponse, elle propose de réessayer.
+- Prix d'une carte française : son produit Cardmarket est partagé avec toutes les langues, son prix
+  est donc celui de toutes les langues, surtout des offres en anglais (l'API des données, sa page
+  `docs/donnees.md`). `PricePanel` le dit près du prix (« Prix toutes langues », quand
+  `card.language` est `'fr'` : une carte de la collection comme une carte du catalogue) ; jamais
+  pour une japonaise. Le lien « Voir sur Cardmarket » ouvre, lui, les offres en français.
 - État des données (Réglages › Avancé, `ReferenceSection`) : `/api/status` est demandé à
   chaque ouverture (`loadStatus`, `lib/api.ts`). Aucun panneau n'est affiché quand tout va bien ;
   seuls un retard, un échec, des prix figés ou une absence de réponse produisent une alerte,
