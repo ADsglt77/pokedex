@@ -1,6 +1,6 @@
 /* L'interrupteur des langues : deux drapeaux dans un `SegmentedControl`. Le drapeau du segment
-   choisi est plein, l'autre un peu éteint (il se rallume au survol). Les couleurs sont dans
-   `theme.css` (`--flag-*`). */
+   choisi est plein, l'autre un peu éteint (il se rallume au survol). Et le petit drapeau de la
+   langue d'une carte (`.inline`). Les couleurs sont dans `theme.css` (`--flag-*`). */
 .flag {
   display: block;
   width: 1.5rem;
@@ -14,6 +14,16 @@
 
 .switch [aria-checked='false']:hover .flag {
   opacity: 1;
+}
+
+/* Le drapeau de la langue d'une carte, à côté de sa référence (`LanguageFlag`) : petit, à la
+   hauteur des minuscules du texte qui l'entoure. */
+.inline {
+  display: inline-block;
+  width: 1.05em;
+  height: 0.7em;
+  margin-inline-start: 0.4em;
+  vertical-align: -0.04em;
 }
 
 .white {

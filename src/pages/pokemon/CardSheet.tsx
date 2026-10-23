@@ -2,9 +2,11 @@ import { Button } from '@camply/ui'
 import { ArrowRight, Plus } from '@camply/ui/icons'
 import { useEffect, useState, type Ref } from 'react'
 import { Link } from 'react-router'
+import { LanguageFlag } from '@/components/LanguageSwitch'
 import { Panel } from '@/components/Panel'
 import { PricePanel } from '@/components/PricePanel'
 import { loadSpeciesCards } from '@/lib/card-catalog'
+import { cardLanguage } from '@/lib/collection'
 import { speciesPath } from '@/lib/filters'
 import { details, statusCaption } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
@@ -34,7 +36,12 @@ export function CardSheet({
     <div className={styles.sheet}>
       {/* Les actions d'abord : sur téléphone, « Je possède cette carte » reste près de l'écran. */}
       <Panel
-        title={`Carte ${card.reference}`}
+        title={
+          <>
+            Carte {card.reference}
+            <LanguageFlag language={cardLanguage(card)} />
+          </>
+        }
         description={details(
           statusCaption(view.status, view.acquiredAt),
           // Une carte TAG TEAM : la même, achetée une fois, pour ses autres Pokémon.

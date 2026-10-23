@@ -83,7 +83,11 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises et françaises (
   (`findCardImage`) et se lit à l'enregistrement : `language: 'fr'` pour une carte française, rien
   pour une japonaise (un export d'avant n'a rien à migrer). Corriger une carte garde donc sa langue,
   qu'on peut aussi changer là ; l'image déjà retrouvée n'est gardée (`kept`) que dans la langue de
-  la carte.
+  la carte. Les codes d'extension se répètent d'une langue à l'autre (SVP 001 existe dans les
+  deux) : la langue d'une carte de la collection se voit à côté de sa référence, un petit drapeau
+  à la taille du texte, pour les japonaises aussi (`LanguageFlag`, dans `LanguageSwitch.tsx`,
+  nommé « Carte japonaise » / « Carte française ») : le titre de sa fiche (`CardSheet`), la liste
+  d'achats (`WishCard`) et les lignes des commandes et de l'assistant (`CardLine`).
   L'enregistrement (`useCardDraft.save`) attend le prix et l'image : une seule fois à la fois, la
   fenêtre ne se ferme pas pendant ce temps. Une page Cardmarket qui n'était que celle de l'id de
   départ est oubliée quand l'id change (le lien suit alors le nouvel id).

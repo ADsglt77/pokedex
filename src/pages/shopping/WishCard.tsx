@@ -3,7 +3,9 @@ import { memo } from 'react'
 import { speciesPath } from '@/lib/filters'
 import { CardArt } from '@/components/CardArt'
 import { CardmarketLink } from '@/components/CardmarketLink'
+import { LanguageFlag } from '@/components/LanguageSwitch'
 import { PricedValue } from '@/components/PricedValue'
+import { cardLanguage } from '@/lib/collection'
 import { formatDexNumber, formatPercent } from '@/lib/format'
 import { cardTitle } from '@/lib/species'
 import { priceLabel } from '@/lib/prices'
@@ -36,7 +38,10 @@ export const WishCard = memo(function WishCard({ row }: { row: WishRow }) {
           </h2>
           <span className="muted numeric">{formatDexNumber(speciesId)}</span>
         </header>
-        <p className={styles.wishReference}>{card.reference}</p>
+        <p className={styles.wishReference}>
+          {card.reference}
+          <LanguageFlag language={cardLanguage(card)} />
+        </p>
 
         <dl className={styles.wishPrices}>
           <div>

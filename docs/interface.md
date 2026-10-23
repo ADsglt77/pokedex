@@ -19,8 +19,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   `--dark-icon-filter` : les icônes de rareté noires, inversées en sombre ; `--link` et
   `--chart-*` : en clair, liens et courbes à l'encre, liens soulignés de rouge, pour que le rouge
   reste la marque et l'action principale, pas une alerte ; le choix d'un `SegmentedControl` y est un
-  bouton blanc en relief ; `--flag-*` : les couleurs des drapeaux de l'interrupteur des langues,
-  les mêmes dans les deux thèmes, et leur liseré, qui détache le blanc d'un fond blanc ou jaune).
+  bouton blanc en relief ; `--flag-*` : les couleurs des drapeaux de l'interrupteur des langues
+  et de la langue d'une carte (`LanguageFlag`), les mêmes dans les deux thèmes, et leur liseré,
+  qui détache le blanc d'un fond blanc ou jaune).
   Le site s'appelle **PokéCodex** (cette graphie) : le nom à côté du logo
   (la coquille, les pages seules, celles du compte, la page d'erreur), le titre des onglets
   (« Pikachu – PokéCodex », `pageTitle`), le manifeste et l'aperçu d'un lien (`index.html`,
