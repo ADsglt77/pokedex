@@ -1,17 +1,18 @@
 /**
  * Les collections d'extensions : commencer une extension (une case par carte, dans l'ordre, sans
  * remplir le Pokédex), une carte déjà dans le compte reprise comme sa case (jamais d'une autre
- * langue, jamais deux cases), une case obtenue (statut ou commande reçue) qui devient pour de bon
- * une carte de son Pokémon, la suppression d'une collection (rien de possédé ni du registre des
- * commandes ne se perd) et sa progression. Une erreur ici doublerait une carte, remplirait le
- * Pokédex de cartes qu'on n'a pas, ou perdrait une carte payée.
+ * langue, jamais deux cases), une case obtenue (statut ou commande reçue) ou ajoutée seule qui
+ * devient pour de bon une carte de son Pokémon (sans copie), la suppression d'une collection (rien
+ * de possédé ni du registre des commandes ne se perd, et ce que sa confirmation en dit) et sa
+ * progression. Une erreur ici doublerait une carte, remplirait le Pokédex de cartes qu'on n'a pas,
+ * ou perdrait une carte payée.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test'
-import { completeFavorites, setCardStatus } from '@/lib/collection'
+import { adopt, completeFavorites, setCardStatus } from '@/lib/collection'
 import { applyOrder } from '@/lib/orders'
 import { buildPokedex } from '@/lib/pokedex'
-import { findSeries, removeSeries, seriesProgress, startSeries } from '@/lib/series'
+import { findSeries, removeSeries, seriesProgress, seriesRemoval, startSeries } from '@/lib/series'
 import type { CardLanguage, CardStatus, CollectionData, PokemonCard, PriceFile } from '@/types'
 import {
   card,
@@ -197,6 +198,34 @@ describe('obtenir une case', () => {
   })
 })
 
+describe('ajouter seule une case', () => {
+  test('ajoutée seule, une case devient une carte de son Pokémon, sans copie ni autre statut', () => {
+    const data = started(withCards(collectionWith(), card('a', [1])), [
+      slotFor('001', [25]),
+      slotFor('002', [1]),
+    ])
+    const ordered = withStatus(data, 'ja 002', 'ordered')
+    let adopted = adopt(ordered, 'ja 001', NOW)
+    adopted = adopt(adopted, 'ja 002', NOW)
+    // La même carte, plus une case pas encore obtenue : aucune carte en plus.
+    expect(Object.keys(adopted.customCards)).toEqual(Object.keys(ordered.customCards))
+    expect(adopted.customCards['ja 001']).not.toHaveProperty('seriesOnly')
+    expect(adopted.customCards['ja 002']).not.toHaveProperty('seriesOnly')
+    // Toujours une case de sa collection, avec son statut (aucun, ou commandée).
+    expect(adopted.series).toEqual(ordered.series)
+    expect(adopted.cards).toEqual(ordered.cards)
+    // Favorite de Pikachu, qui n'en avait pas ; Bulbizarre garde la sienne.
+    expect(adopted.favorites).toEqual({ 1: 'a', 25: 'ja 001' })
+    expect(cardsOf(adopted, 25)).toEqual(['ja 001'])
+    expect(cardsOf(adopted, 1)).toEqual(['a', 'ja 002'])
+    expect(adopted.updatedAt).toBe(NOW)
+    // La collection supprimée, elle reste, telle quelle : une carte ajoutée seule.
+    const removed = removeSeries(adopted, 'M6A', 'ja', [], NOW)
+    expect(removed.customCards['ja 001']).toBe(adopted.customCards['ja 001']!)
+    expect(removed.favorites[25]).toBe('ja 001')
+  })
+})
+
 describe('supprimer une collection', () => {
   test('supprimer une collection : possédées et commandées restent, le registre ne perd rien', () => {
     const alone = card('alone', [4], { reference: 'Salamèche (M6A 004)' })
@@ -217,6 +246,13 @@ describe('supprimer une collection', () => {
     current = applyOrder(current, placed, dropped, [pending], NOW)
     const orders = [pending, dropped]
 
+    // Ce que la confirmation annonce : ce que fait la suppression.
+    expect(seriesRemoval(current, current.series[0]!, orders)).toEqual({
+      owned: ['ja 001'],
+      alone: ['alone'],
+      kept: ['ja 025', 'ja 026'],
+      dropped: ['ja 100'],
+    })
     const removed = removeSeries(current, 'M6A', 'ja', orders, NOW)
     expect(removed.series).toEqual([])
     // Possédée : gardée telle quelle.

@@ -13,6 +13,7 @@ import {
 import { Suspense, useCallback, useRef, useState } from 'react'
 import { useCardDraft } from '@/hooks/useCardDraft'
 import { useCollectionAction } from '@/hooks/useNotify'
+import { useSeriesSlot } from '@/hooks/useSeriesSlot'
 import { isCatalogCard, NO_FILTER, type CatalogCard } from '@/lib/card-catalog'
 import { addCard, useCollectionStore } from '@/store/collection'
 import type { AddAs, PokemonCard, PokemonSpecies } from '@/types'
@@ -28,9 +29,11 @@ import { speciesNames } from '@/lib/species'
 /**
  * Ajouter une carte à un Pokémon, à côté de celles qu'il a (la choisir dans le catalogue, japonaise
  * ou française, qui remplit la saisie, ou la saisir à la main ; une carte qu'il a déjà est
- * refusée, une carte déjà celle d'un autre de ses Pokémon n'est pas recopiée : il s'y ajoute), ou
- * la corriger (`card`) : sa saisie seulement. Une autre carte ne remplace pas celle-ci : son statut,
- * son prix payé et ses commandes lui appartiennent. Montée seulement quand la fenêtre est ouverte.
+ * refusée, une carte déjà celle d'un autre de ses Pokémon n'est pas recopiée : il s'y ajoute ; une
+ * case pas encore obtenue d'une collection d'extension non plus : elle devient une carte de ses
+ * Pokémon, avec son statut), ou la corriger (`card`) : sa saisie seulement. Une autre carte ne
+ * remplace pas celle-ci : son statut, son prix payé et ses commandes lui appartiennent. Montée
+ * seulement quand la fenêtre est ouverte.
  */
 export function CardForm({
   species,
@@ -68,6 +71,9 @@ export function CardForm({
           .flatMap((id) => entryById.get(id)!.cards)
           .find((view) => isCatalogCard(view.card, listed))?.card
       : undefined
+  // Pas encore une carte de ses Pokémon : une case pas encore obtenue d'une collection d'extension,
+  // reprise telle quelle, pour tous ses Pokémon (une carte n'existe qu'une fois).
+  const slot = useSeriesSlot(listed && !duplicate && !existing ? listed : null)
   const [addAs, setAddAs] = useState<AddAs>('none')
   // L'onglet caché est démonté : ses réglages vivent ici.
   const [view, setView] = useState<PickerView>({
@@ -103,18 +109,23 @@ export function CardForm({
     onClose()
   }
 
-  const save = () =>
-    existing
-      ? attach(existing)
-      : draft.save(receivers, species.names.fr, (saved) => {
-          act(
-            () => (card ? useCollectionStore.getState().saveCard(saved) : addCard(saved, addAs)),
-            card
-              ? `Carte de ${species.names.fr} modifiée.`
-              : `Carte ajoutée à ${speciesNames(receivers)}${ADDED_AS[addAs]}.`,
-          )
-          onClose()
-        })
+  const save = () => {
+    if (slot) {
+      slot.adopt()
+      onClose()
+    } else if (existing) attach(existing)
+    else {
+      void draft.save(receivers, species.names.fr, (saved) => {
+        act(
+          () => (card ? useCollectionStore.getState().saveCard(saved) : addCard(saved, addAs)),
+          card
+            ? `Carte de ${species.names.fr} modifiée.`
+            : `Carte ajoutée à ${speciesNames(receivers)}${ADDED_AS[addAs]}.`,
+        )
+        onClose()
+      })
+    }
+  }
 
   // Pendant l'enregistrement, la fenêtre reste ouverte : la fermer n'empêcherait pas l'ajout.
   const close = () => {
@@ -195,8 +206,14 @@ export function CardForm({
                   title={`${speciesNames(existing.dexIds)} ${existing.dexIds.length > 1 ? 'ont' : 'a'} déjà cette carte : elle devient aussi celle de ${speciesNames(receivers)}, avec son statut et son prix payé.`}
                 />
               )}
+              {slot && (
+                <Alert
+                  tone="info"
+                  title={`Cette carte fait partie de votre collection ${slot.series.name} : elle devient aussi celle de ${speciesNames(slot.card.dexIds)}, avec son statut.`}
+                />
+              )}
               {fields}
-              {!existing && (
+              {!existing && !slot && (
                 <SegmentedControl
                   size="sm"
                   label="Ajouter comme"

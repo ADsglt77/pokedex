@@ -5,6 +5,7 @@
  */
 
 import { derived, getJson } from '@/lib/api'
+import { referenceName } from '@/lib/card-code'
 import { formatList } from '@/lib/format'
 import type {
   PokemonCard,
@@ -42,6 +43,10 @@ export const speciesOf = (card: PokemonCard): PokemonSpecies[] =>
 export const speciesNames = (ids: readonly number[]) =>
   formatList(ids.map((id) => getSpecies(id)!.names.fr))
 
+/** « Pikachu ne sera plus débloqué. », « Pikachu et Zekrom ne seront plus débloqués. » */
+export const noLongerUnlocked = (ids: readonly number[]) =>
+  `${speciesNames(ids)} ${ids.length > 1 ? 'ne seront plus débloqués' : 'ne sera plus débloqué'}.`
+
 /** Les autres Pokémon d'une carte TAG TEAM que celui de la page (`speciesId`) : « Zekrom ». */
 export const otherSpeciesNames = (dexIds: readonly number[], speciesId: number) =>
   speciesNames(dexIds.filter((id) => id !== speciesId))
@@ -53,9 +58,7 @@ export const otherSpeciesNames = (dexIds: readonly number[], speciesId: number) 
 export const cardTitle = (card: PokemonCard) =>
   speciesOf(card)
     .map((species) => species.names.fr)
-    .join(' & ') ||
-  card.reference.replace(/\s*\([^()]*\)\s*$/, '') ||
-  card.reference
+    .join(' & ') || referenceName(card.reference)
 
 /**
  * Description, taille, poids… (`/api/species/details`), chargés à la première fiche ouverte ; vide

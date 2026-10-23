@@ -97,6 +97,10 @@ export const createRouter = () =>
               lazy: () => page(import('@/pages/collections/CollectionsPage'), 'CollectionsPage'),
             },
             {
+              path: 'collections/:set',
+              lazy: () => page(import('@/pages/collections/SeriesPage'), 'SeriesPage'),
+            },
+            {
               path: 'valeur',
               lazy: () => page(import('@/pages/value/ValuePage'), 'ValuePage'),
             },

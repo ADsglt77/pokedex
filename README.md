@@ -25,7 +25,9 @@ bun run format   # Prettier
   collectionnez en entier (drapeau, logo, nom, cartes possédées sur toutes, valeur) ; « Nouvelle
   collection » en commence une, japonaise ou française (l'interrupteur 🇯🇵 / 🇫🇷) : toutes ses
   cartes, Pokémon, dresseurs et énergies, à débloquer, celles déjà dans votre collection reprises
-  telles quelles.
+  telles quelles. Sa page : sa progression, sa valeur, le coût pour la compléter, toutes ses
+  cartes (possédées en couleur), chacune avec son statut, son prix payé et son prix ; la supprimer
+  garde les cartes possédées et commandées.
 - **Pokédex** (depuis Collections) : les 1 025 espèces, recherche (nom fr/en/ja ou numéro,
   raccourci `/`), filtres partageables dans l'adresse.
 - **Fiche** : toutes les cartes du Pokémon, choisies parmi ses cartes japonaises ou françaises (un

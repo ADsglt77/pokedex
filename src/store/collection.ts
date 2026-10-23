@@ -14,6 +14,11 @@ interface CollectionStore {
   setCardStatus: (card: PokemonCard, status: CardStatus | null) => void
   setPaidPrice: (card: PokemonCard, paidPrice: number | undefined) => void
   saveCard: (card: PokemonCard) => void
+  /**
+   * Une case d'extension pas encore obtenue, ajoutée seule : elle devient une carte de ses Pokémon,
+   * sans copie.
+   */
+  adopt: (cardId: string) => void
   /** La carte favorite de ce Pokémon : celle qu'on montre pour lui. */
   setFavorite: (speciesId: number, cardId: string) => void
   /**
@@ -51,6 +56,7 @@ export const useCollectionStore = create<CollectionStore>()((set, get) => {
     setPaidPrice: (card, paidPrice) =>
       update((collection, now) => rules.setPaidPrice(collection, card, paidPrice, now)),
     saveCard: (card) => update((collection, now) => rules.saveCard(collection, card, now)),
+    adopt: (cardId) => update((collection, now) => rules.adopt(collection, cardId, now)),
     setFavorite: (speciesId, cardId) =>
       update((collection, now) => rules.setFavorite(collection, speciesId, cardId, now)),
     removeCard: (cardId, speciesId, favorite) =>

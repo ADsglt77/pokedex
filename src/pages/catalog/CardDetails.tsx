@@ -15,6 +15,7 @@ import { PricePanel } from '@/components/PricePanel'
 import { CARD_TYPES } from '@/config/catalog'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { usePokedex } from '@/hooks/usePokedex'
+import { useSeriesSlot } from '@/hooks/useSeriesSlot'
 import { cardFromCatalog, isCatalogCard, languageField, type SetCard } from '@/lib/card-catalog'
 import { details, formatDate, formatDexNumber, formatList, statusLabel } from '@/lib/format'
 import { getSpecies, speciesNames } from '@/lib/species'
@@ -28,16 +29,18 @@ const statusText = (status: CardStatus | null) =>
 
 /**
  * Où en est la carte dans la collection : la carte de la collection qui est celle-ci (`mine`),
- * parmi toutes les cartes de ses Pokémon, ou ceux de ses Pokémon qui ont déjà des cartes
- * (`holders`) : l'ajout s'y ajoute, sans rien remplacer.
+ * parmi toutes les cartes de ses Pokémon ; sinon la case pas encore obtenue d'une collection
+ * d'extension qui l'est (`slot`), que l'ajout reprend ; et ceux de ses Pokémon qui ont déjà des
+ * cartes (`holders`) : l'ajout s'y ajoute, sans rien remplacer.
  */
 function useCollectionPlace(card: SetCard) {
   const { entryById } = usePokedex()
   const entries = card.dexIds.map((id) => entryById.get(id)!)
   const mine =
     entries.flatMap(({ cards }) => cards).find((view) => isCatalogCard(view.card, card)) ?? null
+  const slot = useSeriesSlot(mine ? null : card)
   const holders = entries.filter(({ cards }) => cards.length > 0)
-  return { mine, holders }
+  return { mine, slot, holders }
 }
 
 type CollectionPlace = ReturnType<typeof useCollectionPlace>
@@ -210,8 +213,11 @@ function facts(card: SetCard, place: CollectionPlace) {
 }
 
 /** La carte dans la collection, en une phrase. */
-function placeText({ mine, holders }: CollectionPlace) {
+function placeText({ mine, slot, holders }: CollectionPlace) {
   if (mine) return `Dans votre collection, ${statusText(mine.status)}.`
+  if (slot) {
+    return `Dans votre collection ${slot.series.name}, ${statusText(slot.status)} : l’ajouter en fait aussi une carte de ${speciesNames(slot.card.dexIds)}.`
+  }
   if (!holders.length) return 'Pas encore dans votre collection.'
   const several = holders.length > 1
   // Un seul Pokémon, avec une seule carte : « une carte » ; sinon « des cartes ».
@@ -223,23 +229,28 @@ function placeText({ mine, holders }: CollectionPlace) {
  * « Ajouter à la collection » : la carte s'ajoute à tous ses Pokémon, à acheter (une carte TAG
  * TEAM, une seule fois pour tous), sans rien remplacer : celles qu'ils ont déjà restent, leur
  * favorite aussi ; un Pokémon sans carte la reçoit pour favorite (`addCard`). Rien ne la retient,
- * pas même une commande. Déjà dans la collection : « Dans votre collection ».
+ * pas même une commande. Une case pas encore obtenue d'une collection d'extension est reprise, avec
+ * son statut (`slot.adopt`) : une carte n'existe qu'une fois. Déjà dans la collection : « Dans
+ * votre collection ».
  */
 function AddToCollection({ card, place }: { card: SetCard; place: CollectionPlace }) {
   const act = useCollectionAction()
   const [added, setAdded] = useState(false)
   const done = useRef<HTMLSpanElement>(null)
-  const { mine } = place
+  const { mine, slot } = place
   // Le bouton disparaît avec l'ajout : le focus va à ce qui le remplace.
   useEffect(() => {
     if (added) done.current?.focus()
   }, [added])
 
   const add = () => {
-    act(
-      () => addCard(cardFromCatalog(card), 'none'),
-      `Carte ${card.reference} ajoutée à ${speciesNames(card.dexIds)}, à acheter.`,
-    )
+    if (slot) slot.adopt()
+    else {
+      act(
+        () => addCard(cardFromCatalog(card), 'none'),
+        `Carte ${card.reference} ajoutée à ${speciesNames(card.dexIds)}, à acheter.`,
+      )
+    }
     setAdded(true)
   }
 

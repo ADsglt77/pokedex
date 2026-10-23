@@ -1,0 +1,32 @@
+/* La fenêtre d'une carte : son image à gauche, qui reste à l'écran quand le reste défile, son
+   statut et son prix à droite ; l'une sous l'autre sur un écran étroit (comme la fiche d'une carte
+   du catalogue). */
+.sheet {
+  display: grid;
+  grid-template-columns: minmax(14rem, 22rem) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--camply-space-6);
+  max-width: 72rem;
+  margin-inline: auto;
+}
+
+.art {
+  position: sticky;
+  top: 0;
+}
+
+.info {
+  min-width: 0;
+}
+
+@media (max-width: 48rem) {
+  .sheet {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .art {
+    position: static;
+    justify-self: center;
+    width: min(100%, 18rem);
+  }
+}

@@ -157,6 +157,15 @@ const STATUS_LABELS: Record<CardStatus | 'none', string> = {
 
 export const statusLabel = (status: CardStatus | null) => STATUS_LABELS[status ?? 'none']
 
+/**
+ * Ce que coûte de quitter « possédée » (`CardStatusControls`, retirer une carte possédée) : la date
+ * d'obtention, et le prix payé sauf pour « commandée ».
+ */
+export const LEAVING_OWNED: Record<Exclude<CardStatus, 'owned'> | 'none', string> = {
+  none: 'Son statut, sa date d’obtention et son prix payé seront effacés.',
+  ordered: 'Sa date d’obtention sera effacée.',
+}
+
 /** « Possédée depuis le 9 octobre 2026 », « Commandée »… */
 export function statusCaption(status: CardStatus | null, acquiredAt: string | null): string {
   const date = status === 'owned' ? formatDate(acquiredAt) : null

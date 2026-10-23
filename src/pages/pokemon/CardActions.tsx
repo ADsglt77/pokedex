@@ -1,23 +1,21 @@
-import { Button, ButtonGroup, Radio, RadioGroup, Spinner, Stack, Toggle } from '@camply/ui'
+import { Button, Radio, RadioGroup, Spinner, Stack } from '@camply/ui'
 import { Pencil, Plus, Star, Trash2 } from '@camply/ui/icons'
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentProps } from 'react'
+import { CardStatusControls } from '@/components/CardStatusControls'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { EuroInput } from '@/components/EuroInput'
 import { LanguageFlag } from '@/components/LanguageSwitch'
-import { STATUS_ICONS } from '@/components/statusIcons'
-import { usePokedex } from '@/hooks/usePokedex'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { loadSpeciesCards } from '@/lib/card-catalog'
-import { cardLanguage, isToBuy } from '@/lib/collection'
+import { cardLanguage } from '@/lib/collection'
 import { isInAnOrder } from '@/lib/orders'
-import { cx } from '@/lib/cx'
 import { focusAfter } from '@/lib/focus'
-import { otherSpeciesNames, speciesNames } from '@/lib/species'
-import { formatEuro, statusLabel } from '@/lib/format'
+import { noLongerUnlocked, otherSpeciesNames } from '@/lib/species'
+import { LEAVING_OWNED, statusLabel } from '@/lib/format'
 import { unlockedWithout, type CardView, type PokedexEntry } from '@/lib/pokedex'
+import { seriesOf } from '@/lib/series'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
-import type { CardStatus, PokemonSpecies } from '@/types'
+import type { PokemonSpecies } from '@/types'
 import styles from './CardActions.module.css'
 
 /**
@@ -85,34 +83,16 @@ export function AddCardButton({
   )
 }
 
-const STATUS_BUTTONS: { status: CardStatus; label: string }[] = [
-  { status: 'owned', label: 'Je possède cette carte' },
-  { status: 'ordered', label: 'Marquer comme commandée' },
-]
-
-/** Ce que coûte de quitter « possédée » : la date d'obtention, et le prix payé sauf « commandée ». */
-const LEAVING_OWNED: Record<Exclude<CardStatus, 'owned'> | 'none', string> = {
-  none: 'Son statut, sa date d’obtention et son prix payé seront effacés.',
-  ordered: 'Sa date d’obtention sera effacée.',
-}
-
-/** « Pikachu ne sera plus débloqué. », « Pikachu et Zekrom ne seront plus débloqués. » */
-const noLongerUnlocked = (ids: readonly number[]) =>
-  `${speciesNames(ids)} ${ids.length > 1 ? 'ne seront plus débloqués' : 'ne sera plus débloqué'}.`
-
 /**
- * Ce que l'utilisateur fait d'une carte du Pokémon (`entry`) : lui donner un statut (un seul à la
- * fois ; le relâcher le retire ; quitter « possédée » demande confirmation), noter son prix payé,
- * en faire sa favorite, la corriger, la retirer (possédée, ou favorite d'un Pokémon qui garde
- * d'autres cartes : après confirmation, qui demande alors la nouvelle favorite). Chaque action est
- * annoncée avec « Annuler ».
+ * Ce que l'utilisateur fait d'une carte du Pokémon (`entry`) : lui donner un statut et noter son
+ * prix payé (`CardStatusControls`), en faire sa favorite, la corriger, la retirer (possédée, ou
+ * favorite d'un Pokémon qui garde d'autres cartes : après confirmation, qui demande alors la
+ * nouvelle favorite ; pas une case d'une collection d'extension, qui se retire avec elle). Chaque
+ * action est annoncée avec « Annuler ».
  */
 export function CardActions({ view, entry }: { view: CardView; entry: PokedexEntry }) {
   const act = useCollectionAction()
-  const { entryById } = usePokedex()
   const [editing, setEditing] = useState(false)
-  // Le statut qui remplacerait « possédée » (`none` : aucun), en attente de confirmation.
-  const [leaving, setLeaving] = useState<keyof typeof LEAVING_OWNED | null>(null)
   const [removing, setRemoving] = useState(false)
   // La nouvelle favorite cochée dans la confirmation du retrait : aucune au départ.
   const [successor, setSuccessor] = useState<string>()
@@ -124,26 +104,14 @@ export function CardActions({ view, entry }: { view: CardView; entry: PokedexEnt
   const otherNames = otherSpeciesNames(card.dexIds, species.id)
   // Une carte d'une commande y reste (sauf d'un seul de ses Pokémon : `isInAnOrder`).
   const inAnOrder = useShoppingStore((state) => isInAnOrder(state.shopping.orders, card.id))
+  // Une case d'une collection d'extension se retire avec elle, jamais d'ici.
+  const series = useCollectionStore((state) => seriesOf(state.collection, card.id))
   // La favorite de ce Pokémon (une TAG TEAM l'est, ou non, de chacun des siens).
   const favorite = entry.card?.card.id === card.id
   const others = entry.cards.filter((other) => other.card.id !== card.id)
   // Retirer sa favorite quand il garde d'autres cartes : l'utilisateur choisit la suivante, l'app ne
   // la choisit jamais.
   const replacing = favorite && others.length > 0
-  // Les Pokémon de la carte qu'elle seule débloque : sans elle possédée, ils seraient à débloquer.
-  const losing = card.dexIds.filter((id) => !unlockedWithout(entryById.get(id)!, card.id))
-
-  const applyStatus = (next: CardStatus | null) =>
-    act(
-      () => useCollectionStore.getState().setCardStatus(card, next),
-      next
-        ? `Carte ${card.reference} marquée comme ${statusLabel(next).toLowerCase()}.`
-        : `Statut retiré de la carte ${card.reference}.`,
-      next ? 'success' : 'info',
-    )
-
-  const setStatus = (next: CardStatus | null) =>
-    status === 'owned' && next !== 'owned' ? setLeaving(next ?? 'none') : applyStatus(next)
 
   // Le bouton disparaît (elle est devenue la favorite) : le focus passe à « Modifier la carte ».
   const makeFavorite = () =>
@@ -172,51 +140,7 @@ export function CardActions({ view, entry }: { view: CardView; entry: PokedexEnt
 
   return (
     <Stack gap={5}>
-      <ButtonGroup
-        orientation="vertical"
-        attached={false}
-        className={styles.group}
-        aria-label="Statut de la carte"
-      >
-        {STATUS_BUTTONS.map(({ status: value, label }) => {
-          const Icon = STATUS_ICONS[value]
-          return (
-            // Tant que rien n'est suivi, « Je possède » est mis en avant : l'action attendue.
-            <Toggle
-              key={value}
-              pressed={status === value}
-              onChange={(pressed) => setStatus(pressed ? value : null)}
-              className={cx(
-                styles.status,
-                styles[value],
-                value === 'owned' && status === null && styles.expected,
-              )}
-            >
-              <Icon size={16} />
-              {label}
-            </Toggle>
-          )
-        })}
-      </ButtonGroup>
-
-      {!isToBuy(view) && (
-        // Le prix payé, enregistré en quittant le champ (ou Entrée).
-        <EuroInput
-          className={styles.group}
-          label="Prix payé"
-          hint="Pour suivre ce que la carte vous a coûté, et ce qu’elle vaut depuis."
-          value={view.paidPrice ?? undefined}
-          onCommit={(amount) =>
-            act(
-              () => useCollectionStore.getState().setPaidPrice(card, amount),
-              amount === undefined
-                ? `Prix payé retiré de la carte ${card.reference}.`
-                : `Carte ${card.reference} payée ${formatEuro(amount)}.`,
-              amount === undefined ? 'info' : 'success',
-            )
-          }
-        />
-      )}
+      <CardStatusControls view={view} />
 
       <Stack gap={2} align="start" className={styles.group}>
         <Stack direction="horizontal" gap={2} wrap>
@@ -248,40 +172,26 @@ export function CardActions({ view, entry }: { view: CardView; entry: PokedexEnt
             tone="danger"
             size="sm"
             leftIcon={<Trash2 size={15} />}
-            disabled={inAnOrder && !shared}
+            disabled={series !== null || (inAnOrder && !shared)}
             onClick={() => (replacing || status === 'owned' ? setRemoving(true) : remove())}
           >
             Retirer la carte
           </Button>
         </Stack>
         <p className="hint">
-          {shared
-            ? `Elle est aussi celle de ${otherNames} : la retirer d’ici la leur laisse, avec son statut et son prix payé.`
-            : inAnOrder
-              ? 'Elle figure dans une commande : elle reste, pour que le registre tienne.'
-              : 'La retirer efface son statut et son prix payé.'}
+          {series
+            ? `Elle fait partie de votre collection ${series.name} : elle se retire avec elle.`
+            : shared
+              ? `Elle est aussi celle de ${otherNames} : la retirer d’ici la leur laisse, avec son statut et son prix payé.`
+              : inAnOrder
+                ? 'Elle figure dans une commande : elle reste, pour que le registre tienne.'
+                : 'La retirer efface son statut et son prix payé.'}
         </p>
       </Stack>
 
       {editing && (
         <CardFormWindow species={species} card={card} onClose={() => setEditing(false)} />
       )}
-
-      <ConfirmDialog
-        open={leaving !== null}
-        title="Ne plus marquer cette carte comme possédée ?"
-        confirmLabel={
-          leaving && leaving !== 'none'
-            ? `Marquer comme ${statusLabel(leaving).toLowerCase()}`
-            : 'Retirer le statut'
-        }
-        onClose={() => setLeaving(null)}
-        onConfirm={() => applyStatus(leaving === 'none' ? null : leaving)}
-      >
-        <p>
-          {LEAVING_OWNED[leaving ?? 'none']} {losing.length > 0 && noLongerUnlocked(losing)}
-        </p>
-      </ConfirmDialog>
 
       <ConfirmDialog
         open={removing}
@@ -294,7 +204,7 @@ export function CardActions({ view, entry }: { view: CardView; entry: PokedexEnt
         {status === 'owned' && (
           <p>
             {shared ? `Elle reste celle de ${otherNames}, possédée.` : LEAVING_OWNED.none}{' '}
-            {losing.includes(species.id) && noLongerUnlocked([species.id])}
+            {!unlockedWithout(entry, card.id) && noLongerUnlocked([species.id])}
           </p>
         )}
         {replacing && (

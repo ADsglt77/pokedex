@@ -1,0 +1,32 @@
+/* Les statuts et le prix payé : à la largeur d'un réglage, pas de la fiche. */
+.group {
+  max-width: 24rem;
+}
+
+.group > * {
+  justify-content: flex-start;
+}
+
+/* Rien n'est suivi : « Je possède cette carte » a l'allure d'un bouton principal. */
+.expected {
+  border-color: var(--camply-accent);
+  background: var(--camply-accent);
+  color: var(--camply-accent-contrast);
+}
+
+.expected:hover {
+  background: var(--camply-accent-hover);
+}
+
+/* Chaque statut garde sa couleur une fois choisi. */
+.status[aria-pressed='true'].owned {
+  border-color: var(--camply-success-border);
+  background: var(--camply-success-soft);
+  color: var(--camply-success);
+}
+
+.status[aria-pressed='true'].ordered {
+  border-color: var(--camply-info-border);
+  background: var(--camply-info-soft);
+  color: var(--camply-info);
+}

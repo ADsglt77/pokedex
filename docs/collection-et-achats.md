@@ -63,11 +63,18 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     carte de ses Pokémon, favorite de ceux qui n'en ont pas (les autres gardent la leur ; un
     dresseur n'en donne aucune). La quitter (« sans statut ») ne la rend pas à l'extension ;
     commandée seulement, elle reste une case.
-  - Supprimer (`removeSeries`) : les cartes possédées restent (et donc au Pokédex) ; une case
-    commandée, ou dans une commande quel que soit son état (`isInAnOrder` : le registre ne perd
-    rien), reste comme carte seule (sans `seriesOnly`, favorite de ceux de ses Pokémon qui n'en ont
-    pas) ; les autres cases disparaissent. Une carte de l'extension ajoutée seule, reprise comme
-    case, ne bouge pas.
+  - Ajouter seule (`adopt`, `lib/collection.ts`) : une case pas encore obtenue qu'on ajoute à ses
+    Pokémon (« Ajouter à la collection » du Catalogue, la fenêtre d'ajout d'une fiche :
+    `docs/cartes.md`) est reprise, jamais copiée (une carte n'existe qu'une fois) : elle perd
+    `seriesOnly` comme à l'obtention (`obtain` : favorite de ceux de ses Pokémon qui n'en ont pas),
+    garde son statut (aucun, ou commandée) et reste une case de sa collection.
+  - Retirer : une carte qui est une case d'une collection (`seriesOf`) se retire avec elle, depuis
+    sa page, jamais depuis la fiche d'un Pokémon (« Retirer la carte » y est inactif).
+  - Supprimer (`removeSeries`, d'après `seriesRemoval`, ce que dit aussi sa confirmation) : les
+    cartes possédées restent (et donc au Pokédex) ; une case commandée, ou dans une commande quel
+    que soit son état (`isInAnOrder` : le registre ne perd rien), reste comme carte seule (sans
+    `seriesOnly`, favorite de ceux de ses Pokémon qui n'en ont pas) ; les autres cases
+    disparaissent. Une carte de l'extension ajoutée seule, reprise comme case, ne bouge pas.
   - Progression (`seriesProgress`) : ses cases possédées sur toutes, chacune une fois (une TAG TEAM
     aussi) ; leur valeur (prix du marché) ; le coût pour la compléter (les cases ni possédées ni
     commandées) et combien d'entre elles n'ont pas de prix.

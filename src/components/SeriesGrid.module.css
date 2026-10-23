@@ -1,0 +1,81 @@
+/* Les cartes d'une collection d'extension, comme les pochettes du Pokédex : autant par rangée que
+   la page en tient, trois sur téléphone. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: 1.5rem 1rem;
+}
+
+/* Une carte : un bouton (la page de la collection) ou une image décrite (le Pokédex public). Une
+   extension compte des centaines de cartes : le navigateur ne dessine que celles à l'écran. Ce
+   qu'il dessine s'arrête au bord de la carte : une marge intérieure, rendue par une marge
+   négative, laisse la place au soulèvement et au contour du focus. */
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  width: calc(100% + 1rem);
+  min-width: 0;
+  margin: -0.5rem;
+  padding: 0.5rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 14rem;
+}
+
+button.tile {
+  cursor: pointer;
+}
+
+.art {
+  margin-bottom: 0.5rem;
+}
+
+/* Seulement un bouton (pas une carte du Pokédex public) se soulève au survol. */
+button.tile:hover .art,
+.tile:focus-visible .art {
+  transform: translateY(-3px);
+  filter: none;
+  opacity: 1;
+  box-shadow: var(--camply-shadow-md);
+}
+
+/* Le retour du toucher (sur téléphone, pas de survol) : la carte s'enfonce un instant. */
+button.tile:active .art {
+  transform: scale(0.97);
+}
+
+.tile:focus-visible {
+  outline: none;
+}
+
+.tile:focus-visible .art {
+  outline: 2px solid var(--camply-accent);
+  outline-offset: 3px;
+}
+
+.number {
+  min-height: 1lh;
+  color: var(--camply-text-muted-2);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.name {
+  overflow: hidden;
+  font-family: var(--camply-font-display);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 40rem) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem 0.5rem;
+  }
+}

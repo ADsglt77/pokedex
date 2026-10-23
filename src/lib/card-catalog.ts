@@ -27,6 +27,7 @@ import type {
   CatalogFile,
   CatalogSetFile,
   CatalogSetsFile,
+  CollectionData,
   PokemonCard,
 } from '@/types'
 
@@ -264,6 +265,15 @@ export const isCatalogCard = (card: PokemonCard, listed: CatalogCard) =>
     { set: listed.set.id, number: listed.number },
     listed.cardmarket,
   )
+
+/**
+ * La case pas encore obtenue d'une collection d'extension (`seriesOnly`) qui est cette carte du
+ * catalogue (`isCatalogCard`) ; `null` sans. Elle n'est pas encore une carte de ses Pokémon : leurs
+ * cartes ne la montrent pas, mais une carte n'existe qu'une fois, l'ajouter la reprend (`adopt`).
+ */
+export const unobtainedSlot = (data: CollectionData, listed: CatalogCard) =>
+  Object.values(data.customCards).find((card) => card.seriesOnly && isCatalogCard(card, listed)) ??
+  null
 
 /**
  * La langue d'une carte du catalogue, telle que la porte une carte de la collection

@@ -67,7 +67,8 @@ function progressOf(entries: readonly PokedexEntry[]): Progress {
   return { total, unlocked, missing: total - unlocked, percent: progressPercent(unlocked, total) }
 }
 
-function describeCard(card: PokemonCard, collection: CollectionData): CardView {
+/** Une carte de la collection, prête à afficher : son statut, sa date d'obtention, son prix payé. */
+export function describeCard(card: PokemonCard, collection: CollectionData): CardView {
   const ownership = collection.cards[card.id]
   return {
     card,

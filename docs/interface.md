@@ -101,7 +101,29 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   (`useStartCollection`) : ses cartes chargées (le bouton attend, un second clic ne la commence pas
   deux fois, le magasin non plus), la collection annoncée avec « Annuler » (« Collection Méga Rêve
   ex commencée : 230 cartes. »), puis sa page ouverte ; sans ses cartes (l'API ne répond pas) : un
-  message, rien de commencé, et un nouvel essai les redemande. Le Pokédex : recherche, filtres rapides de
+  message, rien de commencé, et un nouvel essai les redemande. La page d'une collection
+  (`SeriesPage`, `/collections/M6A`, `?langue=fr`) : en tête son nom et le drapeau de sa langue, son
+  code et le jour où elle a été commencée, « Supprimer la collection » ; puis son logo (au-dessus
+  de ses chiffres quand la page a moins de 56rem) et ses chiffres (`seriesProgress` : cartes
+  possédées sur toutes, leur part et la barre ; leur valeur au prix du jour ; le coût pour la
+  compléter, ses cartes ni possédées ni commandées, « Sans compter 2 cartes sans prix ») ; puis
+  toutes ses cartes (`SeriesGrid`, dans `components/` : le Pokédex public la reprend en lecture
+  seule, `linked` faux, chaque carte une image décrite), dans l'ordre de l'extension, possédées en
+  couleur, les autres en grisé (`CardArt` `locked`), avec leur marque de statut, leur numéro et leur
+  nom ; dessinées au fur et à mesure (`useGrowingList`, 60 à la fois), seules celles à l'écran le
+  sont (`content-visibility`), et mémoïsées : une carte qui change de statut ne redessine qu'elle.
+  Une carte ouvre sa fenêtre (`SeriesCard`, pleine page comme la fiche d'une carte du catalogue) :
+  son image, sa référence et son drapeau, son statut et ses Pokémon (chacun vers sa fiche ; aucun
+  pour un dresseur), « Je possède cette carte » et « Marquer comme commandée », le prix payé et la
+  confirmation pour quitter « possédée » (`CardStatusControls`, les mêmes que sur la fiche d'un
+  Pokémon), son prix Cardmarket et sa courbe (`PricePanel`) ; chaque action annoncée avec
+  « Annuler ». « Supprimer la collection » demande confirmation, qui dit ce qui reste (possédées, au
+  Pokédex ; commandées ou dans une commande, comme cartes seules ; ajoutées seules, telles quelles)
+  et ce qui part (les cartes à acheter), d'après `seriesRemoval` ; la suppression est annoncée avec
+  « Annuler » (« Collection Méga Rêve ex supprimée. »). Une collection inconnue (une autre
+  extension, ou une autre langue) : la page introuvable. Une collection qui disparaît sous sa page
+  (supprimée, son début annulé par « Annuler », supprimée sur un autre appareil) ramène aux
+  Collections (`Navigate`, qui remplace l'adresse). Le Pokédex : recherche, filtres rapides de
   possession avec leur nombre (les autres filtres appliqués), les autres filtres dans un panneau
   (génération, type, carte), chacun rappelé en étiquette retirable ; quand tout ne tient pas sur
   une ligne, les filtres rapides passent dessous (sur téléphone, ils défilent de côté). Achats :
@@ -137,7 +159,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   d'autres cartes demande toujours une confirmation, où l'on coche la nouvelle favorite parmi
   elles (rien de coché au départ, confirmer est impossible avant ; possédée, elle dit aussi ce qui
   part) ; « {nom} ne sera plus débloqué » n'est dit (quitter « possédée », retirer une carte
-  possédée) que pour un Pokémon dont aucune autre carte n'est possédée (`unlockedWithout`) ;
+  possédée) que pour un Pokémon dont aucune autre carte n'est possédée (`unlockedWithout`) ; une
+  carte qui est une case d'une collection d'extension (`seriesOf`) n'a pas « Retirer la carte »
+  actif : « Elle fait partie de votre collection Méga Rêve ex : elle se retire avec elle. » ;
   le lien vers le prochain Pokémon sans carte vient après les actions de la carte,
   « Dans le Pokédex » à part sur grand écran ;
   seul effet appuyé de l'app, la carte en grand suit la souris et la lumière y glisse

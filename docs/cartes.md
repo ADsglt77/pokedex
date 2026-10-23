@@ -84,7 +84,13 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   l'onglet de saisie ; une carte que le Pokémon a déjà, `isCatalogCard`, est refusée : « Pikachu a
   déjà cette carte. » ; une carte qu'un autre de ses Pokémon a déjà lui est ajoutée telle quelle,
   statut, prix payé et commandes compris, la fenêtre le dit et n'offre pas « Ajouter comme » :
-  « Carte … ajoutée à Pikachu (déjà dans votre collection). »). « Modifier la carte » n'a que la saisie : choisir une autre carte, ce serait
+  « Carte … ajoutée à Pikachu (déjà dans votre collection). » ; une case pas encore obtenue d'une
+  collection d'extension, qui n'est encore la carte d'aucun Pokémon (`useSeriesSlot`,
+  `unobtainedSlot`), est reprise de même, jamais copiée : elle devient une carte de tous ses
+  Pokémon (`adopt`, favorite de ceux qui n'en ont pas), avec son statut, et reste une case de sa
+  collection ; la fenêtre le dit (« Cette carte fait partie de votre collection Méga Rêve ex : elle
+  devient aussi celle de Pikachu, avec son statut. »), sans « Ajouter comme » : « Carte … ajoutée à
+  Pikachu (déjà dans votre collection Méga Rêve ex). »). « Modifier la carte » n'a que la saisie : choisir une autre carte, ce serait
   lui transmettre le statut, le prix payé et les commandes de celle-ci. Le catalogue n'est qu'une
   aide : la carte enregistrée est une carte saisie comme les autres (`manual:<uuid>`). La saisie a
   sa langue (`useCardDraft.language`, `CardFields` : son propre `LanguageSwitch` et « Carte
@@ -143,6 +149,10 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   « Dans votre collection », qui reçoit le focus après l'ajout, et le bouton disparaît : une carte
   du catalogue n'est jamais ajoutée deux fois (une TAG TEAM qu'un seul de ses Pokémon a se donne
   aux autres depuis leur fiche). Annoncé avec « Annuler » : « Carte … ajoutée à Pikachu, à acheter. »
+  Une case pas encore obtenue d'une collection d'extension (pas encore une carte de ses Pokémon :
+  `useSeriesSlot`) : « Dans votre collection Méga Rêve ex, à acheter : l’ajouter en fait aussi une
+  carte de Pikachu. » ; « Ajouter à la collection » la reprend avec son statut (`adopt`), jamais une
+  seconde carte : « Carte … ajoutée à Pikachu (déjà dans votre collection Méga Rêve ex). »
   Les dresseurs, les énergies et les cartes dont Pokécardex ne donne pas
   les Pokémon (« Togepi, Mélo et Toudoudou-GX ») n'ont pas de bouton. Filtres de rareté et de type
   (`CardFilters`, demandés par l'utilisateur, octobre 2026) : des pastilles à icône, chacune avec le

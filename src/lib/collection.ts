@@ -68,6 +68,17 @@ export function obtain(data: CollectionData, cardIds: Iterable<string>): Collect
   }
 }
 
+/**
+ * Une case d'extension pas encore obtenue, ajoutée seule (« Ajouter à la collection » du
+ * Catalogue, la fenêtre d'ajout d'une fiche) : une carte n'existe qu'une fois, la case devient une
+ * carte de ses Pokémon (`obtain` : favorite de ceux qui n'en ont pas), avec son statut, et reste une
+ * case de sa collection.
+ */
+export const adopt = (data: CollectionData, cardId: string, now: string): CollectionData => ({
+  ...obtain(data, [cardId]),
+  updatedAt: now,
+})
+
 /** Le prix payé d'une carte suivie ; `undefined` l'efface. Inchangé : la même collection. */
 export function setPaidPrice(
   data: CollectionData,

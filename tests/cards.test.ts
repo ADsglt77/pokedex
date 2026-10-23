@@ -10,6 +10,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import {
+  adopt,
   cardLanguage,
   obtain,
   removeCard,
@@ -133,6 +134,7 @@ describe('les règles ne modifient pas ce qu’elles reçoivent (« Annuler »)'
     const started = startSeries(data, start, slots, NOW)
     const startedBefore = structuredClone(started)
     obtain(started, ['s'])
+    adopt(started, 's', NOW)
     removeSeries(setCardStatus(started, slot, 'ordered', NOW), 'M6A', 'ja', [], NOW)
     removeSeries(started, 'M6A', 'ja', [], NOW)
     expect(data).toEqual(before)

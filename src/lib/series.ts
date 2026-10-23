@@ -4,8 +4,9 @@
  * (`customCards`) : une carte déjà là, la même (`sameCard` : même langue, même code ou même id
  * Cardmarket), est reprise ; les autres sont ajoutées comme cases pas encore obtenues
  * (`seriesOnly`), qui ne remplissent pas le Pokédex. Possédée une fois, une case devient pour de
- * bon une carte de ses Pokémon (`obtain`). La collection d'une carte (`seriesOf`) ; leur
- * progression : cases possédées, valeur, coût pour compléter.
+ * bon une carte de ses Pokémon (`obtain`). La collection d'une carte (`seriesOf`) ; ce que la
+ * suppression d'une collection fait de ses cases (`seriesRemoval`) ; leur progression : cases
+ * possédées, valeur, coût pour compléter.
  */
 
 import { isCardOf, referenceCode, sameCard } from '@/lib/card-code'
@@ -75,11 +76,43 @@ export function startSeries(
   return { ...data, customCards, series: [...data.series, series], updatedAt: now }
 }
 
+/** Ce que deviennent les cases d'une collection qu'on supprime (`removeSeries`) : leurs ids. */
+interface SeriesRemoval {
+  /** Possédées : elles restent, au Pokédex. */
+  owned: string[]
+  /** Des cartes ajoutées seules (pas `seriesOnly`), pas possédées : elles restent telles quelles. */
+  alone: string[]
+  /** Pas encore obtenues, commandées ou dans une commande : elles restent comme cartes seules. */
+  kept: string[]
+  /** Pas encore obtenues, ni commandées ni dans une commande : elles partent. */
+  dropped: string[]
+}
+
 /**
- * Supprime la collection de cette extension dans cette langue. Ses cartes possédées restent (et
- * donc au Pokédex), comme une carte du compte reprise comme case ; une case commandée, ou dans une
- * commande (`orders`, quel que soit son état : le registre ne perd rien), reste comme carte seule
- * de ses Pokémon (`obtain`, favorite de ceux qui n'en ont pas) ; les autres cases disparaissent.
+ * Ce que la suppression d'une collection fait de chacune de ses cases (`orders` : toutes les
+ * commandes, quel que soit leur état, le registre ne perd rien) : ce que dit sa confirmation, ce
+ * que fait `removeSeries`.
+ */
+export function seriesRemoval(
+  data: CollectionData,
+  series: SeriesCollection,
+  orders: readonly Order[],
+): SeriesRemoval {
+  const removal: SeriesRemoval = { owned: [], alone: [], kept: [], dropped: [] }
+  for (const id of series.cards) {
+    const status = data.cards[id]?.status
+    if (!data.customCards[id]!.seriesOnly) removal[status === 'owned' ? 'owned' : 'alone'].push(id)
+    else if (status || isInAnOrder(orders, id)) removal.kept.push(id)
+    else removal.dropped.push(id)
+  }
+  return removal
+}
+
+/**
+ * Supprime la collection de cette extension dans cette langue (`seriesRemoval`). Ses cartes
+ * possédées restent (et donc au Pokédex), comme une carte du compte reprise comme case ; une case
+ * commandée, ou dans une commande, reste comme carte seule de ses Pokémon (`obtain`, favorite de
+ * ceux qui n'en ont pas) ; les autres cases disparaissent.
  */
 export function removeSeries(
   data: CollectionData,
@@ -89,13 +122,9 @@ export function removeSeries(
   now: string,
 ): CollectionData {
   const removed = findSeries(data, set, language)!
+  const { kept, dropped } = seriesRemoval(data, removed, orders)
   const customCards = { ...data.customCards }
-  const kept: string[] = []
-  for (const id of removed.cards) {
-    if (!data.customCards[id]!.seriesOnly) continue
-    if (data.cards[id] || isInAnOrder(orders, id)) kept.push(id)
-    else delete customCards[id]
-  }
+  for (const id of dropped) delete customCards[id]
   const series = data.series.filter((known) => known !== removed)
   return obtain({ ...data, customCards, series, updatedAt: now }, kept)
 }
