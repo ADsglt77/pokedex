@@ -1,9 +1,9 @@
 # PokéCodex
 
-Un Pokédex personnel de cartes Pokémon japonaises, en ligne à https://pokecodex.fr : pour chacun
-des 1 025 Pokémon, on ajoute la carte que l'on veut (sa référence, d'où son image est retrouvée,
-et son id Cardmarket pour suivre son prix) ; le Pokémon se débloque quand on la possède. React +
-Vite + TypeScript, interface [`@camply/ui`](https://www.npmjs.com/package/@camply/ui) ; espèces,
+Un Pokédex personnel de cartes Pokémon japonaises et françaises, en ligne à https://pokecodex.fr :
+pour chacun des 1 025 Pokémon, on ajoute la carte que l'on veut (sa référence, d'où son image est
+retrouvée, et son id Cardmarket pour suivre son prix) ; le Pokémon se débloque quand on la
+possède. React + Vite + TypeScript, interface [`@camply/ui`](https://www.npmjs.com/package/@camply/ui) ; espèces,
 cartes, images et prix relus par l'API des données, un dépôt à part (plus bas).
 
 ```sh
@@ -22,14 +22,15 @@ bun run format   # Prettier
   page, une action.
 - **Pokédex** : les 1 025 espèces, recherche (nom fr/en/ja ou numéro, raccourci `/`), filtres
   partageables dans l'adresse.
-- **Fiche** : la carte du Pokémon, choisie parmi ses cartes japonaises (image, rareté, prix du
-  jour, tri par date ou par prix, filtres de rareté et de type) ou saisie à la main, puis corrigée ou retirée ; en grand, son statut
+- **Fiche** : la carte du Pokémon, choisie parmi ses cartes japonaises ou françaises (un
+  interrupteur 🇯🇵 / 🇫🇷 ; image, rareté, prix du jour, tri par date ou par prix, filtres de rareté
+  et de type) ou saisie à la main, puis corrigée ou retirée ; en grand, son statut
   (commandée / possédée) et son prix payé, son prix Cardmarket et sa courbe, le lien
   vers sa page Cardmarket, les détails de l'espèce.
-- **Catalogue** : un grand catalogue de toutes les cartes japonaises, Pokémon, dresseurs et
-  énergies, extension par extension (choisie sur son logo japonais), en tuiles serrées, avec une
-  recherche et des filtres de rareté et de type ; chaque carte a sa fiche (image en grand, numéro,
-  rareté, type, Pokémon, illustrateur, versions, noms anglais et allemand, prix Cardmarket et sa
+- **Catalogue** : un grand catalogue de toutes les cartes japonaises ou françaises (le même
+  interrupteur 🇯🇵 / 🇫🇷, dans l'adresse), Pokémon, dresseurs et énergies, extension par extension
+  (choisie sur son logo), en tuiles serrées, avec une recherche et des filtres de rareté et de
+  type ; chaque carte a sa fiche (image en grand, numéro, rareté, type, Pokémon, illustrateur, versions, noms anglais et allemand, prix Cardmarket et sa
   courbe) et, pour une carte Pokémon, « Ajouter à la collection » (à acheter ; si le Pokémon a
   déjà sa carte, elle la remplace après confirmation).
 - **Valeur** : prix Cardmarket du jour, valeur de la collection (et gain par rapport au prix
@@ -38,7 +39,7 @@ bun run format   # Prettier
 - **Achats** : liste d'achats (la carte de chaque Pokémon, ni possédée ni commandée),
   assistant « prochaine commande » dans un budget (100 € par mois, 150 € au plus, réglables),
   et « Copier pour Cardmarket » : ses cartes en lignes à coller dans votre liste de souhaits
-  Cardmarket (« Ajouter une deck list »), chacune dans sa version exacte, avant son Shopping
+  Cardmarket (« Ajouter une deck list »), en deux blocs, japonaises et françaises, chacune dans sa version exacte, avant son Shopping
   Wizard (langue et état se règlent ensuite par « Modification en masse » ; une carte dont la
   version ou l'extension n'est pas sûre s'ajoute depuis sa page ; le site n'envoie rien à
   Cardmarket) ; registre
@@ -56,8 +57,8 @@ bun run format   # Prettier
   achats compris), puis actions avancées. L'état du serveur reste invisible quand tout va bien et
   n'apparaît qu'en cas de retard, d'échec ou d'indisponibilité.
 
-Les données (espèces, catalogue des cartes japonaises, images, prix Cardmarket et leur
-historique) viennent de **l'API des données**, un dépôt à part (`pokedex-data`) : privée, sans
+Les données (espèces, catalogue des cartes japonaises et françaises, images, prix Cardmarket et
+leur historique) viennent de **l'API des données**, un dépôt à part (`pokedex-data`) : privée, sans
 token aucune donnée. Le navigateur ne parle qu'au site (`/api/…`, `/images/…`) : nginx (Vite en
 développement) renvoie les adresses des données à l'API, avec le token du site, que le navigateur
 ne voit jamais. Aucune adresse de la source n'apparaît dans le navigateur :
@@ -95,7 +96,8 @@ aussitôt ; si le serveur ne répond pas, le menu du compte le dit et elle repar
 - [ ] **Avant tout** : exporter sa collection depuis le site actuel (Réglages › Sauvegarde › Exporter).
 - [ ] Sur le VPS : Docker, `git` et Caddy ; les ports 22, 80 et 443 autorisés par le pare-feu.
 - [ ] L'API des données d'abord : le réseau `pokedex-net`, son clone, son `.env` (le token du
-      site), ses conteneurs et ses cartes (son README).
+      site), ses conteneurs et ses cartes, japonaises et françaises (son README : plusieurs heures la
+      première fois, les françaises comprises).
 - [ ] Le clone en SSH, avec une clé de déploiement en lecture seule (étape 1 plus bas).
 - [ ] Le fichier `.env` : l'adresse publique en https, la clé des sessions et le token de l'API des
       données (étape 2).
@@ -134,7 +136,10 @@ suivre : `docker compose logs -f server` (en développement, le terminal de
 Les services (`pokedex` : le site, nginx, sur `127.0.0.1:8080`, joignable seulement par Caddy ;
 `server` : les comptes, les collections et leurs sauvegardes) et leurs volumes :
 `docs/deploiement.md`. Les tâches d'ingestion (de nouvelles cartes…) : le README de l'API des
-données.
+données. Le cache des images de nginx est de 12 Go (`deploy/nginx.conf.template`) : tous les
+scans, japonais et français, y tiennent ; l'API les a copiés d'avance, une image absente est un 404
+(le site montre la carte de substitution). Quand l'API des données change (les cartes françaises),
+la déployer avant le site : ses routes japonaises ne changent pas.
 
 Ne jamais lancer `docker compose down -v`, qui effacerait les volumes (`db` : les comptes et les
 collections ; `backups`).

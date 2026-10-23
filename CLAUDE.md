@@ -1,10 +1,9 @@
 # CLAUDE.md
 
-Pokédex personnel de cartes Pokémon **japonaises et françaises** (le catalogue français : à venir) :
-pour chacun des 1 025 Pokémon, la carte que
-l'utilisateur choisit (catalogue ou saisie : référence → image, id Cardmarket → prix). Un Pokémon
-est « débloqué » quand sa carte est possédée. Comptes pseudo + mot de passe, sans e-mail ; sans
-connexion : la connexion et le Pokédex public de chaque compte (`/pseudo`).
+Pokédex personnel de cartes Pokémon **japonaises et françaises** : pour chacun des 1 025 Pokémon,
+la carte que l'utilisateur choisit (catalogue ou saisie : référence → image, id Cardmarket →
+prix). Un Pokémon est « débloqué » quand sa carte est possédée. Comptes pseudo + mot de passe, sans
+e-mail ; sans connexion : la connexion et le Pokédex public de chaque compte (`/pseudo`).
 
 - **Site** (ce dépôt) : React 19, Vite, TS, `@camply/ui`, zustand, react-router ; `server/` (Bun,
   Elysia, Better Auth, SQLite `app.db`) garde comptes et collection. **Rien dans le navigateur**

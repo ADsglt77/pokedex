@@ -2,7 +2,7 @@
   "id": "/",
   "name": "PokéCodex",
   "short_name": "PokéCodex",
-  "description": "Un Pokédex de cartes Pokémon japonaises : une carte par Pokémon, à collectionner.",
+  "description": "Un Pokédex de cartes Pokémon japonaises et françaises : une carte par Pokémon, à collectionner.",
   "lang": "fr",
   "start_url": "/",
   "scope": "/",

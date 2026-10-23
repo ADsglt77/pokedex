@@ -1,6 +1,6 @@
 # Cartes, catalogue et images
 
-La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, par l'API des données) et leurs images. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
+La carte de chaque Pokémon, le catalogue des cartes japonaises et françaises (Pokécardex, par l'API des données) et leurs images. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
 - Source : **Pokécardex** seul. Son accord : lire son site, utiliser ses images **hébergées chez
   nous** (`isSourceImage`), reprendre son historique des prix ; aucun crédit demandé, l'app n'en
@@ -34,8 +34,8 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
 - Catalogue (de l'API des données : sa lecture de Pokécardex, ses gardes et ses tables sont dans
   sa page `docs/donnees.md` ; côté site, `lib/card-catalog.ts`) : les cartes japonaises, Pokémon,
   dresseurs et énergies, environ 450 séries de 1996 à aujourd'hui, decks, promos et anciennes
-  séries compris, sans les exclusivités d'autres pays d'Asie. Trois réponses, que nginx renvoie à
-  l'API :
+  séries compris, sans les exclusivités d'autres pays d'Asie ; et les françaises, environ 250
+  séries et 25 600 cartes (octobre 2026). Trois réponses, que nginx renvoie à l'API :
   `/api/catalog/species/<n°>`, les cartes Pokémon d'un Pokémon (la fenêtre d'ajout,
   `loadSpeciesCards` ; une réponse pour chacun des 1 025, même sans carte : la fenêtre le dit), des
   plus récentes aux plus anciennes : `[série, numéro (sans numéro imprimé : son rang), id

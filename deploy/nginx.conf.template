@@ -5,8 +5,9 @@
 
 # Les images de l'API des données, gardées sur le disque de nginx : une image ne change jamais
 # (l'API ne réécrit pas un fichier qui existe), chacune ne traverse qu'une fois. Perdues à la
-# reconstruction du conteneur : l'API les redonne, sans rien télécharger.
-proxy_cache_path /var/cache/nginx/images levels=1:2 keys_zone=images:10m max_size=4g
+# reconstruction du conteneur : l'API les redonne, sans rien télécharger. 12 Go : tous les scans,
+# japonais et français, y tiennent (environ 3 Go) avec de la marge.
+proxy_cache_path /var/cache/nginx/images levels=1:2 keys_zone=images:10m max_size=12g
                  inactive=90d use_temp_path=off;
 
 # Par visiteur : l'adresse que Caddy écrit dans `x-forwarded-for` avant de joindre nginx. Caddy
@@ -165,14 +166,14 @@ server {
         proxy_set_header Host $host;
     }
 
-    # Les images : celles de l'API des données (qui copie à la demande, 4 à la fois, celles qu'elle
-    # n'a pas encore), gardées par nginx (`proxy_cache`) et par les navigateurs un an, sans
-    # redemande (l'API le dit : `immutable`). Deux demandes d'une même image pas encore gardée n'en
-    # font qu'une (`proxy_cache_lock`) ; une absence (404) n'est pas gardée. 20 par seconde et par
-    # visiteur, 1 100 d'un coup : la plus grande page d'images, le Pokédex (1 025 pochettes, chargées
-    # au fil du défilement : une quarantaine par seconde en le parcourant vite), passe d'un coup.
-    # Pour les pages du site seulement (`Cross-Origin-Resource-Policy`) : un autre site ne les
-    # affiche pas.
+    # Les images : celles de l'API des données (toutes copiées d'avance par sa tâche `images` : une
+    # qui manque est un 404, et le site montre alors la carte de substitution), gardées par nginx
+    # (`proxy_cache`) et par les navigateurs un an, sans redemande (l'API le dit : `immutable`).
+    # Deux demandes d'une même image pas encore gardée n'en font qu'une (`proxy_cache_lock`) ; une
+    # absence (404) n'est pas gardée. 20 par seconde et par visiteur, 1 100 d'un coup : la plus
+    # grande page d'images, le Pokédex (1 025 pochettes, chargées au fil du défilement : une
+    # quarantaine par seconde en le parcourant vite), passe d'un coup. Pour les pages du site
+    # seulement (`Cross-Origin-Resource-Policy`) : un autre site ne les affiche pas.
     location /images/ {
         limit_req zone=images_req burst=1100 nodelay;
         rewrite ^/images/(.*)$ /v1/images/$1 break;

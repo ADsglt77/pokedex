@@ -14,7 +14,7 @@ export function StartPanel() {
           {
             label: 'Choisissez vos cartes',
             description:
-              'Pour chaque Pokémon, la carte japonaise que vous voulez : extension par extension dans le catalogue, ou depuis sa fiche.',
+              'Pour chaque Pokémon, la carte japonaise ou française que vous voulez : extension par extension dans le catalogue, ou depuis sa fiche.',
           },
           {
             label: 'Marquez celles que vous avez',

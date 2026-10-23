@@ -35,7 +35,11 @@ export function createApp({ app, accounts }: AppContext) {
           enabled: process.env.NODE_ENV !== 'production',
           path: '/api/docs',
           documentation: {
-            info: { title: 'Pokédex', version: '1', description: 'L’API du Pokédex japonais.' },
+            info: {
+              title: 'Pokédex',
+              version: '1',
+              description: 'L’API du Pokédex de cartes japonaises et françaises.',
+            },
           },
         }),
       )

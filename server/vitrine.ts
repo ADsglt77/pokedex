@@ -61,7 +61,7 @@ export function vitrineSummary(owner: string, collection: CollectionData) {
   const share = formatShare(progressPercent(unlocked, TOTAL_SPECIES))
   return {
     title: pokedexTitle(owner),
-    description: `${unlockedOf({ unlocked, total: TOTAL_SPECIES }, 'Pokémon')} (${share}) : une carte Pokémon japonaise par Pokémon.`,
+    description: `${unlockedOf({ unlocked, total: TOTAL_SPECIES }, 'Pokémon')} (${share}) : une carte Pokémon japonaise ou française par Pokémon.`,
   }
 }
 
@@ -71,7 +71,8 @@ export function vitrineSummary(owner: string, collection: CollectionData) {
  */
 const SITE_SUMMARY = {
   title: 'PokéCodex',
-  description: 'Un Pokédex de cartes Pokémon japonaises : une carte par Pokémon, à collectionner.',
+  description:
+    'Un Pokédex de cartes Pokémon japonaises et françaises : une carte par Pokémon, à collectionner.',
 }
 
 const escape = (text: string) =>

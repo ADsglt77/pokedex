@@ -41,7 +41,7 @@ export function SignUpPage() {
   return (
     <AuthCard
       title="Créer un compte"
-      description="Votre Pokédex de cartes japonaises&nbsp;: votre collection, vos achats et votre budget, les mêmes sur tous vos appareils (un seul connecté à la fois), et un Pokédex public à partager."
+      description="Votre Pokédex de cartes japonaises et françaises&nbsp;: votre collection, vos achats et votre budget, les mêmes sur tous vos appareils (un seul connecté à la fois), et un Pokédex public à partager."
       submit={{ label: 'Créer mon compte', icon: <UserPlus size={16} /> }}
       onSubmit={submit}
       other={{ to: '/connexion', label: 'Déjà un compte\u202f? Se connecter' }}
