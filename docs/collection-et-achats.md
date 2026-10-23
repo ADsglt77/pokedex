@@ -5,9 +5,9 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
 - Collection : les cartes choisies (`customCards`), un statut par carte (commandée, possédée ;
   sans statut, elle est à débloquer) et le prix payé (`paidPrice`) qui le suit. Son format est
   celui des exports et des documents gardés par le serveur : ne pas le changer. Seuls ses champs connus sont gardés
-  à la lecture (`readCollection` : `schemaVersion`, `updatedAt`, `cards` et `customCards` ; de même
-  `readShopping` pour les achats). La page Valeur montre ce que les commandes ont coûté en tout
-  (« Dépensé en tout »).
+  à la lecture (`readCollection` : `schemaVersion`, `updatedAt`, `cards`, `customCards` et
+  `favorites` ; de même `readShopping` pour les achats). La page Valeur montre ce que les commandes
+  ont coûté en tout (« Dépensé en tout »).
 - Carte favorite : un Pokémon peut avoir plusieurs cartes (`customCards`) ; `favorites`
   (`CollectionData.favorites`, le numéro du Pokémon → l'id de l'une de ses cartes) dit laquelle on
   montre pour lui. Invariant : un Pokémon qui a au moins une carte a exactement une favorite, l'une
@@ -21,7 +21,14 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   sans autre carte, il n'a plus de favorite. Une carte TAG TEAM retirée d'un Pokémon reste la
   favorite des autres. `schemaVersion` reste `1` : un champ ajouté, les documents d'avant se lisent.
   Testé (`tests/cards.test.ts`), « Annuler » compris : ces règles ne modifient pas ce qu'elles
-  reçoivent.
+  reçoivent. À la lecture (`readCollection`, par `completeFavorites`), les favorites sont
+  complétées : un document d'avant les favorites, ou un fichier auquel il en manque, donne à chaque
+  Pokémon sa première carte (celle que le Pokédex montrait) ; celles notées restent. Une carte
+  abîmée (pas un objet à `dexIds` en liste) n'en donne pas et la lecture ne plante jamais : le
+  contrôle la refuse ensuite. Ce contrôle (`documentProblem`, après celui des cartes) refuse une
+  favorite qui n'est pas l'id d'une carte du document portant ce Pokémon (« la carte favorite du
+  Pokémon n° 25 n’est pas une de ses cartes » : une carte d'un autre Pokémon, une carte absente, une
+  clé qui n'est pas un numéro). Testé (`tests/import.test.ts`).
 - Langue d'une carte (`PokemonCard.language`) : `'fr'` pour une carte française ; absente, elle est
   japonaise (`cardLanguage`, `lib/collection.ts`), si bien que les collections et les exports
   d'avant restent japonais, sans migration. Le japonais n'a qu'une écriture, l'absence :
@@ -98,7 +105,8 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   - l'export contient `shopping`. Un import demande toujours confirmation ; un fichier abîmé
     (enregistrement ou bloc d'achats illisible ou absent : image, montant en texte, état de
     commande, date ou jour qui n'existe pas ou d'avant l'an 100, remboursé plus grand que la commande, commande sans id ou en double, carte
-    d'un Pokémon hors du Pokédex ou sans clé `image` (« Modifier la carte » planterait), id Cardmarket
+    d'un Pokémon hors du Pokédex ou sans clé `image` (« Modifier la carte » planterait), favorite qui
+    n'est pas une carte de son Pokémon, id Cardmarket
     que la saisie refuserait (0, négatif, plus de 9 chiffres…), quantité qui n'est pas un entier
     de 1 ou plus, texte qui n'en est pas un, lien…) est refusé (`lib/transfer.ts`), comme par le
     serveur à l'enregistrement, et la règle en cause est dite (« La commande du 5 octobre 2026

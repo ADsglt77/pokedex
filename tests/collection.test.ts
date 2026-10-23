@@ -18,7 +18,7 @@ import type { CollectionDocument, CollectionResponse, CollectionSaved, VitrineDa
 import { createApp } from '../server/app'
 import { createAuth } from '../server/auth'
 import { DATA_DIR, openApp } from '../server/db'
-import { card, collectionWith, order, ownership } from './fixtures'
+import { card, collectionWith, NOW, order, ownership, withCards } from './fixtures'
 
 // Les bases dans le dossier temporaire de `setup.ts`, jamais `.data` : sans lui (`bun test` lancé
 // hors du projet), `DATA_DIR` reviendrait à `.data`, et rien n'est ouvert.
@@ -94,13 +94,11 @@ async function stored() {
  * choisie, pas encore achetée.
  */
 const first: CollectionDocument = {
-  collection: {
-    ...collectionWith({ a: ownership('owned', { paidPrice: 30 }) }),
-    customCards: {
-      a: card('a', [25], { cardmarket: 719445 }),
-      b: card('b', [4], { cardmarket: 719621 }),
-    },
-  },
+  collection: withCards(
+    collectionWith({ a: ownership('owned', { paidPrice: 30 }) }),
+    card('a', [25], { cardmarket: 719445 }),
+    card('b', [4], { cardmarket: 719621 }),
+  ),
   shopping: emptyShopping(),
 }
 
@@ -443,6 +441,22 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
     expect(shown.owner).toBe('Sacha')
     expect(Object.keys(shown.collection.customCards).sort()).toEqual(['a', 'b'])
     expect(Object.keys(shown.collection.cards)).toEqual(['a'])
+  })
+
+  test('un Pokédex enregistré avant les favorites est montré avec la première carte de chaque Pokémon', async () => {
+    // Un document d'avant cette livraison, écrit directement : il n'a pas de clé `favorites`.
+    const old = await createAccount('Ancien')
+    const document = JSON.stringify({
+      ...withCards(collectionWith({ a: ownership('owned') }), card('a', [25])),
+      favorites: undefined,
+    })
+    expect(document).not.toContain('favorites')
+    app
+      .query(
+        'INSERT INTO collections (user_id, version, collection, shopping, updated_at) VALUES (?, 1, ?, ?, ?)',
+      )
+      .run(old.user!.id, document, JSON.stringify(emptyShopping()), NOW)
+    expect((await visit('ancien')).collection.favorites).toEqual({ 25: 'a' })
   })
 
   test('les prix du jour des seules cartes possédées, demandés à l’API des données avec le token', async () => {

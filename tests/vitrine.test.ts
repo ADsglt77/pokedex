@@ -1,11 +1,12 @@
 /**
  * Ce que montre le Pokédex public (`server/vitrine.ts`) : ce qu'il laisserait passer serait public.
- * Jamais un prix payé, une page Cardmarket notée, ni ce qui dit un achat (« commandée »).
+ * Jamais un prix payé, une page Cardmarket notée, ni ce qui dit un achat (« commandée ») ; la
+ * favorite de chaque Pokémon, elle, est montrée.
  */
 
 import { describe, expect, test } from 'bun:test'
 import { shownCollection, vitrineSummary } from '../server/vitrine'
-import { card, collectionWith, ownership } from './fixtures'
+import { card, collectionWith, ownership, withCards } from './fixtures'
 
 describe('shownCollection', () => {
   const collection = {
@@ -48,6 +49,22 @@ describe('shownCollection', () => {
     // Une japonaise ne gagne pas de champ : l'absence reste son seul écrit.
     expect(b).toStrictEqual(card('b', [1]))
     expect(b).not.toHaveProperty('language')
+  })
+
+  test('les favorites restent : le Pokédex public montre la favorite de chaque Pokémon', () => {
+    // `b` est la deuxième carte du 25, notée favorite ; `c` est la seule du 7.
+    const several = withCards(
+      collectionWith({ a: ownership('owned') }),
+      card('a', [25]),
+      card('b', [25, 4]),
+      card('c', [7]),
+    )
+    const favorites = { 25: 'b', 4: 'b', 7: 'c' }
+    const noted = shownCollection({ ...several, favorites })
+    expect(noted.favorites).toEqual(favorites)
+    // Une copie : la collection du compte ne bouge pas avec elle.
+    expect(noted.favorites).not.toBe(favorites)
+    expect(shownCollection(several).favorites).toEqual({ 25: 'a', 4: 'b', 7: 'c' })
   })
 
   test('l’image : ses deux adresses seulement, rien de ce qu’un fichier y aurait glissé', () => {

@@ -7,6 +7,7 @@
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
+import { completeFavorites } from '@/lib/collection'
 import { formatDate, parseLink } from '@/lib/format'
 import { refundFits } from '@/lib/orders'
 import type {
@@ -15,6 +16,7 @@ import type {
   CollectionDocument,
   CollectionExportFile,
   Order,
+  PokemonCard,
   ShoppingData,
 } from '@/types'
 
@@ -46,16 +48,25 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 /**
  * Une collection, telle qu'enregistrée ; `null` si ce n'en est pas une (mauvais fichier). Seuls
- * ses champs connus sont gardés. Une relecture de sa forme seulement : ses statuts et ses cartes ne
- * sont contrôlés qu'à l'import et par le serveur (`documentProblem`).
+ * ses champs connus sont gardés. Une relecture de sa forme seulement : ses statuts, ses cartes et
+ * ses favorites ne sont contrôlés qu'à l'import et par le serveur (`documentProblem`). Les
+ * favorites sont complétées : un document d'avant les favorites (ou un fichier auquel il en manque)
+ * donne à chaque Pokémon sa première carte, celle que le Pokédex montrait ; celles notées restent.
+ * Une carte abîmée (pas un objet à `dexIds` en liste) n'en donne pas : `documentProblem` la refuse,
+ * la lecture ne plante jamais.
  */
 export function readCollection(value: unknown): CollectionData | null {
   if (!isRecord(value) || !isRecord(value.cards) || !isRecord(value.customCards)) return null
+  const cards = Object.values(value.customCards).filter(
+    (card): card is PokemonCard => isRecord(card) && Array.isArray(card.dexIds),
+  )
+  const favorites = (isRecord(value.favorites) ? value.favorites : {}) as Record<number, string>
   return {
     schemaVersion: 1,
     updatedAt: value.updatedAt ?? null,
     cards: value.cards,
     customCards: value.customCards,
+    favorites: completeFavorites(favorites, cards),
   } as CollectionData
 }
 
@@ -167,6 +178,15 @@ const isUpdatedAt = (value: unknown) => value == null || isText(value)
 const firstBad = (values: object, ok: (value: Record<string, unknown>, key: string) => boolean) =>
   Object.entries(values).find(([key, value]) => !(isRecord(value) && ok(value, key)))
 
+/**
+ * Une favorite : l'id d'une carte du document (`id`, texte, propre à `customCards`) qui porte le
+ * Pokémon `key` (son numéro, écrit comme l'app l'écrit : « 025 » n'est pas le 25).
+ */
+const isFavorite = (customCards: Record<string, PokemonCard>, key: string, id: unknown) =>
+  typeof id === 'string' &&
+  Object.hasOwn(customCards, id) &&
+  customCards[id]!.dexIds.map(String).includes(key)
+
 /** Une carte, pour l'utilisateur : sa référence, sinon son id. */
 const cardName = (card: unknown, key: string) =>
   isRecord(card) && isText(card.reference) && card.reference !== '' ? card.reference : key
@@ -192,6 +212,11 @@ export function documentProblem({ collection, shopping }: CollectionDocument): s
   if (ownership) return `le statut de la carte ${ownership[0]} est abîmé`
   const card = firstBad(collection.customCards, isCard)
   if (card) return `la carte « ${cardName(card[1], card[0])} » est abîmée`
+  // Après les cartes : `isFavorite` lit leur `dexIds`, qu'elles passent.
+  const favorite = Object.entries(collection.favorites).find(
+    ([key, id]) => !isFavorite(collection.customCards, key, id),
+  )
+  if (favorite) return `la carte favorite du Pokémon n° ${favorite[0]} n’est pas une de ses cartes`
   if (!isUpdatedAt(shopping.updatedAt)) return 'la date des achats est illisible'
   const order = firstBad(shopping.orders, isOrder)
   if (order) return `la commande ${orderName(order[1])} est abîmée`

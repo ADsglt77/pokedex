@@ -3,10 +3,12 @@
  * - `GET /api/vitrine/<pseudo>`, sans session (le pseudo sans tenir compte des majuscules ; 404
  *   s'il n'est à personne) : `{ owner, collection, prices }` (`VitrineData`), le pseudo du compte
  *   et sa collection, réduite à ce qui se montre : ses cartes (référence, image, langue, id
- *   Cardmarket pour la valeur au prix du jour ; pas leur page) et, pour celles possédées, la date
- *   d'obtention (pas le prix payé). Rien des achats : ni commandes, ni budget, ni statut
- *   « commandée ». Une collection vide tant qu'aucun appareil n'a rien envoyé. Avec elle, les prix
- *   du jour de ses seules cartes possédées, demandés à l'API des données (`dataPrices`), dans la
+ *   Cardmarket pour la valeur au prix du jour ; pas leur page), la carte favorite de chaque
+ *   Pokémon (`favorites`) et, pour celles possédées, la date d'obtention (pas le prix payé). Rien
+ *   des achats : ni commandes, ni budget, ni statut « commandée ». Une collection vide tant
+ *   qu'aucun appareil n'a rien envoyé ; un document enregistré avant les favorites est relu comme
+ *   un fichier (`readCollection`) : chaque Pokémon y a sa première carte. Avec elle, les prix du
+ *   jour de ses seules cartes possédées, demandés à l'API des données (`dataPrices`), dans la
  *   forme de `/api/prices` (`null` sans guide des prix, ou l'API muette : la page s'affiche sans
  *   valeur) : la page n'en montre que la valeur, sans charger ceux de toutes les cartes.
  * - `GET /api/vitrine/<pseudo>/apercu` : la page que lisent les robots d'aperçu (Discord,
@@ -25,6 +27,7 @@ import { emptyCollection } from '@/lib/collection'
 import { formatShare, pokedexTitle, unlockedOf } from '@/lib/format'
 import { progressPercent, unlockEvents } from '@/lib/pokedex'
 import { HOUR, MINUTE } from '@/lib/time'
+import { readCollection } from '@/lib/transfer'
 import type { CardOwnership, CollectionData, PokemonCard, PriceFile, VitrineData } from '@/types'
 import { journalOnce, reasonOf, visitorOf } from './journal'
 
@@ -52,7 +55,14 @@ export function shownCollection(collection: CollectionData): CollectionData {
   for (const [id, { status, updatedAt, acquiredAt }] of Object.entries(collection.cards)) {
     if (status === 'owned') cards[id] = { status, updatedAt, acquiredAt }
   }
-  return { ...emptyCollection(), updatedAt: collection.updatedAt, cards, customCards }
+  // Des ids de cartes, rangés par Pokémon (le serveur refuse le reste) : chaque entrée est recopiée.
+  return {
+    ...emptyCollection(),
+    updatedAt: collection.updatedAt,
+    cards,
+    customCards,
+    favorites: { ...collection.favorites },
+  }
 }
 
 /** Le titre et la phrase de l'aperçu d'un lien partagé : le pseudo, la progression (testé). */
@@ -164,7 +174,9 @@ export function vitrineRoutes(app: Database, origin: string) {
     isPseudo(pseudo) ? (readOwner.get(pseudo.toLowerCase()) as Owner | null) : null
   const shown = (owner: Owner) => {
     const row = readShown.get(owner.id) as { collection: string } | null
-    return row ? shownCollection(JSON.parse(row.collection) as CollectionData) : emptyCollection()
+    // Relue comme celle d'un fichier : un document enregistré avant les favorites n'en a pas, et
+    // chaque Pokémon y reçoit sa première carte, celle que le Pokédex public montrait.
+    return row ? shownCollection(readCollection(JSON.parse(row.collection))!) : emptyCollection()
   }
 
   return new Elysia({ name: 'vitrine' })
