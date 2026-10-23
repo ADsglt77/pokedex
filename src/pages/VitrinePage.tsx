@@ -7,6 +7,8 @@ import { Panel } from '@/components/Panel'
 import { PokedexGrid } from '@/components/PokedexGrid'
 import { ProgressRuler } from '@/components/ProgressRuler'
 import { RegionList } from '@/components/RegionList'
+import { SeriesGrid } from '@/components/SeriesGrid'
+import { SeriesLine } from '@/components/SeriesLine'
 import { StandalonePage } from '@/components/StandalonePage'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { Unavailable } from '@/components/Unavailable'
@@ -15,6 +17,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { isPseudo } from '@/lib/account'
 import { getJson, requestFailed } from '@/lib/api'
 import type { ChartPeriod } from '@/lib/chart'
+import { cardLanguage } from '@/lib/collection'
 import { cx } from '@/lib/cx'
 import {
   formatDate,
@@ -27,18 +30,20 @@ import {
 } from '@/lib/format'
 import { buildPokedex, unlockEvents, type PokedexEntry } from '@/lib/pokedex'
 import { tallyByStatus, trackedCards } from '@/lib/prices'
+import { seriesProgress } from '@/lib/series'
 import { useAccountStore } from '@/store/account'
-import type { VitrineData } from '@/types'
+import type { CollectionData, PriceFile, SeriesCollection, VitrineData } from '@/types'
 import styles from './VitrinePage.module.css'
 import { useStatSize } from '@/hooks/useStatSize'
 
 /**
  * `/pseudo` : le Pokédex public d'un compte, toujours montré ; en lecture seule, hors de la
- * coquille : la progression, la valeur au prix du jour, la courbe des Pokémon débloqués et le
- * classeur, d'après ce que le serveur montre (`server/vitrine.ts`). En tête, « Se connecter » et
- * « Créer un compte », ou, connecté, « Mon Pokédex ». Toute adresse d'un seul segment qui n'est pas
- * une page du site y mène : un pseudo inconnu, ou ce qui n'en est pas un (`/achat`), est une page
- * introuvable. Pas proposé aux moteurs de recherche.
+ * coquille : la progression, la valeur au prix du jour, la courbe des Pokémon débloqués, le
+ * classeur, puis les collections d'extensions (leur progression, leur valeur et toutes leurs
+ * cartes, `SeriesGrid`), d'après ce que le serveur montre (`server/vitrine.ts`). En tête, « Se
+ * connecter » et « Créer un compte », ou, connecté, « Mon Pokédex ». Toute adresse d'un seul
+ * segment qui n'est pas une page du site y mène : un pseudo inconnu, ou ce qui n'en est pas un
+ * (`/achat`), est une page introuvable. Pas proposé aux moteurs de recherche.
  */
 export function VitrinePage() {
   const signedIn = useAccountStore((state) => state.account !== null)
@@ -183,6 +188,13 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
           <p className="muted">
             Une carte par Pokémon&nbsp;: {unlockedOf(progress, 'Pokémon')}.
             {updated && ` Mis à jour le ${updated}.`}
+            {collection.series.length > 0 && (
+              // Le classeur compte plus de 1 000 pochettes : les collections sont loin sous lui.
+              <>
+                {' '}
+                <a href="#collections">Voir ses collections</a>.
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -273,6 +285,50 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
           />
         )}
       </section>
+
+      {collection.series.length > 0 && (
+        <section className={styles.binder} aria-labelledby="collections">
+          <h2 id="collections">Collections</h2>
+          <div className={styles.collections}>
+            {collection.series.map((series) => (
+              <VitrineSeries
+                key={`${cardLanguage(series)} ${series.set}`}
+                collection={collection}
+                series={series}
+                prices={prices}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Une collection d'extension : sa ligne (`SeriesLine`, son nom pour titre), ses cartes possédées
+ * et leur valeur au prix du jour (« — » sans prix), puis toutes ses cartes en lecture seule. Jamais
+ * ce qu'il faudrait pour la compléter : le Pokédex public ne dit rien des achats.
+ */
+function VitrineSeries({
+  collection,
+  series,
+  prices,
+}: {
+  collection: CollectionData
+  series: SeriesCollection
+  prices: PriceFile | null
+}) {
+  const { owned, total, value } = seriesProgress(collection, series, prices)
+  return (
+    <div className={styles.series}>
+      <SeriesLine series={series} owned={owned} total={total} heading>
+        <span>
+          <span className="muted">Valeur </span>
+          <span className="numeric">{prices ? formatEuro(value) : '—'}</span>
+        </span>
+      </SeriesLine>
+      <SeriesGrid collection={collection} series={series} linked={false} />
     </div>
   )
 }

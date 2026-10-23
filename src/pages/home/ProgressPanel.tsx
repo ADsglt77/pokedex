@@ -1,11 +1,17 @@
 import { RadialProgress } from '@camply/ui'
+import { Link } from 'react-router'
 import { Panel } from '@/components/Panel'
 import { ProgressRuler } from '@/components/ProgressRuler'
+import { SeriesLine } from '@/components/SeriesLine'
 import { usePokedex } from '@/hooks/usePokedex'
+import { cardLanguage } from '@/lib/collection'
 import { cx } from '@/lib/cx'
+import { seriesPath } from '@/lib/filters'
 import { formatInteger, plural, unlockedOf } from '@/lib/format'
 import { summarize, type Progress } from '@/lib/pokedex'
+import { seriesProgress } from '@/lib/series'
 import { useCollectionStore } from '@/store/collection'
+import type { CollectionData, SeriesCollection } from '@/types'
 import styles from './ProgressPanel.module.css'
 
 function progressSentence(progress: Progress) {
@@ -26,7 +32,10 @@ function progressSentence(progress: Progress) {
   ]
 }
 
-/** La progression : l'anneau, la phrase et la réglette compacte des générations. */
+/**
+ * La progression : l'anneau, la phrase et la réglette compacte des générations ; dessous, celle de
+ * chaque collection d'extension (rien sans collection).
+ */
 export function ProgressPanel() {
   const { progress, generations } = usePokedex()
   const collection = useCollectionStore((state) => state.collection)
@@ -60,6 +69,34 @@ export function ProgressPanel() {
       <div className={styles.ruler}>
         <ProgressRuler generations={generations} />
       </div>
+      {collection.series.length > 0 && (
+        <div className={styles.collections}>
+          <h3 className={styles.collectionsTitle}>Collections</h3>
+          <ul>
+            {collection.series.map((series) => (
+              <li key={`${cardLanguage(series)} ${series.set}`}>
+                <SeriesLink collection={collection} series={series} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </Panel>
+  )
+}
+
+/** Une collection : sa ligne (`SeriesLine`), lien vers sa page. Les prix ne comptent pas ici. */
+function SeriesLink({
+  collection,
+  series,
+}: {
+  collection: CollectionData
+  series: SeriesCollection
+}) {
+  const { owned, total } = seriesProgress(collection, series, null)
+  return (
+    <Link to={seriesPath(series.set, cardLanguage(series))} className={styles.collection}>
+      <SeriesLine series={series} owned={owned} total={total} />
+    </Link>
   )
 }

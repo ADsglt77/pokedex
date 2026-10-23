@@ -3,8 +3,9 @@
 Pokédex personnel de cartes Pokémon **japonaises et françaises** : pour chacun des 1 025 Pokémon,
 les cartes que l'utilisateur choisit, dont une favorite que montre le Pokédex (catalogue ou saisie :
 référence → image, id Cardmarket → prix). Un Pokémon est « débloqué » dès qu'une de ses cartes est
-possédée. Comptes pseudo + mot de passe, sans e-mail ; sans connexion : la connexion et le Pokédex
-public de chaque compte (`/pseudo`).
+possédée. S'y ajoutent des **collections d'extensions** entières, une case par carte
+(`lib/series.ts`). Comptes pseudo + mot de passe, sans e-mail ; sans connexion : la connexion et le
+Pokédex public de chaque compte (`/pseudo`).
 
 - **Site** (ce dépôt) : React 19, Vite, TS, `@camply/ui`, zustand, react-router ; `server/` (Bun,
   Elysia, Better Auth, SQLite `app.db`) garde comptes et collection. **Rien dans le navigateur**

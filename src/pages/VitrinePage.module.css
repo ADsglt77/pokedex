@@ -72,3 +72,17 @@
   justify-content: space-between;
   gap: var(--camply-space-3);
 }
+
+/* Les collections d'extensions : l'une sous l'autre, plus espacées que les blocs d'une collection
+   (sa ligne, puis ses cartes). */
+.collections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-block);
+}
+
+.series {
+  display: flex;
+  flex-direction: column;
+  gap: var(--camply-space-4);
+}

@@ -93,7 +93,12 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   indexée (`noindex` dans la page, et l'en-tête `X-Robots-Tag` de nginx) : la progression, les régions (la réglette n'y est qu'une image, `linked`
   faux, et pas un lien vers le Pokédex, qui demande d'être connecté ; sur téléphone, leur liste),
   la valeur au prix du jour, la courbe des Pokémon débloqués et le classeur (débloqués en couleur,
-  cartes choisies grisées ; les pochettes ne mènent pas aux fiches, celles du visiteur). Le serveur
+  cartes choisies grisées ; les pochettes ne mènent pas aux fiches, celles du visiteur), puis ses
+  collections d'extensions s'il en a (`series` ; « Voir ses collections » sous le titre y mène) :
+  pour chacune, son nom et le drapeau de sa langue, ses cartes possédées sur toutes, leur valeur au
+  prix du jour (« — » sans prix, `seriesProgress` sur les prix reçus) et toutes ses cartes en
+  lecture seule (`SeriesGrid`, `linked` faux : possédées en couleur, les autres grisées, « à
+  débloquer » pour le lecteur d'écran), jamais ce qu'il faudrait pour la compléter. Le serveur
   ne montre que les cartes (avec leur langue, sans leur page notée), la carte favorite de chaque
   Pokémon (`favorites`, celle qu'on montre pour lui), les collections d'extensions (`series` :
   l'extension, sa langue, son nom, son jour de début et ses cases, recopiés un à un ; leurs cases

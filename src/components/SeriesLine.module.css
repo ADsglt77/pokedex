@@ -1,0 +1,32 @@
+/* Une collection en une ligne : son nom à gauche, ses chiffres à droite, la barre sur toute la
+   largeur. */
+.line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--camply-space-1) var(--camply-space-4);
+}
+
+.name {
+  min-width: 0;
+  color: var(--camply-text-strong);
+  font-weight: 600;
+}
+
+/* Un titre (le Pokédex public) : la taille des intertitres, pas celle d'un texte. */
+h3.name {
+  font-size: var(--title-sm);
+}
+
+.figures {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0 var(--camply-space-3);
+  font-size: var(--text-md);
+}
+
+.bar {
+  grid-column: 1 / -1;
+  margin-top: var(--camply-space-1);
+}

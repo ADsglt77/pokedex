@@ -17,8 +17,9 @@ bun test         # tests de ce qui coûterait de l'argent (chaque fichier de tes
 bun run format   # Prettier
 ```
 
-- **Accueil** : un tableau de bord (progression, « À faire », valeur, budget du mois, liste
-  d'achats, commandes, dernières cartes) ; trois étapes pour commencer quand la collection est vide.
+- **Accueil** : un tableau de bord (progression, avec celle de chaque collection d'extension,
+  « À faire », valeur, budget du mois, liste d'achats, commandes, dernières cartes) ; trois étapes
+  pour commencer quand la collection est vide.
 - **Recherche** (Ctrl/⌘ K, ou le bouton de la barre) : un Pokémon par son nom ou son numéro, une
   page, une action.
 - **Collections** : le Pokédex en première tuile, puis une tuile par extension que vous
@@ -61,8 +62,9 @@ bun run format   # Prettier
   (pas de mot de passe oublié) ; le pseudo, le mot de passe et la suppression du compte dans
   Réglages › Compte & partage › Mon compte.
 - **Pokédex public** : celui de chaque compte, à son adresse (`/pseudo`, toujours public), en
-  lecture seule : progression, régions, valeur au prix du jour, courbe et classeur. Jamais les prix
-  payés, les commandes ni le budget. Le reste du site demande d'être connecté.
+  lecture seule : progression, régions, valeur au prix du jour, courbe, classeur, puis ses
+  collections d'extensions. Jamais les prix payés, les commandes ni le budget. Le reste du site
+  demande d'être connecté.
 - **Thème** : sombre (gris foncé et jaune) ou clair (blanc pastel et rouge), au bouton de la
   barre ; sans choix, celui du système.
 - **Réglages** : trois groupes — compte et Pokédex public, sauvegarde (contenu, export et import,

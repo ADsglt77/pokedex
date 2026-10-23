@@ -79,8 +79,10 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   « poké »). L'accueil est un
   tableau de bord (dès qu'il y a une carte ou une commande) : un seul appel principal vers le
   Pokédex, progression (anneau, réglette compacte des
-  régions), « À faire » (commandes en retard ; Pokémon sans carte, comptés en Pokémon ; cartes
-  à compléter, sans image, sans id Cardmarket, possédées sans prix payé, comptées en cartes
+  régions ; dessous, une ligne par collection d'extension, rien sans collection : son nom et le
+  drapeau de sa langue, « 87 / 230 » et la barre, tout entière un lien vers sa page ; `SeriesLine`,
+  `components/`, que reprend le Pokédex public), « À faire » (commandes en retard ; Pokémon sans
+  carte, comptés en Pokémon ; cartes à compléter, sans image, sans id Cardmarket, possédées sans prix payé, comptées en cartes
   distinctes parmi toutes celles du Pokédex, pas seulement les favorites, une TAG TEAM une fois ;
   chacune vers sa liste filtrée : `shoppingUrl`, `pokedexUrl`, qui montre les Pokémon qui ont au
   moins une de ces cartes), indicateurs
@@ -123,7 +125,12 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   « Annuler » (« Collection Méga Rêve ex supprimée. »). Une collection inconnue (une autre
   extension, ou une autre langue) : la page introuvable. Une collection qui disparaît sous sa page
   (supprimée, son début annulé par « Annuler », supprimée sur un autre appareil) ramène aux
-  Collections (`Navigate`, qui remplace l'adresse). Le Pokédex : recherche, filtres rapides de
+  Collections (`Navigate`, qui remplace l'adresse). Le Pokédex public montre, sous son classeur, une
+  section « Collections » (`VitrinePage`) : pour chacune sa ligne (`SeriesLine`, son nom pour titre,
+  ses cartes possédées sur toutes, leur valeur au prix du jour, « — » sans prix), puis toutes ses
+  cartes (`SeriesGrid`, `linked` faux) ; jamais le coût pour la compléter, un prix payé ni une
+  commande. Le classeur comptant plus de 1 000 pochettes, « Voir ses collections » sous le titre y
+  mène (une ancre, `#collections`). Le Pokédex : recherche, filtres rapides de
   possession avec leur nombre (les autres filtres appliqués), les autres filtres dans un panneau
   (génération, type, carte), chacun rappelé en étiquette retirable ; quand tout ne tient pas sur
   une ligne, les filtres rapides passent dessous (sur téléphone, ils défilent de côté). Achats :

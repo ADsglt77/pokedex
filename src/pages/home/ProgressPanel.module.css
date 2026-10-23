@@ -8,7 +8,8 @@
   padding-bottom: var(--camply-space-2);
 }
 
-/* La réglette des générations au bas du panneau, quand il s'étire à la hauteur de « À faire ». */
+/* La réglette des générations, puis les collections, au bas du panneau, quand il s'étire à la
+   hauteur de « À faire ». */
 .ruler {
   margin-top: auto;
 }
@@ -39,4 +40,32 @@
   font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
   font-weight: 600;
   line-height: 1.25;
+}
+
+/* Les collections d'extensions, sous la réglette : un titre, puis une ligne chacune. */
+.collections {
+  display: grid;
+  gap: var(--camply-space-2);
+  padding-top: var(--camply-space-4);
+  border-top: 1px solid var(--camply-border-soft);
+}
+
+.collectionsTitle {
+  font-size: var(--text-md);
+}
+
+/* Toute la ligne est le lien ; son fond au survol déborde du texte, qui reste aligné sur le
+   panneau. */
+.collection {
+  display: block;
+  margin-inline: calc(var(--camply-space-3) * -1);
+  padding: var(--camply-space-2) var(--camply-space-3);
+  border-radius: var(--camply-radius);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color var(--duration-fast);
+}
+
+.collection:hover {
+  background: var(--camply-fill-2);
 }
