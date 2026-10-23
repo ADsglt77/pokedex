@@ -1,9 +1,10 @@
 # CLAUDE.md
 
 Pokédex personnel de cartes Pokémon **japonaises et françaises** : pour chacun des 1 025 Pokémon,
-la carte que l'utilisateur choisit (catalogue ou saisie : référence → image, id Cardmarket →
-prix). Un Pokémon est « débloqué » quand sa carte est possédée. Comptes pseudo + mot de passe, sans
-e-mail ; sans connexion : la connexion et le Pokédex public de chaque compte (`/pseudo`).
+les cartes que l'utilisateur choisit, dont une favorite que montre le Pokédex (catalogue ou saisie :
+référence → image, id Cardmarket → prix). Un Pokémon est « débloqué » dès qu'une de ses cartes est
+possédée. Comptes pseudo + mot de passe, sans e-mail ; sans connexion : la connexion et le Pokédex
+public de chaque compte (`/pseudo`).
 
 - **Site** (ce dépôt) : React 19, Vite, TS, `@camply/ui`, zustand, react-router ; `server/` (Bun,
   Elysia, Better Auth, SQLite `app.db`) garde comptes et collection. **Rien dans le navigateur**
@@ -41,7 +42,7 @@ Quand un type partagé avec l'API change : `bun run contracts` (exige `../pokede
   colle lui-même ; pas de CSV.
 - **UI** : `@camply/ui` d'abord (skill `camply-ui`) ; couleurs seulement dans `styles/theme.css`.
 - Pas d'image téléversée (on colle une adresse), pas de fusion à l'import.
-- Textes en français, vouvoiement ; sans sa carte possédée, un Pokémon est « à débloquer ».
+- Textes en français, vouvoiement ; sans carte possédée, un Pokémon est « à débloquer ».
 
 ## Structure
 

@@ -3,7 +3,7 @@
 La collection (statuts, prix payés), la liste d'achats, les commandes et le budget : un document par compte, gardé par le serveur (`docs/compte-et-synchronisation.md`). Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
 - Collection : les cartes choisies (`customCards`), un statut par carte (commandée, possédée ;
-  sans statut, elle est à débloquer) et le prix payé (`paidPrice`) qui le suit. Son format est
+  sans statut, elle est à acheter) et le prix payé (`paidPrice`) qui le suit. Son format est
   celui des exports et des documents gardés par le serveur : ne pas le changer. Seuls ses champs connus sont gardés
   à la lecture (`readCollection` : `schemaVersion`, `updatedAt`, `cards`, `customCards` et
   `favorites` ; de même `readShopping` pour les achats). La page Valeur montre ce que les commandes

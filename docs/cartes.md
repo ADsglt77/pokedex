@@ -1,6 +1,6 @@
 # Cartes, catalogue et images
 
-La carte de chaque Pokémon, le catalogue des cartes japonaises et françaises (Pokécardex, par l'API des données) et leurs images. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
+Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises (Pokécardex, par l'API des données) et leurs images. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
 - Source : **Pokécardex** seul. Son accord : lire son site, utiliser ses images **hébergées chez
   nous** (`isSourceImage`), reprendre son historique des prix ; aucun crédit demandé, l'app n'en
@@ -35,7 +35,7 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises et françaises (
   Pokémon l'en détache seulement (`removeCard` : elle reste aux autres, avec son statut, son prix
   payé ; possible même dans une commande) ; du dernier, elle part. La fiche dit « aussi
   celle de … ».
-  Choisir la carte d'un Pokémon dit déjà qu'on la veut : tant qu'elle n'est ni commandée ni
+  Ajouter une carte à un Pokémon dit déjà qu'on la veut : tant qu'elle n'est ni commandée ni
   possédée, elle est dans la liste d'achats (`docs/collection-et-achats.md`).
 - Catalogue (de l'API des données : sa lecture de Pokécardex, ses gardes et ses tables sont dans
   sa page `docs/donnees.md` ; côté site, `lib/card-catalog.ts`) : les cartes japonaises, Pokémon,
@@ -124,17 +124,21 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises et françaises (
   l'illustrateur, ses versions, ses noms anglais et allemand, sa sortie (au Japon, ou en France), où
   elle en est dans la collection, et son prix Cardmarket avec sa courbe (`PricePanel`, comme la
   fiche d'un Pokémon) ; des flèches passent aux cartes voisines de la grille, dans l'ordre affiché.
-  Une carte Pokémon a un seul bouton, « Ajouter à la collection » : elle devient la carte de tous
-  ses Pokémon (une seule pour une TAG TEAM), toujours à acheter (décision de l'utilisateur,
-  octobre 2026) ; une carte française s'ajoute avec `language: 'fr'`, comme son `PricePanel` la
-  reçoit (`languageField`, `lib/card-catalog.ts` : une seule source pour la langue d'une carte du
-  catalogue). Si
-  l'un d'eux a déjà la sienne, elle la remplace après confirmation : l'ancienne part avec son statut
-  et son prix payé (une carte TAG TEAM reste celle de ses autres Pokémon : `removeCard`) ; pas si
-  une commande la retient et qu'elle quitterait tous ses Pokémon (le bouton est désactivé, la fiche
-  dit pourquoi : le registre tiendrait mal). Déjà la leur (de la même langue, avec le même code dans la
-  référence ou le même id Cardmarket : `isCatalogCard`) : « Dans votre collection », qui reçoit le focus après l'ajout.
-  Annoncé avec « Annuler ». Les dresseurs, les énergies et les cartes dont Pokécardex ne donne pas
+  Une carte Pokémon a un seul bouton, « Ajouter à la collection » : elle s'ajoute à tous ses
+  Pokémon (une seule pour une TAG TEAM), toujours à acheter (décision de l'utilisateur, octobre
+  2026), **sans rien remplacer** : les cartes qu'ils ont déjà restent, leur favorite aussi ; un
+  Pokémon qui n'en a pas la reçoit pour favorite (`addCard`). Pas de confirmation, et aucune
+  commande ne la retient. Une carte française s'ajoute avec `language: 'fr'`, comme son
+  `PricePanel` la reçoit (`languageField`, `lib/card-catalog.ts` : une seule source pour la
+  langue d'une carte du catalogue). La fiche dit où elle en est (`useCollectionPlace` : `mine`,
+  la carte de la collection qui est celle-ci, parmi toutes celles de ses Pokémon ; `holders`,
+  ceux qui ont déjà des cartes) : « Pikachu a déjà des cartes : celle-ci s'y ajoute, à acheter,
+  sans changer leur favorite. » Déjà dans la collection (de la même langue, avec le même code dans
+  la référence ou le même id Cardmarket : `isCatalogCard`, pour n'importe lequel de ses Pokémon) :
+  « Dans votre collection », qui reçoit le focus après l'ajout, et le bouton disparaît : une carte
+  du catalogue n'est jamais ajoutée deux fois (une TAG TEAM qu'un seul de ses Pokémon a se donne
+  aux autres depuis leur fiche). Annoncé avec « Annuler » : « Carte … ajoutée à Pikachu, à acheter. »
+  Les dresseurs, les énergies et les cartes dont Pokécardex ne donne pas
   les Pokémon (« Togepi, Mélo et Toudoudou-GX ») n'ont pas de bouton. Filtres de rareté et de type
   (`CardFilters`, demandés par l'utilisateur, octobre 2026) : des pastilles à icône, chacune avec le
   nombre de cartes qu'elle montrerait parmi celles que gardent l'autre filtre et la recherche ;

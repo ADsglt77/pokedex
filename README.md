@@ -35,12 +35,12 @@ bun run format   # Prettier
   interrupteur 🇯🇵 / 🇫🇷, dans l'adresse), Pokémon, dresseurs et énergies, extension par extension
   (choisie sur son logo), en tuiles serrées, avec une recherche et des filtres de rareté et de
   type ; chaque carte a sa fiche (image en grand, numéro, rareté, type, Pokémon, illustrateur, versions, noms anglais et allemand, prix Cardmarket et sa
-  courbe) et, pour une carte Pokémon, « Ajouter à la collection » (à acheter ; si le Pokémon a
-  déjà sa carte, elle la remplace après confirmation).
+  courbe) et, pour une carte Pokémon, « Ajouter à la collection » (à acheter, sans remplacer les
+  cartes que le Pokémon a déjà, ni changer sa favorite).
 - **Valeur** : prix Cardmarket du jour, valeur de la collection (et gain par rapport au prix
   payé), commandes, dépensé en tout, coût pour compléter le Pokédex ; courbes jour par jour (valeur,
   Pokémon débloqués, dépenses) sur 7 jours, 30 jours, 1 an ou tout, avec leurs chiffres.
-- **Achats** : liste d'achats (la carte de chaque Pokémon, ni possédée ni commandée),
+- **Achats** : liste d'achats (toutes les cartes voulues, ni possédées ni commandées),
   assistant « prochaine commande » dans un budget (100 € par mois, 150 € au plus, réglables),
   et « Copier pour Cardmarket » : ses cartes en lignes à coller dans votre liste de souhaits
   Cardmarket (« Ajouter une deck list »), en deux blocs, japonaises et françaises, chacune dans sa version exacte, avant son Shopping
