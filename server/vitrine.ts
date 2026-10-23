@@ -11,8 +11,8 @@
  *   enregistré avant les favorites est relu comme un fichier (`readCollection`) : chaque Pokémon y
  *   a sa première carte. Avec elle, les prix du jour de ses seules cartes possédées, demandés à
  *   l'API des données (`dataPrices`), dans la forme de `/api/prices` (`null` sans guide des prix,
- *   ou l'API muette : la page s'affiche sans valeur) : la page n'en montre que la valeur, sans
- *   charger ceux de toutes les cartes.
+ *   l'API muette, ou plus de 5 000 cartes possédées : la page s'affiche sans valeur) : la page n'en
+ *   montre que la valeur, sans charger ceux de toutes les cartes.
  * - `GET /api/vitrine/<pseudo>/apercu` : la page que lisent les robots d'aperçu (Discord,
  *   WhatsApp…) quand on partage le lien : « Le Pokédex de … » et sa progression (ils ne lancent pas
  *   le JavaScript de l'app). nginx les y envoie pour toute adresse d'un seul segment
@@ -119,16 +119,30 @@ const journalVisit = (entry: Parameters<typeof journalOnce>[1], request: Request
   )
 
 /**
+ * Les paquets de prix qu'une visite demande au plus (5 000 cartes possédées) : la page est publique,
+ * sans session, et un document de quelques Mo ne doit pas lancer des dizaines de demandes à l'API
+ * des données à chaque visite.
+ */
+const MAX_PRICE_BATCHES = 5
+
+/**
  * Les prix du jour des cartes `ids`, demandés à l'API des données (`DATA_API_URL`, avec le token du
  * site, `DATA_API_TOKEN`, lus à chaque demande) par paquets de 1 000 (`idBatches` : elle en refuse
- * plus de 1 025), ensemble, puis réunis ; `null` sans carte, sans guide des prix, ou l'API muette
- * pour l'un des paquets (une valeur partielle serait fausse).
+ * plus de 1 025), l'un après l'autre, puis réunis ; `null` sans carte, au-delà de
+ * `MAX_PRICE_BATCHES` paquets (sans rien demander), sans guide des prix, ou l'API muette pour l'un
+ * des paquets (les suivants ne sont pas demandés : une valeur partielle serait fausse).
  */
 async function dataPrices(ids: number[]): Promise<PriceFile | null> {
-  if (!ids.length) return null
-  const files = await Promise.all(idBatches(ids).map(dataPricesOf))
-  if (files.includes(null)) return null
-  return { date: files[0]!.date, cards: Object.assign({}, ...files.map((file) => file!.cards)) }
+  const batches = idBatches(ids)
+  if (!batches.length || batches.length > MAX_PRICE_BATCHES) return null
+  const prices: PriceFile = { date: '', cards: {} }
+  for (const batch of batches) {
+    const file = await dataPricesOf(batch)
+    if (!file) return null
+    prices.date = file.date
+    Object.assign(prices.cards, file.cards)
+  }
+  return prices
 }
 
 /**

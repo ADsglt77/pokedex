@@ -35,7 +35,8 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   (`/api/prices/<id>`, 404 sans historique) : la courbe de sa fiche, le nom affiché dans le
   formulaire pour vérifier l'id saisi (au départ du champ). Le Pokédex public d'un compte reçoit
   les prix de ses seules cartes possédées avec sa réponse (`server/vitrine.ts`, qui les demande à
-  l'API des données par paquets de 1 000, `idBatches` : `docs/compte-et-synchronisation.md`). Sans API des données, ou base encore
+  l'API des données par paquets de 1 000, `idBatches`, l'un après l'autre, 5 au plus :
+  `docs/compte-et-synchronisation.md`). Sans API des données, ou base encore
   vide, l'app marche sans prix. Une réponse manquante (404) n'est pas redemandée ; après une panne
   passagère (réseau, délai, réponse illisible), elle l'est la fois suivante où elle sert, au plus une
   fois par minute (`getJson`, `lib/api.ts` : la règle vaut pour les données de référence, catalogue

@@ -555,10 +555,10 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
     expect((await visit()).prices).toBeNull()
   })
 
-  test('plus de 1 000 cartes possédées : leurs prix demandés par paquets de 1 000, réunis', async () => {
-    // L'API des données refuse plus de 1 025 ids par demande.
-    const owner = await createAccount('Riche')
-    const many = Array.from({ length: 1001 }, (_, index) =>
+  /** Le compte `pseudo`, qui possède `count` cartes, chacune de son id Cardmarket ; ses cartes. */
+  async function accountOwning(pseudo: string, count: number) {
+    const owner = await createAccount(pseudo)
+    const many = Array.from({ length: count }, (_, index) =>
       card(`c${index}`, [25], { cardmarket: 100_001 + index }),
     )
     const document = withCards(
@@ -570,17 +570,28 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
         'INSERT INTO collections (user_id, version, collection, shopping, updated_at) VALUES (?, 1, ?, ?, ?)',
       )
       .run(owner.user!.id, JSON.stringify(document), JSON.stringify(emptyShopping()), NOW)
-    // Une fausse API des données : elle note combien d'ids chaque demande porte ; `failing` : le
-    // petit paquet échoue.
-    const asked: number[] = []
-    let failing = false
-    const api = Bun.serve({
+    return many
+  }
+
+  /**
+   * Une fausse API des données, à la place de la vraie jusqu'à `stop` : elle note combien d'ids
+   * porte chaque demande, dans l'ordre (`asked`), et combien elle en a reçu à la fois au plus
+   * (`concurrent` : chacune répond après 20 ms), et rend un prix par carte ; `failing` : un paquet
+   * d'un seul id échoue (500).
+   */
+  function pricesApi() {
+    const api = { asked: [] as number[], concurrent: 0, failing: false, stop: async () => {} }
+    let pending = 0
+    const server = Bun.serve({
       port: 0,
       hostname: '127.0.0.1',
-      fetch(request) {
+      async fetch(request) {
         const ids = new URL(request.url).searchParams.get('ids')!.split(',')
-        asked.push(ids.length)
-        if (failing && ids.length === 1) return new Response(null, { status: 500 })
+        api.asked.push(ids.length)
+        api.concurrent = Math.max(api.concurrent, ++pending)
+        await Bun.sleep(20)
+        pending--
+        if (api.failing && ids.length === 1) return new Response(null, { status: 500 })
         return Response.json({
           date: '2026-10-19',
           cards: Object.fromEntries(ids.map((id) => [id, [1, null, null]])),
@@ -588,20 +599,48 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
       },
     })
     const before = process.env.DATA_API_URL
-    process.env.DATA_API_URL = api.url.origin
+    process.env.DATA_API_URL = server.url.origin
+    api.stop = async () => {
+      await server.stop(true)
+      process.env.DATA_API_URL = before
+    }
+    return api
+  }
+
+  test('plus de 1 000 cartes possédées : leurs prix demandés par paquets de 1 000, l’un après l’autre, réunis', async () => {
+    // L'API des données refuse plus de 1 025 ids par demande.
+    const many = await accountOwning('Riche', 1001)
+    const api = pricesApi()
     try {
       const { prices } = await visit('riche')
-      expect(asked.sort((a, b) => a - b)).toEqual([1, 1000])
+      // Dans l'ordre, et jamais deux à la fois : une visite sans session ne mobilise pas l'API.
+      expect(api.asked).toEqual([1000, 1])
+      expect(api.concurrent).toBe(1)
       expect(prices?.date).toBe('2026-10-19')
       expect(Object.keys(prices!.cards).sort()).toEqual(
         many.map(({ cardmarket }) => String(cardmarket)).sort(),
       )
       // Un paquet sans réponse : pas de prix du tout, plutôt qu'une valeur fausse.
-      failing = true
+      api.failing = true
       expect((await visit('riche')).prices).toBeNull()
     } finally {
-      await api.stop(true)
-      process.env.DATA_API_URL = before
+      await api.stop()
+    }
+  })
+
+  test('au plus 5 paquets par visite : au-delà de 5 000 cartes possédées, aucun prix demandé', async () => {
+    // Une visite sans session ne fait jamais plus de 5 demandes à l'API des données.
+    await accountOwning('Enorme', 5000)
+    await accountOwning('Immense', 5001)
+    const api = pricesApi()
+    try {
+      expect((await visit('enorme')).prices).not.toBeNull()
+      expect(api.asked).toEqual([1000, 1000, 1000, 1000, 1000])
+      api.asked.length = 0
+      expect((await visit('immense')).prices).toBeNull()
+      expect(api.asked).toEqual([])
+    } finally {
+      await api.stop()
     }
   })
 })
