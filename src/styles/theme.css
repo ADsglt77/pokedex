@@ -18,6 +18,13 @@
   --brand-white: #ffffff;
   /* La lumière qui glisse sur la carte en grand : blanche, quel que soit le thème. */
   --card-glare: rgb(255 255 255 / 0.35);
+  /* Les drapeaux de l'interrupteur des langues (`LanguageSwitch`) : leurs couleurs, les mêmes dans
+     les deux thèmes ; seul leur liseré, qui détache le blanc d'un fond blanc ou jaune, change. */
+  --flag-white: #ffffff;
+  --flag-jp-red: #bc002d;
+  --flag-fr-blue: #0055a4;
+  --flag-fr-red: #ef4135;
+  --flag-edge: rgb(0 0 0 / 0.35);
   /* Le sprite grisé d'un Pokémon sans carte (`CardArt`) : sur fond sombre, il ressort de lui-même. */
   --empty-sprite-opacity: 0.35;
   --empty-sprite-opacity-large: 0.5;
@@ -108,6 +115,8 @@
   --empty-sprite-opacity: 0.7;
   --empty-sprite-opacity-large: 0.8;
   --dark-icon-filter: none;
+  /* Le liseré des drapeaux, au brun des bordures du thème. */
+  --flag-edge: rgba(60, 35, 28, 0.3);
   /* Le rouge est la marque et l'action principale, pas la couleur de tout : un lien rouge, une
      courbe rouge se liraient comme une erreur ou une perte. Liens à l'encre, soulignés de rouge ;
      courbes à l'encre. */

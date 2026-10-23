@@ -54,7 +54,7 @@ export interface Rarity {
 
 /** Une carte du catalogue : de quoi la montrer et la reprendre dans la saisie. */
 export interface CatalogCard {
-  /** « SV2A 166 » : la série et le numéro, uniques ; « fr MEG 1 » pour une carte française. */
+  /** « SV2A 166 » : la série et le numéro, uniques ; « fr MEG 001 » pour une carte française. */
   key: string
   /** « 166 » : le numéro, sans la série. */
   number: string
@@ -72,6 +72,12 @@ export interface CatalogCard {
   /** Son type (`CARD_TYPES`) ; `null` s'il n'en est pas un. */
   type: number | null
 }
+
+/**
+ * « SV2A 166 », « MEG 001 » : la série et le numéro, ce qu'on montre pour nommer une carte, dans les
+ * deux langues. Jamais sa `key` : « fr MEG 001 » ne sert qu'à la retrouver.
+ */
+export const cardCode = (card: CatalogCard) => `${card.set.id} ${card.number}`
 
 /** Les raretés d'une réponse, par numéro. */
 const readRarities = (rarities: CatalogFile['rarities']) =>
@@ -257,6 +263,13 @@ export function isCatalogCard(card: PokemonCard, listed: CatalogCard) {
       (listed.cardmarket !== undefined && card.cardmarket === listed.cardmarket))
   )
 }
+
+/**
+ * La langue d'une carte du catalogue, telle que la porte une carte de la collection
+ * (`PokemonCard.language`) : `'fr'` pour une carte française, rien pour une japonaise.
+ */
+export const languageField = (card: CatalogCard): Pick<PokemonCard, 'language'> =>
+  card.set.language === 'fr' ? { language: 'fr' } : {}
 
 /** Les raretés et les types choisis pour une grille de cartes ; aucun : tous. */
 export interface CardFilter {

@@ -15,6 +15,7 @@ import { flushSync } from 'react-dom'
 import { useSearchParams } from 'react-router'
 import { CardFilters } from '@/components/CardFilters'
 import { CatalogGrid, CatalogGridSkeleton, CatalogTile } from '@/components/CatalogTile'
+import { LanguageSwitch } from '@/components/LanguageSwitch'
 import { PageHeader } from '@/components/PageHeader'
 import { Unavailable } from '@/components/Unavailable'
 import { ENERGY_TYPE, TRAINER_TYPES } from '@/config/catalog'
@@ -32,32 +33,46 @@ import {
   type SetCard,
   type SetSummary,
 } from '@/lib/card-catalog'
-import { searchForm } from '@/lib/filters'
+import { catalogLanguage, catalogParams, searchForm } from '@/lib/filters'
 import { focusAfter } from '@/lib/focus'
 import { details, formatDate, formatInteger, formatList, pageTitle, plural } from '@/lib/format'
 import { priceText } from '@/lib/prices'
 import { usePrices, usePricesMissing } from '@/store/prices'
+import type { CardLanguage } from '@/types'
 import { CardDetails } from './CardDetails'
 import { SetLogo } from './SetLogo'
 import { SetPicker } from './SetPicker'
 import styles from './CatalogPage.module.css'
 
 /**
- * Le catalogue (`/catalogue?set=SV2a`) : toutes les cartes japonaises, extension par extension,
- * Pokémon, dresseurs et énergies. Les extensions se choisissent sur leur logo japonais
- * (`SetPicker`) ; leurs cartes se cherchent (nom, numéro, illustrateur) et se filtrent par rareté
- * et par type. Une carte ouvre sa fiche (`CardDetails`) : tout ce qu'on en sait, son prix, et
- * pour une carte Pokémon, « Ajouter à la collection ».
+ * Le catalogue (`/catalogue?langue=fr&set=MEG`) : toutes les cartes japonaises ou françaises
+ * (l'interrupteur `LanguageSwitch`, dans l'adresse : `langue`, le japonais sans elle),
+ * extension par extension, Pokémon, dresseurs et énergies. Les extensions se choisissent sur leur
+ * logo (`SetPicker`) ; leurs cartes se cherchent (nom, numéro, illustrateur) et se filtrent par
+ * rareté et par type. Une carte ouvre sa fiche (`CardDetails`) : tout ce qu'on en sait, son prix,
+ * et pour une carte Pokémon, « Ajouter à la collection ».
  */
 export function CatalogPage() {
+  const [params, setParams] = useSearchParams()
+  const lang = catalogLanguage(params)
   return (
     <div className="container">
       <title>{pageTitle('Catalogue')}</title>
-      <PageHeader title="Catalogue">
-        Toutes les cartes japonaises, extension par extension : Pokémon, dresseurs et énergies.
+      <PageHeader
+        title="Catalogue"
+        // Une autre langue : sa plus récente extension (l'adresse perd `set`).
+        actions={
+          <LanguageSwitch
+            value={lang}
+            onChange={(next) => setParams(catalogParams(next), { replace: true })}
+          />
+        }
+      >
+        Toutes les cartes {lang === 'fr' ? 'françaises' : 'japonaises'}, extension par extension :
+        Pokémon, dresseurs et énergies.
       </PageHeader>
       <Suspense fallback={<CatalogSkeleton />}>
-        <CatalogContent />
+        <CatalogContent lang={lang} />
       </Suspense>
     </div>
   )
@@ -103,9 +118,9 @@ function useRetry(url: string) {
   return { retrying, onRetry }
 }
 
-function CatalogContent() {
-  const retry = useRetry(catalogSetsUrl('ja'))
-  const catalog = use(loadSets('ja'))
+function CatalogContent({ lang }: { lang: CardLanguage }) {
+  const retry = useRetry(catalogSetsUrl(lang))
+  const catalog = use(loadSets(lang))
   return catalog ? <SetBrowser catalog={catalog} /> : <CatalogUnavailable retry={retry} />
 }
 
@@ -146,14 +161,16 @@ function SetBrowser({ catalog }: { catalog: CatalogSets }) {
         </div>
         <SetPicker
           className={styles.change}
+          language={set.language}
           sets={catalog.sets}
           blocks={catalog.blocks}
           current={set.id}
-          onPick={(setId) => setParams({ set: setId }, { replace: true })}
+          onPick={(setId) => setParams(catalogParams(set.language, setId), { replace: true })}
         />
       </Card>
-      {/* Une autre extension : sa recherche et ses filtres repartent de zéro. */}
-      <Suspense key={set.id} fallback={<SetCardsSkeleton count={set.count} />}>
+      {/* Une autre extension : sa recherche et ses filtres repartent de zéro (un même code existe
+          dans les deux langues). */}
+      <Suspense key={`${set.language} ${set.id}`} fallback={<SetCardsSkeleton count={set.count} />}>
         <SetCards set={set} />
       </Suspense>
     </Stack>

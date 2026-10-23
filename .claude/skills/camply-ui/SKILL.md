@@ -45,6 +45,10 @@ Textarea, Timeline, Toast (ToastProvider, `useToast`), Toggle, Tooltip, Tree.
   `NumberInput`: they carry the app's money rules (« 12,50 », saved when leaving the field, Enter
   or Escape, with « Annuler » ; empty means `undefined`), tested in `tests/`. `NumberInput
   allowEmpty` exists since 0.3 but has steppers and no euro parsing.
+- **`SegmentedControl` segment with a drawing** (the flags of `LanguageSwitch`):
+  `SegmentOption.label` is typed `string`, but camply writes it as is (`{label}`) and names the
+  segment from its content. `segment()` in `LanguageSwitch` passes an SVG (`role="img"` +
+  `aria-label`) through one cast; drop it when camply types `label` as `ReactNode`.
 - A group of `Checkbox` / `Toggle` has no group label: `<fieldset>` + `<legend>` (CardFilters).
 - **Internal classes are not an API**: the last override of one carries the comment « Classe
   interne de camply (pas une API) : à revérifier après une mise à jour ». After a camply update,

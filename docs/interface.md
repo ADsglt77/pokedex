@@ -19,7 +19,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   `--dark-icon-filter` : les icônes de rareté noires, inversées en sombre ; `--link` et
   `--chart-*` : en clair, liens et courbes à l'encre, liens soulignés de rouge, pour que le rouge
   reste la marque et l'action principale, pas une alerte ; le choix d'un `SegmentedControl` y est un
-  bouton blanc en relief). Le site s'appelle **PokéCodex** (cette graphie) : le nom à côté du logo
+  bouton blanc en relief ; `--flag-*` : les couleurs des drapeaux de l'interrupteur des langues,
+  les mêmes dans les deux thèmes, et leur liseré, qui détache le blanc d'un fond blanc ou jaune).
+  Le site s'appelle **PokéCodex** (cette graphie) : le nom à côté du logo
   (la coquille, les pages seules, celles du compte, la page d'erreur), le titre des onglets
   (« Pikachu – PokéCodex », `pageTitle`), le manifeste et l'aperçu d'un lien (`index.html`,
   `SITE_SUMMARY` de `server/vitrine.ts`). « Mon Pokédex » n'est que le Pokédex de l'utilisateur :
@@ -86,8 +88,10 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   une ligne, les filtres rapides passent dessous (sur téléphone, ils défilent de côté). Achats :
   sur téléphone, les filtres de la liste dans un panneau « Filtres », l'onglet ouvert amené dans
   la rangée d'onglets qui défile ; page étroite, les badges des onglets se resserrent. Le
-  catalogue : un panneau (le logo japonais de l'extension, son nom, sa sortie, son nombre de cartes
-  et son bloc, et « Changer d'extension »), puis la recherche, les filtres de rareté et de type
+  catalogue : en tête de page l'interrupteur de langue (deux drapeaux SVG dans un
+  `SegmentedControl`, `LanguageSwitch`, à droite du titre, dessous sur téléphone), puis un panneau
+  (le logo de l'extension, son nom, sa sortie, son nombre de cartes et son bloc, et « Changer
+  d'extension »), puis la recherche, les filtres de rareté et de type
   (chacun sur une ligne qui défile de côté sur téléphone), ce que compte l'extension et ses cartes
   en tuiles serrées (10 colonnes sur un écran de 1440 px, 3 sur téléphone) ; la fiche d'une carte,
   pleine page : l'image à gauche, qui reste à l'écran quand le reste défile, ce qu'on sait de la

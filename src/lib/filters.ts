@@ -2,13 +2,14 @@
  * Les filtres de la page Pokédex : leur place dans l'adresse, leur application aux Pokémon, la
  * recherche par nom ou numéro. Et les adresses de l'app : le Pokédex filtré (`pokedexUrl`), la
  * fiche d'un Pokémon (`speciesPath`), les onglets des Achats et les filtres de leur liste
- * d'achats (`parseShopping`, `shoppingUrl`), le Pokédex public d'un compte (`vitrinePath`).
+ * d'achats (`parseShopping`, `shoppingUrl`), le Pokédex public d'un compte (`vitrinePath`), la
+ * langue et l'extension du Catalogue (`catalogLanguage`, `catalogParams`).
  */
 
 import { generationById, POKEMON_TYPES, type Generation } from '@/config/pokedex'
 import { SPECIES } from '@/lib/species'
 import type { PokedexEntry } from '@/lib/pokedex'
-import type { GenerationId, PokemonSpecies, PokemonTypeId } from '@/types'
+import type { CardLanguage, GenerationId, PokemonSpecies, PokemonTypeId } from '@/types'
 
 /** Débloqués (carte possédée), à débloquer (pas encore), ou carte commandée. */
 export const POSSESSIONS = ['all', 'owned', 'ordered', 'missing'] as const
@@ -132,6 +133,21 @@ export function serializeShopping(view: ShoppingView, filters: WishlistFilters):
 export function shoppingUrl({ view = 'liste' }: { view?: ShoppingView } = {}) {
   const search = serializeShopping(view, DEFAULT_WISHLIST_FILTERS).toString()
   return search ? `/achats?${search}` : '/achats'
+}
+
+/** L'adresse du Catalogue → sa langue (`?langue=fr`) ; sans elle, ou inconnue : le japonais. */
+export const catalogLanguage = (params: URLSearchParams): CardLanguage =>
+  params.get('langue') === 'fr' ? 'fr' : 'ja'
+
+/**
+ * La langue et l'extension du Catalogue → l'adresse, sans la langue par défaut (le japonais) :
+ * `?langue=fr&set=MEG`. Sans extension, la plus récente de la langue.
+ */
+export function catalogParams(lang: CardLanguage, set?: string): URLSearchParams {
+  const params = new URLSearchParams()
+  if (lang === 'fr') params.set('langue', 'fr')
+  if (set) params.set('set', set)
+  return params
 }
 
 /** Sans casse, accent ni ligature : « Nœunœuf » → « noeunoeuf », « Éli » → « eli ». */

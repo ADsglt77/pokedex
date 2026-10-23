@@ -5,6 +5,7 @@ import { useGrowingList } from '@/hooks/useGrowingList'
 import type { SetSummary } from '@/lib/card-catalog'
 import { searchForm } from '@/lib/filters'
 import { details, plural } from '@/lib/format'
+import type { CardLanguage } from '@/types'
 import { SetLogo } from './SetLogo'
 import styles from './SetPicker.module.css'
 
@@ -20,12 +21,15 @@ const ORDER_HINTS: Record<SetOrder, string> = {
   block: 'Bloc par bloc, des plus récents aux plus anciens : leurs extensions, puis leurs decks.',
 }
 
+/** Un code d'extension de chaque langue, pour l'exemple de la recherche. */
+const EXAMPLE_CODES: Record<CardLanguage, string> = { ja: 'SV2a', fr: 'MEG' }
+
 /** Les extensions dessinées d'un coup : plus qu'un grand écran n'en montre. */
 const SETS_STEP = 40
 
 /**
- * La fenêtre du choix d'une extension : leurs logos japonais, cherchées par code ou par nom
- * (« sv2a », « 151 »), rangées par année ou par bloc (l'ordre choisi reste d'une ouverture à
+ * La fenêtre du choix d'une extension : leurs logos, cherchées par code ou par nom (« sv2a » ou
+ * « meg », « 151 »), rangées par année ou par bloc (l'ordre choisi reste d'une ouverture à
  * l'autre), chacune avec son nombre de cartes. Pleine page : la recherche reste en haut quand la
  * liste défile. Le bouton « Changer d'extension » qui l'ouvre est ici, avec son état : l'ouvrir ne
  * fait pas redessiner la page et ses cartes.
@@ -37,6 +41,8 @@ export function SetPicker({
 }: {
   /** Celle du bouton. */
   className?: string
+  /** Leur langue : celle de leurs cartes. */
+  language: CardLanguage
   /** Des plus récentes aux plus anciennes. */
   sets: SetSummary[]
   /** Les blocs, des plus récents aux plus anciens. */
@@ -77,6 +83,7 @@ export function SetPicker({
 
 /** Le contenu de la fenêtre : sa recherche repart de zéro à chaque ouverture. */
 function SetList({
+  language,
   sets,
   blocks,
   current,
@@ -123,7 +130,7 @@ function SetList({
         <Input
           type="search"
           label="Rechercher"
-          placeholder="Code ou nom : SV2a, 151…"
+          placeholder={`Code ou nom : ${EXAMPLE_CODES[language]}, 151…`}
           leftIcon={<Search size={16} />}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -150,7 +157,7 @@ function SetList({
         <EmptyState
           icon={<Search size={22} />}
           title="Aucune extension ne correspond"
-          description="Cherchez son code (SV2a) ou un mot de son nom (151)."
+          description={`Cherchez son code (${EXAMPLE_CODES[language]}) ou un mot de son nom (151).`}
         />
       ) : (
         <div className={styles.results}>

@@ -1,0 +1,39 @@
+/* L'interrupteur des langues : deux drapeaux dans un `SegmentedControl`. Le drapeau du segment
+   choisi est plein, l'autre un peu éteint (il se rallume au survol). Les couleurs sont dans
+   `theme.css` (`--flag-*`). */
+.flag {
+  display: block;
+  width: 1.5rem;
+  height: 1rem;
+  transition: opacity 0.2s;
+}
+
+.switch [aria-checked='false'] .flag {
+  opacity: 0.7;
+}
+
+.switch [aria-checked='false']:hover .flag {
+  opacity: 1;
+}
+
+.white {
+  fill: var(--flag-white);
+}
+
+.sun {
+  fill: var(--flag-jp-red);
+}
+
+.blue {
+  fill: var(--flag-fr-blue);
+}
+
+.red {
+  fill: var(--flag-fr-red);
+}
+
+/* Le liseré : le blanc d'un drapeau se détache du fond blanc (thème clair) ou jaune (sombre). */
+.edge {
+  fill: none;
+  stroke: var(--flag-edge);
+}

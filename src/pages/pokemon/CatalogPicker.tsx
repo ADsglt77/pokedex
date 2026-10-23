@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { CardFilters } from '@/components/CardFilters'
 import { CatalogGrid, CatalogTile } from '@/components/CatalogTile'
 import {
+  cardCode,
   loadSpeciesCards,
   NO_FILTER,
   passesFilter,
@@ -139,7 +140,7 @@ export function CatalogPicker({
           <li key={card.key}>
             <CatalogTile
               card={card}
-              heading={card.key}
+              heading={cardCode(card)}
               price={priceText(prices, missing, card)}
               speciesId={species.id}
               pressed={selected === card.key}

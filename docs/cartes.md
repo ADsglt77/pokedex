@@ -50,8 +50,9 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
   sous `/api/catalog/fr/…` (`species/<n°>`, `sets`, `sets/<code>`) : le site les charge par langue
   (`CardLanguage`, `'ja'` ou `'fr'` : `loadSpeciesCards(n°, langue)`, `loadSets(langue)`, la
   langue d'une série est `CatalogSet.language`), et la clé d'une carte du catalogue est « SV2A 166 »
-  en japonais, « fr MEG 1 » en français (un même code de série existe dans les deux langues) ;
-  l'interface ne montre pour l'instant que le japonais. Les types
+  en japonais, « fr MEG 001 » en français (un même code de série existe dans les deux langues ;
+  cette clé reste interne, on montre « MEG 001 » : `cardCode`) ; le Catalogue montre les deux
+  langues (l'interrupteur, ci-dessous), la fenêtre d'ajout pas encore. Les types
   sont numérotés sans être nommés par la source : leurs noms sont dans `CARD_TYPES`
   (`src/config/catalog.ts` : 1 Plante, 2 Eau, 3 Feu, 4 Électrique, 5 Psy, 6 Obscurité, 7 Métal,
   8 Combat, 9 Dragon, 10 Incolore, 11 Fée ; les catégories des dresseurs, 12 Stade, 13 Dresseur
@@ -75,11 +76,17 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
   L'enregistrement (`useCardDraft.save`) attend le prix et l'image : une seule fois à la fois, la
   fenêtre ne se ferme pas pendant ce temps. Une page Cardmarket qui n'était que celle de l'id de
   départ est oubliée quand l'id change (le lien suit alors le nouvel id).
-  La page Catalogue (`/catalogue?set=…`, dans le menu, `pages/catalog/`), un grand catalogue sans
-  lien avec le Pokédex (à la demande de l'utilisateur, octobre 2026) : en tête, l'extension (une
-  série de Pokécardex) avec son logo japonais (`SetLogo`), son code, sa sortie, son nombre de
-  cartes et son bloc ; « Changer d'extension » ouvre la fenêtre pleine page des extensions
-  (`SetPicker` : leurs logos, une
+  La page Catalogue (`/catalogue?langue=fr&set=…`, dans le menu, `pages/catalog/`), un grand
+  catalogue sans lien avec le Pokédex (à la demande de l'utilisateur, octobre 2026), des cartes
+  japonaises ou françaises : l'interrupteur de la langue (`LanguageSwitch`, dans l'en-tête de la
+  page : un `SegmentedControl` de deux drapeaux SVG, « Cartes japonaises » / « Cartes
+  françaises ») vit dans l'adresse, `langue=fr`, le japonais sans elle (`catalogLanguage`,
+  `catalogParams` de `lib/filters.ts` : une autre valeur vaut le japonais) ; en changer remplace
+  `langue` et retire `set` (la plus récente extension de la langue), les textes suivent (« Toutes
+  les cartes françaises… », « Sortie en France »). En tête, l'extension (une série de Pokécardex)
+  avec son logo, celui de sa langue (`SetLogo`), son code, sa sortie, son nombre de cartes et son
+  bloc ; « Changer d'extension » ouvre la fenêtre pleine page des extensions (`SetPicker` : leurs
+  logos, une
   recherche par code ou par nom, rangées par année ou par bloc, dans l'ordre du menu de Pokécardex,
   leurs extensions puis leurs decks ; chacune avec son nombre de cartes). Puis une recherche (nom
   français, anglais ou allemand, numéro, illustrateur), les filtres de rareté et de type (catégories
@@ -88,11 +95,14 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
   cartes en tuiles serrées (`CatalogTile` : le numéro et le prix, puis la rareté et le nom). Un clic
   ouvre la fiche de la carte (`CardDetails`, pleine page) : son image en grand, l'extension et son
   bloc, le numéro imprimé (« Secrète »), la rareté, le type ou la catégorie, ses Pokémon,
-  l'illustrateur, ses versions, ses noms anglais et allemand, la sortie au Japon, où elle en est
-  dans la collection, et son prix Cardmarket avec sa courbe (`PricePanel`, comme la fiche d'un
-  Pokémon) ; des flèches passent aux cartes voisines de la grille, dans l'ordre affiché. Une carte
-  Pokémon a un seul bouton, « Ajouter à la collection » : elle devient la carte de tous ses Pokémon
-  (une seule pour une TAG TEAM), toujours à acheter (décision de l'utilisateur, octobre 2026). Si
+  l'illustrateur, ses versions, ses noms anglais et allemand, sa sortie (au Japon, ou en France), où
+  elle en est dans la collection, et son prix Cardmarket avec sa courbe (`PricePanel`, comme la
+  fiche d'un Pokémon) ; des flèches passent aux cartes voisines de la grille, dans l'ordre affiché.
+  Une carte Pokémon a un seul bouton, « Ajouter à la collection » : elle devient la carte de tous
+  ses Pokémon (une seule pour une TAG TEAM), toujours à acheter (décision de l'utilisateur,
+  octobre 2026) ; une carte française s'ajoute avec `language: 'fr'`, comme son `PricePanel` la
+  reçoit (`languageField`, `lib/card-catalog.ts` : une seule source pour la langue d'une carte du
+  catalogue). Si
   l'un d'eux a déjà la sienne, elle la remplace après confirmation : l'ancienne part avec son statut
   et son prix payé (une carte TAG TEAM reste celle de ses autres Pokémon : `removeCard`) ; pas si
   une commande la retient et qu'elle quitterait tous ses Pokémon (le bouton est désactivé, la fiche
@@ -103,7 +113,8 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
   (`CardFilters`, demandés par l'utilisateur, octobre 2026) : des pastilles à icône, chacune avec le
   nombre de cartes qu'elle montrerait parmi celles que gardent l'autre filtre et la recherche ;
   plusieurs choix d'un filtre s'ajoutent, les deux filtres se combinent (`passesFilter`) ; un filtre
-  qui n'offrirait qu'un choix n'est pas montré ; changer d'extension les retire, avec la recherche.
+  qui n'offrirait qu'un choix n'est pas montré ; changer d'extension ou de langue les retire, avec
+  la recherche.
   Ce sont des filtres que l'utilisateur choisit : rien n'est trié ni écarté seul.
 - Images (`lib/card-images.ts`) : copiées et servies par l'API des données (sa page
   `docs/donnees.md` : leurs sources, la tâche `images`), aux chemins neutres

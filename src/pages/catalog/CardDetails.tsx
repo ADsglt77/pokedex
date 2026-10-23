@@ -16,7 +16,7 @@ import { PricePanel } from '@/components/PricePanel'
 import { CARD_TYPES } from '@/config/catalog'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { usePokedex } from '@/hooks/usePokedex'
-import { isCatalogCard, type SetCard } from '@/lib/card-catalog'
+import { isCatalogCard, languageField, type SetCard } from '@/lib/card-catalog'
 import { newCardId } from '@/lib/collection'
 import { isInAnOrder } from '@/lib/orders'
 import { details, formatDate, formatDexNumber, formatList, statusLabel } from '@/lib/format'
@@ -153,7 +153,11 @@ export function CardDetails({
             <DescriptionList items={facts(card, place)} />
           </section>
           <PricePanel
-            card={card}
+            card={{
+              cardmarket: card.cardmarket,
+              reference: card.reference,
+              ...languageField(card),
+            }}
             headingLevel={3}
             withoutId="Pas de prix : son id Cardmarket n’est pas connu."
           />
@@ -221,7 +225,10 @@ function facts(card: SetCard, place: CollectionPlace) {
     },
     card.english && { term: 'Nom anglais', description: card.english },
     card.german && { term: 'Nom allemand', description: card.german },
-    card.set.released && { term: 'Sortie au Japon', description: formatDate(card.set.released) },
+    card.set.released && {
+      term: card.set.language === 'fr' ? 'Sortie en France' : 'Sortie au Japon',
+      description: formatDate(card.set.released),
+    },
     pokemon && { term: 'Collection', description: placeText(place) },
   ]
   return rows.filter((row): row is DescriptionItem => !!row)
@@ -274,6 +281,7 @@ function AddToCollection({ card, place }: { card: SetCard; place: CollectionPlac
             reference: card.reference,
             image: card.image,
             ...(card.cardmarket !== undefined && { cardmarket: card.cardmarket }),
+            ...languageField(card),
           },
           'none',
         )
