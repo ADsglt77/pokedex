@@ -22,22 +22,24 @@ const TILES_STEP = 60
  * Les cartes d'une collection d'extension (`series`, lue dans `collection`), dans l'ordre de
  * l'extension : chacune en couleur une fois possédée, en grisé sinon (`CardArt` `locked`), avec sa
  * marque de statut, son numéro et son nom. `linked` : la page de la collection, où choisir une
- * carte ouvre sa fenêtre (`SeriesCard`) ; faux sur le Pokédex public, où chacune est une image
- * décrite. Une extension compte des centaines de cartes : dessinées au fur et à mesure
- * (`useGrowingList`), seules celles à l'écran le sont (`content-visibility`), et une carte ne se
- * redessine que si elle ou son statut change.
+ * carte ouvre sa fenêtre (`SeriesCard`), celle d'`opened` (son id) ouverte d'emblée ; faux sur le
+ * Pokédex public, où chacune est une image décrite. Une extension compte des centaines de cartes :
+ * dessinées au fur et à mesure (`useGrowingList`), seules celles à l'écran le sont
+ * (`content-visibility`), et une carte ne se redessine que si elle ou son statut change.
  */
 export function SeriesGrid({
   collection,
   series,
   linked,
+  opened = null,
 }: {
   collection: CollectionData
   series: SeriesCollection
   linked: boolean
+  opened?: string | null
 }) {
   // La carte dont la fenêtre est ouverte (son id) ; `null` : aucune.
-  const [open, setOpen] = useState<string | null>(null)
+  const [open, setOpen] = useState(opened)
   const { limit, sentinel, more } = useGrowingList(series.cards.length, TILES_STEP)
   return (
     <div className="growing">

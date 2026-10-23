@@ -177,6 +177,10 @@ export function summarize(data: CollectionData): CollectionSummary {
   return summary
 }
 
+/** Une collection vide (`summarize`) : ni carte ajoutée, ni collection d'extension commencée. */
+export const isEmptySummary = (summary: CollectionSummary) =>
+  summary.cards === 0 && summary.series === 0
+
 export interface RecentCard {
   card: PokemonCard
   acquiredAt: string | null

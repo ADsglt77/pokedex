@@ -3,12 +3,14 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { useGrowingList } from '@/hooks/useGrowingList'
 import { cardTitle } from '@/lib/species'
-import { CardSpeciesLink } from '@/components/CardSpeciesLink'
+import { CardPageLink } from '@/components/CardPageLink'
 import { TableCount } from '@/components/TableCount'
 import { cx } from '@/lib/cx'
 import { pokedexUrl } from '@/lib/filters'
+import { seriesOf } from '@/lib/series'
 import { formatEuro, formatEuroChange, statusLabel } from '@/lib/format'
 import type { CompletionCost, TrackedCard } from '@/lib/prices'
+import { useCollectionStore } from '@/store/collection'
 import { type Generation, generationLabel } from '@/config/pokedex'
 import type { CardStatus, PokemonCard } from '@/types'
 import styles from './ValuePage.module.css'
@@ -60,6 +62,7 @@ const ROWS_STEP = 60
  * défilement (`useGrowingList`) : la page s'ouvre vite.
  */
 export function CardsTable({ cards }: { cards: TrackedCard[] }) {
+  const collection = useCollectionStore((state) => state.collection)
   const [sort, setSort] = useState<SortState | null>({ key: 'value', dir: 'desc' })
   const rows = useMemo(
     () =>
@@ -97,7 +100,9 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
             sortValue: SORT_VALUES.name,
             cell: (row) => (
               <span className={styles.card}>
-                <CardSpeciesLink card={row.card}>{row.name}</CardSpeciesLink>
+                <CardPageLink card={row.card} series={seriesOf(collection, row.id)}>
+                  {row.name}
+                </CardPageLink>
                 <span className="muted">{row.reference}</span>
               </span>
             ),

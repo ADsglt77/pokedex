@@ -1,7 +1,7 @@
 import { Alert, Skeleton, SkeletonText, Stack, Stat } from '@camply/ui'
 import { Flag, Wallet } from '@camply/ui/icons'
 import { Suspense, use, useMemo, useState } from 'react'
-import { CardSpeciesLink } from '@/components/CardSpeciesLink'
+import { CardPageLink } from '@/components/CardPageLink'
 import { ChartPeriodControl, ChartStats } from '@/components/ChartParts'
 import { CollectionValueStat } from '@/components/CollectionValueStat'
 import { PageHeader } from '@/components/PageHeader'
@@ -44,6 +44,7 @@ import {
   type TrackedCard,
 } from '@/lib/prices'
 import { unlockEvents } from '@/lib/pokedex'
+import { seriesOf } from '@/lib/series'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
 import { loadPriceHistories, usePrices, usePricesMissing } from '@/store/prices'
@@ -245,6 +246,7 @@ function SpendingChart({ events, period }: { events: PricePoint[]; period: Chart
  * jour : « — », une ébauche tant qu'ils arrivent (pas « aucune »).
  */
 function Movers({ cards }: { cards: TrackedCard[] }) {
+  const collection = useCollectionStore((state) => state.collection)
   const prices = usePrices()
   const pricesMissing = usePricesMissing()
   const moves = priceMovers(cards, prices, 5)
@@ -273,7 +275,9 @@ function Movers({ cards }: { cards: TrackedCard[] }) {
               <ul className={styles.movers}>
                 {list.map(({ card, price, monthAgo, change }) => (
                   <li key={card.id}>
-                    <CardSpeciesLink card={card}>{card.reference}</CardSpeciesLink>
+                    <CardPageLink card={card} series={seriesOf(collection, card.id)}>
+                      {card.reference}
+                    </CardPageLink>
                     <span className={styles.moverPrice}>
                       {formatEuro(price)} <span className={className}>{formatPercent(change)}</span>
                       <span className="muted"> · il y a 30 jours {formatEuro(monthAgo)}</span>

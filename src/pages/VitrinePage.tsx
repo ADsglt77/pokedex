@@ -17,7 +17,6 @@ import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { isPseudo } from '@/lib/account'
 import { getJson, requestFailed } from '@/lib/api'
 import type { ChartPeriod } from '@/lib/chart'
-import { cardLanguage } from '@/lib/collection'
 import { cx } from '@/lib/cx'
 import {
   formatDate,
@@ -30,7 +29,7 @@ import {
 } from '@/lib/format'
 import { buildPokedex, unlockEvents, type PokedexEntry } from '@/lib/pokedex'
 import { tallyByStatus, trackedCards } from '@/lib/prices'
-import { seriesProgress } from '@/lib/series'
+import { seriesId, seriesProgress } from '@/lib/series'
 import { useAccountStore } from '@/store/account'
 import type { CollectionData, PriceFile, SeriesCollection, VitrineData } from '@/types'
 import styles from './VitrinePage.module.css'
@@ -292,7 +291,7 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
           <div className={styles.collections}>
             {collection.series.map((series) => (
               <VitrineSeries
-                key={`${cardLanguage(series)} ${series.set}`}
+                key={seriesId(series)}
                 collection={collection}
                 series={series}
                 prices={prices}

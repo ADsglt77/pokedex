@@ -30,6 +30,7 @@ import { ORDER_STATE_LABELS } from '@/config/shopping'
 import { cardLanguage } from '@/lib/collection'
 import { formatEuro, formatInteger } from '@/lib/format'
 import { cardCount, orderSpent, supplierLabel } from '@/lib/orders'
+import { seriesId } from '@/lib/series'
 import type {
   CollectionData,
   CollectionDocument,
@@ -316,9 +317,6 @@ export function documentChanges(
   ]
 }
 
-/** Une collection d'extension se retrouve par son extension et sa langue. */
-const seriesKey = (series: SeriesCollection) => `${series.set} ${cardLanguage(series)}`
-
 /**
  * Les collections d'extensions commencées ou supprimées : une ligne chacune. Leurs cases, ajoutées
  * ou retirées avec elles (`seriesOnly`), n'ont pas chacune la leur (`cardChanges`).
@@ -330,14 +328,15 @@ function seriesChanges(before: CollectionData, after: CollectionData): JournalEn
     message,
     details: { extension: series.name, langue: cardLanguage(series), cartes: series.cards.length },
   })
-  const was = new Set(before.series.map(seriesKey))
-  const is = new Set(after.series.map(seriesKey))
+  // Une collection se retrouve par son extension et sa langue (`seriesId`).
+  const was = new Set(before.series.map(seriesId))
+  const is = new Set(after.series.map(seriesId))
   return [
     ...after.series
-      .filter((series) => !was.has(seriesKey(series)))
+      .filter((series) => !was.has(seriesId(series)))
       .map((series) => line('Collection commencée', series, 'ok')),
     ...before.series
-      .filter((series) => !is.has(seriesKey(series)))
+      .filter((series) => !is.has(seriesId(series)))
       .map((series) => line('Collection supprimée', series, 'warn')),
   ]
 }

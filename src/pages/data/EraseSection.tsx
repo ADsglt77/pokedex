@@ -6,7 +6,7 @@ import { ExportCollectionButton } from '@/components/ExportCollectionButton'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { emptyCollection } from '@/lib/collection'
 import { focusAfter } from '@/lib/focus'
-import { summarize } from '@/lib/pokedex'
+import { isEmptySummary, summarize } from '@/lib/pokedex'
 import { useCollectionStore } from '@/store/collection'
 import { DataSection } from './DataSection'
 import { SummaryLedger } from './SummaryLedger'
@@ -32,7 +32,7 @@ export function EraseSection() {
           variant="secondary"
           tone="danger"
           leftIcon={<Trash2 size={16} />}
-          disabled={summary.cards === 0 && summary.series === 0}
+          disabled={isEmptySummary(summary)}
           onClick={() => setConfirming(true)}
         >
           Effacer ma collection

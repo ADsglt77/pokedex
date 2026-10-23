@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { CardArt } from '@/components/CardArt'
-import { CardSpeciesLink } from '@/components/CardSpeciesLink'
+import { CardPageLink } from '@/components/CardPageLink'
 import { LanguageFlag } from '@/components/LanguageSwitch'
 import { cardLanguage } from '@/lib/collection'
 import { cx } from '@/lib/cx'
@@ -9,7 +9,7 @@ import type { PokemonCard, SeriesCollection } from '@/types'
 import styles from './CardLine.module.css'
 
 /**
- * Une carte sur une ligne : vignette, nom (le lien vers la fiche de son Pokémon, s'il en a un),
+ * Une carte sur une ligne : vignette, nom (le lien vers sa page, s'il y en a une : `CardPageLink`),
  * référence et langue, la collection d'extension dont elle est une case (`series`), un détail, et
  * des actions à droite. Une carte retirée du Pokédex depuis (`null`, toujours dans une commande) le
  * dit à leur place.
@@ -21,7 +21,7 @@ export function CardLine({
   children,
 }: {
   card: PokemonCard | null
-  series?: SeriesCollection | null
+  series: SeriesCollection | null
   detail?: ReactNode
   children?: ReactNode
 }) {
@@ -31,9 +31,13 @@ export function CardLine({
         <>
           <CardArt card={card} speciesId={card.dexIds[0]} alt="" className={styles.lineArt} />
           <div className={styles.lineText}>
-            <CardSpeciesLink card={card} className={cx('quiet-link', styles.lineTitle)}>
+            <CardPageLink
+              card={card}
+              series={series}
+              className={cx('quiet-link', styles.lineTitle)}
+            >
               {cardTitle(card)}
-            </CardSpeciesLink>
+            </CardPageLink>
             <span className="muted">
               {card.reference}
               <LanguageFlag language={cardLanguage(card)} />

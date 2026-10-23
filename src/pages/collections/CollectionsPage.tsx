@@ -5,6 +5,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { LanguageFlag } from '@/components/LanguageSwitch'
 import { PageHeader } from '@/components/PageHeader'
 import { PricedValue } from '@/components/PricedValue'
+import { ProgressCount } from '@/components/ProgressCount'
 import { SetLogo } from '@/components/SetLogo'
 import { SetPicker } from '@/components/SetPicker'
 import { usePokedex } from '@/hooks/usePokedex'
@@ -15,7 +16,7 @@ import { cx } from '@/lib/cx'
 import { catalogLanguage, catalogParams, seriesPath } from '@/lib/filters'
 import { formatEuro, formatInteger, formatShare, pageTitle } from '@/lib/format'
 import { progressPercent } from '@/lib/pokedex'
-import { seriesProgress } from '@/lib/series'
+import { seriesId, seriesProgress } from '@/lib/series'
 import { useCollectionStore } from '@/store/collection'
 import { usePrices } from '@/store/prices'
 import type { SeriesCollection } from '@/types'
@@ -41,7 +42,7 @@ export function CollectionsPage() {
       <ul className={styles.tiles}>
         <PokedexTile />
         {series.map((one) => (
-          <SeriesTile key={`${cardLanguage(one)} ${one.set}`} series={one} />
+          <SeriesTile key={seriesId(one)} series={one} />
         ))}
       </ul>
     </div>
@@ -113,16 +114,6 @@ function Tile({
   )
 }
 
-/** « 87 / 230 » : ce qui est obtenu sur tout, nommé pour le lecteur d'écran (`what`). */
-function Count({ done, total, what }: { done: number; total: number; what: string }) {
-  return (
-    <span className="numeric">
-      {formatInteger(done)} / {formatInteger(total)}
-      <span className="visually-hidden"> {what}</span>
-    </span>
-  )
-}
-
 /** Le Pokédex, toujours en premier : ses Pokémon débloqués sur 1 025. */
 function PokedexTile() {
   const { progress } = usePokedex()
@@ -134,7 +125,7 @@ function PokedexTile() {
       meta={`Les ${formatInteger(progress.total)} Pokémon`}
       percent={progress.percent}
     >
-      <Count done={progress.unlocked} total={progress.total} what="Pokémon débloqués" />
+      <ProgressCount done={progress.unlocked} total={progress.total} what="Pokémon débloqués" />
       <span className="numeric muted">{formatShare(progress.percent)}</span>
     </Tile>
   )
@@ -164,7 +155,7 @@ function SeriesTile({ series }: { series: SeriesCollection }) {
       meta={series.set}
       percent={progressPercent(owned, total)}
     >
-      <Count done={owned} total={total} what="cartes possédées" />
+      <ProgressCount done={owned} total={total} what="cartes possédées" />
       <span>
         <span className="muted">Valeur </span>
         <span className="numeric">

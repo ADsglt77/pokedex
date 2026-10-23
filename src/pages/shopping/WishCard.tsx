@@ -1,6 +1,6 @@
 import { Card } from '@camply/ui'
 import { memo } from 'react'
-import { speciesPath } from '@/lib/filters'
+import { cardPath, seriesPath } from '@/lib/filters'
 import { CardArt } from '@/components/CardArt'
 import { CardmarketLink } from '@/components/CardmarketLink'
 import { LanguageFlag } from '@/components/LanguageSwitch'
@@ -15,14 +15,14 @@ import styles from './WishCard.module.css'
 /**
  * Une carte de la liste d'achats : ce qu'elle est (et la collection d'extension dont elle est une
  * case), ce qu'elle coûte, où la trouver. Mémoïsée : les lignes de `useWishlist` restent les mêmes
- * d'un filtre à l'autre, seules les nouvelles se rendent. Ses liens vers la fiche de son Pokémon
- * sont de simples liens, que la liste fait suivre par le routeur (`useFollowLinks`) ; une carte
- * sans Pokémon (un dresseur, une énergie) n'en a pas.
+ * d'un filtre à l'autre, seules les nouvelles se rendent. Ses liens, vers sa page (`cardPath` :
+ * la fiche de son Pokémon, ou la page de sa collection, sa fenêtre ouverte) et vers sa
+ * collection, sont de simples liens, que la liste fait suivre par le routeur (`useFollowLinks`).
  */
 export const WishCard = memo(function WishCard({ row }: { row: WishRow }) {
   const { card, price, change30, series } = row
   const [speciesId] = card.dexIds
-  const path = speciesId === undefined ? null : speciesPath(speciesId)
+  const path = cardPath(card, series)
   const art = <CardArt card={card} speciesId={speciesId} alt="" />
 
   return (
@@ -55,7 +55,11 @@ export const WishCard = memo(function WishCard({ row }: { row: WishRow }) {
           {card.reference}
           <LanguageFlag language={cardLanguage(card)} />
         </p>
-        {series && <p className="hint">Collection {series.name}</p>}
+        {series && (
+          <p className="hint">
+            <a href={seriesPath(series.set, cardLanguage(series))}>Collection {series.name}</a>
+          </p>
+        )}
 
         <dl className={styles.wishPrices}>
           <div>

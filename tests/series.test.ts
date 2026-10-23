@@ -3,16 +3,26 @@
  * remplir le Pokédex), une carte déjà dans le compte reprise comme sa case (jamais d'une autre
  * langue, jamais deux cases), une case obtenue (statut ou commande reçue) ou ajoutée seule qui
  * devient pour de bon une carte de son Pokémon (sans copie), la suppression d'une collection (rien
- * de possédé ni du registre des commandes ne se perd, et ce que sa confirmation en dit) et sa
- * progression. Une erreur ici doublerait une carte, remplirait le Pokédex de cartes qu'on n'a pas,
- * ou perdrait une carte payée.
+ * de possédé ni du registre des commandes ne se perd, et ce que sa confirmation en dit), sa
+ * progression, et où mène le lien d'une carte (une case pas encore obtenue : sa collection, jamais
+ * la fiche de son Pokémon, qui ne la montre pas). Une erreur ici doublerait une carte, remplirait
+ * le Pokédex de cartes qu'on n'a pas, perdrait une carte payée, ou ferait marquer possédée une
+ * autre carte que celle suivie.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test'
 import { adopt, completeFavorites, setCardStatus } from '@/lib/collection'
+import { cardPath, seriesCard } from '@/lib/filters'
 import { applyOrder } from '@/lib/orders'
 import { buildPokedex } from '@/lib/pokedex'
-import { findSeries, removeSeries, seriesProgress, seriesRemoval, startSeries } from '@/lib/series'
+import {
+  findSeries,
+  removeSeries,
+  seriesOf,
+  seriesProgress,
+  seriesRemoval,
+  startSeries,
+} from '@/lib/series'
 import type { CardLanguage, CardStatus, CollectionData, PokemonCard, PriceFile } from '@/types'
 import {
   card,
@@ -307,5 +317,42 @@ describe('la progression', () => {
       toComplete: 4,
       unpriced: 2,
     })
+  })
+})
+
+describe('le lien d’une carte', () => {
+  test('une case pas encore obtenue, ou un dresseur, mène à sa collection', () => {
+    const data = started(withCards(collectionWith(), card('a', [1]), card('b', [])), [
+      slotFor('001', [25]),
+      slotFor('100', []),
+      slotFor('101', []),
+    ])
+    let current = withStatus(data, 'ja 001', 'ordered')
+    current = withStatus(current, 'ja 101', 'owned')
+    const path = (id: string) => cardPath(current.customCards[id]!, seriesOf(current, id))
+    // Commandée mais pas obtenue, elle n'est pas sur la fiche de Pikachu : sa collection.
+    expect(path('ja 001')).toBe('/collections/M6A?carte=ja+001')
+    // Un dresseur, obtenu ou non : sa collection, la seule page qui le montre.
+    expect(path('ja 100')).toBe('/collections/M6A?carte=ja+100')
+    expect(path('ja 101')).toBe('/collections/M6A?carte=ja+101')
+    // Une carte d'un Pokémon : sa fiche ; obtenue, la case en est une, toujours dans sa collection.
+    expect(path('a')).toBe('/pokemon/1')
+    current = withStatus(current, 'ja 001', 'owned')
+    expect(path('ja 001')).toBe('/pokemon/25')
+    // Un dresseur d'aucune collection : nulle part.
+    expect(path('b')).toBeNull()
+    // Une française : sa langue dans l'adresse.
+    const french = started(collectionWith(), [slotFor('025', [25], undefined, 'fr')], 'fr')
+    expect(cardPath(french.customCards['fr 025']!, french.series[0]!)).toBe(
+      '/collections/M6A?langue=fr&carte=fr+025',
+    )
+  })
+
+  test('l’adresse d’une collection n’ouvre que la fenêtre d’une de ses cases', () => {
+    const data = started(withCards(collectionWith(), card('a', [1])), [slotFor('001', [25])])
+    const series = data.series[0]!
+    expect(seriesCard(new URLSearchParams('carte=ja+001'), series)).toBe('ja 001')
+    expect(seriesCard(new URLSearchParams('carte=a'), series)).toBeNull()
+    expect(seriesCard(new URLSearchParams(), series)).toBeNull()
   })
 })

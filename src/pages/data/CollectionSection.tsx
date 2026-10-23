@@ -3,7 +3,7 @@ import { Inbox } from '@camply/ui/icons'
 import { useRef } from 'react'
 import { Link } from 'react-router'
 import { usePokedex } from '@/hooks/usePokedex'
-import { summarize } from '@/lib/pokedex'
+import { isEmptySummary, summarize } from '@/lib/pokedex'
 import { formatDateTime, formatShare, unlockedOf } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'
 import { DataSection } from './DataSection'
@@ -26,7 +26,7 @@ export function CollectionSection() {
       titleRef={title}
       description="Enregistrée sur le serveur : la même sur tous vos appareils."
     >
-      {summary.cards === 0 && summary.series === 0 ? (
+      {isEmptySummary(summary) ? (
         <EmptyState
           align="start"
           icon={<Inbox size={22} />}

@@ -4,13 +4,22 @@
  * fiche d'un Pokémon (`speciesPath`), les onglets des Achats et les filtres de leur liste
  * d'achats (`parseShopping`, `shoppingUrl`), le Pokédex public d'un compte (`vitrinePath`), la
  * langue et l'extension du Catalogue (`catalogLanguage`, `catalogParams`), la page d'une collection
- * d'extension (`seriesPath`).
+ * d'extension et la carte dont elle ouvre la fenêtre (`seriesPath`, `seriesCard`), où mène le lien
+ * d'une carte (`cardPath`).
  */
 
 import { generationById, POKEMON_TYPES, type Generation } from '@/config/pokedex'
+import { cardLanguage } from '@/lib/collection'
 import { SPECIES } from '@/lib/species'
 import type { CardView, PokedexEntry } from '@/lib/pokedex'
-import type { CardLanguage, GenerationId, PokemonSpecies, PokemonTypeId } from '@/types'
+import type {
+  CardLanguage,
+  GenerationId,
+  PokemonCard,
+  PokemonSpecies,
+  PokemonTypeId,
+  SeriesCollection,
+} from '@/types'
 
 /**
  * Débloqués (une de leurs cartes est possédée), à débloquer (pas encore), ou dont une carte est
@@ -166,11 +175,38 @@ export function catalogParams(lang: CardLanguage, set?: string): URLSearchParams
 
 /**
  * La page de la collection d'une extension : `/collections/M6A`, `/collections/MEG?langue=fr` pour
- * une française (un même code existe dans les deux langues).
+ * une française (un même code existe dans les deux langues) ; avec `card` (son id), la fenêtre de
+ * cette carte ouverte d'emblée (`?carte=`, `seriesCard`).
  */
-export function seriesPath(set: string, language: CardLanguage): string {
-  const search = catalogParams(language).toString()
+export function seriesPath(set: string, language: CardLanguage, card?: string): string {
+  const params = catalogParams(language)
+  if (card) params.set('carte', card)
+  const search = params.toString()
   return `/collections/${encodeURIComponent(set)}${search ? `?${search}` : ''}`
+}
+
+/**
+ * L'adresse de la page d'une collection → la carte dont la fenêtre s'ouvre d'emblée (`?carte=`,
+ * `seriesPath`), si c'est une de ses cases ; sinon aucune (`null`).
+ */
+export function seriesCard(params: URLSearchParams, series: SeriesCollection): string | null {
+  const card = params.get('carte')
+  return card !== null && series.cards.includes(card) ? card : null
+}
+
+/**
+ * Où mène le lien d'une carte (`series` : la collection d'extension dont elle est une case,
+ * `seriesOf`). Une case pas encore obtenue (`seriesOnly`), absente de la fiche de ses Pokémon, ou
+ * une carte sans Pokémon (un dresseur, une énergie) : la page de sa collection, sa fenêtre ouverte.
+ * Une autre carte : la fiche de son Pokémon (le premier d'une carte TAG TEAM). Ni Pokémon ni
+ * collection : nulle part (`null`).
+ */
+export function cardPath(card: PokemonCard, series: SeriesCollection | null): string | null {
+  const [speciesId] = card.dexIds
+  if (series && (card.seriesOnly || speciesId === undefined)) {
+    return seriesPath(series.set, cardLanguage(series), card.id)
+  }
+  return speciesId === undefined ? null : speciesPath(speciesId)
 }
 
 /** Sans casse, accent ni ligature : « Nœunœuf » → « noeunoeuf », « Éli » → « eli ». */

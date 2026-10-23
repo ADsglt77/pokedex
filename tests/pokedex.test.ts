@@ -4,7 +4,8 @@
  * favorite ou non, sinon « commandé » si l'une l'est ; une carte TAG TEAM est la favorite de chacun
  * de ses Pokémon, chacun pour soi. Une entrée inchangée est reprise telle quelle (les pochettes
  * mémoïsées ne se redessinent pas). Une case d'extension pas encore obtenue n'est pas une carte de
- * son Pokémon, ni du compte des cartes (`summarize`) ; possédée, elle l'est. Et le jour où un
+ * son Pokémon, ni du compte des cartes (`summarize`) ; possédée, elle l'est ; une collection
+ * commencée suffit à ce que la collection ne soit pas vide (`isEmptySummary`). Et le jour où un
  * Pokémon est débloqué (`unlockEvents`) : celui de sa première carte obtenue. Une erreur ici dirait
  * « à débloquer » un Pokémon qu'on a, ou l'inverse.
  */
@@ -12,7 +13,7 @@
 import { beforeAll, describe, expect, test } from 'bun:test'
 import { setCardStatus, setFavorite } from '@/lib/collection'
 import { localDayOf } from '@/lib/format'
-import { buildPokedex, type CardView, summarize, unlockEvents } from '@/lib/pokedex'
+import { buildPokedex, type CardView, isEmptySummary, summarize, unlockEvents } from '@/lib/pokedex'
 import type { CollectionData } from '@/types'
 import { card, collectionWith, loadTestSpecies, NOW, ownership, withCards } from './fixtures'
 
@@ -135,6 +136,8 @@ describe('les cases des collections d’extensions', () => {
       series: [{ set: 'M6A', name: 'Méga Rêve ex', startedAt: NOW, cards: ['slot'] }],
     }
     expect(summarize(data)).toEqual({ cards: 0, owned: 0, ordered: 0, series: 1 })
+    expect(isEmptySummary(summarize(data))).toBe(false)
+    expect(isEmptySummary(summarize(collectionWith()))).toBe(true)
   })
 })
 

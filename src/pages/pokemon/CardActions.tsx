@@ -87,8 +87,8 @@ export function AddCardButton({
  * Ce que l'utilisateur fait d'une carte du Pokémon (`entry`) : lui donner un statut et noter son
  * prix payé (`CardStatusControls`), en faire sa favorite, la corriger, la retirer (possédée, ou
  * favorite d'un Pokémon qui garde d'autres cartes : après confirmation, qui demande alors la
- * nouvelle favorite ; pas une case d'une collection d'extension, qui se retire avec elle). Chaque
- * action est annoncée avec « Annuler ».
+ * nouvelle favorite ; pas une case d'une collection d'extension, qui y reste : supprimer la
+ * collection la garde, possédée ou ajoutée seule). Chaque action est annoncée avec « Annuler ».
  */
 export function CardActions({ view, entry }: { view: CardView; entry: PokedexEntry }) {
   const act = useCollectionAction()
@@ -104,7 +104,8 @@ export function CardActions({ view, entry }: { view: CardView; entry: PokedexEnt
   const otherNames = otherSpeciesNames(card.dexIds, species.id)
   // Une carte d'une commande y reste (sauf d'un seul de ses Pokémon : `isInAnOrder`).
   const inAnOrder = useShoppingStore((state) => isInAnOrder(state.shopping.orders, card.id))
-  // Une case d'une collection d'extension se retire avec elle, jamais d'ici.
+  // Une case d'une collection d'extension y reste : elle ne se retire pas d'ici (la carte d'une
+  // fiche, possédée ou ajoutée seule, reste même si la collection est supprimée).
   const series = useCollectionStore((state) => seriesOf(state.collection, card.id))
   // La favorite de ce Pokémon (une TAG TEAM l'est, ou non, de chacun des siens).
   const favorite = entry.card?.card.id === card.id
@@ -180,7 +181,7 @@ export function CardActions({ view, entry }: { view: CardView; entry: PokedexEnt
         </Stack>
         <p className="hint">
           {series
-            ? `Elle fait partie de votre collection ${series.name} : elle se retire avec elle.`
+            ? `Elle fait partie de votre collection ${series.name} : elle y reste.`
             : shared
               ? `Elle est aussi celle de ${otherNames} : la retirer d’ici la leur laisse, avec son statut et son prix payé.`
               : inAnOrder

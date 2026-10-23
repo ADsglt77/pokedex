@@ -11,7 +11,7 @@ import { SetLogo } from '@/components/SetLogo'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { useStatSize } from '@/hooks/useStatSize'
 import { cardLanguage } from '@/lib/collection'
-import { catalogLanguage } from '@/lib/filters'
+import { catalogLanguage, seriesCard } from '@/lib/filters'
 import {
   details,
   formatDate,
@@ -34,7 +34,8 @@ import styles from './SeriesPage.module.css'
  * La page d'une collection d'extension (`/collections/M6A`, `?langue=fr` pour une française,
  * `seriesPath`) : son nom et le drapeau de sa langue, son logo, ses cartes possédées sur toutes,
  * leur valeur, le coût pour la compléter (et combien de cartes à acheter n'ont pas de prix) ; puis
- * toutes ses cartes (`SeriesGrid`), chacune ouvrant sa fenêtre. Une collection inconnue : la page
+ * toutes ses cartes (`SeriesGrid`), chacune ouvrant sa fenêtre, celle de `?carte=` ouverte
+ * d'emblée (`seriesCard` : le lien d'une carte, `cardPath`). Une collection inconnue : la page
  * introuvable. Une collection qui disparaît sous la page (supprimée ici, son début annulé par
  * « Annuler », supprimée sur un autre appareil) ramène aux Collections.
  */
@@ -69,7 +70,12 @@ export function SeriesPage() {
       <SeriesSummary collection={collection} series={series} />
       <section className={styles.cards}>
         <h2 className={styles.heading}>Ses cartes</h2>
-        <SeriesGrid collection={collection} series={series} linked />
+        <SeriesGrid
+          collection={collection}
+          series={series}
+          linked
+          opened={seriesCard(params, series)}
+        />
       </section>
     </div>
   )
@@ -139,10 +145,11 @@ function SeriesSummary({
 }
 
 /**
- * « Supprimer la collection » : une confirmation dit ce qui reste (les cartes possédées, au
- * Pokédex ; commandées ou dans une commande, comme cartes seules ; ajoutées seules, telles
- * quelles) et ce qui part (les cartes à acheter), d'après `seriesRemoval` ; puis la page ramène
- * aux Collections (`SeriesPage`), la suppression annoncée avec « Annuler ».
+ * « Supprimer la collection » : une confirmation dit ce qui reste (les cartes possédées, dans le
+ * compte, et au Pokédex pour celles d'un Pokémon ; commandées ou dans une commande, comme cartes
+ * seules ; ajoutées seules, telles quelles) et ce qui part (les cartes à acheter), d'après
+ * `seriesRemoval` ; puis la page ramène aux Collections (`SeriesPage`), la suppression annoncée
+ * avec « Annuler ».
  */
 function RemoveSeries({
   collection,
@@ -156,7 +163,8 @@ function RemoveSeries({
   const [confirming, setConfirming] = useState(false)
   const { owned, kept, alone, dropped } = seriesRemoval(collection, series, orders)
   const stays = [
-    owned.length > 0 && `${plural(owned.length, 'carte possédée', 'cartes possédées')}, au Pokédex`,
+    owned.length > 0 &&
+      `${plural(owned.length, 'carte possédée', 'cartes possédées')}, dans votre compte (et au Pokédex ${owned.length > 1 ? 'pour celles' : 'si elle est'} d’un Pokémon)`,
     kept.length > 0 &&
       `${plural(kept.length, 'carte commandée ou dans une commande', 'cartes commandées ou dans une commande')}, comme ${kept.length > 1 ? 'cartes seules' : 'carte seule'}`,
     alone.length > 0 &&

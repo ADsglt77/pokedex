@@ -94,11 +94,13 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   faux, et pas un lien vers le Pokédex, qui demande d'être connecté ; sur téléphone, leur liste),
   la valeur au prix du jour, la courbe des Pokémon débloqués et le classeur (débloqués en couleur,
   cartes choisies grisées ; les pochettes ne mènent pas aux fiches, celles du visiteur), puis ses
-  collections d'extensions s'il en a (`series` ; « Voir ses collections » sous le titre y mène) :
-  pour chacune, son nom et le drapeau de sa langue, ses cartes possédées sur toutes, leur valeur au
-  prix du jour (« — » sans prix, `seriesProgress` sur les prix reçus) et toutes ses cartes en
-  lecture seule (`SeriesGrid`, `linked` faux : possédées en couleur, les autres grisées, « à
-  débloquer » pour le lecteur d'écran), jamais ce qu'il faudrait pour la compléter. Le serveur
+  collections d'extensions s'il en a (`series`, la section « Collections » de `VitrinePage` ; le
+  classeur comptant plus de 1 000 pochettes, « Voir ses collections » sous le titre y mène, une
+  ancre `#collections`) : pour chacune sa ligne (`SeriesLine` : son nom pour titre et le drapeau
+  de sa langue, ses cartes possédées sur toutes, leur valeur au prix du jour, « — » sans prix,
+  `seriesProgress` sur les prix reçus) et toutes ses cartes en lecture seule (`SeriesGrid`,
+  `linked` faux : possédées en couleur, les autres grisées, « à débloquer » pour le lecteur
+  d'écran), jamais ce qu'il faudrait pour la compléter, un prix payé ni une commande. Le serveur
   ne montre que les cartes (avec leur langue, sans leur page notée), la carte favorite de chaque
   Pokémon (`favorites`, celle qu'on montre pour lui), les collections d'extensions (`series` :
   l'extension, sa langue, son nom, son jour de début et ses cases, recopiés un à un ; leurs cases
@@ -145,9 +147,13 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   tard, au retour du réseau ou de la page, et quitter la page le demande d'abord (`beforeunload`).
   Un refus pour de bon (400 et 422 : un document qui ne passe pas les contrôles ; 413 : plus de
   5 Mo ; 403 : une origine refusée) donne « Envoi refusé », avec sa raison (la règle en cause, relue
-  par le navigateur avec le même code, `documentProblem`) ; rien ne repart tout seul. Au retour sur
-  la page, le document est relu (changé sur un autre appareil), si rien n'attend d'être envoyé ;
-  une modification faite pendant cette relecture n'est pas écrasée : elle part, depuis la version
+  par le navigateur avec le même code, `documentProblem`) ; rien ne repart tout seul. Le plafond de
+  5 Mo (`MAX_BODY`, `server/app.ts`) tombe vers 16 000 à 18 000 cartes (une carte d'une collection
+  d'extension pèse environ 270 octets), soit 50 à 80 extensions selon leur taille ; au-delà,
+  chaque envoi est refusé (« Envoi refusé » : « elle dépasse 5 Mo ») : plus rien ne s'enregistre
+  tant que le document dépasse le plafond. Au retour sur la page, le document est relu (changé sur
+  un autre appareil), si rien n'attend d'être envoyé ; une modification faite pendant cette
+  relecture n'est pas écrasée : elle part, depuis la version
   d'avant (changée ailleurs entre-temps : refusée, 409, puis relue, comme plus haut). Le
   serveur garde une version remplacée par heure, 30 jours (`collection_versions`, à reprendre à la
   main). Il note au journal ce qui change d'une version à l'autre (`documentChanges`,

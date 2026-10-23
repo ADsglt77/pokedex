@@ -68,13 +68,17 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     `docs/cartes.md`) est reprise, jamais copiée (une carte n'existe qu'une fois) : elle perd
     `seriesOnly` comme à l'obtention (`obtain` : favorite de ceux de ses Pokémon qui n'en ont pas),
     garde son statut (aucun, ou commandée) et reste une case de sa collection.
-  - Retirer : une carte qui est une case d'une collection (`seriesOf`) se retire avec elle, depuis
-    sa page, jamais depuis la fiche d'un Pokémon (« Retirer la carte » y est inactif).
+  - Retirer : une carte qui est une case d'une collection (`seriesOf`) y reste ; sur la fiche d'un
+    Pokémon, « Retirer la carte » est inactif (« Elle fait partie de votre collection Méga Rêve ex :
+    elle y reste. »). Supprimer la collection ne retire que des cases pas encore obtenues, qui ne
+    sont sur aucune fiche : une carte de la fiche (possédée, ou ajoutée seule) reste, et se retire
+    ensuite de la fiche comme les autres.
   - Supprimer (`removeSeries`, d'après `seriesRemoval`, ce que dit aussi sa confirmation) : les
-    cartes possédées restent (et donc au Pokédex) ; une case commandée, ou dans une commande quel
-    que soit son état (`isInAnOrder` : le registre ne perd rien), reste comme carte seule (sans
-    `seriesOnly`, favorite de ceux de ses Pokémon qui n'en ont pas) ; les autres cases
-    disparaissent. Une carte de l'extension ajoutée seule, reprise comme case, ne bouge pas.
+    cartes possédées restent dans le compte (et au Pokédex pour celles d'un Pokémon : un dresseur ou
+    une énergie n'y est pas) ; une case commandée, ou dans une commande quel que soit son état
+    (`isInAnOrder` : le registre ne perd rien), reste comme carte seule (sans `seriesOnly`,
+    favorite de ceux de ses Pokémon qui n'en ont pas) ; les autres cases disparaissent. Une carte de
+    l'extension ajoutée seule, reprise comme case, ne bouge pas.
   - Progression (`seriesProgress`) : ses cases possédées sur toutes, chacune une fois (une TAG TEAM
     aussi) ; leur valeur (prix du marché) ; le coût pour la compléter (les cases ni possédées ni
     commandées) et combien d'entre elles n'ont pas de prix.

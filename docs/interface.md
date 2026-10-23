@@ -110,27 +110,26 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   possédées sur toutes, leur part et la barre ; leur valeur au prix du jour ; le coût pour la
   compléter, ses cartes ni possédées ni commandées, « Sans compter 2 cartes sans prix ») ; puis
   toutes ses cartes (`SeriesGrid`, dans `components/` : le Pokédex public la reprend en lecture
-  seule, `linked` faux, chaque carte une image décrite), dans l'ordre de l'extension, possédées en
-  couleur, les autres en grisé (`CardArt` `locked`), avec leur marque de statut, leur numéro et leur
-  nom ; dessinées au fur et à mesure (`useGrowingList`, 60 à la fois), seules celles à l'écran le
-  sont (`content-visibility`), et mémoïsées : une carte qui change de statut ne redessine qu'elle.
+  seule, `linked` faux, chaque carte une image décrite, dans sa section « Collections » :
+  `docs/compte-et-synchronisation.md`), dans l'ordre de l'extension, possédées en couleur, les
+  autres en grisé (`CardArt` `locked`), avec leur marque de statut, leur numéro et leur nom ;
+  dessinées au fur et à mesure (`useGrowingList`, 60 à la fois), seules celles à l'écran le sont
+  (`content-visibility`), et mémoïsées : une carte qui change de statut ne redessine qu'elle.
   Une carte ouvre sa fenêtre (`SeriesCard`, pleine page comme la fiche d'une carte du catalogue) :
   son image, sa référence et son drapeau, son statut et ses Pokémon (chacun vers sa fiche ; aucun
   pour un dresseur), « Je possède cette carte » et « Marquer comme commandée », le prix payé et la
   confirmation pour quitter « possédée » (`CardStatusControls`, les mêmes que sur la fiche d'un
   Pokémon), son prix Cardmarket et sa courbe (`PricePanel`) ; chaque action annoncée avec
-  « Annuler ». « Supprimer la collection » demande confirmation, qui dit ce qui reste (possédées, au
-  Pokédex ; commandées ou dans une commande, comme cartes seules ; ajoutées seules, telles quelles)
-  et ce qui part (les cartes à acheter), d'après `seriesRemoval` ; la suppression est annoncée avec
+  « Annuler ». Le lien d'une carte ailleurs dans l'app (`cardPath`, plus bas) ouvre sa fenêtre
+  d'emblée : `?carte=<id>` (`seriesPath` avec la carte), lu par `seriesCard` (seulement une case
+  de la collection ; sinon, aucune fenêtre). « Supprimer la collection » demande confirmation, qui
+  dit ce qui reste (possédées, dans le compte, et au Pokédex pour celles d'un Pokémon ; commandées
+  ou dans une commande, comme cartes seules ; ajoutées seules, telles quelles) et ce qui part (les
+  cartes à acheter), d'après `seriesRemoval` ; la suppression est annoncée avec
   « Annuler » (« Collection Méga Rêve ex supprimée. »). Une collection inconnue (une autre
   extension, ou une autre langue) : la page introuvable. Une collection qui disparaît sous sa page
   (supprimée, son début annulé par « Annuler », supprimée sur un autre appareil) ramène aux
-  Collections (`Navigate`, qui remplace l'adresse). Le Pokédex public montre, sous son classeur, une
-  section « Collections » (`VitrinePage`) : pour chacune sa ligne (`SeriesLine`, son nom pour titre,
-  ses cartes possédées sur toutes, leur valeur au prix du jour, « — » sans prix), puis toutes ses
-  cartes (`SeriesGrid`, `linked` faux) ; jamais le coût pour la compléter, un prix payé ni une
-  commande. Le classeur comptant plus de 1 000 pochettes, « Voir ses collections » sous le titre y
-  mène (une ancre, `#collections`). Le Pokédex : recherche, filtres rapides de
+  Collections (`Navigate`, qui remplace l'adresse). Le Pokédex : recherche, filtres rapides de
   possession avec leur nombre (les autres filtres appliqués), les autres filtres dans un panneau
   (génération, type, carte), chacun rappelé en étiquette retirable ; quand tout ne tient pas sur
   une ligne, les filtres rapides passent dessous (sur téléphone, ils défilent de côté). Achats :
@@ -168,7 +167,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   part) ; « {nom} ne sera plus débloqué » n'est dit (quitter « possédée », retirer une carte
   possédée) que pour un Pokémon dont aucune autre carte n'est possédée (`unlockedWithout`) ; une
   carte qui est une case d'une collection d'extension (`seriesOf`) n'a pas « Retirer la carte »
-  actif : « Elle fait partie de votre collection Méga Rêve ex : elle se retire avec elle. » ;
+  actif : « Elle fait partie de votre collection Méga Rêve ex : elle y reste. » (supprimer la
+  collection la garde, `docs/collection-et-achats.md`) ;
   le lien vers le prochain Pokémon sans carte vient après les actions de la carte,
   « Dans le Pokédex » à part sur grand écran ;
   seul effet appuyé de l'app, la carte en grand suit la souris et la lumière y glisse
@@ -188,9 +188,14 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   carte sans Pokémon (un dresseur, une énergie : une case d'une collection d'extension) se montre
   partout comme les autres (accueil, Valeur, liste d'achats, prochaine commande, commandes), son
   nom pour titre (`cardTitle` : sa référence sans son code) et son image, ou une carte de
-  substitution sans dessin d'espèce, mais ne mène à aucune fiche (`CardSpeciesLink` ; sur l'accueil
+  substitution sans dessin d'espèce. Où mène le lien d'une carte (accueil, Valeur, liste d'achats,
+  prochaine commande, commandes) se décide en un seul endroit (`cardPath`, `lib/filters.ts` ;
+  `CardPageLink`) : une case pas encore obtenue (`seriesOnly`, absente de la fiche de ses Pokémon,
+  où « Je possède cette carte » viserait une autre carte) ou une carte sans Pokémon mène à la page
+  de sa collection, sa fenêtre ouverte (`?carte=`) ; une autre carte, à la fiche de son Pokémon (le
+  premier d'une TAG TEAM) ; une carte sans Pokémon ni collection ne mène nulle part (sur l'accueil,
   elle ne se soulève pas au survol). Une case d'extension dit sa collection (« Collection Méga Rêve
-  ex » sur la liste d'achats, « collection … » sur sa ligne).
+  ex » sur la liste d'achats, un lien vers sa page ; « collection … » sur sa ligne).
 - Installation : le site s'installe sur téléphone et ordinateur (`public/manifest.webmanifest`,
   icônes de `public/icons` et `public/apple-touch-icon.png`, dessinées d'après `favicon.svg`). Pas
   de service worker ni d'usage hors ligne (décision de l'utilisateur, octobre 2026 : la collection

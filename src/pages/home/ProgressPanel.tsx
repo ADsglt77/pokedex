@@ -9,7 +9,7 @@ import { cx } from '@/lib/cx'
 import { seriesPath } from '@/lib/filters'
 import { formatInteger, plural, unlockedOf } from '@/lib/format'
 import { summarize, type Progress } from '@/lib/pokedex'
-import { seriesProgress } from '@/lib/series'
+import { seriesId, seriesProgress } from '@/lib/series'
 import { useCollectionStore } from '@/store/collection'
 import type { CollectionData, SeriesCollection } from '@/types'
 import styles from './ProgressPanel.module.css'
@@ -74,7 +74,7 @@ export function ProgressPanel() {
           <h3 className={styles.collectionsTitle}>Collections</h3>
           <ul>
             {collection.series.map((series) => (
-              <li key={`${cardLanguage(series)} ${series.set}`}>
+              <li key={seriesId(series)}>
                 <SeriesLink collection={collection} series={series} />
               </li>
             ))}

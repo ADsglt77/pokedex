@@ -4,10 +4,12 @@ import { Link } from 'react-router'
 import { CardArt } from '@/components/CardArt'
 import { Panel } from '@/components/Panel'
 import { usePokedex } from '@/hooks/usePokedex'
-import { pokedexUrl, speciesPath } from '@/lib/filters'
+import { cardPath, pokedexUrl, speciesPath } from '@/lib/filters'
 import { formatDate } from '@/lib/format'
 import type { RecentCard } from '@/lib/pokedex'
+import { seriesOf } from '@/lib/series'
 import { cardTitle } from '@/lib/species'
+import { useCollectionStore } from '@/store/collection'
 import type { PokemonCard } from '@/types'
 import page from './HomePage.module.css'
 import styles from './RecentPanel.module.css'
@@ -21,6 +23,7 @@ export const SHOWN_CARDS = 10
  * se remonte à chaque visite, la donne se rejouerait chaque fois.
  */
 export function RecentPanel({ cards }: { cards: RecentCard[] }) {
+  const collection = useCollectionStore((state) => state.collection)
   const [first] = useState(() => new Set(cards.map((recent) => recent.card.id)))
   let dealt = 0
   return (
@@ -46,6 +49,7 @@ export function RecentPanel({ cards }: { cards: RecentCard[] }) {
             >
               <CardLink
                 card={recent.card}
+                to={cardPath(recent.card, seriesOf(collection, recent.card.id))}
                 speciesId={speciesId}
                 name={cardTitle(recent.card)}
                 hint={date ? `Obtenue le ${date}` : recent.card.reference}
@@ -59,18 +63,21 @@ export function RecentPanel({ cards }: { cards: RecentCard[] }) {
 }
 
 /**
- * Une carte de l'accueil, qui mène à la fiche de son Pokémon (`speciesId`) ; une carte sans Pokémon
- * (un dresseur, une énergie) n'a pas de fiche : elle ne mène nulle part. `locked` : pas encore
- * obtenue.
+ * Une carte de l'accueil, qui mène à sa page (`to` : la fiche de son Pokémon, ou la page de sa
+ * collection d'extension, `cardPath`) ; sans page (`null` : un dresseur ou une énergie d'aucune
+ * collection), elle ne mène nulle part. `speciesId` : le Pokémon de son dessin de substitution.
+ * `locked` : pas encore obtenue.
  */
 function CardLink({
   card,
+  to,
   speciesId,
   name,
   hint,
   locked,
 }: {
   card: PokemonCard
+  to: string | null
   speciesId: number | undefined
   name: string
   hint: string
@@ -83,10 +90,10 @@ function CardLink({
       <span className="hint">{hint}</span>
     </>
   )
-  return speciesId === undefined ? (
+  return to === null ? (
     <span className={styles.card}>{content}</span>
   ) : (
-    <Link to={speciesPath(speciesId)} className={styles.card}>
+    <Link to={to} className={styles.card}>
       {content}
     </Link>
   )
@@ -108,6 +115,7 @@ export function Chosen() {
           <li key={species.id}>
             <CardLink
               card={card!.card}
+              to={speciesPath(species.id)}
               speciesId={species.id}
               name={species.names.fr}
               hint={card!.card.reference}

@@ -4,9 +4,9 @@
  * (`customCards`) : une carte déjà là, la même (`sameCard` : même langue, même code ou même id
  * Cardmarket), est reprise ; les autres sont ajoutées comme cases pas encore obtenues
  * (`seriesOnly`), qui ne remplissent pas le Pokédex. Possédée une fois, une case devient pour de
- * bon une carte de ses Pokémon (`obtain`). La collection d'une carte (`seriesOf`) ; ce que la
- * suppression d'une collection fait de ses cases (`seriesRemoval`) ; leur progression : cases
- * possédées, valeur, coût pour compléter.
+ * bon une carte de ses Pokémon (`obtain`). Ce qui distingue une collection (`seriesId`) ; la
+ * collection d'une carte (`seriesOf`) ; ce que la suppression d'une collection fait de ses cases
+ * (`seriesRemoval`) ; leur progression : cases possédées, valeur, coût pour compléter.
  */
 
 import { isCardOf, referenceCode, sameCard } from '@/lib/card-code'
@@ -21,6 +21,14 @@ import type {
   PriceFile,
   SeriesCollection,
 } from '@/types'
+
+/**
+ * Ce qui distingue une collection des autres : sa langue et son extension (« fr MEG »), un même
+ * code existant dans les deux langues. Sa clé dans une liste ; au journal du serveur, ce qui la
+ * retrouve d'une version du document à l'autre.
+ */
+export const seriesId = (series: Pick<SeriesCollection, 'set' | 'language'>) =>
+  `${cardLanguage(series)} ${series.set}`
 
 /** La collection de cette extension dans cette langue ; `null` si elle n'est pas commencée. */
 export const findSeries = (data: CollectionData, set: string, language: CardLanguage) =>
@@ -78,7 +86,7 @@ export function startSeries(
 
 /** Ce que deviennent les cases d'une collection qu'on supprime (`removeSeries`) : leurs ids. */
 interface SeriesRemoval {
-  /** Possédées : elles restent, au Pokédex. */
+  /** Possédées : elles restent dans le compte (et au Pokédex pour celles d'un Pokémon). */
   owned: string[]
   /** Des cartes ajoutées seules (pas `seriesOnly`), pas possédées : elles restent telles quelles. */
   alone: string[]
@@ -110,9 +118,9 @@ export function seriesRemoval(
 
 /**
  * Supprime la collection de cette extension dans cette langue (`seriesRemoval`). Ses cartes
- * possédées restent (et donc au Pokédex), comme une carte du compte reprise comme case ; une case
- * commandée, ou dans une commande, reste comme carte seule de ses Pokémon (`obtain`, favorite de
- * ceux qui n'en ont pas) ; les autres cases disparaissent.
+ * possédées restent (et au Pokédex pour celles d'un Pokémon), comme une carte du compte reprise
+ * comme case ; une case commandée, ou dans une commande, reste comme carte seule de ses Pokémon
+ * (`obtain`, favorite de ceux qui n'en ont pas) ; les autres cases disparaissent.
  */
 export function removeSeries(
   data: CollectionData,

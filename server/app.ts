@@ -17,7 +17,11 @@ import { collectionRoutes } from './collection'
 import { journal, journalRoutes } from './journal'
 import { vitrineRoutes } from './vitrine'
 
-/** Bien au-delà d'une collection de 1 025 cartes et de ses commandes : 413 au-delà. */
+/**
+ * Le plus gros corps accepté (la collection et les achats d'un compte) : 413 au-delà. Une carte
+ * d'une collection d'extension pèse environ 270 octets : la limite tombe vers 16 000 à 18 000
+ * cartes, soit 50 à 80 extensions selon leur taille (`docs/compte-et-synchronisation.md`).
+ */
 const MAX_BODY = 5_000_000
 
 interface AppContext {

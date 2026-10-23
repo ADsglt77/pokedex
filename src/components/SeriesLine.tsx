@@ -1,8 +1,8 @@
 import { Progress } from '@camply/ui'
 import type { ReactNode } from 'react'
 import { LanguageFlag } from '@/components/LanguageSwitch'
+import { ProgressCount } from '@/components/ProgressCount'
 import { cardLanguage } from '@/lib/collection'
-import { formatInteger } from '@/lib/format'
 import { progressPercent } from '@/lib/pokedex'
 import type { SeriesCollection } from '@/types'
 import styles from './SeriesLine.module.css'
@@ -34,10 +34,7 @@ export function SeriesLine({
         <LanguageFlag language={cardLanguage(series)} of="set" />
       </Name>
       <span className={styles.figures}>
-        <span className="numeric">
-          {formatInteger(owned)} / {formatInteger(total)}
-          <span className="visually-hidden"> cartes possédées</span>
-        </span>
+        <ProgressCount done={owned} total={total} what="cartes possédées" />
         {children}
       </span>
       <Progress
