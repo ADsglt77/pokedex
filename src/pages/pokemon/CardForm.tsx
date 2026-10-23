@@ -18,6 +18,7 @@ import type { AddAs, PokemonCard, PokemonSpecies } from '@/types'
 import { CardFields } from './CardFields'
 import { CatalogPicker, type PickerView } from './CatalogPicker'
 import { CatalogGridSkeleton } from '@/components/CatalogTile'
+import { LanguageSwitch } from '@/components/LanguageSwitch'
 import { ADD_AS_LABELS, ADDED_AS } from '@/config/shopping'
 import { usePokedex } from '@/hooks/usePokedex'
 import { cardSpecies } from '@/lib/collection'
@@ -25,10 +26,10 @@ import { toOptions } from '@/lib/format'
 import { speciesNames } from '@/lib/species'
 
 /**
- * Ajouter la carte d'un Pokémon (la choisir dans le catalogue des cartes japonaises, qui remplit la
- * saisie, ou la saisir à la main), ou la corriger (`card`) : sa saisie seulement. Une autre carte
- * ne remplace pas celle-ci : son statut, son prix payé et ses commandes lui appartiennent. Montée
- * seulement quand la fenêtre est ouverte.
+ * Ajouter la carte d'un Pokémon (la choisir dans le catalogue, japonaise ou française, qui remplit
+ * la saisie, ou la saisir à la main), ou la corriger (`card`) : sa saisie seulement. Une autre
+ * carte ne remplace pas celle-ci : son statut, son prix payé et ses commandes lui appartiennent.
+ * Montée seulement quand la fenêtre est ouverte.
  */
 export function CardForm({
   species,
@@ -56,6 +57,7 @@ export function CardForm({
   const [addAs, setAddAs] = useState<AddAs>('none')
   // L'onglet caché est démonté : ses réglages vivent ici.
   const [view, setView] = useState<PickerView>({
+    language: 'ja',
     order: 'recent',
     set: '',
     pricedOnly: false,
@@ -107,8 +109,8 @@ export function CardForm({
       }
       description={
         card
-          ? 'Corrigez sa référence (d’où son image), son id Cardmarket (d’où son prix et son lien) ou sa page.'
-          : 'Choisissez-la parmi ses cartes japonaises, ou saisissez sa référence (d’où son image) et son id Cardmarket (d’où son prix).'
+          ? 'Corrigez sa langue, sa référence (d’où son image), son id Cardmarket (d’où son prix et son lien) ou sa page.'
+          : 'Choisissez-la dans le catalogue, japonais ou français, ou saisissez sa référence (d’où son image) et son id Cardmarket (d’où son prix).'
       }
       footer={
         <>
@@ -130,21 +132,33 @@ export function CardForm({
       ) : (
         <Tabs value={tab} defaultValue="catalogue" onChange={setTab}>
           <TabList>
-            <Tab value="catalogue">Cartes japonaises</Tab>
+            <Tab value="catalogue">Catalogue</Tab>
             <Tab value="saisie" ref={entryTab}>
               {picked ? 'La carte choisie' : 'Saisie à la main'}
             </Tab>
           </TabList>
           <TabPanel value="catalogue">
-            <Suspense fallback={<PickerSkeleton />}>
-              <CatalogPicker
-                species={species}
-                selected={picked?.key ?? null}
-                onPick={pick}
-                view={view}
-                onView={setView}
-              />
-            </Suspense>
+            <Stack gap={4}>
+              {/* En rangée : le segment ne s'étire pas sur la largeur. Une autre langue : ses
+                  extensions ne sont pas celles de l'autre. */}
+              <Stack direction="horizontal">
+                <LanguageSwitch
+                  value={view.language}
+                  onChange={(language) =>
+                    setView({ ...view, language, set: '', filter: NO_FILTER })
+                  }
+                />
+              </Stack>
+              <Suspense fallback={<PickerSkeleton />}>
+                <CatalogPicker
+                  species={species}
+                  selected={picked?.key ?? null}
+                  onPick={pick}
+                  view={view}
+                  onView={setView}
+                />
+              </Suspense>
+            </Stack>
           </TabPanel>
           <TabPanel value="saisie">
             <Stack gap={5}>

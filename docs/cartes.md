@@ -51,8 +51,8 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
   (`CardLanguage`, `'ja'` ou `'fr'` : `loadSpeciesCards(n°, langue)`, `loadSets(langue)`, la
   langue d'une série est `CatalogSet.language`), et la clé d'une carte du catalogue est « SV2A 166 »
   en japonais, « fr MEG 001 » en français (un même code de série existe dans les deux langues ;
-  cette clé reste interne, on montre « MEG 001 » : `cardCode`) ; le Catalogue montre les deux
-  langues (l'interrupteur, ci-dessous), la fenêtre d'ajout pas encore. Les types
+  cette clé reste interne, on montre « MEG 001 » : `cardCode`) ; le Catalogue et la fenêtre
+  d'ajout montrent les deux langues (l'interrupteur, ci-dessous). Les types
   sont numérotés sans être nommés par la source : leurs noms sont dans `CARD_TYPES`
   (`src/config/catalog.ts` : 1 Plante, 2 Eau, 3 Feu, 4 Électrique, 5 Psy, 6 Obscurité, 7 Métal,
   8 Combat, 9 Dragon, 10 Incolore, 11 Fée ; les catégories des dresseurs, 12 Stade, 13 Dresseur
@@ -63,16 +63,27 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises (Pokécardex, pa
   été lue (404), la fenêtre d'ajout et la page Catalogue le disent (« pas disponible pour le
   moment »). La référence d'une carte : « Dracaufeu ex (SV2A 006) », son nom puis le code de
   sa série et son numéro. « Ajouter une carte »
-  (`pokemon/CardForm`) s'ouvre sur l'onglet « Cartes japonaises » (`CatalogPicker` : image
-  Pokécardex, code, rareté, prix du jour, tri par date ou par prix, filtres de rareté et de type
-  (`CardFilters`, retirés quand l'extension change) ; ses réglages vivent
-  dans `CardForm`, l'onglet caché étant démonté) ; choisir une carte remplit la saisie (`fill` :
-  référence « Pikachu ex (SV8 033) » et id, d'où l'image, le prix et le lien Cardmarket ; une carte
+  (`pokemon/CardForm`) s'ouvre sur l'onglet « Catalogue », où l'interrupteur de langue
+  (`LanguageSwitch`, le même que celui de la page Catalogue, japonais au départ) précède la grille
+  (`CatalogPicker` : image Pokécardex, code, rareté, prix du jour, tri par date ou par prix, filtres
+  de rareté et de type (`CardFilters`, retirés quand l'extension change) ; une seule langue à la fois,
+  les textes (« cartes françaises »), l'extension et le lien « toute l'extension » (`catalogParams`,
+  qui porte la langue) le suivent ; changer de langue remet l'extension et les filtres à zéro ; ses
+  réglages, la langue comprise (`PickerView.language`), vivent dans `CardForm`, l'onglet caché étant
+  démonté) ; choisir une carte remplit la saisie (`fill` : sa langue (`set.language`), sa
+  référence « Pikachu ex (SV8 033) » et son id, d'où l'image, le prix et le lien Cardmarket ; une carte
   TAG TEAM dit « avec … » dans la grille, et va à tous ses Pokémon sans carte tant que la référence
   reste la sienne) et y mène le focus ; on la vérifie puis l'enregistre (« Enregistrer » attend que la
   carte soit choisie, ou l'onglet de saisie). « Modifier la carte » n'a que la saisie : choisir une autre carte, ce serait
   lui transmettre le statut, le prix payé et les commandes de celle-ci. Le catalogue n'est qu'une
-  aide : la carte enregistrée est une carte saisie comme les autres (`manual:<uuid>`).
+  aide : la carte enregistrée est une carte saisie comme les autres (`manual:<uuid>`). La saisie a
+  sa langue (`useCardDraft.language`, `CardFields` : son propre `LanguageSwitch` et « Carte
+  japonaise » / « Carte française ») : celle de la carte corrigée, japonaise pour une nouvelle, ou
+  celle de la carte choisie dans le catalogue ; elle dit où l'image de la référence est cherchée
+  (`findCardImage`) et se lit à l'enregistrement : `language: 'fr'` pour une carte française, rien
+  pour une japonaise (un export d'avant n'a rien à migrer). Corriger une carte garde donc sa langue,
+  qu'on peut aussi changer là ; l'image déjà retrouvée n'est gardée (`kept`) que dans la langue de
+  la carte.
   L'enregistrement (`useCardDraft.save`) attend le prix et l'image : une seule fois à la fois, la
   fenêtre ne se ferme pas pendant ce temps. Une page Cardmarket qui n'était que celle de l'id de
   départ est oubliée quand l'id change (le lien suit alors le nouvel id).

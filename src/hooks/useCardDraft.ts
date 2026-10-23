@@ -7,21 +7,22 @@ import { cardLanguage, newCardId } from '@/lib/collection'
 import { focusFirstError } from '@/lib/focus'
 import { parseLink } from '@/lib/format'
 import { loadPriceHistory } from '@/store/prices'
-import type { CardImage, PokemonCard } from '@/types'
+import type { CardImage, CardLanguage, PokemonCard } from '@/types'
 
 /** L'image enregistrée a été retrouvée : elle suit la référence, ce n'est pas une adresse collée. */
 const hasFoundImage = (card: PokemonCard) => card.image !== null && isFoundImage(card.image)
 
 /**
- * La saisie d'une carte : l'adresse de son image (vide : celle retrouvée d'après la référence),
- * son id Cardmarket, sa référence, sa page chez Cardmarket. `card` : la carte à corriger ;
- * `fields` : le bloc de ses champs, où le premier en erreur reçoit le focus à l'enregistrement.
+ * La saisie d'une carte : sa langue, l'adresse de son image (vide : celle retrouvée d'après la
+ * référence), son id Cardmarket, sa référence, sa page chez Cardmarket. `card` : la carte à
+ * corriger ; `fields` : le bloc de ses champs, où le premier en erreur reçoit le focus à
+ * l'enregistrement.
  */
 export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLElement | null>) {
   // Tiré une fois : deux clics sur « Enregistrer » écrivent la même carte, pas deux.
   const [id] = useState(() => card?.id ?? newCardId())
   // La langue de la carte à corriger (japonaise pour une nouvelle) : où son image est cherchée.
-  const language = card ? cardLanguage(card) : 'ja'
+  const [language, setLanguage] = useState<CardLanguage>(() => (card ? cardLanguage(card) : 'ja'))
   const [image, setImage] = useState(() =>
     card?.image && !hasFoundImage(card) ? card.image.large : '',
   )
@@ -63,17 +64,23 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
   // La référence dont on cherche l'image : aucune si une adresse est collée, ou sans code de série
   // et numéro.
   const lookup = image.trim() || !referenceCode(searched) ? null : searched
-  // L'image déjà retrouvée reste, pour la même référence : si elle ne répond pas cette fois, ou si
-  // la référence n'a pas de code où la chercher.
+  // L'image déjà retrouvée reste, pour la même référence et la même langue : si elle ne répond pas
+  // cette fois, ou si la référence n'a pas de code où la chercher.
   const kept =
-    card && reference.trim() === card.reference && hasFoundImage(card) ? card.image : null
+    card &&
+    reference.trim() === card.reference &&
+    language === cardLanguage(card) &&
+    hasFoundImage(card)
+      ? card.image
+      : null
 
   /**
-   * La carte saisie, pour les Pokémon `dexIds` ; `null` tant qu'un champ est illisible (ses
-   * erreurs s'affichent alors, et le premier reçoit le focus). Sans référence notée, le nom de la
-   * carte chez Cardmarket, sinon `fallback` ; une référence qui n'était que le nom de l'ancien id
-   * suit l'id corrigé, et une page qui n'était que celle de l'ancien id est oubliée (le lien suit
-   * alors l'id). Sans adresse collée, l'image retrouvée d'après la référence, s'il y en a une.
+   * La carte saisie, pour les Pokémon `dexIds` (`language: 'fr'` si elle est française, rien si elle
+   * est japonaise) ; `null` tant qu'un champ est illisible (ses erreurs s'affichent alors, et le
+   * premier reçoit le focus). Sans référence notée, le nom de la carte chez Cardmarket, sinon
+   * `fallback` ; une référence qui n'était que le nom de l'ancien id suit l'id corrigé, et une page
+   * qui n'était que celle de l'ancien id est oubliée (le lien suit alors l'id). Sans adresse
+   * collée, l'image retrouvée d'après la référence, s'il y en a une.
    */
   async function read(dexIds: number[], fallback: string): Promise<PokemonCard | null> {
     if (cardmarket === undefined || errors.image || errors.page) {
@@ -100,17 +107,19 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
       dexIds,
       reference: (!stale && typed) || known?.name || fallback,
       image: picture,
+      ...(language === 'fr' && { language }),
       ...(cardmarket !== null && { cardmarket }),
       ...(pageUrl && !stalePage && { page: pageUrl }),
     }
   }
 
   /**
-   * Reprend une carte choisie dans le catalogue : sa référence (d'où son image) et son id
-   * Cardmarket. Une adresse d'image ou une page collées pour une autre carte ne lui vont plus. La
+   * Reprend une carte choisie dans le catalogue : sa langue, sa référence (d'où son image) et son
+   * id Cardmarket. Une adresse d'image ou une page collées pour une autre carte ne lui vont plus. La
    * même fonction d'un rendu à l'autre : les tuiles du catalogue (mémoïsées) ne se redessinent pas.
    */
-  const fill = useCallback((chosen: Pick<CatalogCard, 'reference' | 'cardmarket'>) => {
+  const fill = useCallback((chosen: Pick<CatalogCard, 'reference' | 'cardmarket' | 'set'>) => {
+    setLanguage(chosen.set.language)
     setReference(chosen.reference)
     setSearched(chosen.reference)
     setCardmarketText(String(chosen.cardmarket ?? ''))
@@ -139,6 +148,7 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
   return {
     /** La langue de la carte : celle où son image est cherchée (`findCardImage`). */
     language,
+    setLanguage,
     image,
     setImage,
     /** L'image de l'adresse collée, si elle est lisible. */

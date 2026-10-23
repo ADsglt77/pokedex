@@ -1,6 +1,7 @@
 import { Input, Stack } from '@camply/ui'
 import { Suspense, use, type Ref } from 'react'
 import { CardArt } from '@/components/CardArt'
+import { LanguageSwitch } from '@/components/LanguageSwitch'
 import type { CardDraft } from '@/hooks/useCardDraft'
 import { findCardImage } from '@/lib/card-catalog'
 import { formatEuro } from '@/lib/format'
@@ -16,8 +17,9 @@ import styles from './CardFields.module.css'
 const RAW_TEXT = { spellCheck: false, autoCorrect: 'off', autoComplete: 'off' } as const
 
 /**
- * Les champs d'une carte : sa référence (d'où son image est retrouvée), l'adresse de son image
- * (vide : celle retrouvée), son id Cardmarket (vérifié dans les prix), sa page Cardmarket, et
+ * Les champs d'une carte : sa langue (japonaise ou française : où son image est cherchée, et quelle
+ * offre Cardmarket son lien montre), sa référence (d'où son image est retrouvée), l'adresse de son
+ * image (vide : celle retrouvée), son id Cardmarket (vérifié dans les prix), sa page Cardmarket, et
  * l'aperçu de la carte. `speciesId` : pour l'aperçu sans image ; `ref` : le bloc des champs.
  */
 export function CardFields({
@@ -33,6 +35,10 @@ export function CardFields({
   return (
     <div className={styles.layout} ref={ref}>
       <Stack gap={4}>
+        <Stack direction="horizontal" align="center" gap={3} wrap>
+          <LanguageSwitch value={draft.language} onChange={draft.setLanguage} />
+          <span className="muted">Carte {draft.language === 'fr' ? 'française' : 'japonaise'}</span>
+        </Stack>
         <Input
           {...RAW_TEXT}
           label="Référence"

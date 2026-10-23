@@ -11,11 +11,12 @@ import {
   type CardFilter,
   type CatalogCard,
 } from '@/lib/card-catalog'
+import { catalogParams } from '@/lib/filters'
 import { plural } from '@/lib/format'
 import { priceOf, priceText } from '@/lib/prices'
 import { otherSpeciesNames } from '@/lib/species'
 import { usePrices, usePricesMissing } from '@/store/prices'
-import type { PokemonSpecies } from '@/types'
+import type { CardLanguage, PokemonSpecies } from '@/types'
 
 const ORDERS = [
   { value: 'recent', label: 'Plus récentes' },
@@ -24,8 +25,10 @@ const ORDERS = [
 
 /** Les réglages de la grille, gardés par la fenêtre : revenir aux cartes les retrouve. */
 export interface PickerView {
+  /** La langue des cartes montrées (`LanguageSwitch`, dans `CardForm`) : le japonais au départ. */
+  language: CardLanguage
   order: 'recent' | 'price'
-  /** L'extension montrée ; `''` : toutes. */
+  /** L'extension montrée, de cette langue ; `''` : toutes. */
   set: string
   pricedOnly: boolean
   /** Les raretés et les types choisis : retirés quand l'extension change. */
@@ -33,10 +36,10 @@ export interface PickerView {
 }
 
 /**
- * Les cartes japonaises du Pokémon, à choisir : leur image, leur série et leur numéro, leur rareté,
- * leur prix Cardmarket du jour ; à filtrer par série, par rareté et par type, ou aux cartes qui ont
- * un prix.
- * `selected` : la clé de la carte choisie (« SV2A 166 »). Une carte de plusieurs Pokémon (TAG
+ * Les cartes du Pokémon dans la langue de `view` (japonaises ou françaises), à choisir : leur
+ * image, leur série et leur numéro, leur rareté, leur prix Cardmarket du jour ; à filtrer par
+ * série, par rareté et par type, ou aux cartes qui ont un prix.
+ * `selected` : la clé de la carte choisie (`CatalogCard.key`). Une carte de plusieurs Pokémon (TAG
  * TEAM) dit avec qui.
  */
 export function CatalogPicker({
@@ -52,13 +55,14 @@ export function CatalogPicker({
   view: PickerView
   onView: (view: PickerView) => void
 }) {
-  const listed = use(loadSpeciesCards(species.id, 'ja'))
+  const { language, order, set, pricedOnly, filter } = view
+  const listed = use(loadSpeciesCards(species.id, language))
   const ids = useMemo(() => (listed ?? []).flatMap((card) => card.cardmarket ?? []), [listed])
   const prices = usePrices(ids)
   const missing = usePricesMissing(ids)
-  const { order, set, pricedOnly, filter } = view
   const change = (next: Partial<PickerView>) => onView({ ...view, ...next })
 
+  const adjective = language === 'fr' ? 'française' : 'japonaise'
   if (!listed) {
     return (
       <p className="muted">
@@ -70,7 +74,7 @@ export function CatalogPicker({
   if (listed.length === 0) {
     return (
       <p className="muted">
-        Aucune carte japonaise de {species.names.fr} dans le catalogue : saisissez-la à la main.
+        Aucune carte {adjective} de {species.names.fr} dans le catalogue : saisissez-la à la main.
       </p>
     )
   }
@@ -126,12 +130,12 @@ export function CatalogPicker({
       <p className="muted">
         {/* Annoncé à chaque filtre : un lecteur d'écran apprend ainsi le nombre de cartes. */}
         <span aria-live="polite">
-          {plural(shown.length, 'carte japonaise', 'cartes japonaises')}
+          {plural(shown.length, `carte ${adjective}`, `cartes ${adjective}s`)}
         </span>
         {set && (
           <>
             {' '}
-            · <Link to={`/catalogue?set=${encodeURIComponent(set)}`}>toute l’extension {set}</Link>
+            · <Link to={`/catalogue?${catalogParams(language, set)}`}>toute l’extension {set}</Link>
           </>
         )}
       </p>
