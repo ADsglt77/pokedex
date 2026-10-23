@@ -1,6 +1,6 @@
 /** Des données d'essai : une carte, une collection, des commandes, des cartes de liste d'achats. */
 
-import { emptyCollection } from '@/lib/collection'
+import { completeFavorites, emptyCollection } from '@/lib/collection'
 import { newOrder } from '@/lib/orders'
 import type { PlannableCard } from '@/lib/purchase-planner'
 import type { CardOwnership, CollectionData, Order, OrderLine, PokemonCard } from '@/types'
@@ -28,6 +28,13 @@ export const ownership = (
 export const collectionWith = (cards: CollectionData['cards'] = {}): CollectionData => ({
   ...emptyCollection(),
   cards,
+})
+
+/** Ces cartes, dans l'ordre : la première de chaque Pokémon en est la favorite (d'office). */
+export const withCards = (data: CollectionData, ...cards: PokemonCard[]): CollectionData => ({
+  ...data,
+  customCards: Object.fromEntries(cards.map((c) => [c.id, c])),
+  favorites: completeFavorites({}, cards),
 })
 
 export const line = (cardId: string, unitPrice: number, extra: Partial<OrderLine> = {}) => ({

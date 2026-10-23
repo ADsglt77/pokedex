@@ -97,8 +97,14 @@ export interface CollectionData {
   updatedAt: string | null
   /** Clé : id de carte. Une carte sans statut n'y figure pas. */
   cards: Record<string, CardOwnership>
-  /** Les cartes ajoutées par l'utilisateur, une par Pokémon. Clé : id de carte. */
+  /** Les cartes ajoutées par l'utilisateur, plusieurs par Pokémon au besoin. Clé : id de carte. */
   customCards: Record<string, PokemonCard>
+  /**
+   * La carte favorite de chaque Pokémon : celle qu'on montre pour lui. Clé : numéro du Pokémon ;
+   * valeur : l'id d'une de ses cartes. Un Pokémon qui a des cartes en a exactement une, un Pokémon
+   * sans carte n'en a pas.
+   */
+  favorites: Record<number, string>
 }
 
 /** Le document d'un compte : la collection et les achats, gardés ensemble par le serveur. */

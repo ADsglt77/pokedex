@@ -12,8 +12,13 @@ interface CollectionStore {
   setCardStatus: (card: PokemonCard, status: CardStatus | null) => void
   setPaidPrice: (card: PokemonCard, paidPrice: number | undefined) => void
   saveCard: (card: PokemonCard) => void
-  /** Retire la carte de ce Pokémon (une carte de plusieurs Pokémon reste celle des autres). */
-  removeCard: (cardId: string, speciesId: number) => void
+  /** La carte favorite de ce Pokémon : celle qu'on montre pour lui. */
+  setFavorite: (speciesId: number, cardId: string) => void
+  /**
+   * Retire la carte de ce Pokémon (une carte de plusieurs Pokémon reste celle des autres) ;
+   * `favorite` remplace la sienne si c'en était la favorite et qu'il garde d'autres cartes.
+   */
+  removeCard: (cardId: string, speciesId: number, favorite?: string) => void
   /** Remplace toute la collection : lue sur le serveur, import, effacement. */
   replaceCollection: (collection: CollectionData) => void
 }
@@ -30,8 +35,10 @@ export const useCollectionStore = create<CollectionStore>()((set, get) => {
     setPaidPrice: (card, paidPrice) =>
       update((collection, now) => rules.setPaidPrice(collection, card, paidPrice, now)),
     saveCard: (card) => update((collection, now) => rules.saveCard(collection, card, now)),
-    removeCard: (cardId, speciesId) =>
-      update((collection, now) => rules.removeCard(collection, cardId, speciesId, now)),
+    setFavorite: (speciesId, cardId) =>
+      update((collection, now) => rules.setFavorite(collection, speciesId, cardId, now)),
+    removeCard: (cardId, speciesId, favorite) =>
+      update((collection, now) => rules.removeCard(collection, cardId, speciesId, now, favorite)),
     replaceCollection: (collection) => set({ collection }),
   }
 })

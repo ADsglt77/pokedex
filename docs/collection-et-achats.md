@@ -8,6 +8,20 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   à la lecture (`readCollection` : `schemaVersion`, `updatedAt`, `cards` et `customCards` ; de même
   `readShopping` pour les achats). La page Valeur montre ce que les commandes ont coûté en tout
   (« Dépensé en tout »).
+- Carte favorite : un Pokémon peut avoir plusieurs cartes (`customCards`) ; `favorites`
+  (`CollectionData.favorites`, le numéro du Pokémon → l'id de l'une de ses cartes) dit laquelle on
+  montre pour lui. Invariant : un Pokémon qui a au moins une carte a exactement une favorite, l'une
+  de ses cartes ; un Pokémon sans carte n'en a pas. Une carte TAG TEAM peut être la favorite de
+  chacun de ses Pokémon, chacun pour soi. Qui la choisit : la première carte d'un Pokémon l'est
+  d'office (`saveCard`, par `completeFavorites` : pour une carte de plusieurs Pokémon, chacun de ceux
+  qui n'en ont pas encore) ; ensuite, seul l'utilisateur la change (`setFavorite`, une carte à la
+  fois pour un Pokémon, les autres Pokémon n'y changent rien) : l'app ne la choisit jamais, rien
+  n'est proposé quand une carte est obtenue. Retirer la favorite d'un Pokémon (`removeCard`) : si
+  le Pokémon garde d'autres cartes, l'appelant désigne la nouvelle favorite (paramètre `favorite`) ;
+  sans autre carte, il n'a plus de favorite. Une carte TAG TEAM retirée d'un Pokémon reste la
+  favorite des autres. `schemaVersion` reste `1` : un champ ajouté, les documents d'avant se lisent.
+  Testé (`tests/cards.test.ts`), « Annuler » compris : ces règles ne modifient pas ce qu'elles
+  reçoivent.
 - Langue d'une carte (`PokemonCard.language`) : `'fr'` pour une carte française ; absente, elle est
   japonaise (`cardLanguage`, `lib/collection.ts`), si bien que les collections et les exports
   d'avant restent japonais, sans migration. Le japonais n'a qu'une écriture, l'absence :
