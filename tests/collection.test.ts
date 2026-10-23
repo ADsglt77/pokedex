@@ -554,4 +554,54 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
     // L'API muette : le Pokédex, sans prix.
     expect((await visit()).prices).toBeNull()
   })
+
+  test('plus de 1 000 cartes possédées : leurs prix demandés par paquets de 1 000, réunis', async () => {
+    // L'API des données refuse plus de 1 025 ids par demande.
+    const owner = await createAccount('Riche')
+    const many = Array.from({ length: 1001 }, (_, index) =>
+      card(`c${index}`, [25], { cardmarket: 100_001 + index }),
+    )
+    const document = withCards(
+      collectionWith(Object.fromEntries(many.map(({ id }) => [id, ownership('owned')]))),
+      ...many,
+    )
+    app
+      .query(
+        'INSERT INTO collections (user_id, version, collection, shopping, updated_at) VALUES (?, 1, ?, ?, ?)',
+      )
+      .run(owner.user!.id, JSON.stringify(document), JSON.stringify(emptyShopping()), NOW)
+    // Une fausse API des données : elle note combien d'ids chaque demande porte ; `failing` : le
+    // petit paquet échoue.
+    const asked: number[] = []
+    let failing = false
+    const api = Bun.serve({
+      port: 0,
+      hostname: '127.0.0.1',
+      fetch(request) {
+        const ids = new URL(request.url).searchParams.get('ids')!.split(',')
+        asked.push(ids.length)
+        if (failing && ids.length === 1) return new Response(null, { status: 500 })
+        return Response.json({
+          date: '2026-10-19',
+          cards: Object.fromEntries(ids.map((id) => [id, [1, null, null]])),
+        })
+      },
+    })
+    const before = process.env.DATA_API_URL
+    process.env.DATA_API_URL = api.url.origin
+    try {
+      const { prices } = await visit('riche')
+      expect(asked.sort((a, b) => a - b)).toEqual([1, 1000])
+      expect(prices?.date).toBe('2026-10-19')
+      expect(Object.keys(prices!.cards).sort()).toEqual(
+        many.map(({ cardmarket }) => String(cardmarket)).sort(),
+      )
+      // Un paquet sans réponse : pas de prix du tout, plutôt qu'une valeur fausse.
+      failing = true
+      expect((await visit('riche')).prices).toBeNull()
+    } finally {
+      await api.stop(true)
+      process.env.DATA_API_URL = before
+    }
+  })
 })

@@ -2,15 +2,15 @@
  * Les prix Cardmarket : ceux du jour, demandés pour les seules cartes affichées (`/api/prices`, par
  * paquets de 200 : celles de la collection, d'une extension du catalogue, d'un Pokémon, un id
  * saisi), que l'API des données met à jour (sa tâche `prices`), et leur historique
- * (`/api/prices/<id>` pour une carte, `/api/histories` pour la collection). Les réponses
- * s'ajoutent : une carte dont le prix est connu n'est plus redemandée, sauf au retour sur une page
- * restée ouverte plus de 6 h (`refreshPrices`). Facultatifs : sans eux (serveur arrêté, base encore
- * vide), `null`, et l'app s'affiche sans prix.
+ * (`/api/prices/<id>` pour une carte, `/api/histories` par paquets de 1 000 pour la collection).
+ * Les réponses s'ajoutent : une carte dont le prix est connu n'est plus redemandée, sauf au retour
+ * sur une page restée ouverte plus de 6 h (`refreshPrices`). Facultatifs : sans eux (serveur
+ * arrêté, base encore vide), `null`, et l'app s'affiche sans prix.
  */
 
 import { create } from 'zustand'
 import { forget, getJson } from '@/lib/api'
-import { historiesOf } from '@/lib/prices'
+import { historiesOf, idBatches, priceBatches } from '@/lib/prices'
 import { settled } from '@/lib/settled'
 import { HOUR } from '@/lib/time'
 import { useCollectionStore } from '@/store/collection'
@@ -53,30 +53,23 @@ const priceUrls = new Set<string>()
 let answeredAt = 0
 
 /**
- * Les ids d'une demande de prix, au plus : une collection en a des milliers (ses extensions), et
- * l'adresse doit rester courte (l'API des données en accepte 1 025 au plus).
- */
-const IDS_PER_REQUEST = 200
-
-/**
- * Demande les prix des cartes `ids` qui ne sont pas encore connus, par paquets de
- * `IDS_PER_REQUEST` ; le serveur répond pour chaque carte (`null` sans prix). Redemandés après une
- * panne (`getJson`, une minute après au plus tôt).
+ * Demande les prix des cartes `ids` qui ne sont pas encore connus, par paquets fixes de 200
+ * (`priceBatches` : une collection de plusieurs extensions en a des milliers) ; le serveur répond
+ * pour chaque carte (`null` sans prix). Redemandés après une panne (`getJson`, une minute après au
+ * plus tôt).
  */
 function requestPrices(ids: readonly number[]) {
   const { known, failed } = usePriceStore.getState()
   // Une panne : redemandée (`getJson` attend une minute) à chaque rendu.
   if (requested.get(ids) === known && (!failed.size || !ids.some((id) => failed.has(id)))) return
   requested.set(ids, known)
-  // Triés : quand des paquets entiers arrivent, les autres (en cours, ou en panne) gardent leur
-  // adresse, et ne sont pas redemandés.
-  const wanted = [...new Set(ids)].filter((id) => !known.has(id)).sort((a, b) => a - b)
-  for (let start = 0; start < wanted.length; start += IDS_PER_REQUEST) {
-    requestBatch(wanted.slice(start, start + IDS_PER_REQUEST))
-  }
+  for (const batch of priceBatches(ids, known)) requestBatch(batch)
 }
 
-/** Demande les prix d'un paquet de cartes, en une demande ; sa réponse s'ajoute aux autres. */
+/**
+ * Demande les prix d'un paquet de cartes, en une demande ; sa réponse s'ajoute aux autres. En
+ * panne, seules ses cartes encore sans réponse sont en échec : un prix déjà là reste valable.
+ */
 function requestBatch(batch: readonly number[]) {
   const url = `/api/prices?ids=${batch.join()}`
   priceUrls.add(url)
@@ -93,7 +86,7 @@ function requestBatch(batch: readonly number[]) {
             known: new Set([...state.known, ...batch]),
             failed: new Set([...state.failed].filter((id) => !batch.includes(id))),
           }
-        : { failed: new Set([...state.failed, ...batch]) },
+        : { failed: new Set([...state.failed, ...batch.filter((id) => !state.known.has(id))]) },
     )
   })
 }
@@ -197,28 +190,36 @@ export const loadPriceHistory = (cardmarket: number) =>
 
 /**
  * La dernière liste demandée, seule gardée : une liste d'avant (la collection a changé depuis) ne
- * revient pas, et sa réponse (les historiques de toute la collection) pèse plusieurs Mo.
+ * revient pas, et ses réponses (les historiques de toute la collection) pèsent plusieurs Mo.
  */
 let last: {
-  url: string
+  urls: string[]
   key: string
-  response: Promise<PriceHistories | null>
+  responses: Promise<PriceHistories | null>[]
   histories: Promise<CardPriceHistory[] | null>
 } | null = null
 
 /**
- * Les historiques des cartes `cardmarkets` (au moins une), ceux que le serveur connaît, en une
- * demande (`/api/histories`, chaque id une fois) relue dans l'ordre de la liste (`historiesOf`) ;
- * `null` si le serveur ne répond pas. La même promesse pour la même liste, lue par `use()`, refaite
- * quand la réponse est redemandée après une panne (`getJson`).
+ * Les historiques des cartes `cardmarkets` (au moins une), ceux que le serveur connaît
+ * (`/api/histories`, chaque id une fois : une demande par paquet de 1 000, `idBatches`, une seule
+ * tant qu'elles y tiennent), réunis et relus dans l'ordre de la liste (`historiesOf`) ; `null` si
+ * le serveur ne répond pas pour l'un des paquets (une courbe partielle serait fausse). La même
+ * promesse pour la même liste, lue par `use()`, refaite quand une réponse est redemandée après une
+ * panne (`getJson`).
  */
 export function loadPriceHistories(cardmarkets: readonly number[]) {
   const key = cardmarkets.join()
-  const url = `/api/histories?ids=${[...new Set(cardmarkets)].join()}`
-  if (last && last.url !== url) forget(last.url)
-  const response = getJson<PriceHistories>(url)
-  if (last?.key === key && last.response === response) return last.histories
-  const histories = settled(response.then((found) => found && historiesOf(found, cardmarkets)))
-  last = { url, key, response, histories }
+  const urls = idBatches(cardmarkets).map((ids) => `/api/histories?ids=${ids.join()}`)
+  for (const url of last?.urls ?? []) if (!urls.includes(url)) forget(url)
+  const responses = urls.map((url) => getJson<PriceHistories>(url))
+  if (last?.key === key && responses.every((response, i) => response === last!.responses[i])) {
+    return last.histories
+  }
+  const histories = settled(
+    Promise.all(responses).then((found) =>
+      found.includes(null) ? null : historiesOf(Object.assign({}, ...found), cardmarkets),
+    ),
+  )
+  last = { urls, key, responses, histories }
   return histories
 }

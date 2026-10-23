@@ -69,8 +69,8 @@ server {
     access_log off;
     # Les pages en UTF-8, dit dans leur type (`text/html; charset=utf-8`).
     charset utf-8;
-    # Une ligne de requête jusqu'à 16 Ko (8 Ko par défaut) : les 1 025 ids d'une collection
-    # (`/api/histories?ids=…`, de 7 à 8 Ko) y tiennent, avec de la marge.
+    # Une ligne de requête jusqu'à 16 Ko (8 Ko par défaut) : les 1 000 ids d'un paquet de la
+    # collection (`/api/histories?ids=…`, de 7 à 8 Ko) y tiennent, avec de la marge.
     large_client_header_buffers 4 16k;
 
     # Niveau 6 plutôt que 1 (le défaut) : le code rétrécit, pour un coût serveur négligeable.
@@ -136,8 +136,10 @@ server {
 
     # Le catalogue et les prix, de même, ensemble : 10 par seconde et par visiteur, 300 d'un coup.
     # Une page en demande une à trois (la page Catalogue : les séries, une série, ses prix ; une
-    # fiche : l'historique de sa carte, à chaque carte voisine) ; « Chercher les images » (Réglages),
-    # au plus une par série de la collection, quatre à la fois.
+    # fiche : l'historique de sa carte, à chaque carte voisine), plus, à la première, les prix de la
+    # collection par paquets fixes de 200 cartes (5 000 cartes, plusieurs extensions : 25
+    # demandes) ; « Chercher les images » (Réglages), au plus une par série de la collection, quatre
+    # à la fois.
     location ~ ^/api/(catalog|prices)(/|$) {
         limit_req zone=api_data burst=300 nodelay;
         rewrite ^/api/(.*)$ /v1/$1 break;
@@ -147,8 +149,9 @@ server {
         proxy_buffers 128 8k;
     }
 
-    # Ses routes coûteuses : 2 par seconde et par visiteur, 10 d'un coup au plus (la page Valeur,
-    # « Copier pour Cardmarket » n'en demandent qu'une).
+    # Ses routes coûteuses : 2 par seconde et par visiteur, 10 d'un coup au plus (la page Valeur en
+    # demande une par paquet de 1 000 cartes possédées, une seule jusqu'à 1 000 ; « Copier pour
+    # Cardmarket », une).
     location ~ ^/api/(histories|wants)$ {
         limit_req zone=api_heavy burst=10 nodelay;
         rewrite ^/api/(.*)$ /v1/$1 break;

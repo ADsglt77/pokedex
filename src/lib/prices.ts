@@ -1,7 +1,8 @@
 /**
  * Les prix du jour appliqués à la collection : prix d'une carte, totaux par statut, coût pour
  * compléter le Pokédex, courbes au fil des jours, plus fortes hausses et baisses. Les prix de
- * Cardmarket, par l'id Cardmarket de chaque carte.
+ * Cardmarket, par l'id Cardmarket de chaque carte. Et les paquets d'ids de leurs demandes à l'API
+ * des données, qui en refuse plus de 1 025 à la fois (le navigateur comme le serveur).
  */
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
@@ -18,6 +19,31 @@ import type {
   PriceFile,
   PriceHistories,
 } from '@/types'
+
+/**
+ * Ces ids, chacun une fois, dans leur ordre, en paquets de `size` au plus : 1 000 par défaut, sous
+ * les 1 025 que l'API des données accepte par demande (les historiques, les prix du Pokédex
+ * public). Tout tient dans un paquet : une seule demande.
+ */
+export function idBatches(ids: readonly number[], size = 1000): number[][] {
+  const unique = [...new Set(ids)]
+  return Array.from({ length: Math.ceil(unique.length / size) }, (_, index) =>
+    unique.slice(index * size, (index + 1) * size),
+  )
+}
+
+/**
+ * Les paquets de prix du jour que le navigateur demande pour les cartes `ids` (`/api/prices`) :
+ * des paquets fixes de 200 (une adresse courte), coupés dans la liste triée de toutes ces cartes,
+ * ceux dont une carte n'a pas encore sa réponse (`known`). Fixes : une réponse arrivée pour
+ * d'autres cartes ne décale aucun paquet ; chacun garde son adresse, et une demande en cours ou en
+ * panne n'est pas refaite (`getJson`).
+ */
+export const priceBatches = (ids: readonly number[], known: ReadonlySet<number>) =>
+  idBatches(
+    [...ids].sort((a, b) => a - b),
+    200,
+  ).filter((batch) => batch.some((id) => !known.has(id)))
 
 /** Ce qu'il faut d'une carte pour son prix : son id Cardmarket. */
 interface Priced {

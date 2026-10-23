@@ -74,9 +74,11 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   compte (`GET /api/vitrine/<pseudo>`, sans tenir compte des majuscules :
   `{ owner, collection, prices }`, `VitrineData`). `prices` : les prix du jour de ses seules cartes
   possédées, que le serveur demande à l'API des données (`dataPrices`, `/v1/prices` avec le token du
-  site, `DATA_API_URL` et `DATA_API_TOKEN`, 5 s au plus ; testé avec une fausse API : seulement les
-  ids de ces cartes, avec le token), `null` sans carte possédée, sans guide des prix ou l'API muette
-  (la valeur est alors « — », et une ligne au journal par minute au plus) ; un ETag tiré du compte,
+  site, `DATA_API_URL` et `DATA_API_TOKEN`, 5 s au plus ; par paquets de 1 000 ids, `idBatches`,
+  ensemble, réponses réunies : elle en refuse plus de 1 025 ; testé avec une fausse API : seulement
+  les ids de ces cartes, avec le token, 1 001 cartes en deux demandes), `null` sans carte possédée,
+  sans guide des prix ou l'API muette, pour l'un des paquets aussi (une valeur partielle serait
+  fausse ; la valeur est alors « — », et une ligne au journal par minute au plus) ; un ETag tiré du compte,
   de son contenu (`serveJson`) : un visiteur qui revient sur un Pokédex inchangé reçoit un 304.
   Réglages › Compte & partage › Pokédex public en donne l'adresse (`vitrinePath`). Un lien partagé (Discord,
   WhatsApp…) a son aperçu : nginx envoie les robots d'aperçu (`map $vitrine_preview` sur

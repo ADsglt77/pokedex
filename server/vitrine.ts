@@ -28,6 +28,7 @@ import { isPseudo } from '@/lib/account'
 import { emptyCollection } from '@/lib/collection'
 import { formatShare, pokedexTitle, unlockedOf } from '@/lib/format'
 import { progressPercent, unlockEvents } from '@/lib/pokedex'
+import { idBatches } from '@/lib/prices'
 import { HOUR, MINUTE } from '@/lib/time'
 import { readCollection } from '@/lib/transfer'
 import type { CardOwnership, CollectionData, PokemonCard, PriceFile, VitrineData } from '@/types'
@@ -119,12 +120,23 @@ const journalVisit = (entry: Parameters<typeof journalOnce>[1], request: Request
 
 /**
  * Les prix du jour des cartes `ids`, demandés à l'API des données (`DATA_API_URL`, avec le token du
- * site, `DATA_API_TOKEN`, lus à chaque demande) ; `null` sans carte, sans guide des prix, ou l'API
- * muette (5 s au plus, et une ligne au journal par minute au plus).
+ * site, `DATA_API_TOKEN`, lus à chaque demande) par paquets de 1 000 (`idBatches` : elle en refuse
+ * plus de 1 025), ensemble, puis réunis ; `null` sans carte, sans guide des prix, ou l'API muette
+ * pour l'un des paquets (une valeur partielle serait fausse).
  */
 async function dataPrices(ids: number[]): Promise<PriceFile | null> {
   if (!ids.length) return null
-  const url = `${process.env.DATA_API_URL ?? 'http://127.0.0.1:3001'}/v1/prices?ids=${[...new Set(ids)].join()}`
+  const files = await Promise.all(idBatches(ids).map(dataPricesOf))
+  if (files.includes(null)) return null
+  return { date: files[0]!.date, cards: Object.assign({}, ...files.map((file) => file!.cards)) }
+}
+
+/**
+ * Les prix du jour d'un paquet de cartes, en une demande ; `null` sans guide des prix, ou l'API
+ * muette (5 s au plus, et une ligne au journal par minute au plus).
+ */
+async function dataPricesOf(ids: number[]): Promise<PriceFile | null> {
+  const url = `${process.env.DATA_API_URL ?? 'http://127.0.0.1:3001'}/v1/prices?ids=${ids.join()}`
   try {
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${process.env.DATA_API_TOKEN ?? ''}` },
