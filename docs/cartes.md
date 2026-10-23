@@ -133,8 +133,9 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   langue d'une carte du catalogue). La fiche dit où elle en est (`useCollectionPlace` : `mine`,
   la carte de la collection qui est celle-ci, parmi toutes celles de ses Pokémon ; `holders`,
   ceux qui ont déjà des cartes) : « Pikachu a déjà des cartes : celle-ci s'y ajoute, à acheter,
-  sans changer leur favorite. » Déjà dans la collection (de la même langue, avec le même code dans
-  la référence ou le même id Cardmarket : `isCatalogCard`, pour n'importe lequel de ses Pokémon) :
+  sans changer sa favorite. » (« leur favorite » s'ils sont plusieurs). Déjà dans la collection (de
+  la même langue, avec le même code dans la référence ou le même id Cardmarket : `isCatalogCard`,
+  pour n'importe lequel de ses Pokémon) :
   « Dans votre collection », qui reçoit le focus après l'ajout, et le bouton disparaît : une carte
   du catalogue n'est jamais ajoutée deux fois (une TAG TEAM qu'un seul de ses Pokémon a se donne
   aux autres depuis leur fiche). Annoncé avec « Annuler » : « Carte … ajoutée à Pikachu, à acheter. »

@@ -214,7 +214,8 @@ function facts(card: SetCard, place: CollectionPlace) {
 function placeText({ mine, holders }: CollectionPlace) {
   if (mine) return `Dans votre collection, ${statusText(mine.status)}.`
   if (!holders.length) return 'Pas encore dans votre collection.'
-  return `${speciesNames(holders)} ${holders.length > 1 ? 'ont' : 'a'} déjà des cartes : celle-ci s’y ajoute, à acheter, sans changer leur favorite.`
+  const several = holders.length > 1
+  return `${speciesNames(holders)} ${several ? 'ont' : 'a'} déjà des cartes : celle-ci s’y ajoute, à acheter, sans changer ${several ? 'leur' : 'sa'} favorite.`
 }
 
 /**

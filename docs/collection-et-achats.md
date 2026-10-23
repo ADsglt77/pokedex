@@ -135,7 +135,7 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     montant facultatif vide vaut 0, un montant ou une quantité illisible est une erreur du champ,
     jamais un montant approché. Une carte d'une commande (en cours,
     reçue ou annulée) ne se retire pas de la collection, sauf d'un seul de ses Pokémon (`isInAnOrder`,
-    `lib/orders.ts` : la fiche d'un Pokémon et celle d'une carte du catalogue) ; les règles de la
+    `lib/orders.ts` : la fiche d'un Pokémon) ; les règles de la
     collection et des commandes ne modifient jamais ce qu'elles reçoivent (« Annuler » repose
     dessus ; testé). « Effacer ma
     collection » efface les cartes, leurs statuts et leurs prix payés ; les commandes et le budget
