@@ -5,7 +5,7 @@
   display: block;
   width: 1.5rem;
   height: 1rem;
-  transition: opacity 0.2s;
+  transition: opacity var(--duration-fast);
 }
 
 .switch [aria-checked='false'] .flag {

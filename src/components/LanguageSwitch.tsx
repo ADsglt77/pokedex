@@ -5,7 +5,8 @@ import styles from './LanguageSwitch.module.css'
 
 /**
  * Un drapeau de proportions 3:2, dessiné en SVG (Windows n'affiche pas les drapeaux emoji) aux
- * couleurs du thème (`--flag-*`) ; `label` le nomme, pour le lecteur d'écran comme pour le survol.
+ * couleurs du thème (`--flag-*`) ; `label` le nomme pour le lecteur d'écran (et donne son nom au
+ * segment qui le contient).
  */
 function Flag({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -53,7 +54,9 @@ const OPTIONS = [
 /**
  * L'interrupteur de la langue des cartes, 🇯🇵 / 🇫🇷 (le Catalogue). Un `SegmentedControl` (un groupe
  * de boutons radio : les flèches changent de segment, un seul est dans l'ordre de tabulation) dont
- * chaque segment est un drapeau, nommé « Cartes japonaises » / « Cartes françaises ».
+ * chaque segment est un drapeau, nommé « Cartes japonaises » / « Cartes françaises ». camply appelle
+ * `onChange` à chaque clic, même sur le segment déjà choisi : `onChange` n'est appelé ici que
+ * pour une autre langue (re-choisir la langue montrée ne doit rien changer à la page).
  */
 export function LanguageSwitch({
   value,
@@ -68,7 +71,7 @@ export function LanguageSwitch({
       className={styles.switch}
       options={OPTIONS}
       value={value}
-      onChange={onChange}
+      onChange={(next) => next !== value && onChange(next)}
     />
   )
 }
