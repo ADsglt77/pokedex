@@ -28,9 +28,9 @@ import { speciesNames } from '@/lib/species'
 /**
  * Ajouter une carte à un Pokémon, à côté de celles qu'il a (la choisir dans le catalogue, japonaise
  * ou française, qui remplit la saisie, ou la saisir à la main ; une carte qu'il a déjà est
- * refusée), ou la corriger (`card`) : sa saisie seulement. Une autre carte ne remplace pas
- * celle-ci : son statut, son prix payé et ses commandes lui appartiennent. Montée seulement quand
- * la fenêtre est ouverte.
+ * refusée, une carte déjà celle d'un autre de ses Pokémon n'est pas recopiée : il s'y ajoute), ou
+ * la corriger (`card`) : sa saisie seulement. Une autre carte ne remplace pas celle-ci : son statut,
+ * son prix payé et ses commandes lui appartiennent. Montée seulement quand la fenêtre est ouverte.
  */
 export function CardForm({
   species,
@@ -59,6 +59,15 @@ export function CardForm({
   // seule carte, achetée une fois), sauf ceux qui l'ont déjà ; saisie à la main, celui-ci.
   const receivers =
     card?.dexIds ?? (listed ? listed.dexIds.filter((id) => !holds(id, listed)) : [species.id])
+  // Déjà dans la collection, celle d'un autre de ses Pokémon (une TAG TEAM ajoutée avant à certains
+  // seulement) : une carte n'existe qu'une fois, les Pokémon qui la reçoivent s'ajoutent à elle (même
+  // id : son statut, son prix payé et ses commandes la suivent).
+  const existing =
+    listed && !duplicate
+      ? listed.dexIds
+          .flatMap((id) => entryById.get(id)!.cards)
+          .find((view) => isCatalogCard(view.card, listed))?.card
+      : undefined
   const [addAs, setAddAs] = useState<AddAs>('none')
   // L'onglet caché est démonté : ses réglages vivent ici.
   const [view, setView] = useState<PickerView>({
@@ -84,16 +93,28 @@ export function CardForm({
     [fill],
   )
 
+  // La carte qui existe déjà reste telle quelle (« Ajouter comme » ne change pas son statut).
+  const attach = (kept: PokemonCard) => {
+    act(
+      () =>
+        useCollectionStore.getState().saveCard({ ...kept, dexIds: [...kept.dexIds, ...receivers] }),
+      `Carte ${kept.reference} ajoutée à ${speciesNames(receivers)} (déjà dans votre collection).`,
+    )
+    onClose()
+  }
+
   const save = () =>
-    draft.save(receivers, species.names.fr, (saved) => {
-      act(
-        () => (card ? useCollectionStore.getState().saveCard(saved) : addCard(saved, addAs)),
-        card
-          ? `Carte de ${species.names.fr} modifiée.`
-          : `Carte ajoutée à ${speciesNames(receivers)}${ADDED_AS[addAs]}.`,
-      )
-      onClose()
-    })
+    existing
+      ? attach(existing)
+      : draft.save(receivers, species.names.fr, (saved) => {
+          act(
+            () => (card ? useCollectionStore.getState().saveCard(saved) : addCard(saved, addAs)),
+            card
+              ? `Carte de ${species.names.fr} modifiée.`
+              : `Carte ajoutée à ${speciesNames(receivers)}${ADDED_AS[addAs]}.`,
+          )
+          onClose()
+        })
 
   // Pendant l'enregistrement, la fenêtre reste ouverte : la fermer n'empêcherait pas l'ajout.
   const close = () => {
@@ -168,14 +189,22 @@ export function CardForm({
           <TabPanel value="saisie">
             <Stack gap={5}>
               {duplicate && <Alert tone="warn" title={`${species.names.fr} a déjà cette carte.`} />}
+              {existing && (
+                <Alert
+                  tone="info"
+                  title={`${speciesNames(existing.dexIds)} ${existing.dexIds.length > 1 ? 'ont' : 'a'} déjà cette carte : elle devient aussi celle de ${speciesNames(receivers)}, avec son statut et son prix payé.`}
+                />
+              )}
               {fields}
-              <SegmentedControl
-                size="sm"
-                label="Ajouter comme"
-                options={toOptions(ADD_AS_LABELS)}
-                value={addAs}
-                onChange={setAddAs}
-              />
+              {!existing && (
+                <SegmentedControl
+                  size="sm"
+                  label="Ajouter comme"
+                  options={toOptions(ADD_AS_LABELS)}
+                  value={addAs}
+                  onChange={setAddAs}
+                />
+              )}
             </Stack>
           </TabPanel>
         </Tabs>

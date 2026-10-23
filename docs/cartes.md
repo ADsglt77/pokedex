@@ -27,7 +27,9 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises et françaises (
   la nouvelle favorite ; impossible tant qu'une commande la contient).
   Une carte de plusieurs Pokémon (TAG TEAM : `dexIds` en a plusieurs) est **une seule carte**,
   achetée une fois (décision de l'utilisateur, octobre 2026) : choisie dans le catalogue, elle va
-  à tous ses Pokémon, sauf à ceux qui l'ont déjà ; son statut et son prix payé valent pour tous ;
+  à tous ses Pokémon, sauf à ceux qui l'ont déjà ; déjà dans la collection comme carte d'un autre
+  de ses Pokémon (une TAG TEAM ajoutée avant à certains seulement), elle n'est pas recopiée : ceux
+  qui la reçoivent s'ajoutent à elle (même id) ; son statut et son prix payé valent pour tous ;
   elle peut être la favorite de chacun, chacun pour soi ; la valeur, le coût
   pour compléter et la prochaine commande ne la comptent qu'une fois. La retirer d'un de ses
   Pokémon l'en détache seulement (`removeCard` : elle reste aux autres, avec son statut, son prix
@@ -80,7 +82,9 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises et françaises (
   référence reste la sienne ; une saisie à la main ne va qu'au Pokémon de la fiche) et y mène le
   focus ; on la vérifie puis l'enregistre (« Enregistrer » attend que la carte soit choisie, ou
   l'onglet de saisie ; une carte que le Pokémon a déjà, `isCatalogCard`, est refusée : « Pikachu a
-  déjà cette carte. »). « Modifier la carte » n'a que la saisie : choisir une autre carte, ce serait
+  déjà cette carte. » ; une carte qu'un autre de ses Pokémon a déjà lui est ajoutée telle quelle,
+  statut, prix payé et commandes compris, la fenêtre le dit et n'offre pas « Ajouter comme » :
+  « Carte … ajoutée à Pikachu (déjà dans votre collection). »). « Modifier la carte » n'a que la saisie : choisir une autre carte, ce serait
   lui transmettre le statut, le prix payé et les commandes de celle-ci. Le catalogue n'est qu'une
   aide : la carte enregistrée est une carte saisie comme les autres (`manual:<uuid>`). La saisie a
   sa langue (`useCardDraft.language`, `CardFields` : son propre `LanguageSwitch` et « Carte
