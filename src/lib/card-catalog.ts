@@ -307,13 +307,14 @@ const loads = (image: CardImage) =>
   })
 
 /**
- * L'image de la carte dans cette langue, si elle se charge (l'API des données ne copie plus rien à
- * la demande : une image est chez nous, ou ne l'est pas) : celle que le catalogue donne à cette
- * référence, sinon celle que la référence désigne (`cardImage`) ; `null` sans image. La même
- * promesse pour la même langue et la même référence (ce qu'attend `use`). `retry`, au moment
- * d'enregistrer, redemande une image qui a échoué : une panne passagère ne doit pas compter pour
- * une image absente. Sans réponse en 10 s, elle compte pour absente : l'enregistrement, qui
- * l'attend, ne reste pas bloqué.
+ * L'image de la carte dans cette langue : celle que le catalogue donne à cette référence, telle
+ * quelle, comme l'ajoute la page Catalogue (son chemin ne change jamais d'image ; pas encore copiée
+ * par l'API des données, elle s'affiche dès qu'elle l'est) ; hors du catalogue, celle que la
+ * référence désigne (`cardImage`), si elle se charge (un chemin déduit peut ne mener à rien) ;
+ * `null` sans image. La même promesse pour la même langue et la même référence (ce qu'attend
+ * `use`). `retry`, au moment d'enregistrer, redemande une image qui a échoué : une panne passagère
+ * ne doit pas compter pour une image absente. Sans réponse en 10 s, elle compte pour absente :
+ * l'enregistrement, qui l'attend, ne reste pas bloqué.
  */
 export function findCardImage(
   reference: string,
@@ -324,8 +325,9 @@ export function findCardImage(
   if (!promise || (retry && missing.has(key))) {
     promise = settled(
       catalogCard(reference, lang).then(async (listed) => {
-        // Une carte du catalogue sans image : rien à chercher.
-        const image = listed ? listed.image : cardImage(reference, lang)
+        // Une carte du catalogue : son image, sans la charger (aucune : rien à chercher).
+        if (listed) return listed.image
+        const image = cardImage(reference, lang)
         if (image && (await loads(image))) {
           missing.delete(key)
           return image
