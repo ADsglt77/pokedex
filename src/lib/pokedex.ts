@@ -89,6 +89,13 @@ const sameView = (a: CardView, b: CardView) =>
 const sameViews = (a: readonly CardView[], b: readonly CardView[]) =>
   a.length === b.length && a.every((view, index) => sameView(view, b[index]!))
 
+/**
+ * Le Pokémon resterait débloqué sans cette carte (qui quitte « possédée », ou qu'on lui retire) :
+ * une autre de ses cartes est possédée.
+ */
+export const unlockedWithout = (entry: PokedexEntry, cardId: string) =>
+  entry.cards.some(({ card, status }) => card.id !== cardId && status === 'owned')
+
 /** Où en est un Pokémon d'après ses cartes : possédée avant commandée, sinon rien. */
 const statusOf = (views: readonly CardView[]) =>
   (['owned', 'ordered'] as const).find((status) => views.some((view) => view.status === status)) ??

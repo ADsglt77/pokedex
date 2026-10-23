@@ -18,13 +18,17 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises et françaises (
   pour une carte française (`PokemonCard.language`), sauf les filtres qu'une page collée fixe déjà.
   Le filtre japonais (`language=7`) a été vérifié par l'utilisateur sur cardmarket.com ; le français
   (`language=2`) est **à faire vérifier** de même.
-  Une par Pokémon : on la corrige (« Modifier la carte », même id, son statut et ses achats la
-  suivent) ou on la retire (« Retirer la carte » : avec son statut et son prix payé ; confirmation si elle est possédée ; impossible tant qu'une commande la contient) avant
-  d'en ajouter une autre. Si un fichier importé en a plusieurs, la première compte.
+  Un Pokémon peut en avoir plusieurs, dont une favorite, celle que montre le Pokédex
+  (`docs/collection-et-achats.md`) : on en ajoute une sans rien remplacer (la fenêtre d'ajout
+  refuse une carte du catalogue qu'il a déjà) ; on corrige chacune (« Modifier la carte », même
+  id, son statut et ses achats la suivent), on en fait la favorite (« Mettre en favorite ») ou on
+  la retire (« Retirer la carte » : avec son statut et son prix payé ; confirmation si elle est
+  possédée, ou si c'est la favorite d'un Pokémon qui garde d'autres cartes : il faut alors choisir
+  la nouvelle favorite ; impossible tant qu'une commande la contient).
   Une carte de plusieurs Pokémon (TAG TEAM : `dexIds` en a plusieurs) est **une seule carte**,
   achetée une fois (décision de l'utilisateur, octobre 2026) : choisie dans le catalogue, elle va
-  aussi à ceux de ses Pokémon qui n'ont pas de carte (`cardSpecies`, le Pokémon de la fiche en
-  tête) ; son statut et son prix payé valent pour tous ; la valeur, le coût
+  à tous ses Pokémon, sauf à ceux qui l'ont déjà ; son statut et son prix payé valent pour tous ;
+  elle peut être la favorite de chacun, chacun pour soi ; la valeur, le coût
   pour compléter et la prochaine commande ne la comptent qu'une fois. La retirer d'un de ses
   Pokémon l'en détache seulement (`removeCard` : elle reste aux autres, avec son statut, son prix
   payé ; possible même dans une commande) ; du dernier, elle part. La fiche dit « aussi
@@ -72,9 +76,11 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises et françaises (
   réglages, la langue comprise (`PickerView.language`), vivent dans `CardForm`, l'onglet caché étant
   démonté) ; choisir une carte remplit la saisie (`fill` : sa langue (`set.language`), sa
   référence « Pikachu ex (SV8 033) » et son id, d'où l'image, le prix et le lien Cardmarket ; une carte
-  TAG TEAM dit « avec … » dans la grille, et va à tous ses Pokémon sans carte tant que la référence
-  reste la sienne) et y mène le focus ; on la vérifie puis l'enregistre (« Enregistrer » attend que la
-  carte soit choisie, ou l'onglet de saisie). « Modifier la carte » n'a que la saisie : choisir une autre carte, ce serait
+  TAG TEAM dit « avec … » dans la grille, et va à tous ses Pokémon qui ne l'ont pas déjà tant que la
+  référence reste la sienne ; une saisie à la main ne va qu'au Pokémon de la fiche) et y mène le
+  focus ; on la vérifie puis l'enregistre (« Enregistrer » attend que la carte soit choisie, ou
+  l'onglet de saisie ; une carte que le Pokémon a déjà, `isCatalogCard`, est refusée : « Pikachu a
+  déjà cette carte. »). « Modifier la carte » n'a que la saisie : choisir une autre carte, ce serait
   lui transmettre le statut, le prix payé et les commandes de celle-ci. Le catalogue n'est qu'une
   aide : la carte enregistrée est une carte saisie comme les autres (`manual:<uuid>`). La saisie a
   sa langue (`useCardDraft.language`, `CardFields` : son propre `LanguageSwitch` et « Carte
@@ -86,8 +92,9 @@ La carte de chaque Pokémon, le catalogue des cartes japonaises et françaises (
   la carte. Les codes d'extension se répètent d'une langue à l'autre (SVP 001 existe dans les
   deux) : la langue d'une carte de la collection se voit à côté de sa référence, un petit drapeau
   à la taille du texte, pour les japonaises aussi (`LanguageFlag`, dans `LanguageSwitch.tsx`,
-  nommé « Carte japonaise » / « Carte française ») : le titre de sa fiche (`CardSheet`), la liste
-  d'achats (`WishCard`) et les lignes des commandes et de l'assistant (`CardLine`).
+  nommé « Carte japonaise » / « Carte française ») : le titre de sa fiche (`CardSheet`), les
+  cartes d'un Pokémon sur sa fiche (`CardList`), la liste d'achats (`WishCard`) et les lignes des
+  commandes et de l'assistant (`CardLine`).
   L'enregistrement (`useCardDraft.save`) attend le prix et l'image : une seule fois à la fois, la
   fenêtre ne se ferme pas pendant ce temps. Une page Cardmarket qui n'était que celle de l'id de
   départ est oubliée quand l'id change (le lien suit alors le nouvel id).

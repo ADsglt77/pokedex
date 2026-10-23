@@ -49,13 +49,16 @@ export interface CardImage {
   large: string
 }
 
-/** La carte qu'un Pokémon attend : c'est l'utilisateur qui l'ajoute, une par Pokémon. */
+/**
+ * Une carte que veut un Pokémon : c'est l'utilisateur qui l'ajoute ; un Pokémon peut en avoir
+ * plusieurs, dont une favorite (`CollectionData.favorites`).
+ */
 export interface PokemonCard {
   /** `manual:<uuid>`. */
   id: string
   /**
-   * Les Pokémon dont c'est la carte : plusieurs pour une carte TAG TEAM, achetée une fois, qui les
-   * débloque tous (`cardSpecies`).
+   * Les Pokémon dont c'est une carte : plusieurs pour une carte TAG TEAM, achetée une fois, qui les
+   * débloque tous (choisie dans le catalogue, elle va à chacun).
    */
   dexIds: number[]
   /** « Bulbizarre (SV2a 166) » : son nom, puis le code de l'extension et le numéro (d'où l'image). */

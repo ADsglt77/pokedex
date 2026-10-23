@@ -7,6 +7,8 @@ interface ConfirmDialogProps {
   confirmLabel: string
   /** `warn` : une action qui dépasse un seuil, sans rien détruire. */
   tone?: 'danger' | 'warn'
+  /** Confirmer est impossible : un choix demandé dans la fenêtre n'est pas encore fait. */
+  confirmDisabled?: boolean
   onConfirm: () => void
   onClose: () => void
   children: ReactNode
@@ -18,6 +20,7 @@ export function ConfirmDialog({
   title,
   confirmLabel,
   tone = 'danger',
+  confirmDisabled,
   onConfirm,
   onClose,
   children,
@@ -35,6 +38,7 @@ export function ConfirmDialog({
           </Button>
           <Button
             tone={tone}
+            disabled={confirmDisabled}
             onClick={() => {
               onConfirm()
               onClose()

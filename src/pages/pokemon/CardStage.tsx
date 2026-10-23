@@ -48,7 +48,7 @@ function release(event: PointerEvent<HTMLDivElement>) {
   for (const name of ['--tilt-x', '--tilt-y']) holder.style.removeProperty(name)
 }
 
-/** La carte du Pokémon en grand, ou une pochette vide tant qu'il n'en a pas. */
+/** La carte montrée du Pokémon en grand, ou une pochette vide tant qu'il n'en a pas. */
 export function CardStage({ view, species }: { view: CardView | null; species: PokemonSpecies }) {
   if (!view) {
     return (

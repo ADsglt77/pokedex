@@ -1,5 +1,5 @@
 import { Stack } from '@camply/ui'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router'
 import { PossessionMark } from '@/components/PossessionMark'
 import { usePokedex } from '@/hooks/usePokedex'
@@ -8,6 +8,7 @@ import { formatDexNumber, pageTitle } from '@/lib/format'
 import type { PokedexEntry } from '@/lib/pokedex'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import type { CardStatus } from '@/types'
+import { CardList } from './CardList'
 import { CardSheet, EmptySheet } from './CardSheet'
 import { CardStage } from './CardStage'
 import { SpeciesAbout } from './SpeciesAbout'
@@ -19,28 +20,46 @@ import styles from './PokemonPage.module.css'
 export function PokemonPage() {
   const { id = '' } = useParams()
   const entry = usePokedex().entryById.get(Number(id))
-  return /^\d+$/.test(id) && entry ? <SpeciesPage entry={entry} /> : <NotFoundPage />
+  // Une clé par Pokémon : la carte choisie dans la liste ne passe pas d'une fiche à l'autre.
+  return /^\d+$/.test(id) && entry ? (
+    <SpeciesPage key={entry.species.id} entry={entry} />
+  ) : (
+    <NotFoundPage />
+  )
 }
 
 function SpeciesPage({ entry }: { entry: PokedexEntry }) {
-  const { species, card } = entry
+  const { species } = entry
   const { entries } = usePokedex()
   const nextWithoutCard =
     entries.find((other) => other.species.id > species.id && !other.card)?.species ?? null
 
-  // La carte ajoutée, retirée ou rétablie (« Annuler ») : le bouton ou la fenêtre qui avait le
-  // focus a disparu avec l'ancien panneau, le focus va au titre du nouveau. Seulement s'il était
-  // perdu : un changement venu d'un autre onglet ne le déplace pas.
+  // La carte montrée : celle choisie dans la liste, sinon la favorite. Une carte qui apparaît
+  // (ajoutée, ou rétablie par « Annuler ») devient la carte montrée ; une carte montrée qui
+  // disparaît laisse la place à la favorite.
+  const [chosen, setChosen] = useState<string | null>(null)
+  const [cards, setCards] = useState(entry.cards)
+  if (cards !== entry.cards) {
+    setCards(entry.cards)
+    const added = entry.cards.find(({ card }) => !cards.some((known) => known.card.id === card.id))
+    if (added) setChosen(added.card.id)
+  }
+  const shown = entry.cards.find(({ card }) => card.id === chosen) ?? entry.card
+
+  // La carte montrée a changé sous le focus (ajoutée, retirée, rétablie) : le bouton ou la fenêtre
+  // qui l'avait a disparu avec l'ancien panneau, le focus va au titre du nouveau. Seulement s'il
+  // était perdu : une carte choisie dans la liste le garde, un changement venu d'un autre onglet ne
+  // le déplace pas.
   const sheetTitle = useRef<HTMLHeadingElement>(null)
-  const cardId = card?.card.id ?? null
-  const shownCard = useRef(cardId)
+  const shownId = shown?.card.id ?? null
+  const shownBefore = useRef(shownId)
   useEffect(() => {
-    if (shownCard.current === cardId) return
-    shownCard.current = cardId
+    if (shownBefore.current === shownId) return
+    shownBefore.current = shownId
     if (document.activeElement === null || document.activeElement === document.body) {
       sheetTitle.current?.focus()
     }
-  }, [cardId])
+  }, [shownId])
 
   return (
     <div className="container">
@@ -65,27 +84,28 @@ function SpeciesPage({ entry }: { entry: PokedexEntry }) {
             ))}
           </Stack>
           <PossessionStatement entry={entry} />
+          {shown && <CardList entry={entry} shownId={shown.card.id} onShow={setChosen} />}
         </Stack>
 
         <div className={styles.stage}>
-          <CardStage view={card} species={species} />
+          <CardStage view={shown} species={species} />
         </div>
 
         <div className={styles.body}>
           <div className={styles.columns}>
             {/* Une clé par carte : une saisie en cours ne passe pas d'une carte à l'autre. */}
-            {card ? (
+            {shown ? (
               <CardSheet
-                key={card.card.id}
-                view={card}
-                species={species}
+                key={shown.card.id}
+                view={shown}
+                entry={entry}
                 nextWithoutCard={nextWithoutCard}
                 titleRef={sheetTitle}
               />
             ) : (
               <EmptySheet species={species} titleRef={sheetTitle} />
             )}
-            <SpeciesAbout species={species} showArtwork={card === null} />
+            <SpeciesAbout species={species} showArtwork={shown === null} />
           </div>
         </div>
       </div>
@@ -93,25 +113,25 @@ function SpeciesPage({ entry }: { entry: PokedexEntry }) {
   )
 }
 
-const STATEMENTS: Record<CardStatus | 'none' | 'no-card', string> = {
+const STATEMENTS: Record<CardStatus | 'none' | 'several' | 'no-card', string> = {
   owned: 'carte possédée',
   ordered: 'carte commandée',
   none: 'carte choisie, pas encore obtenue',
+  several: 'cartes choisies, aucune encore obtenue',
   'no-card': 'pas encore de carte',
 }
 
 /** « Débloqué : carte possédée. » D'après toutes les cartes du Pokémon, pas seulement sa favorite. */
 function PossessionStatement({ entry }: { entry: PokedexEntry }) {
-  const { status } = entry
+  const { status, cards } = entry
+  const statement = status ?? (cards.length > 1 ? 'several' : cards.length ? 'none' : 'no-card')
   return (
     <p className={styles.statement}>
       <span className={styles.statementMark}>
-        {/* Une clé par Pokémon : passer au suivant ne change pas un statut (pas d'animation). */}
-        <PossessionMark key={entry.species.id} status={status} />
+        <PossessionMark status={status} />
       </span>
       <span>
-        <strong>{entry.unlocked ? 'Débloqué' : 'À débloquer'}</strong> :{' '}
-        {STATEMENTS[entry.card ? (status ?? 'none') : 'no-card']}.
+        <strong>{entry.unlocked ? 'Débloqué' : 'À débloquer'}</strong> : {STATEMENTS[statement]}.
       </span>
     </p>
   )

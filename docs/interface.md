@@ -105,9 +105,22 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   panneaux passent sur deux colonnes sur très grand écran. Le serveur n'y apparaît qu'en cas de
   problème ; l'effacement garde son fond teinté de rouge. Valeur : ses panneaux l'un sous
   l'autre. La fiche d'un Pokémon :
-  fil d'Ariane (Pokédex › région › nom) et Pokémon voisins, puis la carte, collée à l'écran (sa largeur suit la
-  page : `cqi`), et ses panneaux (statut et prix payé, prix Cardmarket, « Dans le Pokédex ») : sur
-  deux colonnes dès que la fiche a la place (la carte et ses statuts à gauche, son prix à droite) ;
+  fil d'Ariane (Pokédex › région › nom) et Pokémon voisins ; sous son nom, la phrase de possession
+  puis, dès une carte, toutes ses cartes (`CardList` : dans l'ordre d'ajout, un bouton par carte,
+  sa petite image ou le dessin de l'espèce, sa référence et son drapeau, la favorite marquée
+  « ★ Favorite » ; puis « Ajouter une carte », qui en ajoute une sans rien remplacer). La carte
+  montrée (`aria-pressed` dans la liste) : celle choisie dans la liste, sinon la favorite ; une
+  carte qui apparaît (ajoutée, ou rétablie par « Annuler ») devient la carte montrée, une carte
+  montrée qui disparaît laisse la place à la favorite ; rien ne passe d'une fiche à l'autre
+  (`SpeciesPage` a pour clé le numéro du Pokémon). Puis la carte montrée, collée à l'écran (sa
+  largeur suit la page : `cqi`), et ses panneaux (statut et prix payé, favorite, prix Cardmarket,
+  « Dans le Pokédex ») : sur deux colonnes dès que la fiche a la place (la carte et ses statuts à
+  gauche, son prix à droite) ; le titre de la carte dit « ★ Favorite » quand c'est la favorite du
+  Pokémon, ses actions « Mettre en favorite » sinon ; retirer la favorite d'un Pokémon qui garde
+  d'autres cartes demande toujours une confirmation, où l'on coche la nouvelle favorite parmi
+  elles (rien de coché au départ, confirmer est impossible avant ; possédée, elle dit aussi ce qui
+  part) ; « {nom} ne sera plus débloqué » n'est dit (quitter « possédée », retirer une carte
+  possédée) que pour un Pokémon dont aucune autre carte n'est possédée (`unlockedWithout`) ;
   le lien vers le prochain Pokémon sans carte vient après les actions de la carte,
   « Dans le Pokédex » à part sur grand écran ;
   seul effet appuyé de l'app, la carte en grand suit la souris et la lumière y glisse
@@ -187,8 +200,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   route parente sans chemin porte une seule fois la page d'erreur et l'attente, vide, d'une page
   ouverte directement) ; sur un réseau lent, une barre fine en haut le dit (`NavigationProgress`,
   `AppShell` : le `Progress` indéterminé de camply, sans fond, montré après 0,3 s). La fenêtre
-  d'une carte est préparée dès que le pointeur ou le focus arrive sur « Modifier la carte » (sur
-  une fiche sans carte, quand le navigateur est libre), et une roue dit son ouverture si elle
+  d'une carte est préparée dès que le pointeur ou le focus arrive sur « Modifier la carte » ou
+  « Ajouter une carte » de la liste des cartes (avec les cartes japonaises du Pokémon ; sur une
+  fiche sans carte, quand le navigateur est libre), et une roue dit son ouverture si elle
   tarde. Le client Better Auth non plus (`lib/auth.ts`, à part de `lib/account.ts` que lit le
   démarrage) : seules la connexion, l'inscription et Réglages › Mon compte l'importent, la
   déconnexion le charge à la demande. Une donnée chargée à la demande et lue par `use()` passe par
@@ -217,9 +231,12 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
 - Focus et annonces : une action qui retire ou désactive son propre bouton (« Réinitialiser » les
   filtres ou un filtre retiré dans le Pokédex, « Tout afficher » du catalogue, « Retirer les
   filtres » de raretés et de types, l'aperçu d'un import, « Effacer », « Chercher les images »
-  quand toutes sont trouvées) mène le focus à ce qui suit : la recherche, le premier choix, le titre
-  du panneau (`focusAfter`, `lib/focus.ts`, à côté de `keepFocusInList`), au lieu de le laisser
-  tomber au document. De retour sur une page d'où un lien a été suivi (une pochette du Pokédex,
+  quand toutes sont trouvées, « Mettre en favorite ») mène le focus à ce qui suit : la recherche, le
+  premier choix, le titre du panneau, « Modifier la carte » (`focusAfter`, `lib/focus.ts`, à côté
+  de `keepFocusInList`), au lieu de le laisser tomber au document. Sur la fiche d'un Pokémon, une
+  carte montrée qui change sous le focus (ajoutée, retirée, rétablie) emporte le panneau qui
+  l'avait : le focus va au titre du nouveau, s'il était perdu (une carte choisie dans la liste le
+  garde). De retour sur une page d'où un lien a été suivi (une pochette du Pokédex,
   une carte de la liste d'achats), le focus revient à ce lien (`returnedLink` de `useFollowLinks`,
   la coquille) ; la fiche d'une carte du catalogue fermée, il va à la tuile de la carte montrée en
   dernier (parcourue avec ← et →), pas à celle ouverte au départ. Le nombre de résultats est

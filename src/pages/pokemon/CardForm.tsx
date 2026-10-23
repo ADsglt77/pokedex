@@ -1,4 +1,5 @@
 import {
+  Alert,
   Button,
   Modal,
   SegmentedControl,
@@ -12,7 +13,7 @@ import {
 import { Suspense, useCallback, useRef, useState } from 'react'
 import { useCardDraft } from '@/hooks/useCardDraft'
 import { useCollectionAction } from '@/hooks/useNotify'
-import { NO_FILTER, type CatalogCard } from '@/lib/card-catalog'
+import { isCatalogCard, NO_FILTER, type CatalogCard } from '@/lib/card-catalog'
 import { addCard, useCollectionStore } from '@/store/collection'
 import type { AddAs, PokemonCard, PokemonSpecies } from '@/types'
 import { CardFields } from './CardFields'
@@ -21,15 +22,15 @@ import { CatalogGridSkeleton } from '@/components/CatalogTile'
 import { LanguageSwitch } from '@/components/LanguageSwitch'
 import { ADD_AS_LABELS, ADDED_AS } from '@/config/shopping'
 import { usePokedex } from '@/hooks/usePokedex'
-import { cardSpecies } from '@/lib/collection'
 import { toOptions } from '@/lib/format'
 import { speciesNames } from '@/lib/species'
 
 /**
- * Ajouter la carte d'un Pokémon (la choisir dans le catalogue, japonaise ou française, qui remplit
- * la saisie, ou la saisir à la main), ou la corriger (`card`) : sa saisie seulement. Une autre
- * carte ne remplace pas celle-ci : son statut, son prix payé et ses commandes lui appartiennent.
- * Montée seulement quand la fenêtre est ouverte.
+ * Ajouter une carte à un Pokémon, à côté de celles qu'il a (la choisir dans le catalogue, japonaise
+ * ou française, qui remplit la saisie, ou la saisir à la main ; une carte qu'il a déjà est
+ * refusée), ou la corriger (`card`) : sa saisie seulement. Une autre carte ne remplace pas
+ * celle-ci : son statut, son prix payé et ses commandes lui appartiennent. Montée seulement quand
+ * la fenêtre est ouverte.
  */
 export function CardForm({
   species,
@@ -47,13 +48,17 @@ export function CardForm({
   const [tab, setTab] = useState('catalogue')
   const [picked, setPicked] = useState<CatalogCard | null>(null)
   const { entryById } = usePokedex()
-  // Les Pokémon qui recevront la carte : celle choisie dans le catalogue (tant que la référence
-  // reste la sienne) va aussi à ceux de ses Pokémon qui n'ont pas de carte (TAG TEAM).
+  // Ce Pokémon (`id`) a-t-il déjà cette carte du catalogue (même code, ou même id Cardmarket) ?
+  const holds = (id: number, listed: CatalogCard) =>
+    entryById.get(id)!.cards.some((view) => isCatalogCard(view.card, listed))
+  // La carte choisie est déjà l'une des siennes : l'ajouter ferait un doublon.
+  const duplicate = picked !== null && holds(species.id, picked)
+  // La carte choisie, tant que la référence reste la sienne ; sinon, c'est une saisie.
+  const listed = picked && draft.reference.trim() === picked.reference ? picked : null
+  // Les Pokémon qui recevront la carte : choisie dans le catalogue, tous les siens (TAG TEAM : une
+  // seule carte, achetée une fois), sauf ceux qui l'ont déjà ; saisie à la main, celui-ci.
   const receivers =
-    card?.dexIds ??
-    (picked && draft.reference.trim() === picked.reference
-      ? cardSpecies(picked.dexIds, species.id, (id) => entryById.get(id)?.card != null)
-      : [species.id])
+    card?.dexIds ?? (listed ? listed.dexIds.filter((id) => !holds(id, listed)) : [species.id])
   const [addAs, setAddAs] = useState<AddAs>('none')
   // L'onglet caché est démonté : ses réglages vivent ici.
   const [view, setView] = useState<PickerView>({
@@ -120,7 +125,7 @@ export function CardForm({
           <Button
             onClick={save}
             loading={draft.saving}
-            disabled={!card && tab === 'catalogue' && !picked}
+            disabled={(!card && tab === 'catalogue' && !picked) || duplicate}
           >
             Enregistrer
           </Button>
@@ -162,6 +167,7 @@ export function CardForm({
           </TabPanel>
           <TabPanel value="saisie">
             <Stack gap={5}>
+              {duplicate && <Alert tone="warn" title={`${species.names.fr} a déjà cette carte.`} />}
               {fields}
               <SegmentedControl
                 size="sm"

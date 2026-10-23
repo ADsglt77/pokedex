@@ -9,28 +9,31 @@ import { loadSpeciesCards } from '@/lib/card-catalog'
 import { cardLanguage } from '@/lib/collection'
 import { speciesPath } from '@/lib/filters'
 import { details, statusCaption } from '@/lib/format'
-import type { CardView } from '@/lib/pokedex'
+import type { CardView, PokedexEntry } from '@/lib/pokedex'
 import { otherSpeciesNames } from '@/lib/species'
 import type { PokemonSpecies } from '@/types'
 import { CardActions, CardFormWindow } from './CardActions'
+import { FavoriteBadge } from './CardList'
 import styles from './CardSheet.module.css'
 
 /**
- * La fiche de la carte du Pokémon, en deux panneaux : ce que l'utilisateur en fait (statut, prix
- * payé), ce qu'elle vaut chez Cardmarket. `titleRef` : le titre du premier, qui reçoit
- * le focus quand la carte vient d'être ajoutée.
+ * La fiche de la carte montrée du Pokémon (`view`, l'une des cartes de `entry`), en deux panneaux :
+ * ce que l'utilisateur en fait (statut, prix payé, favorite), ce qu'elle vaut chez Cardmarket.
+ * `titleRef` : le titre du premier, qui reçoit le focus quand la carte montrée vient de changer
+ * sous lui (ajoutée, retirée, rétablie).
  */
 export function CardSheet({
   view,
-  species,
+  entry,
   nextWithoutCard,
   titleRef,
 }: {
   view: CardView
-  species: PokemonSpecies
+  entry: PokedexEntry
   nextWithoutCard: PokemonSpecies | null
   titleRef: Ref<HTMLHeadingElement>
 }) {
+  const { species } = entry
   const { card } = view
   return (
     <div className={styles.sheet}>
@@ -40,6 +43,11 @@ export function CardSheet({
           <>
             Carte {card.reference}
             <LanguageFlag language={cardLanguage(card)} />
+            {entry.card?.card.id === card.id && (
+              <span className={styles.favorite}>
+                <FavoriteBadge />
+              </span>
+            )}
           </>
         }
         description={details(
@@ -49,7 +57,7 @@ export function CardSheet({
         )}
         titleRef={titleRef}
       >
-        <CardActions view={view} species={species} />
+        <CardActions view={view} entry={entry} />
         {nextWithoutCard && (
           <div className={styles.next}>
             <Button asChild variant="soft" size="sm" rightIcon={<ArrowRight size={16} />}>

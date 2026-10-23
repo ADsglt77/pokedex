@@ -6,6 +6,13 @@
   min-width: 0;
 }
 
+/* « ★ Favorite » dans le titre, après le drapeau : au milieu de la ligne, pas sur sa base. */
+.favorite {
+  display: inline-flex;
+  margin-inline-start: 0.5em;
+  vertical-align: 0.1em;
+}
+
 .next {
   margin-top: var(--camply-space-4);
 }

@@ -1,9 +1,10 @@
 # PokéCodex
 
 Un Pokédex personnel de cartes Pokémon japonaises et françaises, en ligne à https://pokecodex.fr :
-pour chacun des 1 025 Pokémon, on ajoute la carte que l'on veut (sa référence, d'où son image est
-retrouvée, et son id Cardmarket pour suivre son prix) ; le Pokémon se débloque quand on la
-possède. React + Vite + TypeScript, interface [`@camply/ui`](https://www.npmjs.com/package/@camply/ui) ; espèces,
+pour chacun des 1 025 Pokémon, on ajoute les cartes que l'on veut (leur référence, d'où leur image
+est retrouvée, et leur id Cardmarket pour suivre leur prix), dont une favorite que montre le
+Pokédex ; le Pokémon se débloque dès qu'on en possède une. React + Vite + TypeScript, interface
+[`@camply/ui`](https://www.npmjs.com/package/@camply/ui) ; espèces,
 cartes, images et prix relus par l'API des données, un dépôt à part (plus bas).
 
 ```sh
@@ -22,11 +23,14 @@ bun run format   # Prettier
   page, une action.
 - **Pokédex** : les 1 025 espèces, recherche (nom fr/en/ja ou numéro, raccourci `/`), filtres
   partageables dans l'adresse.
-- **Fiche** : la carte du Pokémon, choisie parmi ses cartes japonaises ou françaises (un
+- **Fiche** : toutes les cartes du Pokémon, choisies parmi ses cartes japonaises ou françaises (un
   interrupteur 🇯🇵 / 🇫🇷 ; image, rareté, prix du jour, tri par date ou par prix, filtres de rareté
-  et de type) ou saisie à la main, puis corrigée ou retirée ; en grand, son statut
-  (commandée / possédée) et son prix payé, son prix Cardmarket et sa courbe, le lien
-  vers sa page Cardmarket, les détails de l'espèce.
+  et de type) ou saisies à la main, chacune ajoutée sans en remplacer une autre, puis corrigée ou
+  retirée ; sa favorite, celle que montre le Pokédex, marquée et changée d'un bouton (la première
+  l'est d'office ; retirer la favorite demande de choisir la suivante) ; en grand, la carte
+  choisie dans la liste, son statut (commandée / possédée) et son prix payé, son prix Cardmarket
+  et sa courbe, le lien vers sa page Cardmarket, les détails de l'espèce. Le Pokémon est débloqué
+  dès qu'une de ses cartes est possédée.
 - **Catalogue** : un grand catalogue de toutes les cartes japonaises ou françaises (le même
   interrupteur 🇯🇵 / 🇫🇷, dans l'adresse), Pokémon, dresseurs et énergies, extension par extension
   (choisie sur son logo), en tuiles serrées, avec une recherche et des filtres de rareté et de

@@ -55,17 +55,6 @@ export function setPaidPrice(
 }
 
 /**
- * Les Pokémon qui reçoivent une carte choisie pour `speciesId` : lui, et pour une carte de plusieurs
- * Pokémon (TAG TEAM), ceux d'entre eux qui n'ont pas encore de carte (`hasCard`). Une seule carte,
- * achetée une fois, qui les débloque tous ; un Pokémon qui a déjà la sienne la garde.
- */
-export const cardSpecies = (
-  cardDexIds: readonly number[],
-  speciesId: number,
-  hasCard: (id: number) => boolean,
-) => [speciesId, ...cardDexIds.filter((id) => id !== speciesId && !hasCard(id))]
-
-/**
  * Les favorites, complétées : chaque Pokémon de ces cartes qui n'a pas de favorite reçoit la
  * première d'entre elles qui le porte ; celles qui existent ne changent pas. Une nouvelle table.
  */
