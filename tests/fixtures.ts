@@ -1,11 +1,49 @@
-/** Des données d'essai : une carte, une collection, des commandes, des cartes de liste d'achats. */
+/**
+ * Des données d'essai : une carte, une collection, des commandes, des cartes de liste d'achats, et
+ * les espèces d'un Pokédex.
+ */
 
+import { spyOn } from 'bun:test'
 import { completeFavorites, emptyCollection } from '@/lib/collection'
 import { newOrder } from '@/lib/orders'
 import type { PlannableCard } from '@/lib/purchase-planner'
-import type { CardOwnership, CollectionData, Order, OrderLine, PokemonCard } from '@/types'
+import { loadSpecies } from '@/lib/species'
+import type {
+  CardOwnership,
+  CollectionData,
+  Order,
+  OrderLine,
+  PokemonCard,
+  PokemonSpecies,
+} from '@/types'
 
 export const NOW = '2026-10-11T10:00:00.000Z'
+
+/** Quatre espèces, comme les donne `/api/species` : de quoi bâtir un Pokédex (`buildPokedex`). */
+const TEST_SPECIES: PokemonSpecies[] = [
+  {
+    id: 1,
+    names: { fr: 'Bulbizarre', en: 'Bulbasaur', ja: null },
+    types: ['grass'],
+    generation: 1,
+  },
+  { id: 4, names: { fr: 'Salamèche', en: 'Charmander', ja: null }, types: ['fire'], generation: 1 },
+  { id: 25, names: { fr: 'Pikachu', en: 'Pikachu', ja: null }, types: ['electric'], generation: 1 },
+  { id: 644, names: { fr: 'Zekrom', en: 'Zekrom', ja: null }, types: ['dragon'], generation: 5 },
+]
+
+/**
+ * Donne ces espèces à l'app (`SPECIES`) sans serveur : le navigateur les demande à `/api/species`.
+ * `bun test` charge un module une fois pour tous les fichiers : chaque fichier qui bâtit un Pokédex
+ * les donne lui-même (`beforeAll`), sans compter sur un autre.
+ */
+export async function loadTestSpecies() {
+  const fetch = spyOn(globalThis, 'fetch').mockResolvedValue(
+    Response.json({ species: TEST_SPECIES }),
+  )
+  await loadSpecies()
+  fetch.mockRestore()
+}
 
 /** Une carte choisie : sa référence, sans image ; `extra` pour le reste (id Cardmarket…). */
 export const card = (

@@ -100,9 +100,9 @@ const STATEMENTS: Record<CardStatus | 'none' | 'no-card', string> = {
   'no-card': 'pas encore de carte',
 }
 
-/** « Débloqué : carte possédée. » */
+/** « Débloqué : carte possédée. » D'après toutes les cartes du Pokémon, pas seulement sa favorite. */
 function PossessionStatement({ entry }: { entry: PokedexEntry }) {
-  const status = entry.card?.status ?? null
+  const { status } = entry
   return (
     <p className={styles.statement}>
       <span className={styles.statementMark}>

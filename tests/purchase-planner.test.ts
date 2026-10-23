@@ -1,6 +1,7 @@
 /**
- * La prochaine commande : les cartes de la liste d'achats, budget, une carte par Pokémon, la moins
- * chère d'abord, ajouts et retraits.
+ * La liste d'achats (toutes les cartes à acheter d'un Pokémon, sa favorite ou non, chacune une fois)
+ * et la prochaine commande qui la lit : budget, une carte par Pokémon, la moins chère d'abord,
+ * ajouts et retraits.
  */
 
 import { describe, expect, test } from 'bun:test'
@@ -77,31 +78,54 @@ describe('prochaine commande', () => {
   })
 })
 
-/** Une entrée du Pokédex dont la carte a ce statut (la liste ne lit que la carte). */
-const entry = (card: PokemonCard, status: CardStatus | null): PokedexEntry => ({
-  species: {
-    id: 1,
-    names: { fr: 'Bulbizarre', en: 'Bulbasaur', ja: null },
-    types: ['grass'],
-    generation: 1,
-  },
-  card: { card, status, acquiredAt: null, paidPrice: null },
-  unlocked: status === 'owned',
-})
+/**
+ * Une entrée du Pokédex avec ces cartes, chacune à son statut, la première étant la favorite (la
+ * liste d'achats ne lit que les cartes).
+ */
+const entry = (...cards: [PokemonCard, CardStatus | null][]): PokedexEntry => {
+  const views = cards.map(([card, status]) => ({ card, status, acquiredAt: null, paidPrice: null }))
+  const statuses = views.map((view) => view.status)
+  const status = statuses.includes('owned')
+    ? 'owned'
+    : statuses.includes('ordered')
+      ? 'ordered'
+      : null
+  return {
+    species: {
+      id: 1,
+      names: { fr: 'Bulbizarre', en: 'Bulbasaur', ja: null },
+      types: ['grass'],
+      generation: 1,
+    },
+    card: views[0] ?? null,
+    cards: views,
+    status,
+    unlocked: status === 'owned',
+  }
+}
 
 describe('liste d’achats', () => {
   // Le plan ne lit qu'elle : une carte possédée ou commandée n'y est jamais.
   test('jamais une carte possédée ou commandée', () => {
     const entries = [
-      entry(card('owned', [1]), 'owned'),
-      entry(card('ordered', [2]), 'ordered'),
-      entry(card('new', [3]), null),
+      entry([card('owned', [1]), 'owned']),
+      entry([card('ordered', [2]), 'ordered']),
+      entry([card('new', [3]), null]),
     ]
     expect(ids(wishlistRows(entries, null))).toEqual(['new'])
   })
 
+  test('toutes les cartes à acheter d’un Pokémon, pas seulement sa favorite', () => {
+    const pikachu = entry(
+      [card('a', [25]), null],
+      [card('b', [25]), 'owned'],
+      [card('c', [25]), null],
+    )
+    expect(ids(wishlistRows([pikachu], null))).toEqual(['a', 'c'])
+  })
+
   test('une carte TAG TEAM, achetée une fois : une seule ligne pour ses deux Pokémon', () => {
     const tag = card('tag', [25, 644])
-    expect(ids(wishlistRows([entry(tag, null), entry(tag, null)], null))).toEqual(['tag'])
+    expect(ids(wishlistRows([entry([tag, null]), entry([tag, null])], null))).toEqual(['tag'])
   })
 })

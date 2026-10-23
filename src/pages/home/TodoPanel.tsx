@@ -13,11 +13,12 @@ import { Panel } from '@/components/Panel'
 import { usePokedex } from '@/hooks/usePokedex'
 import { cx } from '@/lib/cx'
 import {
+  cardNeeds,
   DEFAULT_FILTERS,
   filterEntries,
   pokedexUrl,
   shoppingUrl,
-  type CardFilter,
+  type CardNeed,
 } from '@/lib/filters'
 import { plural, today } from '@/lib/format'
 import { LATE_AFTER_DAYS, latePendingOrders } from '@/lib/orders'
@@ -34,9 +35,12 @@ interface Todo {
   warn?: boolean
 }
 
-/** Les cartes à compléter, comptées par les filtres du Pokédex (la liste y mène). */
+/**
+ * Ce qui reste à compléter, compté comme les filtres du Pokédex (la liste y mène) : les Pokémon
+ * sans carte, et les cartes à compléter (`cardNeeds`).
+ */
 const TO_COMPLETE: {
-  card: CardFilter
+  card: 'without' | CardNeed
   one: string
   many: string
   /** Le conseil, au singulier et au pluriel. */
@@ -85,12 +89,16 @@ export function TodoPanel() {
   const orders = useShoppingStore((state) => state.shopping.orders)
   const late = latePendingOrders(orders, today()).length
   const todos: Todo[] = TO_COMPLETE.flatMap(({ card, one, many, hint, icon }) => {
-    // Une carte TAG TEAM compte une fois, pas une fois par Pokémon.
-    const count = new Set(
-      filterEntries(entries, { ...DEFAULT_FILTERS, card }).map(
-        ({ species, card }) => card?.card.id ?? species.id,
-      ),
-    ).size
+    // Des Pokémon sans carte ; sinon des cartes, parmi toutes celles du Pokédex, une fois chacune
+    // (une carte TAG TEAM compte une fois, pas une fois par Pokémon).
+    const count =
+      card === 'without'
+        ? filterEntries(entries, { ...DEFAULT_FILTERS, card }).length
+        : new Set(
+            entries.flatMap(({ cards }) =>
+              cards.filter((view) => cardNeeds(view, card)).map((view) => view.card.id),
+            ),
+          ).size
     return count > 0
       ? [
           {

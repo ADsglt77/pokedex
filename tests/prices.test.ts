@@ -1,13 +1,20 @@
 /**
  * Le prix d'une carte, que lisent la liste d'achats et le plan : celui de son id Cardmarket, jamais
  * celui d'une autre carte, et aucun s'il n'y en a pas (aucun prix n'est inventé). Et les
- * historiques de la collection, lus en une demande, que la courbe de sa valeur additionne. Les prix
- * et leur historique eux-mêmes : l'API des données (ses propres tests).
+ * historiques de la collection, lus en une demande, que la courbe de sa valeur additionne. Et le
+ * coût pour compléter le Pokédex : la favorite de chaque Pokémon à débloquer, une carte comptée
+ * une fois, rien pour un Pokémon déjà débloqué (par n'importe quelle de ses cartes) ou dont une
+ * carte est commandée. Les prix et leur historique eux-mêmes : l'API des données (ses propres
+ * tests).
  */
 
-import { describe, expect, test } from 'bun:test'
-import { collectionHistory, historiesOf, priceOf } from '@/lib/prices'
+import { beforeAll, describe, expect, test } from 'bun:test'
+import { buildPokedex } from '@/lib/pokedex'
+import { collectionHistory, completionCost, historiesOf, priceOf } from '@/lib/prices'
 import type { CardPriceHistory, PriceFile, PriceHistories } from '@/types'
+import { card, collectionWith, loadTestSpecies, ownership, withCards } from './fixtures'
+
+beforeAll(loadTestSpecies)
 
 const prices: PriceFile = {
   date: '2026-10-12',
@@ -61,5 +68,49 @@ describe('historiesOf', () => {
   test('sans historique, ou absente de la réponse : ne compte pas', () => {
     expect(historiesOf(response, [719445, 1, 719621])).toEqual([a])
     expect(historiesOf({}, [719621])).toEqual([])
+  })
+})
+
+describe('coût pour compléter', () => {
+  const costs: PriceFile = {
+    date: '2026-10-12',
+    cards: {
+      '1': [10, 8, 12],
+      '2': [99, 90, 99],
+      '3': [3, 2, 3],
+      '4': [500, 400, 500],
+      '5': [4, 3, 4],
+      '6': [600, 500, 600],
+    },
+  }
+
+  test('la favorite d’un Pokémon à débloquer, rien pour un Pokémon débloqué par une autre carte ni pour celui dont une carte est commandée', () => {
+    const data = withCards(
+      collectionWith({ own: ownership('owned'), ordered: ownership('ordered') }),
+      // Pikachu : à débloquer, sa favorite vaut 10 € et l'autre carte 99 €.
+      card('favorite', [25], { cardmarket: 1 }),
+      card('other', [25], { cardmarket: 2 }),
+      // Bulbizarre : débloqué par sa deuxième carte, sa favorite (3 €) ne compte pas.
+      card('unowned', [1], { cardmarket: 3 }),
+      card('own', [1], { cardmarket: 4 }),
+      // Zekrom : une carte commandée, sa favorite (4 €) ne compte pas non plus.
+      card('waiting', [644], { cardmarket: 5 }),
+      card('ordered', [644], { cardmarket: 6 }),
+    )
+    // Salamèche n'a pas de carte.
+    expect(completionCost(buildPokedex(data).entries, costs)).toEqual({
+      value: 10,
+      priced: 1,
+      unpriced: 0,
+      noCard: 1,
+    })
+  })
+
+  test('une carte TAG TEAM, favorite de deux Pokémon, n’est comptée qu’une fois', () => {
+    const data = withCards(collectionWith(), card('tag', [25, 644], { cardmarket: 1 }))
+    expect(completionCost(buildPokedex(data).entries, costs)).toMatchObject({
+      value: 10,
+      priced: 2,
+    })
   })
 })

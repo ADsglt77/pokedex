@@ -1,6 +1,6 @@
 /**
- * Le Pokédex tel que l'utilisateur le voit : pour chaque espèce, la carte qu'il y a ajoutée et ce
- * qu'il en a fait ; la progression, en tout et par génération.
+ * Le Pokédex tel que l'utilisateur le voit : pour chaque espèce, ses cartes (plusieurs au besoin),
+ * sa favorite, qu'il montre, et où il en est ; la progression, en tout et par génération.
  */
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
@@ -22,9 +22,13 @@ export interface CardView {
 
 export interface PokedexEntry {
   species: PokemonSpecies
-  /** La carte du Pokémon ; `null` tant que l'utilisateur n'en a pas ajouté. */
+  /** Sa favorite, la carte que montre le Pokédex ; `null` tant qu'il n'a pas de carte. */
   card: CardView | null
-  /** Débloqué : sa carte est possédée. Choisie ou commandée ne suffit pas. */
+  /** Toutes ses cartes, dans l'ordre d'ajout, la favorite comprise. */
+  cards: CardView[]
+  /** Où il en est : `owned` si une de ses cartes est possédée, sinon `ordered` si une est commandée. */
+  status: CardStatus | null
+  /** Débloqué : une de ses cartes est possédée (`status === 'owned'`), quelle qu'elle soit. */
   unlocked: boolean
 }
 
@@ -74,31 +78,52 @@ function describeCard(card: PokemonCard, collection: CollectionData): CardView {
 }
 
 /** La même carte, au même statut (une carte relue du serveur est un autre objet). */
-const sameView = (a: CardView | null, b: CardView | null) =>
+const sameView = (a: CardView, b: CardView) =>
   a === b ||
-  (a !== null &&
-    b !== null &&
-    a.status === b.status &&
+  (a.status === b.status &&
     a.acquiredAt === b.acquiredAt &&
     a.paidPrice === b.paidPrice &&
     (a.card === b.card || JSON.stringify(a.card) === JSON.stringify(b.card)))
 
+/** Les mêmes cartes, dans le même ordre, aux mêmes statuts. */
+const sameViews = (a: readonly CardView[], b: readonly CardView[]) =>
+  a.length === b.length && a.every((view, index) => sameView(view, b[index]!))
+
+/** Où en est un Pokémon d'après ses cartes : possédée avant commandée, sinon rien. */
+const statusOf = (views: readonly CardView[]) =>
+  (['owned', 'ordered'] as const).find((status) => views.some((view) => view.status === status)) ??
+  null
+
 /**
- * Le Pokédex d'une collection. `previous` : celui d'avant ; une entrée inchangée (la même carte au
- * même statut) en est reprise telle quelle, et les pochettes mémoïsées ne se redessinent pas.
+ * Le Pokédex d'une collection. `previous` : celui d'avant ; une entrée inchangée (la même favorite,
+ * les mêmes cartes aux mêmes statuts) en est reprise telle quelle, et les pochettes mémoïsées ne se
+ * redessinent pas.
  */
 export function buildPokedex(collection: CollectionData, previous?: Pokedex): Pokedex {
-  // Une carte par Pokémon : la première ajoutée, si un fichier importé en a plusieurs.
-  const cardBySpecies = new Map<number, PokemonCard>()
+  // Les cartes de chaque Pokémon, dans l'ordre d'ajout.
+  const cardsBySpecies = new Map<number, PokemonCard[]>()
   for (const card of Object.values(collection.customCards)) {
-    for (const id of card.dexIds) if (!cardBySpecies.has(id)) cardBySpecies.set(id, card)
+    for (const id of card.dexIds) {
+      const cards = cardsBySpecies.get(id)
+      if (cards) cards.push(card)
+      else cardsBySpecies.set(id, [card])
+    }
   }
   const entries = SPECIES.map((species, index): PokedexEntry => {
-    const card = cardBySpecies.get(species.id)
-    const view = card ? describeCard(card, collection) : null
+    const cards = (cardsBySpecies.get(species.id) ?? []).map((card) =>
+      describeCard(card, collection),
+    )
+    const favorite = cards.find(({ card }) => card.id === collection.favorites[species.id]) ?? null
     const before = previous?.entries[index]
-    if (before?.species === species && sameView(before.card, view)) return before
-    return { species, card: view, unlocked: view?.status === 'owned' }
+    if (
+      before?.species === species &&
+      before.card?.card.id === favorite?.card.id &&
+      sameViews(before.cards, cards)
+    ) {
+      return before
+    }
+    const status = statusOf(cards)
+    return { species, card: favorite, cards, status, unlocked: status === 'owned' }
   })
   return {
     entries,

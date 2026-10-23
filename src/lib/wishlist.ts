@@ -1,6 +1,7 @@
 /**
- * La liste d'achats : la carte de chaque Pokémon qui n'est ni possédée ni commandée. Choisir une
- * carte suffit à dire qu'on la veut : toutes sont voulues autant (`docs/collection-et-achats.md`).
+ * La liste d'achats : chaque carte de chaque Pokémon qui n'est ni possédée ni commandée, sa favorite
+ * ou non. Choisir une carte suffit à dire qu'on la veut : toutes sont voulues autant
+ * (`docs/collection-et-achats.md`).
  */
 
 import { speciesOf } from '@/lib/species'
@@ -20,19 +21,22 @@ export interface WishRow {
 }
 
 /**
- * La carte de chaque Pokémon, ni possédée ni commandée ; une carte de plusieurs Pokémon (TAG TEAM)
- * une seule fois : on ne l'achète qu'une fois.
+ * Toutes les cartes de tous les Pokémon, ni possédées ni commandées, même celles d'un Pokémon déjà
+ * débloqué par une autre ; une carte de plusieurs Pokémon (TAG TEAM) une seule fois : on ne
+ * l'achète qu'une fois.
  */
 export function wishlistRows(entries: readonly PokedexEntry[], prices: PriceFile | null) {
   const rows = new Map<string, WishRow>()
-  for (const { card: view } of entries) {
-    if (!view || !isToBuy(view) || rows.has(view.card.id)) continue
-    const price = priceOf(prices, view.card)
-    rows.set(view.card.id, {
-      card: view.card,
-      price: price?.price ?? null,
-      change30: price && priceChange(price),
-    })
+  for (const { cards } of entries) {
+    for (const view of cards) {
+      if (!isToBuy(view) || rows.has(view.card.id)) continue
+      const price = priceOf(prices, view.card)
+      rows.set(view.card.id, {
+        card: view.card,
+        price: price?.price ?? null,
+        change30: price && priceChange(price),
+      })
+    }
   }
   return [...rows.values()]
 }

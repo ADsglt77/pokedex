@@ -8,18 +8,28 @@
 
 import { generationById, POKEMON_TYPES, type Generation } from '@/config/pokedex'
 import { SPECIES } from '@/lib/species'
-import type { PokedexEntry } from '@/lib/pokedex'
+import type { CardView, PokedexEntry } from '@/lib/pokedex'
 import type { CardLanguage, GenerationId, PokemonSpecies, PokemonTypeId } from '@/types'
 
-/** Débloqués (carte possédée), à débloquer (pas encore), ou carte commandée. */
+/**
+ * Débloqués (une de leurs cartes est possédée), à débloquer (pas encore), ou dont une carte est
+ * commandée (et aucune possédée).
+ */
 export const POSSESSIONS = ['all', 'owned', 'ordered', 'missing'] as const
 export type PossessionFilter = (typeof POSSESSIONS)[number]
 
 /**
- * Avec une carte ajoutée, ou sans carte ; ou une carte à compléter : sans image, sans id Cardmarket
- * (pas de prix ni de lien Cardmarket), possédée sans prix payé (la valeur ne dit pas le gain).
+ * Une carte à compléter : sans image, sans id Cardmarket (pas de prix ni de lien Cardmarket),
+ * possédée sans prix payé (la valeur ne dit pas le gain).
  */
-const CARD_FILTERS = ['with', 'without', 'no-image', 'no-cardmarket', 'no-paid'] as const
+const CARD_NEEDS = ['no-image', 'no-cardmarket', 'no-paid'] as const
+export type CardNeed = (typeof CARD_NEEDS)[number]
+
+/**
+ * Avec des cartes, ou sans carte ; ou dont une des cartes est à compléter (`cardNeeds`) : un
+ * Pokémon qui en a plusieurs passe dès qu'une seule l'est.
+ */
+const CARD_FILTERS = ['with', 'without', ...CARD_NEEDS] as const
 export type CardFilter = (typeof CARD_FILTERS)[number]
 
 export interface PokedexFilters {
@@ -190,31 +200,35 @@ export function searchMatcher(search: string): (species: PokemonSpecies) => bool
  */
 let searchNames: Map<number, string> | undefined
 
-function cardMatches(card: PokedexEntry['card'], filter: CardFilter) {
-  switch (filter) {
-    case 'with':
-      return card !== null
-    case 'without':
-      return card === null
+/** Cette carte est-elle à compléter ? (`CardNeed`) */
+export function cardNeeds(view: CardView, need: CardNeed) {
+  switch (need) {
     case 'no-image':
-      return card !== null && card.card.image === null
+      return view.card.image === null
     case 'no-cardmarket':
-      return card !== null && card.card.cardmarket === undefined
+      return view.card.cardmarket === undefined
     case 'no-paid':
-      return card?.status === 'owned' && card.paidPrice === null
+      return view.status === 'owned' && view.paidPrice === null
   }
 }
+
+const cardMatches = (cards: readonly CardView[], filter: CardFilter) =>
+  filter === 'with'
+    ? cards.length > 0
+    : filter === 'without'
+      ? cards.length === 0
+      : cards.some((view) => cardNeeds(view, filter))
 
 export function filterEntries(entries: PokedexEntry[], filters: PokedexFilters): PokedexEntry[] {
   const matches = searchMatcher(filters.search)
   return entries.filter(
-    ({ species, unlocked, card }) =>
+    ({ species, unlocked, status, cards }) =>
       (!filters.generation || species.generation === filters.generation) &&
       (filters.possession === 'all' ||
         (filters.possession === 'owned' && unlocked) ||
         (filters.possession === 'missing' && !unlocked) ||
-        card?.status === filters.possession) &&
-      (!filters.card || cardMatches(card, filters.card)) &&
+        status === filters.possession) &&
+      (!filters.card || cardMatches(cards, filters.card)) &&
       (!filters.type || species.types.includes(filters.type)) &&
       matches(species),
   )

@@ -29,6 +29,21 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   favorite qui n'est pas l'id d'une carte du document portant ce Pokémon (« la carte favorite du
   Pokémon n° 25 n’est pas une de ses cartes » : une carte d'un autre Pokémon, une carte absente, une
   clé qui n'est pas un numéro). Testé (`tests/import.test.ts`).
+- Débloqué : un Pokémon l'est dès qu'une de ses cartes est possédée, quelle qu'elle soit ; sa
+  favorite ne décide que de la carte que le Pokédex montre pour lui. Chaque entrée du Pokédex
+  (`PokedexEntry`, `buildPokedex`) a sa favorite (`card`), toutes ses cartes dans l'ordre d'ajout
+  (`cards`) et où il en est (`status`) : `owned` si une de ses cartes est possédée, sinon `ordered`
+  si une est commandée, sinon rien ; `unlocked` est `status === 'owned'`. La pochette (en couleur,
+  marque « possédée »), la fiche (« Débloqué : carte possédée ») et le Pokédex public lisent ce
+  statut, pas celui de la favorite : une favorite pas encore possédée reste montrée avec son propre
+  statut, et le Pokémon n'en est pas moins débloqué. Testé (`tests/pokedex.test.ts`, avec le jour du
+  déblocage : celui de la première de ses cartes obtenue).
+- Coût pour compléter (Valeur › « Pour compléter le Pokédex », `completionCost`) : pour chaque Pokémon à
+  débloquer (`status` nul : aucune de ses cartes n'est possédée ni commandée), le prix de sa
+  **favorite**, seule chiffrée ; ses autres cartes ne comptent pas. Un Pokémon sans carte
+  (`noCard`) n'est pas chiffré. Un Pokémon débloqué, par n'importe laquelle de ses cartes, ou dont
+  une carte est commandée n'y est pas (il compte dans les commandes). Une même carte (TAG TEAM,
+  favorite de deux Pokémon) n'est comptée qu'une fois. Testé (`tests/prices.test.ts`).
 - Langue d'une carte (`PokemonCard.language`) : `'fr'` pour une carte française ; absente, elle est
   japonaise (`cardLanguage`, `lib/collection.ts`), si bien que les collections et les exports
   d'avant restent japonais, sans migration. Le japonais n'a qu'une écriture, l'absence :
@@ -39,9 +54,11 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
 - Achats (`/achats`, `ShoppingData`, à part de la collection dans le document : elle garde son
   format ; ceux d'un nouveau venu, aucune commande et le budget par défaut :
   `emptyShopping`, `lib/orders.ts`) :
-  - la liste d'achats n'est pas enregistrée : c'est la carte de chaque Pokémon ni possédée ni
-    commandée (`wishlistRows`, une TAG TEAM une fois), toutes voulues autant (décision de
-    l'utilisateur, octobre 2026 : choisir la carte suffit). Le lien vers Cardmarket est
+  - la liste d'achats n'est pas enregistrée : ce sont toutes les cartes de tous les Pokémon ni
+    possédées ni commandées (`wishlistRows`, chacune une fois : une TAG TEAM une fois), pas seulement
+    les favorites, toutes voulues autant (décision de l'utilisateur, octobre 2026 : choisir la carte
+    suffit) ; les cartes d'un Pokémon déjà débloqué par une autre y restent tant qu'elles ne sont
+    ni commandées ni possédées (testé, `tests/purchase-planner.test.ts`). Le lien vers Cardmarket est
     `cardmarketPage` : la page notée, sinon l'id. La prochaine commande (`planPurchase`,
     `purchase-planner`) ne lit qu'elle : elle y prend les moins chères d'abord,
     une par Pokémon, dans le budget, port réservé ; on peut en retirer ou en ajouter à la main.

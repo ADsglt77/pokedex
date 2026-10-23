@@ -6,7 +6,6 @@
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
 import { details, formatEuro, formatInteger, plural } from '@/lib/format'
-import { isToBuy } from '@/lib/collection'
 import { cardsWithStatus, type PokedexEntry } from '@/lib/pokedex'
 import type { PricePoint } from '@/lib/chart'
 import { addDays, daysBetween } from '@/lib/time'
@@ -160,18 +159,20 @@ export function priceMovers(
 export interface CompletionCost {
   /** Somme des prix des cartes chiffrées. */
   value: number
-  /** Pokémon dont la carte a un prix. */
+  /** Pokémon dont la favorite a un prix. */
   priced: number
-  /** Pokémon dont la carte n'a pas de prix Cardmarket ce jour. */
+  /** Pokémon dont la favorite n'a pas de prix Cardmarket ce jour. */
   unpriced: number
   /** Pokémon sans carte. */
   noCard: number
 }
 
 /**
- * Ce que coûterait de débloquer les Pokémon qui restent, au prix de leur carte. Un Pokémon dont la
- * carte est déjà commandée compte dans les commandes, pas ici. Une carte de plusieurs Pokémon
- * (TAG TEAM) n'est comptée qu'une fois : on ne l'achète qu'une fois.
+ * Ce que coûterait de débloquer les Pokémon qui restent, au prix de leur favorite : on ne chiffre
+ * que celle-là, pas les autres cartes d'un Pokémon. Un Pokémon déjà débloqué (par n'importe laquelle
+ * de ses cartes) ou dont une carte est commandée compte dans la collection ou les commandes, pas
+ * ici. Une carte de plusieurs Pokémon (TAG TEAM) n'est comptée qu'une fois : on ne l'achète qu'une
+ * fois.
  */
 export function completionCost(
   entries: readonly PokedexEntry[],
@@ -179,13 +180,13 @@ export function completionCost(
 ): CompletionCost {
   const cost = { value: 0, priced: 0, unpriced: 0, noCard: 0 }
   const counted = new Set<string>()
-  for (const { card } of entries) {
+  for (const { card, status } of entries) {
     if (!card) {
       cost.noCard++
       continue
     }
-    // Obtenu ou en route : sa carte est possédée ou commandée.
-    if (!isToBuy(card)) continue
+    // Obtenu ou en route : une de ses cartes est possédée ou commandée.
+    if (status) continue
     const price = marketPrice(prices, card.card)
     if (price === null) {
       cost.unpriced++

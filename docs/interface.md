@@ -29,10 +29,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   le titre de l'accueil, le bouton du Pokédex public pour qui est connecté. Le logo est une Poké
   Ball plate (`Logo`, `AppShell` ; couleurs `--brand-*`, les mêmes dans les deux thèmes), la même
   que l'icône de l'onglet (`public/favicon.svg`).
-- Filtres du Pokédex dans l'adresse : `q` (raccourci « / »), `generation`, `type`, `possession` (`owned` : débloqués,
-  `missing` : à débloquer, `ordered`), `card` (`with` : avec carte, `without` : sans ;
-  à compléter : `no-image`, `no-cardmarket`, `no-paid` : possédée sans prix payé), `order=desc` ;
-  un lien filtré se
+- Filtres du Pokédex dans l'adresse : `q` (raccourci « / »), `generation`, `type`, `possession` (`owned` :
+  débloqués, une de leurs cartes est possédée ; `missing` : à débloquer, aucune ne l'est ;
+  `ordered` : aucune possédée, une commandée), `card` (`with` : avec des cartes, `without` : sans ;
+  à compléter, dès qu'une de leurs cartes l'est, favorite ou non, `cardNeeds` : `no-image`,
+  `no-cardmarket`, `no-paid` : possédée sans prix payé), `order=desc` ; un lien filtré se
   construit avec `pokedexUrl`. La recherche passe par `flushSync` (le routeur met l'adresse à jour
   dans une transition, le champ suivrait la frappe en retard), sans relancer le chargement de la
   route (`defaultShouldRevalidate: false` : sinon le curseur partirait au bout du texte) ; la
@@ -77,9 +78,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   « poké »). L'accueil est un
   tableau de bord (dès qu'il y a une carte ou une commande) : un seul appel principal vers le
   Pokédex, progression (anneau, réglette compacte des
-  régions), « À faire » (commandes en retard,
-  cartes à compléter, une TAG TEAM comptée une fois, chacune vers sa liste filtrée : `shoppingUrl`,
-  `pokedexUrl`), indicateurs
+  régions), « À faire » (commandes en retard ; Pokémon sans carte, comptés en Pokémon ; cartes
+  à compléter, sans image, sans id Cardmarket, possédées sans prix payé, comptées en cartes
+  distinctes parmi toutes celles du Pokédex, pas seulement les favorites, une TAG TEAM une fois ;
+  chacune vers sa liste filtrée : `shoppingUrl`, `pokedexUrl`, qui montre les Pokémon qui ont au
+  moins une de ces cartes), indicateurs
   (valeur, dépensé ce mois-ci, liste d'achats, commandes), dernières cartes obtenues (« Vos cartes
   choisies » tant qu'aucune n'est obtenue : une rangée, de trois cartes sur téléphone à dix sur un
   très grand écran) ; une collection vide y trouve trois étapes pour commencer. La progression et
@@ -162,7 +165,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   Ctrl K n'est montée qu'à sa première ouverture (ses plus de 1 000 commandes coûtaient une
   soixantaine de millisecondes au démarrage), puis mémoïsée ; la palette n'en rend que les 50
   premières qui correspondent (`limit` de camply), une ligne dit combien d'autres. `buildPokedex`
-  reprend les entrées inchangées du Pokédex précédent (la même carte au même statut) : après
+  reprend les entrées inchangées du Pokédex précédent (la même favorite, les mêmes cartes aux mêmes
+  statuts) : après
   une annulation ou la collection relue du serveur, seules les pochettes changées se redessinent.
   Le tableau des cartes de Valeur (trié par lui, le tri du tableau contrôlé) et la liste d'achats
   sont dessinés au fur et à mesure (`useGrowingList` : Valeur 151 ms → 60 à l'ouverture, Achats 254
