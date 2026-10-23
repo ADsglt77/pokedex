@@ -1,12 +1,13 @@
 /**
  * Ce que montre le Pokédex public (`server/vitrine.ts`) : ce qu'il laisserait passer serait public.
  * Jamais un prix payé, une page Cardmarket notée, ni ce qui dit un achat (« commandée ») ; la
- * favorite de chaque Pokémon, elle, est montrée.
+ * favorite de chaque Pokémon, elle, est montrée, comme les collections d'extensions et leurs cases.
  */
 
 import { describe, expect, test } from 'bun:test'
+import type { SeriesCollection } from '@/types'
 import { shownCollection, vitrineSummary } from '../server/vitrine'
-import { card, collectionWith, ownership, withCards } from './fixtures'
+import { card, collectionWith, NOW, ownership, withCards } from './fixtures'
 
 describe('shownCollection', () => {
   const collection = {
@@ -65,6 +66,50 @@ describe('shownCollection', () => {
     // Une copie : la collection du compte ne bouge pas avec elle.
     expect(noted.favorites).not.toBe(favorites)
     expect(shownCollection(several).favorites).toEqual({ 25: 'a', 4: 'b', 7: 'c' })
+  })
+
+  test('les collections d’extensions et leurs cases restent, sans le statut « commandée »', () => {
+    // Une collection de quatre cases : une possédée, un dresseur, et deux pas encore obtenues dont
+    // une commandée (payée 12 €) ; une seconde, française.
+    const series = [
+      {
+        set: 'SV2A',
+        name: 'Pokémon Card 151',
+        startedAt: NOW,
+        cards: ['a', 't', 's', 'u'],
+        note: 'payée 30 €',
+      },
+      { set: 'SV2A', language: 'fr', name: 'Pokémon 151', startedAt: NOW, cards: ['a'] },
+    ] as SeriesCollection[]
+    const inSeries = {
+      ...collectionWith({
+        a: ownership('owned', { acquiredAt: NOW, paidPrice: 30 }),
+        s: ownership('ordered', { paidPrice: 12 }),
+      }),
+      customCards: {
+        a: card('a', [25]),
+        t: card('t', []),
+        s: card('s', [4], { seriesOnly: true }),
+        u: card('u', [1], { seriesOnly: true }),
+      },
+      series,
+    }
+    const shown = shownCollection(inSeries)
+    // Champ par champ : l'extension, la langue (seulement le français), le nom, le jour, les cases.
+    expect(shown.series).toStrictEqual([
+      { set: 'SV2A', name: 'Pokémon Card 151', startedAt: NOW, cards: ['a', 't', 's', 'u'] },
+      { set: 'SV2A', language: 'fr', name: 'Pokémon 151', startedAt: NOW, cards: ['a'] },
+    ])
+    expect(shown.series[0]!.cards).not.toBe(series[0]!.cards)
+    // Les cases pas encore obtenues le restent (sans elles, le Pokédex public les compterait), et
+    // un dresseur n'a aucun Pokémon.
+    expect(shown.customCards.s).toStrictEqual(card('s', [4], { seriesOnly: true }))
+    expect(shown.customCards.t).toStrictEqual(card('t', []))
+    expect(shown.customCards.a).toStrictEqual(card('a', [25]))
+    expect(shown.customCards.a).not.toHaveProperty('seriesOnly')
+    // Rien de ce que dit un achat : la case commandée n'a pas de statut, ni de prix payé.
+    expect(Object.keys(shown.cards)).toEqual(['a'])
+    expect(JSON.stringify(shown)).not.toMatch(/ordered|paidPrice|payée/)
   })
 
   test('l’image : ses deux adresses seulement, rien de ce qu’un fichier y aurait glissé', () => {

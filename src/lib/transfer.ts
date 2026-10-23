@@ -7,9 +7,10 @@
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
-import { completeFavorites } from '@/lib/collection'
+import { cardLanguage, completeFavorites } from '@/lib/collection'
 import { formatDate, parseLink } from '@/lib/format'
 import { refundFits } from '@/lib/orders'
+import { findSeries } from '@/lib/series'
 import type {
   BudgetSettings,
   CollectionData,
@@ -48,8 +49,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 /**
  * Une collection, telle qu'enregistrée ; `null` si ce n'en est pas une (mauvais fichier). Seuls
- * ses champs connus sont gardés. Une relecture de sa forme seulement : ses statuts, ses cartes et
- * ses favorites ne sont contrôlés qu'à l'import et par le serveur (`documentProblem`). Les
+ * ses champs connus sont gardés. Une relecture de sa forme seulement : ses statuts, ses cartes, ses
+ * favorites et ses collections d'extensions ne sont contrôlés qu'à l'import et par le serveur
+ * (`documentProblem`) ; un document d'avant les collections (sans `series`) n'en a aucune. Les
  * favorites sont complétées : un document d'avant les favorites (ou un fichier auquel il en manque)
  * donne à chaque Pokémon sa première carte, celle que le Pokédex montrait ; celles notées restent.
  * Une carte abîmée (pas un objet à `dexIds` en liste) n'en donne pas : `documentProblem` la refuse,
@@ -67,6 +69,7 @@ export function readCollection(value: unknown): CollectionData | null {
     cards: value.cards,
     customCards: value.customCards,
     favorites: completeFavorites(favorites, cards),
+    series: Array.isArray(value.series) ? value.series : [],
   } as CollectionData
 }
 
@@ -121,14 +124,14 @@ const isOwnership = (ownership: Record<string, unknown>) =>
 
 /**
  * Une carte, rangée sous son id (l'app la retrouve par sa clé et l'enregistre sous son id : deux
- * différents la dédoubleraient), d'au moins un Pokémon du Pokédex (elle n'y aurait pas de place), de
- * langue française (`'fr'`) ou sans langue : le japonais n'a qu'une écriture, l'absence (un « ja »
- * ferait deux écritures d'une même langue).
+ * différents la dédoubleraient), de Pokémon du Pokédex (aucun : un dresseur ou une énergie, une
+ * carte d'extension), de langue française (`'fr'`) ou sans langue : le japonais n'a qu'une
+ * écriture, l'absence (un « ja » ferait deux écritures d'une même langue), et `seriesOnly` (une case
+ * pas encore obtenue) absent ou vrai : à l'obtention le champ disparaît, il ne devient pas faux.
  */
 const isCard = (card: Record<string, unknown>, key: string) =>
   card.id === key &&
   Array.isArray(card.dexIds) &&
-  card.dexIds.length > 0 &&
   card.dexIds.every((id) => Number.isInteger(id) && id >= 1 && id <= TOTAL_SPECIES) &&
   isText(card.reference) &&
   (card.image === null ||
@@ -136,7 +139,23 @@ const isCard = (card: Record<string, unknown>, key: string) =>
   // Comme à la saisie : un id 0, négatif ou trop long ferait un lien et une requête de prix vains.
   isOptional(card.cardmarket, (id) => readCardmarketId(String(id)) === id) &&
   isOptional(card.page, (page) => isText(page) && parseCardmarketLink(page as string) !== null) &&
-  isOptional(card.language, (language) => language === 'fr')
+  isOptional(card.language, (language) => language === 'fr') &&
+  isOptional(card.seriesOnly, (seriesOnly) => seriesOnly === true)
+
+/**
+ * Une collection d'extension : son extension (`set`, le code du catalogue), son nom, sa langue
+ * (`'fr'` ou aucune, comme une carte), le jour où elle a été commencée, et ses cases : l'id d'une
+ * carte du document chacune, une seule fois (les pages lisent la carte de chaque case sans garde).
+ */
+const isSeries = (series: Record<string, unknown>, customCards: Record<string, PokemonCard>) =>
+  isText(series.set) &&
+  series.set !== '' &&
+  isText(series.name) &&
+  isOptional(series.language, (language) => language === 'fr') &&
+  isTime(series.startedAt) &&
+  Array.isArray(series.cards) &&
+  series.cards.every((id) => typeof id === 'string' && Object.hasOwn(customCards, id)) &&
+  distinct(series.cards)
 
 const isLine = (line: Record<string, unknown>) =>
   isText(line.cardId) &&
@@ -180,22 +199,51 @@ const firstBad = (values: object, ok: (value: Record<string, unknown>, key: stri
 
 /**
  * Une favorite : l'id d'une carte du document (`id`, texte, propre à `customCards`) qui porte le
- * Pokémon `key` (son numéro, écrit comme l'app l'écrit : « 025 » n'est pas le 25).
+ * Pokémon `key` (son numéro, écrit comme l'app l'écrit : « 025 » n'est pas le 25), et qui est déjà
+ * une de ses cartes : une case d'extension pas encore obtenue (`seriesOnly`) ne l'est pas encore.
  */
 const isFavorite = (customCards: Record<string, PokemonCard>, key: string, id: unknown) =>
   typeof id === 'string' &&
   Object.hasOwn(customCards, id) &&
+  !customCards[id]!.seriesOnly &&
   customCards[id]!.dexIds.map(String).includes(key)
 
 /** Une carte, pour l'utilisateur : sa référence, sinon son id. */
 const cardName = (card: unknown, key: string) =>
   isRecord(card) && isText(card.reference) && card.reference !== '' ? card.reference : key
 
+/** Une collection, pour l'utilisateur : son nom entre guillemets, sinon « sans nom ». */
+const seriesName = (series: unknown) =>
+  isRecord(series) && isText(series.name) && series.name !== ''
+    ? `« ${series.name as string} »`
+    : 'sans nom'
+
 /** Une commande, pour l'utilisateur : sa référence, sinon son jour. */
 function orderName(order: unknown) {
   if (!isRecord(order)) return 'sans date'
   if (isText(order.reference) && order.reference !== '') return `« ${order.reference as string} »`
   return isDay(order.date) ? `du ${formatDate(order.date as string)}` : 'sans date'
+}
+
+/**
+ * Une case d'extension pas encore obtenue (`seriesOnly`) qui n'est pas dans une seule collection,
+ * dite en clair ; `null` sans. Dans aucune, rien ne la montrerait ni ne la retirerait ; dans deux,
+ * supprimer l'une la retirerait à l'autre. Une carte qui n'est pas `seriesOnly` (possédée, ajoutée
+ * seule) peut être la case de plusieurs collections, ou d'aucune.
+ */
+function lostSlot(collection: CollectionData) {
+  const counts = new Map<string, number>()
+  for (const id of collection.series.flatMap(({ cards }) => cards)) {
+    counts.set(id, (counts.get(id) ?? 0) + 1)
+  }
+  const slot = Object.values(collection.customCards).find(
+    (card) => card.seriesOnly && counts.get(card.id) !== 1,
+  )
+  if (!slot) return null
+  const where = counts.has(slot.id)
+    ? 'est dans plusieurs collections'
+    : 'n’est dans aucune collection'
+  return `la carte « ${slot.reference} » ${where}`
 }
 
 /**
@@ -217,6 +265,15 @@ export function documentProblem({ collection, shopping }: CollectionDocument): s
     ([key, id]) => !isFavorite(collection.customCards, key, id),
   )
   if (favorite) return `la carte favorite du Pokémon n° ${favorite[0]} n’est pas une de ses cartes`
+  // Après les cartes : `isSeries` cherche les cases parmi elles.
+  const series = firstBad(collection.series, (series) => isSeries(series, collection.customCards))
+  if (series) return `la collection ${seriesName(series[1])} est abîmée`
+  const twice = collection.series.find(
+    (known) => findSeries(collection, known.set, cardLanguage(known)) !== known,
+  )
+  if (twice) return `deux collections de l’extension ${twice.set}`
+  const lost = lostSlot(collection)
+  if (lost) return lost
   if (!isUpdatedAt(shopping.updatedAt)) return 'la date des achats est illisible'
   const order = firstBad(shopping.orders, isOrder)
   if (order) return `la commande ${orderName(order[1])} est abîmée`

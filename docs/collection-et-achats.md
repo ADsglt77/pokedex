@@ -5,8 +5,9 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
 - Collection : les cartes choisies (`customCards`), un statut par carte (commandée, possédée ;
   sans statut, elle est à acheter) et le prix payé (`paidPrice`) qui le suit. Son format est
   celui des exports et des documents gardés par le serveur : ne pas le changer. Seuls ses champs connus sont gardés
-  à la lecture (`readCollection` : `schemaVersion`, `updatedAt`, `cards`, `customCards` et
-  `favorites` ; de même `readShopping` pour les achats). La page Valeur montre ce que les commandes
+  à la lecture (`readCollection` : `schemaVersion`, `updatedAt`, `cards`, `customCards`,
+  `favorites` et `series`, vide dans un document d'avant les collections d'extensions ; de même
+  `readShopping` pour les achats). La page Valeur montre ce que les commandes
   ont coûté en tout (« Dépensé en tout »).
 - Carte favorite : un Pokémon peut avoir plusieurs cartes (`customCards`) ; `favorites`
   (`CollectionData.favorites`, le numéro du Pokémon → l'id de l'une de ses cartes) dit laquelle on
@@ -29,7 +30,8 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   contrôle la refuse ensuite. Ce contrôle (`documentProblem`, après celui des cartes) refuse une
   favorite qui n'est pas l'id d'une carte du document portant ce Pokémon (« la carte favorite du
   Pokémon n° 25 n’est pas une de ses cartes » : une carte d'un autre Pokémon, une carte absente, une
-  clé qui n'est pas un numéro). Testé (`tests/import.test.ts`).
+  clé qui n'est pas un numéro, une case d'extension pas encore obtenue). Testé
+  (`tests/import.test.ts`).
 - Collections d'extensions (`CollectionData.series`, `lib/series.ts`) : une collection, ce sont
   toutes les cartes d'une extension dans une langue (Pokémon, dresseurs, énergies, secrètes ; une
   Reverse est la même case), une case par carte, dans l'ordre de l'extension
@@ -67,6 +69,27 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     commandées) et combien d'entre elles n'ont pas de prix.
   - Testé (`tests/series.test.ts`) ; ces règles non plus ne modifient pas ce qu'elles reçoivent
     (`tests/cards.test.ts`).
+  - Lecture et contrôle (`lib/transfer.ts`, pour un fichier importé comme pour l'envoi au serveur ;
+    testé dans `tests/import.test.ts`) : `readCollection` rend `series` (une liste, sinon aucune
+    collection : un export d'avant s'importe). Une carte (`isCard`) peut n'avoir aucun Pokémon
+    (`dexIds` vide : un dresseur, une énergie ; un numéro hors du Pokédex reste refusé), et son
+    `seriesOnly` est absent ou `true`, jamais `false` (le champ disparaît à l'obtention). Une favorite
+    sur une case `seriesOnly` est refusée (le message des favorites). `documentProblem`, après les
+    cartes et les favorites, refuse, en le disant en clair :
+    - une collection abîmée (« la collection « Pokémon Card 151 » est abîmée » ; « sans nom » quand
+      elle n'en a pas) : une extension (`set`) vide ou qui n'est pas un texte, un nom qui n'en est pas
+      un, une langue autre que `'fr'` ou absente, un jour de début illisible, des cases qui ne sont pas
+      une liste d'ids distincts de cartes du document ;
+    - deux collections de la même extension dans la même langue (« deux collections de l’extension
+      SV2A ») ;
+    - une case `seriesOnly` qui n'est dans aucune collection (« la carte « Carte s » n’est dans
+      aucune collection ») ou dans plusieurs (supprimer l'une la retirerait à l'autre ; une carte
+      qui n'est pas `seriesOnly` peut être la case de plusieurs collections, ou d'aucune : une carte
+      possédée reste après la suppression de sa collection).
+  - Le Pokédex public montre les collections (`series`, champ par champ) et leurs cases, marquées
+    `seriesOnly` tant qu'elles ne sont pas obtenues (`shownCollection`) ; jamais un statut
+    « commandée » ni un prix payé (`docs/compte-et-synchronisation.md`). Au journal du serveur, une
+    collection commencée ou supprimée est une ligne (`documentChanges`), pas une par case.
 - Débloqué : un Pokémon l'est dès qu'une de ses cartes est possédée, quelle qu'elle soit ; sa
   favorite ne décide que de la carte que le Pokédex montre pour lui. Chaque entrée du Pokédex
   (`PokedexEntry`, `buildPokedex`) a sa favorite (`card`), toutes ses cartes dans l'ordre d'ajout
@@ -161,7 +184,9 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     (enregistrement ou bloc d'achats illisible ou absent : image, montant en texte, état de
     commande, date ou jour qui n'existe pas ou d'avant l'an 100, remboursé plus grand que la commande, commande sans id ou en double, carte
     d'un Pokémon hors du Pokédex ou sans clé `image` (« Modifier la carte » planterait), favorite qui
-    n'est pas une carte de son Pokémon, id Cardmarket
+    n'est pas une carte de son Pokémon, collection d'extension abîmée (case inconnue ou en double,
+    deux fois la même extension dans la même langue, case pas encore obtenue hors de toute
+    collection), id Cardmarket
     que la saisie refuserait (0, négatif, plus de 9 chiffres…), quantité qui n'est pas un entier
     de 1 ou plus, texte qui n'en est pas un, lien…) est refusé (`lib/transfer.ts`), comme par le
     serveur à l'enregistrement, et la règle en cause est dite (« La commande du 5 octobre 2026

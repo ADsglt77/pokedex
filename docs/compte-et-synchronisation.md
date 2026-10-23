@@ -89,9 +89,12 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   la valeur au prix du jour, la courbe des Pokémon débloqués et le classeur (débloqués en couleur,
   cartes choisies grisées ; les pochettes ne mènent pas aux fiches, celles du visiteur). Le serveur
   ne montre que les cartes (avec leur langue, sans leur page notée), la carte favorite de chaque
-  Pokémon (`favorites`, celle qu'on montre pour lui) et les possessions avec leur date
-  (`shownCollection`, testé) : jamais un prix payé, une commande, le budget, la liste d'achats ni
-  le statut « commandée » ; une collection vide tant qu'aucun appareil n'a rien envoyé. Il montre
+  Pokémon (`favorites`, celle qu'on montre pour lui), les collections d'extensions (`series` :
+  l'extension, sa langue, son nom, son jour de début et ses cases, recopiés un à un ; leurs cases
+  pas encore obtenues sont des cartes marquées `seriesOnly`, sans quoi la page les compterait au
+  Pokédex) et les possessions avec leur date (`shownCollection`, testé) : jamais un prix payé, une
+  commande, le budget, la liste d'achats ni le statut « commandée » (une case commandée n'a pas de
+  statut) ; une collection vide tant qu'aucun appareil n'a rien envoyé. Il montre
   la version que le serveur a reçue, relue comme un fichier (`readCollection`) : un document
   enregistré avant les favorites n'en a pas, et chaque Pokémon y reçoit sa première carte, celle
   qu'il montrait jusque-là, sans rien faire (testé sur la route). La page la lit une fois
@@ -102,8 +105,9 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   qu'un fichier importé y aurait glissé en plus ne devient pas public, testé). La route elle-même
   est testée sur le serveur entier (`tests/collection.test.ts`) : le pseudo sans tenir compte des
   majuscules, 404 pour un pseudo qui n'est à personne ou un compte supprimé, sans session jamais
-  un prix payé, une commande ni un statut « commandée », les prix des seules cartes possédées, et
-  un Pokédex enregistré avant les favorites montré avec la première carte de chaque Pokémon.
+  un prix payé, une commande ni un statut « commandée », les prix des seules cartes possédées, un
+  Pokédex enregistré avant les favorites montré avec la première carte de chaque Pokémon, et les
+  collections d'extensions montrées avec leurs cases.
 - La collection (`server/collection.ts`, `store/account.ts`) : la collection et les achats
   forment un seul document par compte (une commande modifie les deux), gardé par le serveur seul,
   dans `app.db` ; chaque compte ne lit et n'écrit que le sien (testé : un second compte ne voit ni
@@ -135,7 +139,12 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   une modification faite pendant cette relecture n'est pas écrasée : elle part, depuis la version
   d'avant (changée ailleurs entre-temps : refusée, 409, puis relue, comme plus haut). Le
   serveur garde une version remplacée par heure, 30 jours (`collection_versions`, à reprendre à la
-  main). « Annuler », l'import, « Effacer » sont des modifications comme les autres. Le compte
+  main). Il note au journal ce qui change d'une version à l'autre (`documentChanges`,
+  `server/journal.ts`) : une collection d'extension commencée (« Collection commencée ») ou
+  supprimée (« Collection supprimée ») est **une ligne** (son nom, sa langue, son nombre de cartes),
+  jamais une par case, que des centaines de cartes soient ajoutées ou retirées avec elle ; une case
+  obtenue est « Carte possédée », sans « Carte modifiée » (testé, `tests/journal.test.ts`).
+  « Annuler », l'import, « Effacer » sont des modifications comme les autres. Le compte
   (`AccountMenu`, en pied de la barre latérale, ou en icône dans la barre du haut sur petit écran ;
   seulement connecté) montre son pseudo et l'état : enregistrée, enregistrement, hors ligne
   (« Réessayer maintenant »), reconnectez-vous (« Se reconnecter »), rechargée, envoi refusé

@@ -459,6 +459,34 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
     expect((await visit('ancien')).collection.favorites).toEqual({ 25: 'a' })
   })
 
+  test('les collections d’extensions sont montrées avec leurs cases, jamais une case commandée comme telle', async () => {
+    // Une collection de deux cases : une possédée, une pas encore obtenue mais commandée (payée 12 €).
+    const owner = await createAccount('Collectionneur')
+    const document = {
+      ...withCards(
+        collectionWith({
+          a: ownership('owned', { paidPrice: 30 }),
+          s: ownership('ordered', { paidPrice: 12 }),
+        }),
+        card('a', [25]),
+        card('s', [4], { seriesOnly: true }),
+      ),
+      series: [{ set: 'SV2A', name: 'Pokémon Card 151', startedAt: NOW, cards: ['a', 's'] }],
+    }
+    app
+      .query(
+        'INSERT INTO collections (user_id, version, collection, shopping, updated_at) VALUES (?, 1, ?, ?, ?)',
+      )
+      .run(owner.user!.id, JSON.stringify(document), JSON.stringify(emptyShopping()), NOW)
+    const shown = await visit('collectionneur')
+    expect(shown.collection.series).toEqual(document.series)
+    expect(shown.collection.customCards.s?.seriesOnly).toBe(true)
+    expect(shown.collection.customCards.a).not.toHaveProperty('seriesOnly')
+    expect(shown.collection.favorites).toEqual({ 25: 'a' })
+    expect(Object.keys(shown.collection.cards)).toEqual(['a'])
+    expect(JSON.stringify(shown)).not.toMatch(/ordered|paidPrice/)
+  })
+
   test('les prix du jour des seules cartes possédées, demandés à l’API des données avec le token', async () => {
     // Une fausse API des données : elle note ce qu'on lui demande, et rend un prix par carte.
     const asked: string[] = []

@@ -10,7 +10,8 @@
  *   (`auth.ts`) ;
  * - `collection` et `achats` : ce qui change dans le document synchronisé d'un compte (`compte=`),
  *   comparé à la version d'avant (`documentChanges`, `collection.ts`) : cartes ajoutées, possédées,
- *   commandes, budget… ;
+ *   commandes, budget… ; une collection d'extension commencée ou supprimée, une ligne chacune, pas
+ *   une par carte (des centaines de cases) ;
  * - `données` : l'export et l'import, que le navigateur signale (`POST /api/journal`) : le serveur
  *   ne les voit pas autrement ;
  * - `vitrine` : une visite du Pokédex public d'un compte, un lien partagé lu par un robot
@@ -26,9 +27,17 @@
 
 import { Elysia, t } from 'elysia'
 import { ORDER_STATE_LABELS } from '@/config/shopping'
+import { cardLanguage } from '@/lib/collection'
 import { formatEuro, formatInteger } from '@/lib/format'
 import { cardCount, orderSpent, supplierLabel } from '@/lib/orders'
-import type { CollectionData, CollectionDocument, Order, ShoppingData } from '@/types'
+import type {
+  CollectionData,
+  CollectionDocument,
+  Order,
+  PokemonCard,
+  SeriesCollection,
+  ShoppingData,
+} from '@/types'
 import type { accountRoutes } from './auth'
 
 type JournalTopic = 'compte' | 'collection' | 'achats' | 'données' | 'vitrine' | 'serveur'
@@ -307,22 +316,62 @@ export function documentChanges(
   ]
 }
 
-/** Les cartes : ajoutées, retirées, corrigées ; leur statut et leur prix payé. */
+/** Une collection d'extension se retrouve par son extension et sa langue. */
+const seriesKey = (series: SeriesCollection) => `${series.set} ${cardLanguage(series)}`
+
+/**
+ * Les collections d'extensions commencées ou supprimées : une ligne chacune. Leurs cases, ajoutées
+ * ou retirées avec elles (`seriesOnly`), n'ont pas chacune la leur (`cardChanges`).
+ */
+function seriesChanges(before: CollectionData, after: CollectionData): JournalEntry[] {
+  const line = (message: string, series: SeriesCollection, level: JournalLevel): JournalEntry => ({
+    topic: 'collection',
+    level,
+    message,
+    details: { extension: series.name, langue: cardLanguage(series), cartes: series.cards.length },
+  })
+  const was = new Set(before.series.map(seriesKey))
+  const is = new Set(after.series.map(seriesKey))
+  return [
+    ...after.series
+      .filter((series) => !was.has(seriesKey(series)))
+      .map((series) => line('Collection commencée', series, 'ok')),
+    ...before.series
+      .filter((series) => !is.has(seriesKey(series)))
+      .map((series) => line('Collection supprimée', series, 'warn')),
+  ]
+}
+
+/**
+ * Une carte sans `seriesOnly` : ce que l'utilisateur a changé. Une case obtenue perd le champ, ce
+ * qui n'est pas une correction (sa ligne est « Carte possédée »).
+ */
+const cardContent = (card: PokemonCard) => JSON.stringify({ ...card, seriesOnly: undefined })
+
+/**
+ * Les cartes : ajoutées, retirées, corrigées ; leur statut et leur prix payé ; et les collections
+ * d'extensions. Une case pas encore obtenue (`seriesOnly`) n'est jamais ajoutée ni retirée seule :
+ * c'est sa collection qui est commencée ou supprimée.
+ */
 function cardChanges(before: CollectionData, after: CollectionData): JournalEntry[] {
   const removed = Object.keys(before.customCards).filter((id) => !after.customCards[id])
   if (removed.length > 0 && Object.keys(after.customCards).length === 0) {
     const details = { cartes: removed.length }
     return [{ topic: 'collection', level: 'warn', message: 'Collection effacée', details }]
   }
-  const lines: JournalEntry[] = []
+  const lines = seriesChanges(before, after)
   const add = (message: string, carte: string, level?: JournalLevel, payé?: string) =>
     lines.push({ topic: 'collection', level, message, details: { carte, payé } })
   for (const [id, card] of Object.entries(after.customCards)) {
     const known = before.customCards[id]
-    if (!known) add('Carte ajoutée', card.reference)
-    else if (JSON.stringify(known) !== JSON.stringify(card)) add('Carte modifiée', card.reference)
+    if (!known) {
+      if (!card.seriesOnly) add('Carte ajoutée', card.reference)
+    } else if (cardContent(known) !== cardContent(card)) add('Carte modifiée', card.reference)
   }
-  for (const id of removed) add('Carte retirée', before.customCards[id]!.reference)
+  for (const id of removed) {
+    const { reference, seriesOnly } = before.customCards[id]!
+    if (!seriesOnly) add('Carte retirée', reference)
+  }
 
   for (const id of new Set([...Object.keys(before.cards), ...Object.keys(after.cards)])) {
     const reference = after.customCards[id]?.reference

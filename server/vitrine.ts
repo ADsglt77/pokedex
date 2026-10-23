@@ -4,13 +4,15 @@
  *   s'il n'est à personne) : `{ owner, collection, prices }` (`VitrineData`), le pseudo du compte
  *   et sa collection, réduite à ce qui se montre : ses cartes (référence, image, langue, id
  *   Cardmarket pour la valeur au prix du jour ; pas leur page), la carte favorite de chaque
- *   Pokémon (`favorites`) et, pour celles possédées, la date d'obtention (pas le prix payé). Rien
- *   des achats : ni commandes, ni budget, ni statut « commandée ». Une collection vide tant
- *   qu'aucun appareil n'a rien envoyé ; un document enregistré avant les favorites est relu comme
- *   un fichier (`readCollection`) : chaque Pokémon y a sa première carte. Avec elle, les prix du
- *   jour de ses seules cartes possédées, demandés à l'API des données (`dataPrices`), dans la
- *   forme de `/api/prices` (`null` sans guide des prix, ou l'API muette : la page s'affiche sans
- *   valeur) : la page n'en montre que la valeur, sans charger ceux de toutes les cartes.
+ *   Pokémon (`favorites`), ses collections d'extensions (`series` : l'extension, son nom, ses
+ *   cases, dont celles pas encore obtenues, `seriesOnly`) et, pour les cartes possédées, la date
+ *   d'obtention (pas le prix payé). Rien des achats : ni commandes, ni budget, ni statut
+ *   « commandée ». Une collection vide tant qu'aucun appareil n'a rien envoyé ; un document
+ *   enregistré avant les favorites est relu comme un fichier (`readCollection`) : chaque Pokémon y
+ *   a sa première carte. Avec elle, les prix du jour de ses seules cartes possédées, demandés à
+ *   l'API des données (`dataPrices`), dans la forme de `/api/prices` (`null` sans guide des prix,
+ *   ou l'API muette : la page s'affiche sans valeur) : la page n'en montre que la valeur, sans
+ *   charger ceux de toutes les cartes.
  * - `GET /api/vitrine/<pseudo>/apercu` : la page que lisent les robots d'aperçu (Discord,
  *   WhatsApp…) quand on partage le lien : « Le Pokédex de … » et sa progression (ils ne lancent pas
  *   le JavaScript de l'app). nginx les y envoie pour toute adresse d'un seul segment
@@ -33,12 +35,14 @@ import { journalOnce, reasonOf, visitorOf } from './journal'
 
 /**
  * La collection telle que la voit un visiteur (testé : jamais un prix payé ni un achat). Chaque
- * champ est recopié un à un, l'image comprise : ce qu'un fichier importé y aurait glissé en plus
- * ne devient pas public.
+ * champ est recopié un à un, l'image et les collections d'extensions comprises : ce qu'un fichier
+ * importé y aurait glissé en plus ne devient pas public. Une case d'extension pas encore obtenue
+ * reste marquée (`seriesOnly`) : sans elle, la page la compterait au Pokédex. Une case commandée
+ * n'est pas dite commandée : seules les cartes possédées ont un statut.
  */
 export function shownCollection(collection: CollectionData): CollectionData {
   const customCards: Record<string, PokemonCard> = {}
-  for (const [id, { dexIds, reference, image, cardmarket, language }] of Object.entries(
+  for (const [id, { dexIds, reference, image, cardmarket, language, seriesOnly }] of Object.entries(
     collection.customCards,
   )) {
     customCards[id] = {
@@ -49,6 +53,7 @@ export function shownCollection(collection: CollectionData): CollectionData {
       ...(cardmarket && { cardmarket }),
       // Sans elle, une carte française serait montrée japonaise (son image, son lien).
       ...(language && { language }),
+      ...(seriesOnly && { seriesOnly }),
     }
   }
   const cards: Record<string, CardOwnership> = {}
@@ -62,6 +67,13 @@ export function shownCollection(collection: CollectionData): CollectionData {
     cards,
     customCards,
     favorites: { ...collection.favorites },
+    series: collection.series.map(({ set, language, name, startedAt, cards: slots }) => ({
+      set,
+      ...(language && { language }),
+      name,
+      startedAt,
+      cards: [...slots],
+    })),
   }
 }
 
