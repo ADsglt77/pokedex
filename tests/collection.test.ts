@@ -330,9 +330,37 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
     }
     // Avec la session, le même corps est décompressé (le compteur compte bien) ; des espaces ne
     // sont pas un document : 400.
-    expect(await decompressions(() => gzipped(heavy))).toBe(1)
+    let withSession = 0
+    const count = await decompressions(async () => {
+      withSession = (await gzipped(heavy)).status
+    })
+    expect(count).toBe(1)
+    expect(withSession).toBe(400)
     // Du gzip illisible, sans session : 401, pas 400.
     expect((await gzipped('pas du gzip', { Cookie: '' })).status).toBe(401)
+    expect(await stored()).toEqual(before)
+  })
+
+  test('non compressée et illisible, même sans session : le 400 d’Elysia, rien au journal', async () => {
+    const before = await stored()
+    // Le `parse` passe avant la session : n'importe qui peut l'envoyer, rien ne doit en venir au
+    // journal (ni une ligne, ni une erreur dans la sortie du serveur).
+    log.mockClear()
+    const errors = spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const response = await server.handle(
+        new Request(`${ORIGIN}/api/collection`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Origin: ORIGIN },
+          body: '{"account":',
+        }),
+      )
+      expect(response.status).toBe(400)
+      expect(log).not.toHaveBeenCalled()
+      expect(errors).not.toHaveBeenCalled()
+    } finally {
+      errors.mockRestore()
+    }
     expect(await stored()).toEqual(before)
   })
 

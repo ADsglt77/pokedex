@@ -140,7 +140,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   lu d'abord, tel quel : sous `Bun.serve`, le lire en flux après la lecture de la session levait
   une erreur que personne n'attrapait (testé derrière un vrai `Bun.serve`, `server.handle` ne le
   voit pas). Une panne en lisant la session (la base occupée) : 500, l'appareil réessaie (un 400
-  dirait « Envoi refusé », testé). Un envoi non compressé reste accepté : sans `CompressionStream` (Safari avant
+  dirait « Envoi refusé », testé) ; un corps illisible, compressé ou non, reste le 400 d'Elysia,
+  sans rien au journal (n'importe qui peut l'envoyer, testé). Un envoi non compressé reste accepté : sans `CompressionStream` (Safari avant
   16.4, Firefox avant 113), le navigateur l'envoie tel quel (testé). Son délai grandit avec lui
   (15 s, plus 10 s par Mo envoyé). Le document est numéroté
   par le serveur : `PUT /api/collection` `{ account, baseVersion, collection, shopping }` est

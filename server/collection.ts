@@ -59,13 +59,14 @@ async function gunzip(compressed: Blob) {
 }
 
 /**
- * Ce que `parse` refuse d'un corps compressé : sans session (401, avant de rien décompresser), trop
- * gros une fois décompressé (413), illisible (ni du gzip ni du JSON : 400). Elysia fait de toute
- * erreur du `parse` un 400 : `error` les rend, et toute autre erreur en 500.
+ * Ce que `parse` refuse d'un corps compressé : sans session (401, avant de rien décompresser), la
+ * session pas lue (une panne : 500, l'appareil réessaiera), trop gros une fois décompressé (413).
+ * Elysia fait de toute erreur du `parse` un 400 : `error` rend ceux-là, et laisse le 400 au reste
+ * (un corps illisible, compressé ou non).
  */
 const NO_SESSION = new Error('Sans session')
+const SESSION_DOWN = new Error('Session pas lue')
 const TOO_LARGE = new Error(`Plus de ${MAX_DOCUMENT} octets une fois décompressé`)
-const UNREADABLE = new Error('Ni du gzip ni du JSON')
 
 export function collectionRoutes(
   app: Database,
@@ -187,33 +188,27 @@ export function collectionRoutes(
         async parse({ request }) {
           if (request.headers.get('content-encoding') !== 'gzip') return
           const compressed = await request.blob()
-          const session = await auth.api.getSession({
-            headers: request.headers,
-            query: { disableRefresh: true },
-          })
+          const session = await auth.api
+            .getSession({ headers: request.headers, query: { disableRefresh: true } })
+            .catch((cause: unknown) => {
+              // Une panne (la base occupée…) : au journal, la cause dans la sortie du serveur.
+              console.error(cause)
+              journal({ topic: 'collection', level: 'error', message: 'Session pas lue' })
+              throw SESSION_DOWN
+            })
           if (!session) throw NO_SESSION
-          try {
-            const text = await gunzip(compressed)
-            if (text !== null) return JSON.parse(text) as unknown
-          } catch {
-            throw UNREADABLE
-          }
-          throw TOO_LARGE
+          const text = await gunzip(compressed)
+          if (text === null) throw TOO_LARGE
+          return JSON.parse(text) as unknown
         },
         error({ code, error }) {
           if (code !== 'PARSE') return
           if (error.cause === NO_SESSION) return json('null', 401)
+          // Pas un 400 : l'appareil dirait « Envoi refusé », et ne réessaierait pas.
+          if (error.cause === SESSION_DOWN) {
+            return new Response(null, { status: 500, headers: { 'Cache-Control': 'no-store' } })
+          }
           if (error.cause === TOO_LARGE) return json('null', 413)
-          if (error.cause === UNREADABLE) return
-          // Une panne (la session pas lue : la base occupée…) : 500, et l'appareil réessaiera ; un
-          // 400 lui ferait dire « Envoi refusé », pour de bon. La cause dans la sortie du serveur.
-          console.error(error.cause)
-          journal({
-            topic: 'collection',
-            level: 'error',
-            message: 'Envoi pas lu, panne du serveur',
-          })
-          return new Response(null, { status: 500, headers: { 'Cache-Control': 'no-store' } })
         },
         body: t.Object({
           account: t.String(),
