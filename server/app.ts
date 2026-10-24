@@ -12,17 +12,11 @@
 import { openapi } from '@elysiajs/openapi'
 import type { Database } from 'bun:sqlite'
 import { Elysia } from 'elysia'
+import { MAX_DOCUMENT } from '@/types'
 import { accountRoutes, type Accounts } from './auth'
 import { collectionRoutes } from './collection'
 import { journal, journalRoutes } from './journal'
 import { vitrineRoutes } from './vitrine'
-
-/**
- * Le plus gros corps accepté (la collection et les achats d'un compte) : 413 au-delà. Une carte
- * d'une collection d'extension pèse environ 270 octets : la limite tombe vers 16 000 à 18 000
- * cartes, soit 50 à 80 extensions selon leur taille (`docs/compte-et-synchronisation.md`).
- */
-const MAX_BODY = 5_000_000
 
 interface AppContext {
   /** Les comptes et les collections. */
@@ -33,7 +27,13 @@ interface AppContext {
 export function createApp({ app, accounts }: AppContext) {
   const account = accountRoutes(accounts)
   return (
-    new Elysia({ serve: { maxRequestBodySize: MAX_BODY } })
+    // Le plus gros corps reçu : 413 au-delà. Le plus gros est la collection et les achats d'un
+    // compte (`MAX_DOCUMENT`, le même plafond une fois décompressée : `collection.ts`). Une case
+    // d'une collection d'extension pèse 320 octets pas encore obtenue, 463 possédée, 566 possédée
+    // et achetée par une commande (mesuré, octobre 2026) : le Pokédex compris, le plafond tombe
+    // vers 8 000 à 14 000 cases, soit 34 à 61 extensions de 230 cartes selon leur état
+    // (`docs/compte-et-synchronisation.md`).
+    new Elysia({ serve: { maxRequestBodySize: MAX_DOCUMENT } })
       .use(
         openapi({
           enabled: process.env.NODE_ENV !== 'production',

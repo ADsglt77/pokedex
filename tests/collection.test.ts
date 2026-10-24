@@ -4,8 +4,12 @@
  * avance (la base restaurée), est refusé (409), et la version du serveur reste telle quelle ; sans
  * session rien ne passe, ni d'un autre site (une modification, sur toute adresse, avant même la
  * lecture de son corps ; une lecture, si) ; un document abîmé est refusé (400). Une erreur ici écraserait les
- * commandes d'un autre appareil. Chaque compte ne touche qu'à sa collection, et la sienne part avec
- * lui. Et ce que montre le Pokédex public d'un compte (`/api/vitrine/<pseudo>`) : ce qu'il
+ * commandes d'un autre appareil. La lecture dit à quel compte est la collection, et seulement sa
+ * version quand l'appareil a déjà celle-là (`?version=`) ; un envoi compressé (`gzip`, celui du
+ * site) est enregistré, mais refusé (413) au-delà de 5 000 000 octets décompressés, sans jamais
+ * décompresser plus ; un envoi renvoyé tel quel après une réponse perdue est reconnu (200, la même
+ * version), un autre parti de la même version reste refusé (409). Chaque compte ne touche qu'à sa
+ * collection, et la sienne part avec lui. Et ce que montre le Pokédex public d'un compte (`/api/vitrine/<pseudo>`) : ce qu'il
  * laisserait passer serait public. Le serveur entier (`createApp`), sur des bases neuves dans le
  * dossier temporaire de `setup.ts`, avec un compte créé comme à l'inscription et un premier envoi ;
  * chaque test part de la version du moment, dans n'importe quel ordre.
@@ -83,11 +87,34 @@ const collection = (method: 'GET' | 'PUT', body?: unknown, headers: Record<strin
     }),
   )
 
+/** `PUT /api/collection` comme l'envoie le site : compressé (`Content-Encoding: gzip`). */
+const gzipped = (body: RequestInit['body']) =>
+  server.handle(
+    new Request(`${ORIGIN}/api/collection`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Encoding': 'gzip',
+        Origin: ORIGIN,
+        Cookie: cookie,
+      },
+      body,
+    }),
+  )
+
 /** La version enregistrée sur le serveur. */
 async function stored() {
   const response = await collection('GET')
   return { body: (await response.json()) as CollectionResponse }
 }
+
+/** Le nombre de versions remplacées gardées pour le compte de Sacha. */
+const keptVersions = () =>
+  (
+    app.query('SELECT COUNT(*) AS count FROM collection_versions WHERE user_id = ?').get(sacha) as {
+      count: number
+    }
+  ).count
 
 /**
  * Le document d'un appareil : une carte possédée, payée 30 €, reliée à Cardmarket ; une autre
@@ -118,7 +145,12 @@ describe('/api/collection : jamais une version écrasée', () => {
     expect(signUp.response.status).toBe(200)
     expect(saved.status).toBe(200)
     expect(savedBody).toEqual({ version: 1 })
-    expect(afterFirst.body).toEqual({ version: 1, ...first } satisfies CollectionResponse)
+    // La lecture dit à quel compte est la collection : l'appareil ne prend jamais celle d'un autre.
+    expect(afterFirst.body).toEqual({
+      version: 1,
+      account: sacha,
+      ...first,
+    } satisfies CollectionResponse)
   })
 
   test('un autre appareil, parti de la version 0 : 409, la version du serveur reste', async () => {
@@ -141,7 +173,7 @@ describe('/api/collection : jamais une version écrasée', () => {
     })
     expect(response.status).toBe(200)
     const after = await stored()
-    expect(after.body).toEqual({ version: before.body.version + 1, ...next })
+    expect(after.body).toEqual({ version: before.body.version + 1, account: sacha, ...next })
     expect((await response.json()) as CollectionSaved).toEqual({
       version: before.body.version + 1,
     })
@@ -255,6 +287,103 @@ describe('/api/collection : jamais une version écrasée', () => {
   })
 })
 
+describe('/api/collection : lue depuis sa version, envoyée compressée, renvoyée après une réponse perdue', () => {
+  /** La lecture d'un appareil qui a déjà la version `version` (`?version=`). */
+  const readFrom = (version: number | string) =>
+    server.handle(
+      new Request(`${ORIGIN}/api/collection?version=${version}`, { headers: { Cookie: cookie } }),
+    )
+
+  test('l’appareil a déjà la version du serveur : la version et le compte seuls, sans le document', async () => {
+    const { body } = await stored()
+    const same = await readFrom(body.version)
+    expect(same.status).toBe(200)
+    expect(same.headers.get('cache-control')).toBe('no-store')
+    expect(await same.json()).toEqual({ version: body.version, account: sacha })
+    // Une autre version : le document entier.
+    expect(await (await readFrom(body.version - 1)).json()).toEqual(body)
+    // Une version qui n'en est pas une : refusée par le schéma, sans document.
+    expect((await readFrom('abc')).status).toBe(422)
+  })
+
+  test('compressée (`Content-Encoding: gzip`, comme l’envoie le site) : enregistrée comme une autre', async () => {
+    const before = await stored()
+    const next: CollectionDocument = {
+      ...first,
+      shopping: { ...emptyShopping(), orders: [order({ id: 'compressée' })] },
+    }
+    const sent = { account: sacha, baseVersion: before.body.version, ...next }
+    const response = await gzipped(Bun.gzipSync(JSON.stringify(sent)))
+    expect(response.status).toBe(200)
+    expect((await response.json()) as CollectionSaved).toEqual({
+      version: before.body.version + 1,
+    })
+    expect((await stored()).body).toEqual({
+      version: before.body.version + 1,
+      account: sacha,
+      ...next,
+    })
+    // Illisible une fois décompressée, ou pas du gzip : 400, rien d'écrit.
+    const after = await stored()
+    expect((await gzipped(Bun.gzipSync('{"account":'))).status).toBe(400)
+    expect((await gzipped(JSON.stringify(sent))).status).toBe(400)
+    expect(await stored()).toEqual(after)
+  })
+
+  test('plus de 5 000 000 octets une fois décompressée : 413, sans décompresser plus', async () => {
+    const before = await stored()
+    // Une « bombe » : 50 Go une fois décompressée (500 membres gzip de 100 Mo de zéros), 48 Mo
+    // compressés. Décompressée en entier, il faudrait des dizaines de secondes, et autant de Go.
+    const member = Bun.gzipSync(new Uint8Array(100_000_000))
+    const bomb = new Uint8Array(member.length * 500)
+    for (let i = 0; i < 500; i++) bomb.set(member, i * member.length)
+    const start = performance.now()
+    const response = await gzipped(bomb)
+    expect(response.status).toBe(413)
+    // Arrêtée au plafond : quelques dizaines de millisecondes.
+    expect(performance.now() - start).toBeLessThan(2_000)
+    expect(await stored()).toEqual(before)
+  })
+
+  test('renvoyée telle quelle après une réponse perdue : 200, la version déjà enregistrée, rien de nouveau', async () => {
+    const before = await stored()
+    const next: CollectionDocument = {
+      ...first,
+      shopping: { ...emptyShopping(), orders: [order({ id: 'renvoyée' })] },
+    }
+    const sent = { account: sacha, baseVersion: before.body.version, ...next }
+    expect((await collection('PUT', sent)).status).toBe(200)
+    const after = await stored()
+    const kept = keptVersions()
+    // La réponse s'est perdue (délai, réseau coupé) : l'appareil renvoie le même document.
+    log.mockClear()
+    const again = await collection('PUT', sent)
+    expect(again.status).toBe(200)
+    expect((await again.json()) as CollectionSaved).toEqual({ version: before.body.version + 1 })
+    expect(await stored()).toEqual(after)
+    expect(keptVersions()).toBe(kept)
+    // Rien au journal : ni un refus, ni une modification de plus.
+    expect(log).not.toHaveBeenCalled()
+    // Compressée aussi.
+    expect((await gzipped(Bun.gzipSync(JSON.stringify(sent)))).status).toBe(200)
+    expect(await stored()).toEqual(after)
+  })
+
+  test('un autre document parti de la même version : toujours 409, rien d’écrit', async () => {
+    const before = await stored()
+    const sent = { account: sacha, baseVersion: before.body.version, ...first }
+    expect((await collection('PUT', sent)).status).toBe(200)
+    const after = await stored()
+    const other = await collection('PUT', { ...sent, ...second })
+    expect(other.status).toBe(409)
+    expect(await stored()).toEqual(after)
+    // Le même document, mais de plus loin (deux versions d'écart) : 409 aussi.
+    const older = await collection('PUT', { ...sent, baseVersion: before.body.version - 1 })
+    expect(older.status).toBe(409)
+    expect(await stored()).toEqual(after)
+  })
+})
+
 describe('d’un autre site : une modification refusée partout, une lecture jamais', () => {
   const FOREIGN = 'https://autre.exemple'
 
@@ -340,6 +469,7 @@ describe('les comptes : chacun le sien', () => {
     const empty = await collection('GET', undefined, asOndine)
     expect((await empty.json()) as CollectionResponse).toEqual({
       version: 0,
+      account: ondine.user!.id,
       collection: null,
       shopping: null,
     })
@@ -351,7 +481,7 @@ describe('les comptes : chacun le sien', () => {
     const ondineSees = (await (
       await collection('GET', undefined, asOndine)
     ).json()) as CollectionResponse
-    expect(ondineSees).toEqual({ version: 1, ...second })
+    expect(ondineSees).toEqual({ version: 1, account: ondine.user!.id, ...second })
   })
 
   test('parti d’un autre compte (une connexion entre-temps) : 401, rien d’écrit', async () => {

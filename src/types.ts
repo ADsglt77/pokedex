@@ -379,15 +379,24 @@ export interface AccountState {
 
 /**
  * `GET /api/collection` : le document du compte, numéroté (`version`, que l'appareil renvoie avec
- * ses modifications) ; `version` 0 et le reste `null` tant que rien n'a été enregistré.
- * Enregistré tel que l'appareil l'a envoyé ; relu comme un fichier importé (`readCollection`,
- * `readShopping`).
+ * ses modifications), et l'id du compte dont c'est la collection (`account` : l'appareil ne prend
+ * jamais celle d'un autre compte) ; `version` 0 et le reste `null` tant que rien n'a été
+ * enregistré. Demandé depuis la version que l'appareil a déjà (`?version=N`) et inchangé :
+ * `version` et `account` seuls. Enregistré tel que l'appareil l'a envoyé ; relu comme un fichier
+ * importé (`readCollection`, `readShopping`).
  */
 export interface CollectionResponse {
   version: number
-  collection: CollectionData | null
-  shopping: ShoppingData | null
+  account: string
+  collection?: CollectionData | null
+  shopping?: ShoppingData | null
 }
+
+/**
+ * Le plus gros document que garde le serveur (`PUT /api/collection`), en octets, décompressé : 413
+ * au-delà (`server/collection.ts`) ; l'app avertit à 80 % (`store/account.ts`).
+ */
+export const MAX_DOCUMENT = 5_000_000
 
 /** `PUT /api/collection`, enregistré : la nouvelle version du document. */
 export interface CollectionSaved {
