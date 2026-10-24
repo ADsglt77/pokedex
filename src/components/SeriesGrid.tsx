@@ -36,7 +36,13 @@ export function SeriesGrid({
   const [params, setParams] = useSearchParams()
   // La carte dont la fenêtre est ouverte (son id) ; `null` : aucune.
   const [open, setOpen] = useState(() => (linked ? seriesCard(params, series) : null))
-  const { limit, sentinel, more } = useGrowingList(series.cards.length, TILES_STEP)
+  // Ouverte d'emblée (souvent une case loin dans l'extension) : les tuiles jusqu'à la sienne sont
+  // dessinées, pour lui rendre le focus à la fermeture.
+  const { limit, sentinel, more } = useGrowingList(
+    series.cards.length,
+    TILES_STEP,
+    open === null ? 0 : series.cards.indexOf(open) + 1,
+  )
   const grid = useRef<HTMLUListElement>(null)
 
   /**

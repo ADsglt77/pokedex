@@ -37,7 +37,7 @@ export function CollectionsPage() {
       <title>{pageTitle('Collections')}</title>
       <PageHeader title="Collections" actions={<NewCollection series={series} />}>
         Le Pokédex, puis chaque extension que vous collectionnez en entier, en japonais ou en
-        français : toutes ses cartes, à débloquer une à une.
+        français : toutes ses cartes, à obtenir une à une.
       </PageHeader>
       <ul className={styles.tiles}>
         <PokedexTile />

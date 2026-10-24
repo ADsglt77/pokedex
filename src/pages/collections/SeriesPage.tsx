@@ -38,7 +38,7 @@ import styles from './SeriesPage.module.css'
  * d'emblée (`seriesCard` : le lien d'une carte, `cardPath`). Une collection inconnue : la page
  * introuvable. Une collection qui disparaît sous la page (supprimée ici, son début annulé par
  * « Annuler », supprimée sur un autre appareil) ramène aux Collections ; de même un début annulé
- * avant que la page ne s'affiche (l'adresse dit `started`, `useStartCollection`).
+ * avant que la page ne s'affiche (l'état de navigation `started`, `useStartCollection`).
  */
 export function SeriesPage() {
   const { set = '' } = useParams()

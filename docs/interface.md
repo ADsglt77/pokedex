@@ -118,8 +118,10 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   seule, `linked` faux, chaque carte une image décrite, dans sa section « Collections » :
   `docs/compte-et-synchronisation.md`), dans l'ordre de l'extension, possédées en couleur, les
   autres en grisé (`CardArt` `locked`), avec leur marque de statut, leur numéro et leur nom ;
-  dessinées au fur et à mesure (`useGrowingList`, 60 à la fois), seules celles à l'écran le sont
-  (`content-visibility`), et mémoïsées : une carte qui change de statut ne redessine qu'elle.
+  dessinées au fur et à mesure (`useGrowingList`, 60 à la fois ; d'emblée jusqu'à celle de
+  `?carte=`, arrondi au palier, souvent une case loin dans l'extension), seules celles à l'écran
+  le sont (`content-visibility`), et mémoïsées : une carte qui change de statut ne redessine
+  qu'elle.
   Une carte ouvre sa fenêtre (`SeriesCard`, pleine page comme la fiche d'une carte du catalogue) :
   son image, sa référence et son drapeau, son statut et ses Pokémon (chacun vers sa fiche ; aucun
   pour un dresseur), « Je possède cette carte » et « Marquer comme commandée », le prix payé et la
@@ -127,10 +129,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   Pokémon), son prix Cardmarket et sa courbe (`PricePanel`) ; chaque action annoncée avec
   « Annuler ». Le statut d'une carte se dit de même partout où l'utilisateur voit les siennes
   (`statusLabel`, `lib/format.ts` : la grille, cette fenêtre, la fiche d'un Pokémon, le
-  Catalogue) : « Possédée », « Commandée », et sans statut « À acheter », comme la liste d'achats
-  et « Ajouter comme » ; le Pokédex public, qui ne dit rien des achats, dit « à débloquer »
-  (`publicStatusLabel`). Le lien d'une carte ailleurs dans l'app (`cardPath`, plus bas) ouvre sa
-  fenêtre d'emblée : `?carte=<id>` (`seriesPath` avec la carte), lu par `seriesCard` dans
+  Catalogue : « Dans votre collection Méga Rêve ex, non possédée ») : « Possédée », « Commandée »,
+  et sans statut « Non possédée » (« À acheter » n'est plus un statut,
+  `docs/collection-et-achats.md`) ; le Pokédex public, qui ne dit rien des achats, dit « à
+  débloquer » (`publicStatusLabel`). Le lien d'une carte ailleurs dans l'app (`cardPath`, plus
+  bas) ouvre sa fenêtre d'emblée : `?carte=<id>` (`seriesPath` avec la carte), lu par `seriesCard` dans
   `SeriesGrid` (seulement une case de la collection ; sinon, aucune fenêtre) ; fermée, l'adresse
   perd `carte` (sans remonter la page) : un rechargement ou « Précédent » ne la rouvre pas, comme
   une fenêtre ouverte depuis sa tuile. « Supprimer la collection » demande confirmation, qui
@@ -274,8 +277,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   `AppShell` : le `Progress` indéterminé de camply, sans fond, montré après 0,3 s). La fenêtre
   d'une carte est préparée dès que le pointeur ou le focus arrive sur « Modifier la carte » ou
   « Ajouter une carte » (`AddCardButton`, avec les cartes japonaises du Pokémon ; sur une fiche
-  sans carte, aussi quand le navigateur est libre, ce qui est annulé si la fiche est quittée
-  avant : parcourir les fiches avec ← et → ne prépare rien), et une roue dit son ouverture si elle
+  sans carte, aussi quand le navigateur est libre ; une fiche quittée avant ne prépare rien :
+  parcourir les fiches avec ← et → ne les prépare pas toutes), et une roue dit son ouverture si elle
   tarde. Le client Better Auth non plus (`lib/auth.ts`, à part de `lib/account.ts` que lit le
   démarrage) : seules la connexion, l'inscription et Réglages › Mon compte l'importent, la
   déconnexion le charge à la demande. Une donnée chargée à la demande et lue par `use()` passe par
@@ -315,9 +318,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   garde). De retour sur une page d'où un lien a été suivi (une pochette du Pokédex,
   une carte de la liste d'achats), le focus revient à ce lien (`returnedLink` de `useFollowLinks`,
   la coquille) ; la fiche d'une carte du catalogue fermée, il va à la tuile de la carte montrée en
-  dernier (parcourue avec ← et →), pas à celle ouverte au départ ; la fenêtre d'une carte d'une
-  collection fermée, à sa tuile, même ouverte d'emblée par `?carte=` (`focusTileAfter`,
-  `lib/focus.ts` : la fenêtre le rendrait sinon au document). Une page qui ouvre une fenêtre
+  dernier (parcourue avec ← et →), pas à celle ouverte au départ (une tuile pas encore dessinée,
+  loin dans la liste : la fenêtre décide) ; la fenêtre d'une carte d'une collection fermée, à sa
+  tuile, mise sous les yeux, même ouverte d'emblée par `?carte=` (`focusTileAfter`,
+  `lib/focus.ts` : la fenêtre le rendrait sinon au document ; la grille a dessiné d'emblée les
+  tuiles jusqu'à la sienne, `useGrowingList`). Une page qui ouvre une fenêtre
   d'emblée la garde : la coquille ne mène pas le focus au contenu, derrière elle, quand il est
   déjà dans une fenêtre. Le nombre de résultats est
   annoncé (`aria-live`) dans le Pokédex, la liste d'achats, le catalogue, la fenêtre d'ajout et

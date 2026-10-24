@@ -152,14 +152,14 @@ export const formatDexNumber = (id: number) => `N°\u00a0${String(id).padStart(4
 const STATUS_LABELS: Record<CardStatus | 'none', string> = {
   owned: 'Possédée',
   ordered: 'Commandée',
-  none: 'À acheter',
+  none: 'Non possédée',
 }
 
 /**
  * Le statut d'une carte, le même mot partout où l'utilisateur voit les siennes (la fiche d'un
  * Pokémon, la grille d'une collection d'extension et la fenêtre d'une de ses cartes, le
- * Catalogue) : « Possédée », « Commandée », et sans statut « À acheter », comme la liste d'achats
- * qui la compte et « Ajouter comme ».
+ * Catalogue) : « Possédée », « Commandée », et sans statut « Non possédée » (« À acheter » n'est
+ * plus un statut : retiré à la demande de l'utilisateur).
  */
 export const statusLabel = (status: CardStatus | null) => STATUS_LABELS[status ?? 'none']
 

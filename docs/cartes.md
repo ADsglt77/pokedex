@@ -154,9 +154,10 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   du catalogue n'est jamais ajoutée deux fois (une TAG TEAM qu'un seul de ses Pokémon a se donne
   aux autres depuis leur fiche). Annoncé avec « Annuler » : « Carte … ajoutée à Pikachu, à acheter. »
   Une case pas encore obtenue d'une collection d'extension (pas encore une carte de ses Pokémon :
-  `useSeriesSlot`) : « Dans votre collection Méga Rêve ex, à acheter : l’ajouter en fait aussi une
-  carte de Pikachu. » ; « Ajouter à la collection » la reprend avec son statut (`adopt`), jamais une
-  seconde carte : « Carte … ajoutée à Pikachu (déjà dans votre collection Méga Rêve ex). »
+  `useSeriesSlot`) : « Dans votre collection Méga Rêve ex, non possédée : l’ajouter en fait aussi
+  une carte de Pikachu. » (le statut, « possédée », « commandée » ou « non possédée », est celui de
+  `statusLabel`, le même que sur la grille et la fenêtre de la collection) ; « Ajouter à la
+  collection » la reprend avec son statut (`adopt`), jamais une seconde carte : « Carte … ajoutée à Pikachu (déjà dans votre collection Méga Rêve ex). »
   Les dresseurs, les énergies et les cartes dont Pokécardex ne donne pas
   les Pokémon (« Togepi, Mélo et Toudoudou-GX ») n'ont pas de bouton. Filtres de rareté et de type
   (`CardFilters`, demandés par l'utilisateur, octobre 2026) : des pastilles à icône, chacune avec le

@@ -23,7 +23,7 @@ import { addCard } from '@/store/collection'
 import type { CardStatus } from '@/types'
 import styles from './CardDetails.module.css'
 
-/** « possédée », « commandée », « à acheter » (`statusLabel`). */
+/** « possédée », « commandée », « non possédée » (`statusLabel`). */
 const statusText = (status: CardStatus | null) => statusLabel(status).toLowerCase()
 
 /**
