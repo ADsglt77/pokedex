@@ -1,7 +1,8 @@
 import { Card, Progress } from '@camply/ui'
-import { Grid3x3, Plus } from '@camply/ui/icons'
-import type { ReactNode } from 'react'
+import { Plus } from '@camply/ui/icons'
+import { useMemo, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
+import { CardArt } from '@/components/CardArt'
 import { LanguageFlag } from '@/components/LanguageSwitch'
 import { PageHeader } from '@/components/PageHeader'
 import { PricedValue } from '@/components/PricedValue'
@@ -10,7 +11,9 @@ import { SetLogo } from '@/components/SetLogo'
 import { SetPicker } from '@/components/SetPicker'
 import { usePokedex } from '@/hooks/usePokedex'
 import { useStartCollection } from '@/hooks/useStartCollection'
+import { artworkUrl } from '@/config/pokedex'
 import type { SetSummary } from '@/lib/card-catalog'
+import { isSourceImage } from '@/lib/card-images'
 import { cardLanguage } from '@/lib/collection'
 import { cx } from '@/lib/cx'
 import { catalogLanguage, catalogParams, seriesPath } from '@/lib/filters'
@@ -19,7 +22,7 @@ import { progressPercent } from '@/lib/pokedex'
 import { seriesId, seriesProgress } from '@/lib/series'
 import { useCollectionStore } from '@/store/collection'
 import { usePrices } from '@/store/prices'
-import type { SeriesCollection } from '@/types'
+import type { PokemonCard, SeriesCollection } from '@/types'
 import styles from './CollectionsPage.module.css'
 
 /**
@@ -114,13 +117,57 @@ function Tile({
   )
 }
 
+/** Les Pokémon de départ de Kanto (Bulbizarre, Salamèche, Carapuce) : le dessin d'un Pokédex vide. */
+const STARTERS = [1, 4, 7]
+
+/** Une carte dont l'image se montre (pas une adresse de chez la source, jamais affichée). */
+const showsImage = (card: PokemonCard) => card.image !== null && !isSourceImage(card.image.small)
+
+/**
+ * Le dessin du Pokédex : trois de ses cartes favorites en éventail, celles des Pokémon débloqués
+ * d'abord, dans l'ordre du Pokédex (une carte TAG TEAM une fois) ; sans carte à montrer, les trois
+ * Pokémon de départ. Décoratif : la tuile se nomme par son titre.
+ */
+function PokedexArt() {
+  const { entries } = usePokedex()
+  const cards = useMemo(() => {
+    const favorites = new Map<string, PokemonCard>()
+    for (const unlocked of [true, false]) {
+      for (const entry of entries) {
+        const card = entry.card?.card
+        if (entry.unlocked === unlocked && card && showsImage(card)) favorites.set(card.id, card)
+        if (favorites.size === 3) return [...favorites.values()]
+      }
+    }
+    return [...favorites.values()]
+  }, [entries])
+  return (
+    <span className={styles.fan} aria-hidden="true">
+      {cards.length > 0
+        ? cards.map((card) => (
+            <CardArt key={card.id} card={card} alt="" className={styles.fanCard} />
+          ))
+        : STARTERS.map((id) => (
+            <img
+              key={id}
+              src={artworkUrl(id)}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className={styles.starter}
+            />
+          ))}
+    </span>
+  )
+}
+
 /** Le Pokédex, toujours en premier : ses Pokémon débloqués sur 1 025. */
 function PokedexTile() {
   const { progress } = usePokedex()
   return (
     <Tile
       to="/pokedex"
-      art={<Grid3x3 size={40} aria-hidden="true" />}
+      art={<PokedexArt />}
       title="Pokédex"
       meta={`Les ${formatInteger(progress.total)} Pokémon`}
       percent={progress.percent}

@@ -93,7 +93,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   très grand écran) ; une collection vide y trouve trois étapes pour commencer. La progression et
   « À faire » côte à côte ont la même hauteur. Les Collections (`/collections`,
   `pages/collections/`) : le Pokédex en première tuile, toujours là (débloqués sur 1 025, et la
-  part), puis une tuile par collection d'extension, dans l'ordre où elles ont été commencées : son
+  part ; pour image, trois de ses cartes favorites en éventail, celles des Pokémon débloqués
+  d'abord, ou les trois Pokémon de départ tant qu'aucune n'a d'image), puis une tuile par
+  collection d'extension, dans l'ordre où elles ont été commencées : son
   logo (demandé à son chemin, sans le catalogue : son code s'il n'y en a pas), son nom et le
   drapeau de sa langue (`LanguageFlag of="set"`, « Extension japonaise »), son code, « 87 / 230 »
   et sa barre, sa valeur au prix du jour ; chaque tuile est tout entière le lien de son titre (vers
