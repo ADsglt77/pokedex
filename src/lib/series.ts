@@ -2,11 +2,11 @@
  * Les collections d'extensions : toutes les cartes d'une extension dans une langue, une case par
  * carte, dans l'ordre de l'extension (`CollectionData.series`). Chaque case est une carte du compte
  * (`customCards`) : une carte déjà là, la même (même langue, même code ou même id Cardmarket :
- * `cardCodeKey`, `cardmarketKey`), est reprise ; les autres sont ajoutées comme cases pas encore obtenues
- * (`seriesOnly`), qui ne remplissent pas le Pokédex. Possédée une fois, une case devient pour de
- * bon une carte de ses Pokémon (`obtain`). Ce qui distingue une collection (`seriesId`) ; la
- * collection d'une carte (`seriesOf`) ; ce que la suppression d'une collection fait de ses cases
- * (`seriesRemoval`) ; leur progression : cases possédées, valeur, coût pour compléter.
+ * `cardCodeKey`, `cardmarketKey`), est reprise ; les autres sont ajoutées comme cases pas encore
+ * obtenues (`seriesOnly`), qui ne remplissent pas le Pokédex. Possédée une fois, une case devient
+ * pour de bon une carte de ses Pokémon (`obtain`). Ce qui distingue une collection (`seriesId`) ;
+ * la collection d'une carte (`seriesOf`) ; ce que la suppression d'une collection fait de ses
+ * cases (`seriesRemoval`) ; leur progression : cases possédées, valeur, coût pour compléter.
  */
 
 import { cardCodeKey, cardmarketKey } from '@/lib/card-code'

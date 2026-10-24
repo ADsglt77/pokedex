@@ -104,6 +104,8 @@ function requestPrices(ids: readonly number[]) {
 interface Answer {
   url: string
   batch: readonly number[]
+  /** La réponse de `getJson`, celle que `markFailed` compte en panne. */
+  response: Promise<PriceFile | null>
   file: PriceFile | null
 }
 
@@ -119,14 +121,14 @@ function requestBatches(batches: readonly number[][]) {
     const response = getJson<PriceFile>(url)
     if (followed.has(response)) return []
     followed.add(response)
-    return [response.then((file): Answer => ({ url, batch, file }))]
+    return [response.then((file): Answer => ({ url, batch, response, file }))]
   })
   if (answers.length === 0) return
   void Promise.all(answers).then((files) => {
     answeredAt = Date.now()
     // Un 404 (des prix pas encore lus) ou une réponse d'une autre forme (un serveur pas encore à
     // jour) : une panne passagère, redemandée une minute après au plus tôt.
-    for (const { url, file } of files) if (!file?.cards) markFailed(url)
+    for (const { url, response, file } of files) if (!file?.cards) markFailed(url, response)
     usePriceStore.setState((state) => withAnswers(state, files))
   })
 }

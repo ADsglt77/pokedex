@@ -48,18 +48,19 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     même id dans une collection) : celle de son code d'abord, sinon celle de son id Cardmarket, car
     deux cartes d'une extension ont parfois le même id Cardmarket au catalogue (« AR 94 » et « AR
     AR7 » en français). Chaque carte du compte est lue une fois, rangée par clé : le clic attend le
-    calcul, et un compte de 8 000 cartes commence une extension de 250 cartes en quelques
-    millisecondes (testé ; comparer chaque case à chaque carte prenait près de 3 s). Une japonaise n'est jamais la case d'une extension française. Une case pas encore
-    obtenue d'une autre collection n'est jamais reprise : deux extensions ont parfois une carte de
-    même id Cardmarket (« SC2 012 », « SC-C 012 »), et supprimer la première collection la
-    retirerait à la seconde. Les autres cases sont ajoutées marquées `seriesOnly` : pas encore des
-    cartes de leurs Pokémon, ni au Pokédex (`buildPokedex` les saute), ni sur leur fiche, jamais
-    favorites (`completeFavorites` les saute). Commencer une extension ne remplit pas
-    le Pokédex ; une case est débloquée quand elle est possédée. Les cases viennent du catalogue,
-    chargé au moment de commencer (`seriesSlot`, `lib/card-catalog.ts` : une nouvelle carte
-    `seriesOnly` par carte de l'extension ; Collections et Catalogue, `useStartCollection`). Le
-    magasin (`store/collection.ts`) ne recommence pas une extension déjà commencée dans cette
-    langue : un second clic pendant le chargement de ses cartes mettrait chaque case en double.
+    calcul (comparer chaque case à chaque carte prenait près de 3 s pour un compte de 8 000 cartes
+    et une extension de 250 ; le test en borne la durée). Une japonaise n'est jamais la case d'une
+    extension française. Une case pas encore obtenue d'une autre collection n'est jamais reprise :
+    deux extensions ont parfois une carte de même id Cardmarket (« SC2 012 », « SC-C 012 »), et
+    supprimer la première collection la retirerait à la seconde. Les autres cases sont ajoutées
+    marquées `seriesOnly` : pas encore des cartes de leurs Pokémon, ni au Pokédex (`buildPokedex`
+    les saute), ni sur leur fiche, jamais favorites (`completeFavorites` les saute). Commencer une
+    extension ne remplit pas le Pokédex ; une case est débloquée quand elle est possédée. Les cases
+    viennent du catalogue, chargé au moment de commencer (`seriesSlot`, `lib/card-catalog.ts` :
+    une nouvelle carte `seriesOnly` par carte de l'extension ; Collections et Catalogue,
+    `useStartCollection`). Le magasin (`store/collection.ts`) ne recommence pas une extension déjà
+    commencée dans cette langue : un second clic pendant le chargement de ses cartes mettrait
+    chaque case en double.
   - Obtenir (`obtain`, `lib/collection.ts`) : une case possédée, par son statut (`setCardStatus`)
     ou à la réception d'une commande (`applyOrder`), perd `seriesOnly` pour de bon et devient une
     carte de ses Pokémon, favorite de ceux qui n'en ont pas (les autres gardent la leur ; un
@@ -72,9 +73,11 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     garde son statut (aucun, ou commandée) et reste une case de sa collection.
   - Retirer : une carte qui est une case d'une collection (`seriesOf`) y reste ; sur la fiche d'un
     Pokémon, « Retirer la carte » est inactif (« Elle fait partie de votre collection Méga Rêve ex :
-    elle y reste. »). Supprimer la collection ne retire que des cases pas encore obtenues, qui ne
-    sont sur aucune fiche : une carte de la fiche (possédée, ou ajoutée seule) reste, et se retire
-    ensuite de la fiche comme les autres.
+    elle y reste. »). Supprimer la collection ne retire que des cartes qui ne sont sur aucune
+    fiche : ses cases pas encore obtenues, et les dresseurs et énergies (sans Pokémon, donc sans
+    fiche) qui ne sont ni possédés ni dans une commande, même obtenus puis quittés (« Supprimer »,
+    plus bas) ; une carte de la fiche (possédée, ou ajoutée seule) reste, et se retire ensuite de la
+    fiche comme les autres.
   - Supprimer (`removeSeries`, d'après `seriesRemoval`, ce que dit aussi sa confirmation) : les
     cartes possédées restent dans le compte (et au Pokédex pour celles d'un Pokémon : un dresseur ou
     une énergie n'y est pas) ; une case commandée, ou dans une commande quel que soit son état
@@ -145,10 +148,10 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     octobre 2026 : choisir la carte, ou commencer l'extension, suffit) ; les cartes d'un Pokémon
     déjà débloqué par une autre y restent tant qu'elles ne sont ni commandées ni possédées (testé,
     `tests/purchase-planner.test.ts`). Une carte sans Pokémon ni collection (un dresseur gardé par
-    une commande après la suppression de sa collection, puis sorti de la commande) n'y est pas : rien
-    ne la veut, et aucune page ne la montre plus (testé). Une case dit sa collection (`WishRow.series`, `seriesOf` : la
-    première, pour une carte obtenue qui l'est de plusieurs), sur sa carte de la liste comme sur sa
-    ligne (prochaine commande, commandes). Une carte sans Pokémon n'a pas de génération (un filtre
+    une commande après la suppression de sa collection, puis sorti de la commande) n'y est pas :
+    rien ne la veut, et aucune page ne la montre plus (testé). Une case dit sa collection
+    (`WishRow.series`, `seriesOf` : la première, pour une carte obtenue qui l'est de plusieurs), sur
+    sa carte de la liste comme sur sa ligne (prochaine commande, commandes). Une carte sans Pokémon n'a pas de génération (un filtre
     de génération l'écarte), se cherche par sa référence et vient après les autres au tri par
     numéro (`filterWishlist`). Le lien vers Cardmarket est `cardmarketPage` : la page notée, sinon
     l'id. La prochaine commande (`planPurchase`, `purchase-planner`) ne lit qu'elle : elle y prend

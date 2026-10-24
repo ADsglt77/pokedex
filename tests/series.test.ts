@@ -187,7 +187,10 @@ describe('commencer une extension', () => {
     const before = withCards(collectionWith(), ...account)
     const start = performance.now()
     const data = started(before, slots)
-    expect(performance.now() - start).toBeLessThan(300)
+    // Une quinzaine de millisecondes ici, de 36 à 146 sous charge : la borne de 1 s laisse de la
+    // marge aux tests de `docker build` sur un serveur occupé (une ingestion en cours), et attrape
+    // toujours l'ancien calcul (de 2,7 à 3,7 s).
+    expect(performance.now() - start).toBeLessThan(1000)
     const cards = data.series[0]!.cards
     expect(cards).toHaveLength(250)
     expect([cards[6], cards[100]]).toEqual(['by-code', 'by-id'])

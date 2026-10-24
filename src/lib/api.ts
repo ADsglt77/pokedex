@@ -67,8 +67,9 @@ export function getJson<T>(url: string, timeout?: number): Promise<T | null> {
 }
 
 /**
- * Oublie la réponse d'une adresse qui ne reviendra pas (les historiques d'une collection qui a
- * changé depuis) : `getJson` ne la garde plus en mémoire, et la redemanderait.
+ * Oublie la réponse d'une adresse, pour la redemander à jour (« Réessayer », les prix et les
+ * historiques au rafraîchissement des 6 h, le Pokédex public d'un compte) : `getJson` ne la garde
+ * plus en mémoire, et la redemanderait.
  */
 export function forget(url: string) {
   requests.delete(url)
@@ -78,14 +79,15 @@ export function forget(url: string) {
 export const requestFailed = (url: string) => requests.get(url)?.failedAt !== undefined
 
 /**
- * Compte la réponse de `url` (`getJson`), arrivée mais inutilisable, comme une panne passagère :
- * redemandée une minute après au plus tôt. Les prix du jour : un 404 tant que l'API des données
- * n'a jamais lu leur guide, une réponse d'une autre forme d'un serveur pas encore à jour ; rien ne
- * dit qu'ils manqueront encore. Une adresse oubliée depuis (`forget`) n'a plus rien à compter.
+ * Compte la réponse `response` de `url` (`getJson`), arrivée mais inutilisable, comme une panne
+ * passagère : redemandée une minute après au plus tôt. Les prix du jour : un 404 tant que l'API
+ * des données n'a jamais lu leur guide, une réponse d'une autre forme d'un serveur pas encore à
+ * jour ; rien ne dit qu'ils manqueront encore. Seulement cette réponse-là : une adresse oubliée
+ * depuis (`forget`), ou déjà redemandée, n'a plus rien à compter.
  */
-export function markFailed(url: string) {
+export function markFailed(url: string, response: Promise<unknown>) {
   const request = requests.get(url)
-  if (request) request.failedAt ??= Date.now()
+  if (request?.response === response) request.failedAt ??= Date.now()
 }
 
 /**
