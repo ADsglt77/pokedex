@@ -3,7 +3,9 @@
  * celui d'une autre carte, et aucun s'il n'y en a pas (aucun prix n'est inventé). Et les
  * historiques de la collection, que la courbe de sa valeur additionne. Et les demandes par paquets
  * (l'API des données refuse plus de 1 025 ids ; des paquets de prix qui se décaleraient seraient
- * redemandés sans fin, et nginx en refuserait l'excès : plus aucun prix). Et le
+ * redemandés sans fin, et nginx en refuserait l'excès : plus aucun prix ; les historiques et les
+ * lignes de Cardmarket demandés d'un coup dépasseraient sa limite, et une réponse partielle
+ * fausserait la courbe ou la liste de souhaits). Et le
  * coût pour compléter le Pokédex : la favorite de chaque Pokémon à débloquer, une carte comptée
  * une fois, rien pour un Pokémon déjà débloqué (par n'importe quelle de ses cartes) ou dont une
  * carte est commandée. Les prix et leur historique eux-mêmes : l'API des données (ses propres
@@ -17,10 +19,11 @@ import {
   completionCost,
   historiesOf,
   idBatches,
+  loadInBatches,
   priceBatches,
   priceOf,
 } from '@/lib/prices'
-import type { CardPriceHistory, PriceFile, PriceHistories } from '@/types'
+import type { CardPriceHistory, PriceFile } from '@/types'
 import { card, collectionWith, loadTestSpecies, ownership, withCards } from './fixtures'
 
 beforeAll(loadTestSpecies)
@@ -60,23 +63,28 @@ describe('historiesOf', () => {
   })
   const a = history('2026-10-14', [10, 11])
   const b = history('2026-10-15', [5])
-  const response: PriceHistories = { '719621': a, '719446': b, '719445': null }
+  // Les historiques reçus, gardés par id (`store/prices.ts`).
+  const known = new Map([
+    [719621, a],
+    [719446, b],
+    [719445, null],
+  ])
 
   test('dans l’ordre des cartes, chaque id avec son historique', () => {
-    expect(historiesOf(response, [719446, 719621])).toEqual([b, a])
+    expect(historiesOf(known, [719446, 719621])).toEqual([b, a])
   })
 
   test('la même carte possédée pour deux Pokémon compte deux fois, comme au prix du jour', () => {
-    expect(historiesOf(response, [719446, 719446, 719621])).toEqual([b, b, a])
-    expect(collectionHistory(historiesOf(response, [719446, 719446, 719621]))).toEqual([
+    expect(historiesOf(known, [719446, 719446, 719621])).toEqual([b, b, a])
+    expect(collectionHistory(historiesOf(known, [719446, 719446, 719621]))).toEqual([
       { date: '2026-10-14', value: 20 },
       { date: '2026-10-15', value: 21 },
     ])
   })
 
-  test('sans historique, ou absente de la réponse : ne compte pas', () => {
-    expect(historiesOf(response, [719445, 1, 719621])).toEqual([a])
-    expect(historiesOf({}, [719621])).toEqual([])
+  test('sans historique, ou pas reçue : ne compte pas', () => {
+    expect(historiesOf(known, [719445, 1, 719621])).toEqual([a])
+    expect(historiesOf(new Map(), [719621])).toEqual([])
   })
 })
 
@@ -96,18 +104,51 @@ describe('les demandes par paquets', () => {
     expect(idBatches([])).toEqual([])
   })
 
-  test('les prix : des paquets fixes de 200, que les réponses d’autres cartes ne décalent pas', () => {
-    // Dans le désordre, avec un doublon : coupés dans la liste triée.
+  test('les prix : des paquets fixes de 200, coupés dans la liste triée', () => {
+    // Dans le désordre, avec un doublon : coupés dans la liste triée, d'après la liste seule (pas
+    // les prix déjà reçus) : une réponse ne décale aucun paquet, chacun garde son adresse.
     const ids = [...range(201, 450), ...range(1, 200), 7]
-    const all = priceBatches(ids, new Set())
+    const all = priceBatches(ids)
     expect(sizes(all)).toEqual([200, 200, 50])
     expect(all.flat()).toEqual(range(1, 450))
-    // Des prix arrivés pour quelques cartes d'un paquet en cours (une autre liste) : les mêmes
-    // paquets, donc les mêmes adresses, rien de redemandé en double.
-    expect(priceBatches(ids, new Set([3, 250, 449]))).toEqual(all)
-    // Un paquet entièrement connu n'est plus demandé ; les autres restent tels quels.
-    expect(priceBatches(ids, new Set(range(1, 200)))).toEqual(all.slice(1))
-    expect(priceBatches(ids, new Set(range(1, 450)))).toEqual([])
+    expect(priceBatches([...ids].reverse())).toEqual(all)
+  })
+
+  /** Une demande qui répond après un temps, et note qu'elle a commencé avant la fin d'une autre. */
+  function slowLoad(answer: (batch: number[], index: number) => Record<string, string> | null) {
+    const asked: number[][] = []
+    let running = 0
+    let overlapped = false
+    const load = async (batch: number[]) => {
+      overlapped ||= running > 0
+      running++
+      asked.push(batch)
+      await new Promise((resolve) => setTimeout(resolve, 2))
+      running--
+      return answer(batch, asked.length - 1)
+    }
+    return { load, asked, overlapped: () => overlapped }
+  }
+
+  test('les historiques, les lignes de Cardmarket : des paquets de 1 000, l’un après l’autre, réunis', async () => {
+    // nginx n'accepte que 2 de ces demandes par seconde, 10 d'un coup ; l'API, 1 025 ids chacune.
+    const lines = slowLoad((batch) => Object.fromEntries(batch.map((id) => [id, `ligne ${id}`])))
+    const found = await loadInBatches([...range(1, 2500), 7, 2500], lines.load)
+    expect(sizes(lines.asked)).toEqual([1000, 1000, 500])
+    expect(lines.overlapped()).toBe(false)
+    expect(Object.keys(found!)).toHaveLength(2500)
+    expect([found![1], found![2500]]).toEqual(['ligne 1', 'ligne 2500'])
+    // Aucun id : aucune demande.
+    const none = slowLoad(() => null)
+    expect(await loadInBatches([], none.load)).toEqual({})
+    expect(none.asked).toEqual([])
+  })
+
+  test('un paquet sans réponse : rien, une réponse partielle serait fausse', async () => {
+    const lines = slowLoad((_, index) => (index === 1 ? null : {}))
+    expect(await loadInBatches(range(1, 2500), lines.load)).toBeNull()
+    // Les paquets suivants ne sont pas demandés pour rien.
+    expect(lines.asked).toHaveLength(2)
   })
 })
 

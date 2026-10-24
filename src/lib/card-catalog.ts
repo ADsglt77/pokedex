@@ -34,6 +34,14 @@ import type {
 /** Le début des adresses du catalogue d'une langue. */
 const catalogPath = (lang: CardLanguage) => (lang === 'fr' ? '/api/catalog/fr' : '/api/catalog')
 
+/**
+ * Le délai d'une lecture du catalogue (ms) : sans réponse, elle compte comme une panne passagère
+ * (`getJson`). « Enregistrer » une carte (son image, `findCardImage`) et « Commencer la
+ * collection » l'attendent : ils ne restent jamais bloqués (sans lui, jusqu'à la minute de nginx,
+ * et sans limite avec Vite).
+ */
+const CATALOG_TIMEOUT = 15_000
+
 /** Une série du catalogue. */
 export interface CatalogSet {
   /** Sa langue : celle de ses cartes. */
@@ -146,6 +154,7 @@ export const loadSpeciesCards = (speciesId: number, lang: CardLanguage) =>
   derived<CatalogFile, CatalogCard[] | null>(
     `${catalogPath(lang)}/species/${speciesId}`,
     (file) => file && readSpeciesCards(file, speciesId, lang),
+    CATALOG_TIMEOUT,
   )
 
 /** Une série de la page Catalogue (`/api/catalog/sets`) : ce que disent sa tuile et son en-tête. */
@@ -189,6 +198,7 @@ export const loadSets = (lang: CardLanguage) =>
           deck: deck === 1,
         })),
       },
+    CATALOG_TIMEOUT,
   )
 
 /** Une carte de la page Catalogue : celle du catalogue, et tout ce qu'on en sait de plus. */
@@ -240,7 +250,11 @@ export const setCardsUrl = (set: SetSummary) =>
  * série est lue une fois : la même promesse, lue par `use()`.
  */
 export const loadSetCards = (set: SetSummary) =>
-  derived<CatalogSetFile, SetCard[] | null>(setCardsUrl(set), (file) => file && readSet(set, file))
+  derived<CatalogSetFile, SetCard[] | null>(
+    setCardsUrl(set),
+    (file) => file && readSet(set, file),
+    CATALOG_TIMEOUT,
+  )
 
 /**
  * La carte du catalogue d'une référence (« Herbizarre (OR1 2) ») dans cette langue, lue dans sa
@@ -346,8 +360,9 @@ const loads = (image: CardImage) =>
  * référence désigne (`cardImage`), si elle se charge (un chemin déduit peut ne mener à rien) ;
  * `null` sans image. La même promesse pour la même langue et la même référence (ce qu'attend
  * `use`). `retry`, au moment d'enregistrer, redemande une image qui a échoué : une panne passagère
- * ne doit pas compter pour une image absente. Sans réponse en 10 s, elle compte pour absente :
- * l'enregistrement, qui l'attend, ne reste pas bloqué.
+ * ne doit pas compter pour une image absente. Sans réponse du catalogue en 15 s
+ * (`CATALOG_TIMEOUT`, ses séries puis celle de la carte), ou de l'image en 10 s, elle compte pour
+ * absente : l'enregistrement, qui l'attend, ne reste pas bloqué.
  */
 export function findCardImage(
   reference: string,

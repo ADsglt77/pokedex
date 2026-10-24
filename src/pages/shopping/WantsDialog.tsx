@@ -4,12 +4,12 @@ import { Suspense, use, useId, useRef, useState, useTransition } from 'react'
 import { CardmarketLink } from '@/components/CardmarketLink'
 import { Unavailable } from '@/components/Unavailable'
 import { useNotify } from '@/hooks/useNotify'
-import { loadWantsLines } from '@/lib/api'
 import { copyText } from '@/lib/clipboard'
 import { cardLanguage } from '@/lib/collection'
 import { plural } from '@/lib/format'
 import { seriesOf } from '@/lib/series'
 import { useCollectionStore } from '@/store/collection'
+import { loadWantsLines } from '@/store/prices'
 import type { CardLanguage, PokemonCard, WantsLines } from '@/types'
 import { CardLine } from './CardLine'
 import page from './ShoppingPage.module.css'
@@ -19,10 +19,11 @@ type Linked = PokemonCard & { cardmarket: number }
 
 /**
  * « Copier pour Cardmarket » : les cartes de la prochaine commande en lignes pour « Ajouter une
- * deck list » d'une liste de souhaits Cardmarket (`/api/wants`, de l'API des données), que l'utilisateur
- * colle lui-même avant le Shopping Wizard : l'app n'envoie rien à Cardmarket. Les lignes sont par
- * langue, un bloc chacune (une ligne ne porte pas la langue : la « Modification en masse » la règle).
- * Une carte sans ligne sûre (version ou extension incertaine) s'ajoute depuis sa page.
+ * deck list » d'une liste de souhaits Cardmarket (`/api/wants`, de l'API des données, par paquets
+ * de 1 000 : `loadWantsLines`), que l'utilisateur colle lui-même avant le Shopping Wizard : l'app
+ * n'envoie rien à Cardmarket. Les lignes sont par langue, un bloc chacune (une ligne ne porte pas
+ * la langue : la « Modification en masse » la règle). Une carte sans ligne sûre (version ou
+ * extension incertaine) s'ajoute depuis sa page.
  */
 export function WantsDialog({
   cards,

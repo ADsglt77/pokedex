@@ -26,37 +26,53 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   inconnues : une réponse arrivée pour d'autres cartes (une autre liste) ne décale aucun paquet,
   chacun garde son adresse, et un paquet en cours ou en panne n'est pas redemandé avant l'heure
   (sinon chaque réponse décalerait les suivants, redemandés en double, jusqu'au refus de nginx).
-  Seul un paquet dont une carte n'a pas encore sa réponse est demandé, en entier : une carte dont
-  le prix est connu n'est pas redemandée seule (une carte ajoutée : le paquet de 200 où elle
-  tombe), sauf au retour sur une page restée ouverte plus de 6 h, où tout ce qui est affiché est
-  redemandé (`refreshPrices` : ceux déjà affichés le restent en attendant). Une demande en panne
+  Les paquets d'une liste sont coupés une fois pour toutes, et une liste n'est revue que si l'état
+  des prix a changé depuis, ou si l'une de ses cartes est en panne depuis une minute : des
+  centaines de montants la demandent à chaque rendu, panne ou pas. Seul un paquet dont une carte
+  n'a pas encore sa réponse est demandé, en entier : une carte dont le prix est connu n'est pas
+  redemandée seule (une carte ajoutée : le paquet de 200 où elle tombe), sauf au retour sur une
+  page restée ouverte plus de 6 h après la dernière réponse (avec ou sans prix), où tout ce qui est
+  affiché est redemandé, les historiques compris (`refreshPrices` : ceux déjà affichés le restent
+  en attendant). Les réponses des paquets d'une liste s'ajoutent en une fois : un rafraîchissement
+  en a des dizaines, et chaque montant affiché se redessinerait à chacune. Une demande en panne
   compte comme une panne passagère (« — », jamais « Sans prix ») pour ses cartes encore sans
-  réponse ; un prix déjà reçu reste affiché. L'historique d'une carte se charge à la demande
+  réponse, redemandée une minute après au plus tôt ; un 404 aussi (le guide pas encore lu : un
+  premier déploiement, une base remise à zéro), et une réponse d'une autre forme (`markFailed`,
+  `lib/api.ts`) ; un prix déjà reçu reste affiché. L'historique d'une carte se charge à la demande
   (`/api/prices/<id>`, 404 sans historique) : la courbe de sa fiche, le nom affiché dans le
   formulaire pour vérifier l'id saisi (au départ du champ). Le Pokédex public d'un compte reçoit
   les prix de ses seules cartes possédées avec sa réponse (`server/vitrine.ts`, qui les demande à
   l'API des données par paquets de 1 000, `idBatches`, l'un après l'autre, 5 au plus :
   `docs/compte-et-synchronisation.md`). Sans API des données, ou base encore
-  vide, l'app marche sans prix. Une réponse manquante (404) n'est pas redemandée ; après une panne
-  passagère (réseau, délai, réponse illisible), elle l'est la fois suivante où elle sert, au plus une
-  fois par minute (`getJson`, `lib/api.ts` : la règle vaut pour les données de référence, catalogue
-  et historiques compris, sauf l'état des tâches et les lignes de la liste de souhaits, demandés à
-  chaque fois : `fetchFresh` ; le compte et la collection ont leurs propres lectures). Une carte
-  sans id Cardmarket, ou dont l'id n'a pas de prix ce jour, n'a pas de prix (aucun n'est inventé).
+  vide, l'app marche sans prix. Une réponse manquante (404) n'est pas redemandée (sauf les prix du
+  jour, plus haut) ; après une panne passagère (réseau, délai, réponse illisible), elle l'est la
+  fois suivante où elle sert, au plus une fois par minute (`getJson`, `retryDue`, `lib/api.ts` : la
+  règle vaut pour les données de référence, catalogue et historiques compris, sauf l'état des
+  tâches et les lignes de la liste de souhaits, demandés à chaque fois : `fetchFresh` ; le compte
+  et la collection ont leurs propres lectures). Les lectures du catalogue ont un délai de 15 s
+  (`CATALOG_TIMEOUT`, `lib/card-catalog.ts`) : « Enregistrer » une carte (son image) et
+  « Commencer la collection » les attendent, et ne restent jamais bloqués. Une carte sans id
+  Cardmarket, ou dont l'id n'a pas de prix ce jour, n'a pas de prix (aucun n'est inventé).
 - Historiques de la collection (`GET /api/histories?ids=719621,719654`) : la courbe de la valeur
-  (Valeur › Évolution) demande ceux de toutes ses cartes possédées, par paquets de 1 000
-  (`idBatches`, `lib/prices.ts`, testé ; une seule demande tant qu'elles y tiennent). Une clé par
-  id demandé, son historique ou `null` ; 1 025 ids au plus par demande (avec les ids de 6 et 7
-  chiffres, l'adresse d'un paquet fait de 7 à 8 Ko, sous les 16 Ko de la ligne de requête que nginx
-  accepte, `large_client_header_buffers`) ; 2 demandes par seconde et par visiteur, 10 d'un coup au
-  plus (nginx : 10 paquets, 10 000 cartes possédées, d'un coup). L'app y met chaque id une fois
-  (`loadPriceHistories`, `store/prices.ts`), réunit les réponses des paquets et les relit dans
-  l'ordre de ses cartes (`historiesOf`, `lib/prices.ts`, testé) : la même carte Cardmarket possédée
-  pour deux Pokémon compte deux fois, comme dans la valeur du jour (une TAG TEAM, une seule carte,
-  une fois) ; une carte sans id ou sans historique ne pèse pas sur la courbe. Seules les réponses
-  de la dernière liste restent en mémoire (`forget`, `lib/api.ts`). Sans réponse pour l'un des
-  paquets (une courbe partielle serait fausse) : « L'historique des prix n'est pas disponible pour
-  le moment ».
+  (Valeur › Évolution) demande ceux de ses cartes possédées qu'elle n'a pas encore : l'app les
+  garde par id (`loadPriceHistories`, `store/prices.ts`), si bien qu'une carte possédée de plus
+  n'en fait demander qu'un, pas toute la collection (des paquets coupés dans la liste se
+  décaleraient tous) ; ils sont oubliés avec les prix au rafraîchissement des 6 h, comme
+  l'historique d'une carte (`/api/prices/<id>`). Les ids inconnus, chacun une fois, par paquets
+  de 1 000 (`idBatches`) demandés l'un après l'autre (`loadInBatches`, `lib/prices.ts`, testé ;
+  une seule demande tant qu'ils y tiennent). Une clé par id demandé, son historique ou `null` ;
+  1 025 ids au plus par demande (avec les ids de 6 et 7 chiffres, l'adresse d'un paquet fait de 7
+  à 8 Ko, sous les 16 Ko de la ligne de requête que nginx accepte, `large_client_header_buffers`) ;
+  2 demandes par seconde et par visiteur, 10 d'un coup au plus (nginx, la même limite que les
+  lignes de la liste de souhaits : l'une après l'autre, les demandes ne s'y heurtent qu'au-delà
+  d'une dizaine de paquets très rapides). L'app relit les historiques dans l'ordre de ses cartes
+  (`historiesOf`, `lib/prices.ts`, testé) : la même carte Cardmarket possédée pour deux Pokémon
+  compte deux fois, comme dans la valeur du jour (une TAG TEAM, une seule carte, une fois) ; une
+  carte sans id ou sans historique ne pèse pas sur la courbe, calculée une fois par réponse (ni la
+  période ni les prix du jour ne la changent). Sans réponse pour l'un des paquets (une courbe
+  partielle serait fausse) : « L'historique des prix n'est pas disponible pour le moment »,
+  redemandé une minute après au plus tôt (les paquets déjà reçus ne le sont pas : `getJson` les
+  garde).
 - Liste de souhaits Cardmarket (`GET /api/wants?ids=…`) : pour chaque id Cardmarket demandé, sa
   ligne pour « Ajouter une deck list » de la liste de souhaits de Cardmarket (`WantsLines`), ou
   `null` quand aucune ne désignerait sûrement cette carte-là (les règles, testées, et le format
@@ -69,9 +85,12 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   d'une carte française est celui de toutes les langues : sa ligne est celle d'une japonaise (nom
   anglais, extension en anglais), et `null` tant que le nom anglais de sa série n'est pas confirmé
   (le cas de bien des séries françaises) : elle s'ajoute alors depuis sa page, déjà sur les offres
-  en français. 2 demandes par seconde et par visiteur au plus (nginx). L'app la demande à chaque
-  ouverture de la fenêtre (`loadWantsLines`, par `fetchFresh` : sans cache, 10 s au plus) ; sans
-  réponse, elle propose de réessayer.
+  en français. 2 demandes par seconde et par visiteur au plus, 10 d'un coup (nginx). L'app la
+  demande à chaque ouverture de la fenêtre (`loadWantsLines`, `store/prices.ts`, par `fetchFresh` :
+  sans cache, 10 s au plus par demande), par paquets de 1 000 ids demandés l'un après l'autre
+  (`loadInBatches`, testé : l'API en refuse plus de 1 025, et un plan fait de cases d'extensions à
+  quelques centimes les dépasse vite), réunis ; sans réponse pour l'un d'eux, elle propose de
+  réessayer.
 - Prix d'une carte française : son produit Cardmarket est partagé avec toutes les langues, son prix
   est donc celui de toutes les langues, surtout des offres en anglais (l'API des données, sa page
   `docs/donnees.md`). `PricePanel` le dit près du prix (« Prix toutes langues », quand

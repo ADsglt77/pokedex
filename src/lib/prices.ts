@@ -2,7 +2,8 @@
  * Les prix du jour appliqués à la collection : prix d'une carte, totaux par statut, coût pour
  * compléter le Pokédex, courbes au fil des jours, plus fortes hausses et baisses. Les prix de
  * Cardmarket, par l'id Cardmarket de chaque carte. Et les paquets d'ids de leurs demandes à l'API
- * des données, qui en refuse plus de 1 025 à la fois (le navigateur comme le serveur).
+ * des données, qui en refuse plus de 1 025 à la fois (le navigateur comme le serveur), et les
+ * demandes de paquets l'une après l'autre (`loadInBatches`).
  */
 
 import { GENERATIONS, type Generation } from '@/config/pokedex'
@@ -17,7 +18,6 @@ import type {
   CollectionData,
   PokemonCard,
   PriceFile,
-  PriceHistories,
 } from '@/types'
 
 /**
@@ -33,17 +33,37 @@ export function idBatches(ids: readonly number[], size = 1000): number[][] {
 }
 
 /**
+ * Les réponses de l'API des données pour ces ids (`load` : la demande d'un paquet, une clé par
+ * id), par paquets de 1 000 (`idBatches`) demandés l'un après l'autre (nginx n'accepte que 2 de ces
+ * demandes par seconde, 10 d'un coup : les historiques, les lignes de la liste de souhaits),
+ * réunies ; `null` dès qu'un paquet manque, sans demander les suivants (une réponse partielle
+ * serait fausse). Aucun id : aucune demande.
+ */
+export async function loadInBatches<T>(
+  ids: readonly number[],
+  load: (batch: number[]) => Promise<Record<string, T> | null>,
+): Promise<Record<string, T> | null> {
+  const found: Record<string, T> = {}
+  for (const batch of idBatches(ids)) {
+    const answer = await load(batch)
+    if (!answer) return null
+    Object.assign(found, answer)
+  }
+  return found
+}
+
+/**
  * Les paquets de prix du jour que le navigateur demande pour les cartes `ids` (`/api/prices`) :
  * des paquets fixes de 200 (une adresse courte), coupés dans la liste triée de toutes ces cartes,
- * ceux dont une carte n'a pas encore sa réponse (`known`). Fixes : une réponse arrivée pour
- * d'autres cartes ne décale aucun paquet ; chacun garde son adresse, et une demande en cours ou en
- * panne n'est pas refaite (`getJson`).
+ * d'après elle seule. Fixes : une réponse arrivée pour d'autres cartes ne décale aucun paquet ;
+ * chacun garde son adresse, et une demande en cours ou en panne n'est pas refaite (`getJson`).
+ * Seuls ceux dont une carte n'a pas encore sa réponse sont demandés (`store/prices.ts`).
  */
-export const priceBatches = (ids: readonly number[], known: ReadonlySet<number>) =>
+export const priceBatches = (ids: readonly number[]) =>
   idBatches(
     [...ids].sort((a, b) => a - b),
     200,
-  ).filter((batch) => batch.some((id) => !known.has(id)))
+  )
 
 /** Ce qu'il faut d'une carte pour son prix : son id Cardmarket. */
 interface Priced {
@@ -246,13 +266,15 @@ export function cardHistory(history: CardPriceHistory | null): PricePoint[] {
 }
 
 /**
- * Les historiques des cartes `ids`, dans leur ordre, d'après la réponse groupée du serveur
- * (`/api/histories`, une clé par id) : un id qui revient (la même carte Cardmarket possédée pour
- * deux Pokémon) compte autant de fois, comme dans la valeur du jour. Un id sans historique ne
- * compte pas.
+ * Les historiques des cartes `ids`, dans leur ordre, d'après ceux reçus du serveur, gardés par id
+ * (`/api/histories`, `null` : pas d'historique) : un id qui revient (la même carte Cardmarket
+ * possédée pour deux Pokémon) compte autant de fois, comme dans la valeur du jour. Un id sans
+ * historique ne compte pas.
  */
-export const historiesOf = (histories: PriceHistories, ids: readonly number[]) =>
-  ids.flatMap((id) => histories[id] ?? [])
+export const historiesOf = (
+  histories: ReadonlyMap<number, CardPriceHistory | null>,
+  ids: readonly number[],
+) => ids.flatMap((id) => histories.get(id) ?? [])
 
 /**
  * Une série sans trou : un jour sans prix prend celui de la veille ; avant le premier prix connu,
