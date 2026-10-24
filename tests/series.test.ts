@@ -3,17 +3,18 @@
  * remplir le Pokédex), une carte déjà dans le compte reprise comme sa case (jamais d'une autre
  * langue, jamais deux cases), une case obtenue (statut ou commande reçue) ou ajoutée seule qui
  * devient pour de bon une carte de son Pokémon (sans copie), la suppression d'une collection (rien
- * de possédé ni du registre des commandes ne se perd, et ce que sa confirmation en dit), sa
- * progression, et où mène le lien d'une carte (une case pas encore obtenue : sa collection, jamais
- * la fiche de son Pokémon, qui ne la montre pas). Une erreur ici doublerait une carte, remplirait
- * le Pokédex de cartes qu'on n'a pas, perdrait une carte payée, ou ferait marquer possédée une
- * autre carte que celle suivie.
+ * de possédé ni du registre des commandes ne se perd, un dresseur ne reste pas sans page, et ce que
+ * sa confirmation en dit), sa progression, et où mène le lien d'une carte (une case pas encore
+ * obtenue : sa collection, jamais la fiche de son Pokémon, qui ne la montre pas). Et commencer une
+ * extension sur un compte de milliers de cartes sans figer la page. Une erreur ici doublerait une
+ * carte, remplirait le Pokédex de cartes qu'on n'a pas, perdrait une carte payée, laisserait une
+ * carte qu'on ne peut plus retirer, ou ferait marquer possédée une autre carte que celle suivie.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test'
 import { adopt, completeFavorites, setCardStatus } from '@/lib/collection'
 import { cardPath, seriesCard } from '@/lib/filters'
-import { applyOrder } from '@/lib/orders'
+import { applyOrder, emptyShopping } from '@/lib/orders'
 import { buildPokedex } from '@/lib/pokedex'
 import {
   findSeries,
@@ -23,6 +24,7 @@ import {
   seriesRemoval,
   startSeries,
 } from '@/lib/series'
+import { documentProblem } from '@/lib/transfer'
 import type { CardLanguage, CardStatus, CollectionData, PokemonCard, PriceFile } from '@/types'
 import {
   card,
@@ -308,6 +310,66 @@ describe('supprimer une collection', () => {
       for (const { cardId } of lines) expect(removed.customCards[cardId]).toBeDefined()
     }
     expect(removed.updatedAt).toBe(NOW)
+  })
+
+  test('un dresseur ou une énergie ne reste que possédé, dans une commande ou case d’une autre collection', () => {
+    // Sans Pokémon, une carte n'a pas d'autre page que sa collection : sans elle, rien ne la
+    // montrerait plus, ni ne pourrait la changer ou la retirer.
+    const data = started(collectionWith(), [
+      slotFor('100', []),
+      slotFor('101', []),
+      slotFor('102', []),
+      slotFor('103', []),
+      slotFor('104', []),
+      slotFor('105', []),
+      slotFor('106', [], 999),
+      slotFor('025', [25]),
+    ])
+    const placed = order({ lines: [line('ja 101', 2), line('ja 105', 2)] })
+    const cancelled = { ...placed, state: 'cancelled' as const }
+    // Commandée à la main, sans commande.
+    let current = withStatus(data, 'ja 100', 'ordered')
+    // Dans une commande annulée.
+    current = applyOrder(current, null, placed, [], NOW)
+    current = applyOrder(current, placed, cancelled, [], NOW)
+    current = withStatus(current, 'ja 102', 'owned')
+    // Obtenues, puis quittées (« sans statut ») : plus des cases pas encore obtenues.
+    for (const id of ['ja 103', 'ja 104', 'ja 105', 'ja 106']) {
+      current = withStatus(withStatus(current, id, 'owned'), id, null)
+    }
+    current = withStatus(current, 'ja 104', 'ordered')
+    // Une autre extension a une carte du même id Cardmarket : la 106 est aussi sa case.
+    current = startSeries(
+      current,
+      { set: 'M6B', language: 'ja', name: 'Autre' },
+      [slotFor('012', [], 999)],
+      NOW,
+    )
+    expect(current.series[1]!.cards).toEqual(['ja 106'])
+    // Un Pokémon commandé à la main reste, lui : il a sa fiche.
+    current = withStatus(current, 'ja 025', 'ordered')
+    const orders = [cancelled]
+
+    expect(seriesRemoval(current, current.series[0]!, orders)).toEqual({
+      owned: ['ja 102'],
+      alone: ['ja 105', 'ja 106'],
+      kept: ['ja 101', 'ja 025'],
+      dropped: ['ja 100', 'ja 103', 'ja 104'],
+    })
+    const removed = removeSeries(current, 'M6A', 'ja', orders, NOW)
+    // Partis, avec leur statut (« commandée » à la main compris).
+    for (const id of ['ja 100', 'ja 103', 'ja 104']) {
+      expect(removed.customCards[id]).toBeUndefined()
+      expect(removed.cards[id]).toBeUndefined()
+    }
+    expect(removed.customCards['ja 101']).not.toHaveProperty('seriesOnly')
+    expect(removed.cards['ja 102']?.status).toBe('owned')
+    expect(removed.customCards['ja 105']).toBe(current.customCards['ja 105']!)
+    expect(seriesOf(removed, 'ja 106')).toBe(removed.series[0]!)
+    expect(removed.cards['ja 025']?.status).toBe('ordered')
+    expect(documentProblem({ collection: removed, shopping: { ...emptyShopping(), orders } })).toBe(
+      null,
+    )
   })
 })
 

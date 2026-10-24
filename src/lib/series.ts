@@ -111,14 +111,21 @@ interface SeriesRemoval {
   alone: string[]
   /** Pas encore obtenues, commandées ou dans une commande : elles restent comme cartes seules. */
   kept: string[]
-  /** Pas encore obtenues, ni commandées ni dans une commande : elles partent. */
+  /**
+   * Pas encore obtenues, ni commandées ni dans une commande ; et un dresseur ou une énergie qui
+   * n'est ni possédé, ni dans une commande, ni case d'une autre collection : elles partent, avec
+   * leur statut.
+   */
   dropped: string[]
 }
 
 /**
  * Ce que la suppression d'une collection fait de chacune de ses cases (`orders` : toutes les
  * commandes, quel que soit leur état, le registre ne perd rien) : ce que dit sa confirmation, ce
- * que fait `removeSeries`.
+ * que fait `removeSeries`. Une carte sans Pokémon (un dresseur, une énergie) n'a pas d'autre page
+ * que ses collections : sans elles, rien ne la montrerait plus, ni ne pourrait la changer ou la
+ * retirer ; elle ne reste que possédée, dans une commande ou case d'une autre collection
+ * (commandée à la main, sans commande, elle part).
  */
 export function seriesRemoval(
   data: CollectionData,
@@ -126,10 +133,16 @@ export function seriesRemoval(
   orders: readonly Order[],
 ): SeriesRemoval {
   const removal: SeriesRemoval = { owned: [], alone: [], kept: [], dropped: [] }
+  // Les cases des autres collections : une carte obtenue peut l'être de plusieurs.
+  const elsewhere = new Set(data.series.flatMap((other) => (other === series ? [] : other.cards)))
   for (const id of series.cards) {
+    const card = data.customCards[id]!
     const status = data.cards[id]?.status
-    if (!data.customCards[id]!.seriesOnly) removal[status === 'owned' ? 'owned' : 'alone'].push(id)
-    else if (status || isInAnOrder(orders, id)) removal.kept.push(id)
+    const ordered = isInAnOrder(orders, id)
+    if (card.dexIds.length === 0 && !elsewhere.has(id) && status !== 'owned' && !ordered) {
+      removal.dropped.push(id)
+    } else if (!card.seriesOnly) removal[status === 'owned' ? 'owned' : 'alone'].push(id)
+    else if (status || ordered) removal.kept.push(id)
     else removal.dropped.push(id)
   }
   return removal
@@ -139,7 +152,7 @@ export function seriesRemoval(
  * Supprime la collection de cette extension dans cette langue (`seriesRemoval`). Ses cartes
  * possédées restent (et au Pokédex pour celles d'un Pokémon), comme une carte du compte reprise
  * comme case ; une case commandée, ou dans une commande, reste comme carte seule de ses Pokémon
- * (`obtain`, favorite de ceux qui n'en ont pas) ; les autres cases disparaissent.
+ * (`obtain`, favorite de ceux qui n'en ont pas) ; les autres cases disparaissent, avec leur statut.
  */
 export function removeSeries(
   data: CollectionData,
@@ -151,9 +164,13 @@ export function removeSeries(
   const removed = findSeries(data, set, language)!
   const { kept, dropped } = seriesRemoval(data, removed, orders)
   const customCards = { ...data.customCards }
-  for (const id of dropped) delete customCards[id]
+  const cards = { ...data.cards }
+  for (const id of dropped) {
+    delete customCards[id]
+    delete cards[id]
+  }
   const series = data.series.filter((known) => known !== removed)
-  return obtain({ ...data, customCards, series, updatedAt: now }, kept)
+  return obtain({ ...data, cards, customCards, series, updatedAt: now }, kept)
 }
 
 /** Où en est une collection d'extension. */

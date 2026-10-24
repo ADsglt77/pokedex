@@ -25,7 +25,8 @@ export interface WishRow {
 /**
  * Toutes les cartes du compte, ni possédées ni commandées : celles d'un Pokémon déjà débloqué par
  * une autre comme les cases d'extensions, chacune une fois (une carte TAG TEAM aussi : on ne
- * l'achète qu'une fois).
+ * l'achète qu'une fois). Pas une carte sans Pokémon ni collection (un dresseur gardé par une
+ * commande après la suppression de sa collection) : rien ne la veut, et rien ne la montre plus.
  */
 export function wishlistRows(collection: CollectionData, prices: PriceFile | null): WishRow[] {
   // La collection de chaque case, la première qui la compte (`seriesOf`), lue une fois pour toutes
@@ -36,13 +37,10 @@ export function wishlistRows(collection: CollectionData, prices: PriceFile | nul
   }
   return Object.values(collection.customCards).flatMap((card) => {
     if (!isToBuy({ status: collection.cards[card.id]?.status ?? null })) return []
+    const series = seriesOfCard.get(card.id) ?? null
+    if (card.dexIds.length === 0 && !series) return []
     const price = priceOf(prices, card)
-    return {
-      card,
-      price: price?.price ?? null,
-      change30: price && priceChange(price),
-      series: seriesOfCard.get(card.id) ?? null,
-    }
+    return { card, price: price?.price ?? null, change30: price && priceChange(price), series }
   })
 }
 

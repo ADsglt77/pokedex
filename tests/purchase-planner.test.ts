@@ -165,4 +165,24 @@ describe('liste d’achats', () => {
       ['trainer', megaDream],
     ])
   })
+
+  test('jamais une carte sans Pokémon ni collection : rien ne la veut', () => {
+    // Un dresseur gardé par une commande annulée après la suppression de sa collection : ni fiche
+    // ni collection ne le montre plus, on ne pourrait pas l'en retirer.
+    const megaDream: SeriesCollection = {
+      set: 'M6A',
+      name: 'Méga Rêve ex',
+      startedAt: NOW,
+      cards: ['trainer'],
+    }
+    const data = {
+      ...collectionOf(
+        [card('orphan', []), null],
+        [slot('trainer', []), null],
+        [card('pokemon', [25]), null],
+      ),
+      series: [megaDream],
+    }
+    expect(ids(wishlistRows(data, null))).toEqual(['trainer', 'pokemon'])
+  })
 })

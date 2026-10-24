@@ -79,8 +79,13 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     cartes possédées restent dans le compte (et au Pokédex pour celles d'un Pokémon : un dresseur ou
     une énergie n'y est pas) ; une case commandée, ou dans une commande quel que soit son état
     (`isInAnOrder` : le registre ne perd rien), reste comme carte seule (sans `seriesOnly`,
-    favorite de ceux de ses Pokémon qui n'en ont pas) ; les autres cases disparaissent. Une carte de
-    l'extension ajoutée seule, reprise comme case, ne bouge pas.
+    favorite de ceux de ses Pokémon qui n'en ont pas) ; les autres cases disparaissent, avec leur
+    statut. Une carte de l'extension ajoutée seule, reprise comme case, ne bouge pas. Un dresseur
+    ou une énergie (sans Pokémon) n'a pas d'autre page que ses collections : sans elles, rien ne le
+    montrerait plus, ni ne pourrait le changer ou le retirer. Il ne reste donc que possédé, dans une
+    commande, ou case d'une autre collection (une carte obtenue peut l'être de plusieurs) ; sinon il
+    part avec son statut, même obtenu puis quitté, ou « commandée » à la main sans commande (un
+    statut sans commande n'est pas le registre). Testé (`tests/series.test.ts`).
   - Progression (`seriesProgress`) : ses cases possédées sur toutes, chacune une fois (une TAG TEAM
     aussi) ; leur valeur (prix du marché) ; le coût pour la compléter (les cases ni possédées ni
     commandées) et combien d'entre elles n'ont pas de prix.
@@ -139,7 +144,9 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     d'extensions, dresseurs et énergies compris, toutes voulues autant (décision de l'utilisateur,
     octobre 2026 : choisir la carte, ou commencer l'extension, suffit) ; les cartes d'un Pokémon
     déjà débloqué par une autre y restent tant qu'elles ne sont ni commandées ni possédées (testé,
-    `tests/purchase-planner.test.ts`). Une case dit sa collection (`WishRow.series`, `seriesOf` : la
+    `tests/purchase-planner.test.ts`). Une carte sans Pokémon ni collection (un dresseur gardé par
+    une commande après la suppression de sa collection, puis sorti de la commande) n'y est pas : rien
+    ne la veut, et aucune page ne la montre plus (testé). Une case dit sa collection (`WishRow.series`, `seriesOf` : la
     première, pour une carte obtenue qui l'est de plusieurs), sur sa carte de la liste comme sur sa
     ligne (prochaine commande, commandes). Une carte sans Pokémon n'a pas de génération (un filtre
     de génération l'écarte), se cherche par sa référence et vient après les autres au tri par
