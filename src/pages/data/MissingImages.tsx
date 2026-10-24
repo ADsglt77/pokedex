@@ -4,16 +4,24 @@ import { useState, type RefObject } from 'react'
 import { useCollectionAction, useNotify } from '@/hooks/useNotify'
 import { findCardImage } from '@/lib/card-catalog'
 import { referenceCode } from '@/lib/card-code'
+import { isSourceImage } from '@/lib/card-images'
 import { cardLanguage } from '@/lib/collection'
 import { focusAfter } from '@/lib/focus'
 import { plural } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'
-import type { CardImage } from '@/types'
+import type { CardImage, PokemonCard } from '@/types'
 
 /**
- * Les cartes sans image dont la référence donne un code d'extension et un numéro : chercher leurs
- * images d'un coup (une image qui manquait à l'ajout de la carte). `title` : le
- * titre de la section, où va le focus quand toutes sont trouvées (le bouton disparaît).
+ * Une carte sans image à montrer : aucune, ou une adresse de chez la source (d'une version d'avant
+ * les images copiées chez nous), jamais affichée (`isSourceImage`).
+ */
+const lacksImage = (card: PokemonCard) => !card.image || isSourceImage(card.image.small)
+
+/**
+ * Les cartes sans image à montrer dont la référence donne un code d'extension et un numéro :
+ * chercher leurs images d'un coup (une image qui manquait à l'ajout de la carte, ou une adresse de
+ * chez la source). `title` : le titre de la section, où va le focus quand toutes sont trouvées (le
+ * bouton disparaît).
  */
 export function MissingImages({ title }: { title: RefObject<HTMLElement | null> }) {
   const customCards = useCollectionStore((state) => state.collection.customCards)
@@ -21,7 +29,7 @@ export function MissingImages({ title }: { title: RefObject<HTMLElement | null> 
   const notify = useNotify()
   const [searching, setSearching] = useState(false)
   const candidates = Object.values(customCards).filter(
-    (card) => !card.image && referenceCode(card.reference) !== null,
+    (card) => lacksImage(card) && referenceCode(card.reference) !== null,
   )
   if (candidates.length === 0) return null
 
@@ -64,7 +72,7 @@ export function MissingImages({ title }: { title: RefObject<HTMLElement | null> 
           const { collection, saveCard } = useCollectionStore.getState()
           for (const { id, image } of found) {
             const card = collection.customCards[id]
-            if (card && !card.image) saveCard({ ...card, image })
+            if (card && lacksImage(card)) saveCard({ ...card, image })
           }
         },
         `${plural(found.length, 'image retrouvée', 'images retrouvées')}${others}.`,

@@ -194,7 +194,9 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   (ses scans ; les adresses que lit l'API des données, `src/images.ts` de son dépôt). Un nouveau
   domaine de la source s'y ajoute par son empreinte, jamais par son nom ; après `bun run build`, le
   nom ne doit apparaître nulle part dans `dist/`. Réglages › Sauvegarde › « Chercher
-  les images » cherche d'un coup celles des cartes sans image. `findCardImage` (`lib/card-catalog.ts`) : l'image du catalogue pour
+  les images » cherche d'un coup celles des cartes sans image à montrer : aucune, ou une adresse
+  de chez la source (gardée par une version d'avant les images copiées chez nous), remplacée par
+  l'image copiée. `findCardImage` (`lib/card-catalog.ts`) : l'image du catalogue pour
   cette référence, dans la langue donnée (celle de la carte, `cardLanguage` ; lue dans sa série :
   `/api/catalog/sets`, puis `/api/catalog/sets/<code>`, sous `fr/` en français), **prise telle
   quelle**, sans la charger, comme l'ajoute « Ajouter à la collection » de la page Catalogue : son
