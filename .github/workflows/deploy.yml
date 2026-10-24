@@ -43,8 +43,9 @@ jobs:
           # Le premier passage reconstruit tout (une dizaine de minutes sur un petit VPS) : au-delà
           # des 10 min par défaut, l'action couperait la construction en route.
           command_timeout: 30m
-          # Le code d'abord, puis le script de déploiement tel qu'il vient d'arriver (construction,
-          # redémarrage, vérification que le site répond) : `deploy/deploy.sh`.
+          # Le code d'abord, puis le script de déploiement tel qu'il vient d'arriver (les cartes
+          # françaises de l'API des données prêtes ?, construction, redémarrage, vérification que
+          # le site répond) : `deploy/deploy.sh`.
           script: |
             set -e
             cd "${{ secrets.VPS_PATH }}"
