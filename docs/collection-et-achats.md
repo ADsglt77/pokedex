@@ -88,7 +88,10 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     montrerait plus, ni ne pourrait le changer ou le retirer. Il ne reste donc que possédé, dans une
     commande, ou case d'une autre collection (une carte obtenue peut l'être de plusieurs) ; sinon il
     part avec son statut, même obtenu puis quitté, ou « commandée » à la main sans commande (un
-    statut sans commande n'est pas le registre). Testé (`tests/series.test.ts`).
+    statut sans commande n'est pas le registre). La confirmation le dit : « Ce qui part » compte à
+    part les cartes à acheter et celles « commandées » à la main sans commande, avec leur statut et
+    leur prix payé noté (la seule sorte de statut que porte une case qui part). Testé
+    (`tests/series.test.ts`).
   - Progression (`seriesProgress`) : ses cases possédées sur toutes, chacune une fois (une TAG TEAM
     aussi) ; leur valeur (prix du marché) ; le coût pour la compléter (les cases ni possédées ni
     commandées) et combien d'entre elles n'ont pas de prix.

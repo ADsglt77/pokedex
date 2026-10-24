@@ -200,10 +200,11 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   quelle**, sans la charger, comme l'ajoute « Ajouter à la collection » de la page Catalogue : son
   chemin ne change jamais d'image, et une image pas encore copiée par l'API des données (les
   françaises, les heures qui suivent leur arrivée) s'affiche dès qu'elle l'est (d'ici là, la carte
-  de substitution) ; une carte que le catalogue dit sans image n'en a pas. Hors du catalogue,
-  celle que la référence désigne (un chemin déduit, qui peut ne mener à rien), seulement si elle
-  se charge (sans réponse en 10 s : absente, pour ne pas bloquer l'enregistrement) ; la saisie le
-  dit, sans nommer de source (aucun crédit dans l'app, à la demande de l'utilisateur, octobre
+  de substitution) ; une carte que le catalogue dit sans image n'en a pas ; un catalogue sans
+  réponse en 15 s (`CATALOG_TIMEOUT`, ses séries puis celle de la carte) la compte pour absente,
+  pour ne pas bloquer l'enregistrement. Hors du catalogue, celle que la référence désigne (un
+  chemin déduit, qui peut ne mener à rien), seulement si elle se charge (sans réponse en 10 s :
+  absente, de même) ; la saisie le dit, sans nommer de source (aucun crédit dans l'app, à la demande de l'utilisateur, octobre
   2026 : CLAUDE.md). Un échec est redemandé à l'enregistrement (panne passagère), et une image
   déjà enregistrée reste si elle ne répond pas. Une adresse collée s'affiche telle quelle : la seule image que le
   navigateur va chercher ailleurs. Sans adresse collée, l'image suit la référence (cherchée en

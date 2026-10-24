@@ -147,7 +147,8 @@ function SeriesSummary({
 /**
  * « Supprimer la collection » : une confirmation dit ce qui reste (les cartes possédées, dans le
  * compte, et au Pokédex pour celles d'un Pokémon ; commandées ou dans une commande, comme cartes
- * seules ; ajoutées seules, telles quelles) et ce qui part (les cartes à acheter), d'après
+ * seules ; ajoutées seules, telles quelles) et ce qui part (les cartes à acheter, et, comptées à
+ * part, celles « commandées » à la main sans commande, avec leur statut), d'après
  * `seriesRemoval` ; puis la page ramène aux Collections (`SeriesPage`), la suppression annoncée
  * avec « Annuler ».
  */
@@ -169,6 +170,15 @@ function RemoveSeries({
       `${plural(kept.length, 'carte commandée ou dans une commande', 'cartes commandées ou dans une commande')}, comme ${kept.length > 1 ? 'cartes seules' : 'carte seule'}`,
     alone.length > 0 &&
       `${plural(alone.length, 'carte ajoutée seule', 'cartes ajoutées seules')}, ${alone.length > 1 ? 'telles quelles' : 'telle quelle'}`,
+  ].filter((part) => part !== false)
+  // Ce qui part avec un statut : un dresseur ou une énergie « commandée » à la main, sans commande
+  // (seul statut que peut avoir une carte de `dropped`), peut-être avec un prix payé noté.
+  const ordered = dropped.filter((id) => collection.cards[id]).length
+  const leaves = [
+    dropped.length > ordered &&
+      plural(dropped.length - ordered, 'carte à acheter', 'cartes à acheter'),
+    ordered > 0 &&
+      `${plural(ordered, 'carte commandée à la main', 'cartes commandées à la main')}, sans commande, avec ${ordered > 1 ? 'leur statut et leur prix payé' : 'son statut et son prix payé'} s’il est noté`,
   ].filter((part) => part !== false)
 
   const remove = () =>
@@ -196,13 +206,7 @@ function RemoveSeries({
         onConfirm={remove}
       >
         <p>Ce qui reste : {stays.length > 0 ? stays.join(' ; ') : 'aucune carte'}.</p>
-        <p>
-          Ce qui part :{' '}
-          {dropped.length > 0
-            ? plural(dropped.length, 'carte à acheter', 'cartes à acheter')
-            : 'aucune carte'}
-          .
-        </p>
+        <p>Ce qui part : {leaves.length > 0 ? leaves.join(' ; ') : 'aucune carte'}.</p>
       </ConfirmDialog>
     </>
   )

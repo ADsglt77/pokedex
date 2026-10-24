@@ -139,7 +139,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   une fenêtre ouverte depuis sa tuile. « Supprimer la collection » demande confirmation, qui
   dit ce qui reste (possédées, dans le compte, et au Pokédex pour celles d'un Pokémon ; commandées
   ou dans une commande, comme cartes seules ; ajoutées seules, telles quelles) et ce qui part (les
-  cartes à acheter), d'après `seriesRemoval` ; la suppression est annoncée avec
+  cartes à acheter, et, comptées à part, celles « commandées » à la main sans commande, avec leur
+  statut), d'après `seriesRemoval` ; la suppression est annoncée avec
   « Annuler » (« Collection Méga Rêve ex supprimée. »). Une collection inconnue (une autre
   extension, ou une autre langue) : la page introuvable. Une collection qui disparaît sous sa page
   (supprimée, son début annulé par « Annuler », supprimée sur un autre appareil) ramène aux
