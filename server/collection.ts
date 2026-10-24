@@ -11,8 +11,9 @@
  *   jamais. Sauf un envoi renvoyé tel quel après une réponse perdue : parti de la version d'avant,
  *   le même document que celui enregistré, il rend cette version, sans rien écrire. Le document
  *   est contrôlé aux règles d'un fichier importé (`readSent` ; 400 sinon, la règle en cause au
- *   journal). Le site l'envoie compressé (`Content-Encoding: gzip`), décompressé ici en flux :
- *   413 au-delà de `MAX_DOCUMENT` octets décompressés.
+ *   journal). Le site l'envoie compressé (`Content-Encoding: gzip`), décompressé ici en flux,
+ *   seulement avec une session (401 sinon, avant de rien lire) : 413 au-delà de `MAX_DOCUMENT`
+ *   octets décompressés.
  * Sans session : 401 ; jamais gardé en cache (`no-store`), ni par le navigateur ni par un relais
  * (macro `auth`, `auth.ts`).
  */
@@ -22,7 +23,7 @@ import { Elysia, t } from 'elysia'
 import { DAY, HOUR } from '@/lib/time'
 import { readCollection, readSent } from '@/lib/transfer'
 import { MAX_DOCUMENT, type CollectionSaved, type ShoppingData } from '@/types'
-import type { accountRoutes } from './auth'
+import type { Accounts, accountRoutes } from './auth'
 import { documentChanges, journal } from './journal'
 
 interface Row {
@@ -57,10 +58,18 @@ async function gunzip(body: ReadableStream<Uint8Array>) {
   return new Blob(chunks).text()
 }
 
-/** Un corps compressé trop gros une fois décompressé : levé par `parse`, rendu en 413. */
+/**
+ * Ce que `parse` refuse d'un corps compressé : sans session (401, avant de rien lire), trop gros
+ * une fois décompressé (413). Elysia fait de toute erreur du `parse` un 400 : `error` les rend.
+ */
+const NO_SESSION = new Error('Sans session')
 const TOO_LARGE = new Error(`Plus de ${MAX_DOCUMENT} octets une fois décompressé`)
 
-export function collectionRoutes(app: Database, account: ReturnType<typeof accountRoutes>) {
+export function collectionRoutes(
+  app: Database,
+  account: ReturnType<typeof accountRoutes>,
+  auth: Accounts['auth'],
+) {
   const read = app.query('SELECT version, collection, shopping FROM collections WHERE user_id = ?')
 
   /** Garde la version remplacée, si la dernière gardée a plus d'une heure ; oublie les vieilles. */
@@ -167,16 +176,25 @@ export function collectionRoutes(app: Database, account: ReturnType<typeof accou
       {
         auth: true,
         // Compressé (le site) : décompressé ici ; sans compression, Elysia le lit lui-même.
+        // Le `parse` passe avant la macro `auth` : sans session, rien n'est lu ni décompressé (pas
+        // 5 Mo à décompresser pour quelques Ko envoyés par n'importe qui). La session est lue sans
+        // être renouvelée : le renouvellement du jour reste à la macro, qui en renvoie le cookie.
         // Illisible (pas du gzip, pas du JSON) : Elysia fait de toute erreur ici un 400.
         async parse({ request }) {
           if (request.headers.get('content-encoding') !== 'gzip') return
+          const session = await auth.api.getSession({
+            headers: request.headers,
+            query: { disableRefresh: true },
+          })
+          if (!session) throw NO_SESSION
           const text = await gunzip(request.body!)
           if (text === null) throw TOO_LARGE
           return JSON.parse(text) as unknown
         },
-        // Trop gros une fois décompressé : 413, et non le 400 d'une erreur du `parse`.
         error({ code, error }) {
-          if (code === 'PARSE' && error.cause === TOO_LARGE) return json('null', 413)
+          if (code !== 'PARSE') return
+          if (error.cause === NO_SESSION) return json('null', 401)
+          if (error.cause === TOO_LARGE) return json('null', 413)
         },
         body: t.Object({
           account: t.String(),

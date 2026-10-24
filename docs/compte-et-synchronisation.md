@@ -129,11 +129,16 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   navigateur lit le document à la connexion (ou au démarrage, avant le premier affichage : sans
   lui, « Le Pokédex ne peut pas s'afficher »), le garde en mémoire, et envoie chaque modification
   une demi-seconde après, un échange à la fois ; aussitôt si la page passe en arrière-plan (un
-  téléphone peut la geler, puis la fermer, avant la demi-seconde). L'envoi part compressé
-  (`CompressionStream('gzip')`, `Content-Encoding: gzip` : 2 Mo en font 400 Ko), décompressé par
-  le serveur en flux, 413 au-delà de 5 000 000 octets décompressés (`MAX_DOCUMENT`, `types.ts`),
-  sans jamais décompresser plus (une « bombe » gzip, testée) ; un envoi non compressé reste
-  accepté. Son délai grandit avec lui (15 s, plus 10 s par Mo envoyé). Le document est numéroté
+  téléphone peut la geler, puis la fermer, avant la demi-seconde). Une modification faite pendant
+  la préparation d'un envoi n'est pas comptée avec lui : elle part ensuite (testé). L'envoi part
+  compressé (`CompressionStream('gzip')`, `Content-Encoding: gzip` : 2 Mo en font 400 Ko),
+  décompressé par le serveur en flux, 413 au-delà de 5 000 000 octets décompressés
+  (`MAX_DOCUMENT`, `types.ts`), sans jamais décompresser plus (une « bombe » gzip, testée) ; et
+  seulement avec une session : sans elle, 401 avant de rien lire (le `parse` d'Elysia passe avant
+  la macro `auth` ; la session y est lue sans être renouvelée, le cookie renouvelé repart avec la
+  réponse, testé). Un envoi non compressé reste accepté : sans `CompressionStream` (Safari avant
+  16.4, Firefox avant 113), le navigateur l'envoie tel quel (testé). Son délai grandit avec lui
+  (15 s, plus 10 s par Mo envoyé). Le document est numéroté
   par le serveur : `PUT /api/collection` `{ account, baseVersion, collection, shopping }` est
   refusé, 401, si `account` n'est pas le compte de la session (un envoi parti juste après une
   connexion à un autre compte, sur la même page, n'écrase jamais sa collection ; la connexion vide
@@ -143,14 +148,16 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   après une réponse perdue (délai dépassé, réseau coupé : le serveur l'avait enregistré) : parti
   de la version d'avant, le même document que celui enregistré, il reçoit cette version, sans
   rien écrire ni noter ; le navigateur renvoie toujours d'abord, tel quel, un envoi resté sans
-  réponse, puis ce qui a changé depuis (rien de perdu, rien de « Rechargée »). Testé sur le
+  réponse, puis ce qui a changé depuis (rien de perdu, rien de « Rechargée » ; ce renvoi refusé,
+  ce qui a changé depuis part aussitôt). Testé sur le
   serveur entier avec 401, 403, une mise à jour, la version remplacée gardée, un document refusé
   (400), un envoi compressé, la bombe, l'envoi renvoyé reconnu et un autre document de la même
   version toujours refusé (409), `tests/collection.test.ts`. Après un 409, le navigateur relit la
   version du serveur, à la place de la sienne : rien n'est écrasé, sa dernière modification est
   perdue, et le menu du compte le dit (« Rechargée », et un toast : « Vos dernières modifications
   ont été remplacées par celles d'un autre appareil. ») ; sans réponse à cette relecture, « Hors
-  ligne », et l'envoi repart plus tard (refusé, puis relu). Accepté, la réponse donne
+  ligne », et l'envoi repart plus tard (refusé, puis relu), de plus en plus tard tant que la
+  relecture échoue. Accepté, la réponse donne
   `{ version }`, et les autres onglets du navigateur l'apprennent (`BroadcastChannel('collection')`
   : `{ account, version }`) : un onglet sans rien en attente relit alors la collection. Le
   document passe les contrôles d'un import (`readSent` : refusé, la règle en cause au journal).
@@ -162,7 +169,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   120 s… 5 min au plus), et quitter la page le demande d'abord (`beforeunload`). Un refus pour de
   bon (400 et 422 : un document qui ne passe pas les contrôles ; 413 : plus de 5 Mo ; 403 : une
   origine refusée) donne « Envoi refusé », avec sa raison (la règle en cause, relue par le
-  navigateur avec le même code, `documentProblem`) et un toast ; le document refusé ne repart pas
+  navigateur avec le même code sur le document envoyé, `documentProblem`) et un toast ; le
+  document refusé ne repart pas
   tel quel, mais il reste à enregistrer : la déconnexion propose l'export, quitter la page le
   demande, et il n'est jamais remplacé par celui du serveur au retour sur la page ; seule une
   nouvelle modification (« Annuler » compris) repart. Le plafond tombe plus tôt qu'on ne croit :
@@ -171,7 +179,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   environ 14 000, 9 700 ou 7 950 cases selon leur état, soit 61, 42 ou 34 extensions de 230
   cartes. Un compte qui progresse franchit donc le plafond sans commencer de collection : passé
   80 %, le menu du compte le dit (« Votre collection pèse 4,2 Mo sur les 5 Mo que garde le
-  serveur… »), avec un toast une fois par page ; au-delà, chaque envoi est refusé (« elle dépasse
+  serveur… » ; le poids est connu dès la lecture du document, puis à chaque envoi), avec un toast
+  une fois par page au passage du seuil ; au-delà, chaque envoi est refusé (« elle dépasse
   5 Mo »). Une session fermée (401, « Reconnectez-vous ») : plus rien ne part, ni ne se relit,
   jusqu'à « Se reconnecter » ; reconnecté au même compte, ce qui attendait reste et part, depuis sa
   version (changée ailleurs entre-temps : 409, puis relue) ; avec une modification en attente,
@@ -184,8 +193,11 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   jamais prise, l'état passe à « Reconnectez-vous ». Une modification faite pendant cette
   relecture n'est pas écrasée : elle part, depuis la version d'avant (changée ailleurs entre-temps :
   refusée, 409, puis relue, comme plus haut). Testé avec le store tel quel contre le serveur entier
-  (`tests/sync.test.ts`, sans DOM) : le refus, la reconnexion, le retour sur la page, l'autre
-  compte, la réponse perdue, l'envoi compressé, la page en arrière-plan et l'autre onglet. Le
+  (`tests/sync.test.ts`, sans DOM ; il attend chaque état attendu, et ne patiente un moment que
+  pour vérifier que rien ne se passe) : le refus, la
+  reconnexion, le retour sur la page, l'autre compte, la réponse perdue (et son renvoi refusé),
+  une modification pendant la compression, l'envoi compressé ou tel quel, la page en
+  arrière-plan et l'autre onglet. Le
   serveur garde une version remplacée par heure, 30 jours (`collection_versions`, à reprendre à la
   main). Il note au journal ce qui change d'une version à l'autre (`documentChanges`,
   `server/journal.ts`), la version d'avant relue comme un fichier (`readCollection` : un document

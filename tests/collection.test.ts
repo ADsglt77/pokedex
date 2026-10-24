@@ -17,6 +17,7 @@
 
 import { afterAll, describe, expect, spyOn, test } from 'bun:test'
 import { emptyShopping } from '@/lib/orders'
+import { DAY } from '@/lib/time'
 import type { CollectionDocument, CollectionResponse, CollectionSaved, VitrineData } from '@/types'
 import { card, collectionWith, NOW, order, ownership, withCards } from './fixtures'
 import { openServer, ORIGIN, PASSWORD } from './server'
@@ -41,8 +42,11 @@ const collection = (method: 'GET' | 'PUT', body?: unknown, headers: Record<strin
     }),
   )
 
-/** `PUT /api/collection` comme l'envoie le site : compressé (`Content-Encoding: gzip`). */
-const gzipped = (body: RequestInit['body']) =>
+/**
+ * `PUT /api/collection` comme l'envoie le site : compressé (`Content-Encoding: gzip`) ; `headers`
+ * s'y ajoute ou les remplace.
+ */
+const gzipped = (body: RequestInit['body'], headers: Record<string, string> = {}) =>
   server.handle(
     new Request(`${ORIGIN}/api/collection`, {
       method: 'PUT',
@@ -51,6 +55,7 @@ const gzipped = (body: RequestInit['body']) =>
         'Content-Encoding': 'gzip',
         Origin: ORIGIN,
         Cookie: cookie,
+        ...headers,
       },
       body,
     }),
@@ -282,6 +287,42 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
     expect((await gzipped(Bun.gzipSync('{"account":'))).status).toBe(400)
     expect((await gzipped(JSON.stringify(sent))).status).toBe(400)
     expect(await stored()).toEqual(after)
+  })
+
+  test('compressée, sans session : 401, sans en rien lire ni décompresser', async () => {
+    const before = await stored()
+    for (const noSession of ['', 'better-auth.session_token=inconnu']) {
+      // Un corps que le serveur ne lit qu'en le demandant : il ne l'est jamais.
+      let read = false
+      const body = new ReadableStream<Uint8Array>(
+        {
+          pull(controller) {
+            read = true
+            controller.enqueue(Bun.gzipSync(' '.repeat(4_000_000)))
+            controller.close()
+          },
+        },
+        { highWaterMark: 0 },
+      )
+      const response = await gzipped(body, { Cookie: noSession })
+      expect(response.status).toBe(401)
+      expect(read).toBe(false)
+    }
+    // Pas plus du gzip illisible : 401, pas 400.
+    expect((await gzipped('pas du gzip', { Cookie: '' })).status).toBe(401)
+    expect(await stored()).toEqual(before)
+  })
+
+  test('une session à renouveler : son cookie renouvelé repart avec la réponse d’un envoi compressé', async () => {
+    const owner = await createAccount('Renouveau')
+    // Ouverte il y a deux jours : renouvelée à la requête suivante (une fois par jour d'usage). Le
+    // contrôle de la session avant la décompression ne doit pas consommer ce renouvellement.
+    const twoDaysOld = new Date(Date.now() + 58 * DAY).toISOString()
+    app.query('UPDATE session SET expiresAt = ? WHERE userId = ?').run(twoDaysOld, owner.user!.id)
+    const sent = { account: owner.user!.id, baseVersion: 0, ...first }
+    const response = await gzipped(Bun.gzipSync(JSON.stringify(sent)), { Cookie: owner.cookie })
+    expect(response.status).toBe(200)
+    expect(response.headers.getSetCookie().join()).toContain('session_token=')
   })
 
   test('plus de 5 000 000 octets une fois décompressée : 413, sans décompresser plus', async () => {

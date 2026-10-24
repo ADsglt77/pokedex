@@ -26,7 +26,7 @@ import { documentProblem, readCollection, readShopping } from '@/lib/transfer'
 import { useCollectionStore } from '@/store/collection'
 import { currentDocument, replaceDocument } from '@/store/document'
 import { useShoppingStore } from '@/store/shopping'
-import type { AccountUser, CollectionResponse, CollectionSaved } from '@/types'
+import type { AccountUser, CollectionDocument, CollectionResponse, CollectionSaved } from '@/types'
 
 /**
  * - `saved` : tout est enregistré ; `saving` : un envoi en cours ;
@@ -64,9 +64,22 @@ let saved = 0
 let refused = 0
 /** La collection relue du serveur : ce n'est pas une modification à envoyer. */
 let loading = false
+/**
+ * Un envoi : le numéro de la modification et le document qu'il porte, son corps (compressé ou
+ * non, `gzip`).
+ */
+interface Sending {
+  sending: number
+  document: CollectionDocument
+  body: Blob
+  gzip: boolean
+}
 /** Le dernier envoi resté sans réponse (peut-être enregistré) : il repart tel quel, avant tout. */
-let unanswered: { sending: number; body: Blob } | null = null
-/** Les essais d'affilée restés sans réponse : le suivant attend d'autant plus. */
+let unanswered: Sending | null = null
+/**
+ * Les essais d'affilée restés sans réponse (ou sans relecture après un 409) : le suivant attend
+ * d'autant plus.
+ */
 let failures = 0
 
 /** Une modification attend encore d'être enregistrée (refusée comprise) : à dire avant de partir. */
@@ -85,16 +98,19 @@ const inTurn = (task: () => Promise<unknown>) =>
   }))
 
 /**
- * Un appel à l'API ; `null` sans réponse (hors ligne, serveur arrêté). Un envoi part compressé
- * (`gzip`), et son délai grandit avec lui : 15 s, plus 10 s par Mo envoyé (un réseau lent).
+ * Un appel à l'API ; `null` sans réponse (hors ligne, serveur arrêté). Le délai d'un envoi grandit
+ * avec lui : 15 s, plus 10 s par Mo envoyé (un réseau lent).
  */
-const call = (method: 'GET' | 'PUT', query = '', body?: Blob) =>
+const call = (method: 'GET' | 'PUT', query = '', sent?: Sending) =>
   fetch(`/api/collection${query}`, {
     method,
-    body,
+    body: sent?.body,
     cache: 'no-store',
-    headers: body && { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' },
-    signal: AbortSignal.timeout(15_000 + ((body?.size ?? 0) / 1_000_000) * 10_000),
+    headers: sent && {
+      'Content-Type': 'application/json',
+      ...(sent.gzip && { 'Content-Encoding': 'gzip' }),
+    },
+    signal: AbortSignal.timeout(15_000 + ((sent?.body.size ?? 0) / 1_000_000) * 10_000),
   }).catch(() => null)
 
 /**
@@ -104,14 +120,15 @@ const call = (method: 'GET' | 'PUT', query = '', body?: Blob) =>
  * mémoire (`?version=`) : inchangée, rien n'est remplacé (« Annuler » garde ses références, rien ne
  * se redessine). Une modification faite pendant la lecture n'est pas écrasée : la collection en
  * mémoire reste, et l'envoi qui attend part de la version d'avant (changée ailleurs entre-temps, le
- * serveur la refuse, 409, et elle est relue).
+ * serveur la refuse, 409, et elle est relue). Relue, son poids est connu (l'avertissement des 80 %).
  */
 async function load(account: string) {
   const before = edits
   const response = await call('GET', hasUnsavedChanges() ? '' : `?version=${version}`)
   if (response?.status === 401) setStatus('expired')
   if (!response?.ok) return false
-  const body = (await response.json()) as CollectionResponse
+  const text = await response.text()
+  const body = JSON.parse(text) as CollectionResponse
   if (body.account !== account) {
     setStatus('expired')
     return false
@@ -119,6 +136,7 @@ async function load(account: string) {
   if (edits !== before || body.collection === undefined) return true
   version = body.version
   saved = edits
+  useAccountStore.setState({ weight: new Blob([text]).size })
   loading = true
   // Lue comme un fichier importé : seuls ses champs connus.
   replaceDocument({
@@ -146,11 +164,16 @@ function retryLater() {
   retry = setTimeout(save, Math.min(30_000 * 2 ** failures++, 300_000))
 }
 
-/** Un document à envoyer, compressé (`gzip`), et son poids décompressé, en octets. */
+/**
+ * Un document à envoyer, compressé (`gzip`) si le navigateur le sait, et son poids décompressé, en
+ * octets. `CompressionStream` manque à Safari avant 16.4 et à Firefox avant 113 : le document part
+ * alors tel quel, que le serveur accepte aussi.
+ */
 async function pack(text: string) {
   const raw = new Blob([text])
+  if (typeof CompressionStream === 'undefined') return { body: raw, gzip: false, weight: raw.size }
   const compressed = raw.stream().pipeThrough(new CompressionStream('gzip'))
-  return { body: await new Response(compressed).blob(), weight: raw.size }
+  return { body: await new Response(compressed).blob(), gzip: true, weight: raw.size }
 }
 
 /** Un autre onglet de ce navigateur vient d'enregistrer : `{ account, version }`. */
@@ -167,26 +190,30 @@ async function push(): Promise<void> {
   if (edits === saved || !account || status === 'expired') return
   if (edits === refused) return setStatus('refused')
   setStatus('saving')
-  const document = currentDocument()
   const resent = unanswered !== null
   if (!unanswered) {
-    const body = { account: account.id, baseVersion: version, ...document }
-    const packed = await pack(JSON.stringify(body))
-    unanswered = { sending: edits, body: packed.body }
-    useAccountStore.setState({ weight: packed.weight })
+    // Le numéro et le document, lus ensemble avant toute attente : une modification faite pendant
+    // la compression n'est pas comptée comme envoyée, elle part ensuite.
+    const sending = edits
+    const document = currentDocument()
+    const { body, gzip, weight } = await pack(
+      JSON.stringify({ account: account.id, baseVersion: version, ...document }),
+    )
+    unanswered = { sending, document, body, gzip }
+    useAccountStore.setState({ weight })
   }
-  const { sending } = unanswered
-  const response = await call('PUT', '', unanswered.body)
+  const sent = unanswered
+  const response = await call('PUT', '', sent)
   if (!response || response.status >= 500) return retryLater()
-  failures = 0
   // Refusé sans être lu (la session fermée), ou une réponse illisible (coupée) : l'envoi reste
   // sans réponse, et repartira tel quel.
   if (response.status === 401) return setStatus('expired')
   const answer = response.ok ? ((await response.json()) as CollectionSaved) : null
   unanswered = null
   if (answer) {
+    failures = 0
     version = answer.version
-    saved = sending
+    saved = sent.sending
     channel.postMessage({ account: account.id, version })
     if (edits === saved) setStatus('saved')
     // Renvoyé tel quel : ce qui a changé depuis part à son tour.
@@ -195,16 +222,21 @@ async function push(): Promise<void> {
   }
   if (response.status === 409) {
     // La version du serveur, relue à la place de celle d'ici ; une modification faite pendant la
-    // lecture part encore (`load`). Sans réponse, l'envoi repartira : refusé, puis relu.
+    // lecture part encore (`load`). Sans réponse, l'envoi repartira (refusé, puis relu), de plus en
+    // plus tard : les essais ne repartent de zéro qu'une fois la collection relue.
     if (await load(account.id)) {
+      failures = 0
       if (!hasUnsavedChanges()) setStatus('reloaded')
     } else if (useAccountStore.getState().status !== 'expired') retryLater()
     return
   }
-  // Refusée pour de bon : la règle en cause (relue ici avec le même code), trop grosse, ou une
-  // origine refusée (l'adresse du site n'est pas celle que connaît le serveur). Elle reste à
-  // enregistrer (la déconnexion propose l'export), mais ne repart pas telle quelle.
-  refused = sending
+  // Refusée pour de bon : la règle en cause (relue ici avec le même code, sur le document envoyé),
+  // trop grosse, ou une origine refusée (l'adresse du site n'est pas celle que connaît le serveur).
+  // Elle reste à enregistrer (la déconnexion propose l'export), mais ne repart pas telle quelle. Un
+  // renvoi refusé alors que d'autres modifications attendent : elles partent à leur tour.
+  failures = 0
+  refused = sent.sending
+  if (resent && edits !== refused) return push()
   useAccountStore.setState({
     status: 'refused',
     refusal:
@@ -212,7 +244,7 @@ async function push(): Promise<void> {
         ? 'il refuse les envois depuis cette adresse, que son réglage BETTER_AUTH_URL ne nomme pas'
         : response.status === 413
           ? 'elle dépasse 5 Mo'
-          : (documentProblem(document) ?? 'elle ne passe pas ses contrôles'),
+          : (documentProblem(sent.document) ?? 'elle ne passe pas ses contrôles'),
   })
 }
 

@@ -70,7 +70,7 @@ export function createApp({ app, accounts }: AppContext) {
       .group('/api', (api) =>
         api
           .use(account)
-          .use(collectionRoutes(app, account))
+          .use(collectionRoutes(app, account, accounts.auth))
           .use(journalRoutes(account))
           .use(vitrineRoutes(app, accounts.origin)),
       )
