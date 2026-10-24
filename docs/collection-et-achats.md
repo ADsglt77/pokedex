@@ -42,12 +42,14 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   ont été commencées ; jamais deux fois la même extension dans la même langue (`findSeries`). Un
   dresseur ou une énergie est une carte sans Pokémon (`dexIds` vide).
   - Commencer (`startSeries`) : une carte n'existe qu'une fois. Une carte déjà dans le compte, de
-    même langue et de même code (extension et numéro) ou de même id Cardmarket (`sameCard`,
-    `lib/card-code.ts`, la règle d'`isCatalogCard`), est reprise comme sa case, telle quelle
-    (statut, achats, place au Pokédex). Une case chacune (jamais deux fois le même id dans une
-    collection) : celle de son code d'abord, sinon celle de son id Cardmarket, car deux cartes d'une
-    extension ont parfois le même id Cardmarket au catalogue (« AR 94 » et « AR AR7 » en
-    français). Une japonaise n'est jamais la case d'une extension française. Une case pas encore
+    même langue et de même code (extension et numéro) ou de même id Cardmarket (`cardCodeKey`,
+    `cardmarketKey`, `lib/card-code.ts`, la règle d'`isCatalogCard` en clés), est reprise comme sa
+    case, telle quelle (statut, achats, place au Pokédex). Une case chacune (jamais deux fois le
+    même id dans une collection) : celle de son code d'abord, sinon celle de son id Cardmarket, car
+    deux cartes d'une extension ont parfois le même id Cardmarket au catalogue (« AR 94 » et « AR
+    AR7 » en français). Chaque carte du compte est lue une fois, rangée par clé : le clic attend le
+    calcul, et un compte de 8 000 cartes commence une extension de 250 cartes en quelques
+    millisecondes (testé ; comparer chaque case à chaque carte prenait près de 3 s). Une japonaise n'est jamais la case d'une extension française. Une case pas encore
     obtenue d'une autre collection n'est jamais reprise : deux extensions ont parfois une carte de
     même id Cardmarket (« SC2 012 », « SC-C 012 »), et supprimer la première collection la
     retirerait à la seconde. Les autres cases sont ajoutées marquées `seriesOnly` : pas encore des

@@ -1,15 +1,15 @@
 /**
  * Les collections d'extensions : toutes les cartes d'une extension dans une langue, une case par
  * carte, dans l'ordre de l'extension (`CollectionData.series`). Chaque case est une carte du compte
- * (`customCards`) : une carte déjà là, la même (`sameCard` : même langue, même code ou même id
- * Cardmarket), est reprise ; les autres sont ajoutées comme cases pas encore obtenues
+ * (`customCards`) : une carte déjà là, la même (même langue, même code ou même id Cardmarket :
+ * `cardCodeKey`, `cardmarketKey`), est reprise ; les autres sont ajoutées comme cases pas encore obtenues
  * (`seriesOnly`), qui ne remplissent pas le Pokédex. Possédée une fois, une case devient pour de
  * bon une carte de ses Pokémon (`obtain`). Ce qui distingue une collection (`seriesId`) ; la
  * collection d'une carte (`seriesOf`) ; ce que la suppression d'une collection fait de ses cases
  * (`seriesRemoval`) ; leur progression : cases possédées, valeur, coût pour compléter.
  */
 
-import { isCardOf, referenceCode, sameCard } from '@/lib/card-code'
+import { cardCodeKey, cardmarketKey } from '@/lib/card-code'
 import { cardLanguage, isToBuy, obtain } from '@/lib/collection'
 import { isInAnOrder } from '@/lib/orders'
 import { marketPrice } from '@/lib/prices'
@@ -41,13 +41,27 @@ export const findSeries = (data: CollectionData, set: string, language: CardLang
 export const seriesOf = (data: CollectionData, cardId: string) =>
   data.series.find((series) => series.cards.includes(cardId)) ?? null
 
+/** Les cartes de chaque clé (`key`), dans leur ordre ; une carte sans clé n'y est pas. */
+function byKey(cards: readonly PokemonCard[], key: (card: PokemonCard) => string | null) {
+  const index = new Map<string, PokemonCard[]>()
+  for (const card of cards) {
+    const value = key(card)
+    if (value === null) continue
+    const known = index.get(value)
+    if (known) known.push(card)
+    else index.set(value, [card])
+  }
+  return index
+}
+
 /**
  * Commence la collection d'une extension, à la fin des autres, avec ses cases (`slots` : une
  * nouvelle carte `seriesOnly` par carte de l'extension, dans son ordre). Une carte du compte qui
- * est la même qu'une case (`sameCard`) la prend, telle quelle (son statut, ses achats et sa place
- * au Pokédex ne changent pas) : une case chacune, celle de son code d'abord, sinon celle de son id
- * Cardmarket ; sinon la case est ajoutée. Une case pas encore obtenue d'une autre collection n'est
- * jamais reprise. Le Pokédex et les favorites n'en changent pas.
+ * est la même qu'une case (même clé de code, sinon même clé Cardmarket : `lib/card-code.ts`) la
+ * prend, telle quelle (son statut, ses achats et sa place au Pokédex ne changent pas) : une case
+ * chacune, celle de son code d'abord, sinon celle de son id Cardmarket ; sinon la case est
+ * ajoutée. Une case pas encore obtenue d'une autre collection n'est jamais reprise. Le Pokédex et
+ * les favorites n'en changent pas.
  */
 export function startSeries(
   data: CollectionData,
@@ -55,21 +69,26 @@ export function startSeries(
   slots: PokemonCard[],
   now: string,
 ): CollectionData {
-  // Les cartes du compte qui peuvent encore prendre une case : la première qui convient la prend.
-  // Pas une case pas encore obtenue d'une autre collection : supprimer celle-ci la retirerait.
+  // Les cartes du compte qui peuvent encore prendre une case, rangées par clé, chacune lue une
+  // fois : le compte peut en avoir des milliers, et le clic attend. Pas une case pas encore obtenue
+  // d'une autre collection : supprimer celle-ci la retirerait.
   const free = Object.values(data.customCards).filter((card) => !card.seriesOnly)
-  const take = (fits: (card: PokemonCard) => boolean) => {
-    const index = free.findIndex(fits)
-    return index === -1 ? undefined : free.splice(index, 1)[0]
+  const byCode = byKey(free, cardCodeKey)
+  const byCardmarket = byKey(free, cardmarketKey)
+  const taken = new Set<PokemonCard>()
+  // La première carte libre de cette clé prend la case, et n'en prend pas d'autre.
+  const take = (index: Map<string, PokemonCard[]>, key: string | null) => {
+    const cards = key === null ? [] : (index.get(key) ?? [])
+    let card = cards.shift()
+    while (card && taken.has(card)) card = cards.shift()
+    if (card) taken.add(card)
+    return card
   }
   // Chaque carte va d'abord à la case de son code : deux cases peuvent avoir le même id Cardmarket.
-  const byCode = slots.map((slot) => {
-    const code = referenceCode(slot.reference)
-    return take((card) => isCardOf(card, cardLanguage(slot), code, undefined))
-  })
+  const ofCode = slots.map((slot) => take(byCode, cardCodeKey(slot)))
   const customCards = { ...data.customCards }
   const cards = slots.map((slot, index) => {
-    const card = byCode[index] ?? take((known) => sameCard(known, slot))
+    const card = ofCode[index] ?? take(byCardmarket, cardmarketKey(slot))
     if (card) return card.id
     customCards[slot.id] = slot
     return slot.id

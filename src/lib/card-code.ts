@@ -1,7 +1,8 @@
 /**
  * Le code d'une carte : le code de la série et le numéro qui finissent sa référence
  * (« Bulbizarre (SV2A 166) ») ; et ce qui fait la même carte : même langue, et même code ou même
- * id Cardmarket (une carte n'existe qu'une fois).
+ * id Cardmarket (une carte n'existe qu'une fois), comparés (`isCardOf`) ou en clés
+ * (`cardCodeKey`, `cardmarketKey`).
  */
 
 import { cardLanguage } from '@/lib/collection'
@@ -59,6 +60,16 @@ export function isCardOf(
   )
 }
 
-/** Deux cartes de la collection sont-elles la même (`isCardOf`) ? */
-export const sameCard = (a: PokemonCard, b: PokemonCard) =>
-  isCardOf(a, cardLanguage(b), referenceCode(b.reference), b.cardmarket)
+/**
+ * Ce qui fait la même carte (`isCardOf`), en clés : deux cartes de la collection de même clé de
+ * code (« ja SV2A 166 », sa langue et son code), ou de même clé Cardmarket (« ja 719445 »), sont la
+ * même. `null` sans code, sans id. De quoi retrouver une carte parmi des milliers sans les
+ * comparer une à une (`startSeries`).
+ */
+export function cardCodeKey(card: PokemonCard) {
+  const code = referenceCode(card.reference)
+  return code && `${cardLanguage(card)} ${codeKey(code)}`
+}
+
+export const cardmarketKey = (card: PokemonCard) =>
+  card.cardmarket === undefined ? null : `${cardLanguage(card)} ${card.cardmarket}`

@@ -166,6 +166,31 @@ describe('commencer une extension', () => {
     expect(both.series[1]!.cards).toEqual(['a'])
     expect(findSeries(both, 'M6A', 'fr')).toBe(both.series[0]!)
   })
+
+  test('un compte de 8 000 cartes commence une extension de 250 cartes sans figer la page', () => {
+    // Le clic attend le calcul : chaque carte du compte est lue une fois, pas une fois par case
+    // (près de 3 s ainsi).
+    const account = Array.from({ length: 8000 }, (_, index) =>
+      card(`c${index}`, [(index % 1025) + 1], {
+        reference: `Carte (S${index % 97}A ${index})`,
+        cardmarket: 100_000 + index,
+      }),
+    )
+    // Une carte reprise par son code, une autre par son id Cardmarket.
+    account[5000] = card('by-code', [25], { reference: 'Pikachu (M6A 7)' })
+    account[7999] = card('by-id', [25], { reference: 'Mon Pikachu', cardmarket: 900_100 })
+    const slots = Array.from({ length: 250 }, (_, index) =>
+      slotFor(String(index + 1).padStart(3, '0'), [25], 900_000 + index),
+    )
+    const before = withCards(collectionWith(), ...account)
+    const start = performance.now()
+    const data = started(before, slots)
+    expect(performance.now() - start).toBeLessThan(300)
+    const cards = data.series[0]!.cards
+    expect(cards).toHaveLength(250)
+    expect([cards[6], cards[100]]).toEqual(['by-code', 'by-id'])
+    expect(Object.keys(data.customCards)).toHaveLength(8000 + 248)
+  })
 })
 
 describe('obtenir une case', () => {
