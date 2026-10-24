@@ -12,8 +12,8 @@
  *   le même document que celui enregistré, il rend cette version, sans rien écrire. Le document
  *   est contrôlé aux règles d'un fichier importé (`readSent` ; 400 sinon, la règle en cause au
  *   journal). Le site l'envoie compressé (`Content-Encoding: gzip`), décompressé ici en flux,
- *   seulement avec une session (401 sinon, avant de rien lire) : 413 au-delà de `MAX_DOCUMENT`
- *   octets décompressés.
+ *   seulement avec une session (401 sinon, sans rien décompresser) : 413 au-delà de
+ *   `MAX_DOCUMENT` octets décompressés ; une panne en lisant la session, 500.
  * Sans session : 401 ; jamais gardé en cache (`no-store`), ni par le navigateur ni par un relais
  * (macro `auth`, `auth.ts`).
  */
@@ -43,8 +43,8 @@ const contents = (row: Row | null) =>
  * Un corps compressé (`gzip`), décompressé en flux : `null` au-delà de `MAX_DOCUMENT` octets, sans
  * en décompresser plus (une « bombe » de quelques Ko ne devient jamais des Go en mémoire).
  */
-async function gunzip(body: ReadableStream<Uint8Array>) {
-  const reader = body.pipeThrough(new DecompressionStream('gzip')).getReader()
+async function gunzip(compressed: Blob) {
+  const reader = compressed.stream().pipeThrough(new DecompressionStream('gzip')).getReader()
   const chunks: Uint8Array[] = []
   let size = 0
   for (let next = await reader.read(); !next.done; next = await reader.read()) {
@@ -59,11 +59,13 @@ async function gunzip(body: ReadableStream<Uint8Array>) {
 }
 
 /**
- * Ce que `parse` refuse d'un corps compressé : sans session (401, avant de rien lire), trop gros
- * une fois décompressé (413). Elysia fait de toute erreur du `parse` un 400 : `error` les rend.
+ * Ce que `parse` refuse d'un corps compressé : sans session (401, avant de rien décompresser), trop
+ * gros une fois décompressé (413), illisible (ni du gzip ni du JSON : 400). Elysia fait de toute
+ * erreur du `parse` un 400 : `error` les rend, et toute autre erreur en 500.
  */
 const NO_SESSION = new Error('Sans session')
 const TOO_LARGE = new Error(`Plus de ${MAX_DOCUMENT} octets une fois décompressé`)
+const UNREADABLE = new Error('Ni du gzip ni du JSON')
 
 export function collectionRoutes(
   app: Database,
@@ -175,26 +177,43 @@ export function collectionRoutes(
       },
       {
         auth: true,
-        // Compressé (le site) : décompressé ici ; sans compression, Elysia le lit lui-même.
-        // Le `parse` passe avant la macro `auth` : sans session, rien n'est lu ni décompressé (pas
-        // 5 Mo à décompresser pour quelques Ko envoyés par n'importe qui). La session est lue sans
-        // être renouvelée : le renouvellement du jour reste à la macro, qui en renvoie le cookie.
-        // Illisible (pas du gzip, pas du JSON) : Elysia fait de toute erreur ici un 400.
+        // Compressé (le site) : décompressé ici ; sans compression, Elysia le lit lui-même. Le
+        // corps compressé est lu d'abord, tel quel (5 Mo au plus, comme un corps non compressé) :
+        // sous `Bun.serve`, le lire en flux après une attente lève une erreur que personne
+        // n'attrape. Le `parse` passe avant la macro `auth` : sans session, rien n'est décompressé
+        // (pas 5 Mo à décompresser pour quelques Ko envoyés par n'importe qui). La session est lue
+        // sans être renouvelée : le renouvellement du jour reste à la macro, qui en renvoie le
+        // cookie.
         async parse({ request }) {
           if (request.headers.get('content-encoding') !== 'gzip') return
+          const compressed = await request.blob()
           const session = await auth.api.getSession({
             headers: request.headers,
             query: { disableRefresh: true },
           })
           if (!session) throw NO_SESSION
-          const text = await gunzip(request.body!)
-          if (text === null) throw TOO_LARGE
-          return JSON.parse(text) as unknown
+          try {
+            const text = await gunzip(compressed)
+            if (text !== null) return JSON.parse(text) as unknown
+          } catch {
+            throw UNREADABLE
+          }
+          throw TOO_LARGE
         },
         error({ code, error }) {
           if (code !== 'PARSE') return
           if (error.cause === NO_SESSION) return json('null', 401)
           if (error.cause === TOO_LARGE) return json('null', 413)
+          if (error.cause === UNREADABLE) return
+          // Une panne (la session pas lue : la base occupée…) : 500, et l'appareil réessaiera ; un
+          // 400 lui ferait dire « Envoi refusé », pour de bon. La cause dans la sortie du serveur.
+          console.error(error.cause)
+          journal({
+            topic: 'collection',
+            level: 'error',
+            message: 'Envoi pas lu, panne du serveur',
+          })
+          return new Response(null, { status: 500, headers: { 'Cache-Control': 'no-store' } })
         },
         body: t.Object({
           account: t.String(),

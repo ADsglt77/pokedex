@@ -46,7 +46,10 @@ export const useAccountStore = create<{
   status: SaveStatus
   /** Pourquoi le serveur refuse la collection (statut `refused`). */
   refusal: string | null
-  /** Le poids du dernier document envoyé, en octets, décompressé (0 avant le premier envoi). */
+  /**
+   * Le poids du document, en octets, décompressé : relu du serveur, puis à chaque envoi (0 sans
+   * compte, ou tant que le serveur n'a rien).
+   */
   weight: number
 }>(() => ({ account: null, status: 'saved', refusal: null, weight: 0 }))
 
@@ -154,9 +157,9 @@ const refresh = (account: string) =>
 let retry: ReturnType<typeof setTimeout> | undefined
 
 /**
- * Sans réponse, ou une panne passagère (502 pendant un redémarrage) : « Hors ligne », et l'envoi
- * repart de plus en plus tard (30 s, 60 s, 120 s… 5 min au plus) ; au retour du réseau ou de la
- * page, aussitôt.
+ * Sans réponse, une panne passagère (502 pendant un redémarrage) ou trop d'envois d'affilée (429) :
+ * « Hors ligne », et l'envoi repart de plus en plus tard (30 s, 60 s, 120 s… 5 min au plus) ; au
+ * retour du réseau ou de la page, aussitôt.
  */
 function retryLater() {
   setStatus('offline')
@@ -204,7 +207,9 @@ async function push(): Promise<void> {
   }
   const sent = unanswered
   const response = await call('PUT', '', sent)
-  if (!response || response.status >= 500) return retryLater()
+  // Sans réponse, une panne passagère, ou trop d'envois d'affilée (429 : la limite de nginx,
+  // `deploy/nginx.conf.template`) : il repartira.
+  if (!response || response.status >= 500 || response.status === 429) return retryLater()
   // Refusé sans être lu (la session fermée), ou une réponse illisible (coupée) : l'envoi reste
   // sans réponse, et repartira tel quel.
   if (response.status === 401) return setStatus('expired')

@@ -6,8 +6,10 @@
  * lecture de son corps ; une lecture, si) ; un document abîmé est refusé (400). Une erreur ici écraserait les
  * commandes d'un autre appareil. La lecture dit à quel compte est la collection, et seulement sa
  * version quand l'appareil a déjà celle-là (`?version=`) ; un envoi compressé (`gzip`, celui du
- * site) est enregistré, mais refusé (413) au-delà de 5 000 000 octets décompressés, sans jamais
- * décompresser plus ; un envoi renvoyé tel quel après une réponse perdue est reconnu (200, la même
+ * site) est enregistré, aussi derrière un vrai `Bun.serve`, mais refusé (413) au-delà de 5 000 000
+ * octets décompressés, sans jamais décompresser plus ; sans session, 401 sans rien décompresser
+ * (le cookie renouvelé d'une session repart toujours) ; une panne en lisant la session, 500 (pas
+ * le 400 d'un document refusé) ; un envoi renvoyé tel quel après une réponse perdue est reconnu (200, la même
  * version), un autre parti de la même version reste refusé (409). Chaque compte ne touche qu'à sa
  * collection, et la sienne part avec lui. Et ce que montre le Pokédex public d'un compte (`/api/vitrine/<pseudo>`) : ce qu'il
  * laisserait passer serait public. Le serveur entier (`createApp`), sur des bases neuves dans le
@@ -18,7 +20,13 @@
 import { afterAll, describe, expect, spyOn, test } from 'bun:test'
 import { emptyShopping } from '@/lib/orders'
 import { DAY } from '@/lib/time'
-import type { CollectionDocument, CollectionResponse, CollectionSaved, VitrineData } from '@/types'
+import {
+  MAX_DOCUMENT,
+  type CollectionDocument,
+  type CollectionResponse,
+  type CollectionSaved,
+  type VitrineData,
+} from '@/types'
 import { card, collectionWith, NOW, order, ownership, withCards } from './fixtures'
 import { openServer, ORIGIN, PASSWORD } from './server'
 
@@ -26,7 +34,7 @@ import { openServer, ORIGIN, PASSWORD } from './server'
 const log = spyOn(console, 'log').mockImplementation(() => {})
 afterAll(() => log.mockRestore())
 
-const { app, server, authCall, createAccount } = await openServer()
+const { app, accounts, server, authCall, createAccount } = await openServer()
 
 const signUp = await createAccount('Sacha')
 const cookie = signUp.cookie
@@ -289,28 +297,94 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
     expect(await stored()).toEqual(after)
   })
 
-  test('compressée, sans session : 401, sans en rien lire ni décompresser', async () => {
-    const before = await stored()
-    for (const noSession of ['', 'better-auth.session_token=inconnu']) {
-      // Un corps que le serveur ne lit qu'en le demandant : il ne l'est jamais.
-      let read = false
-      const body = new ReadableStream<Uint8Array>(
-        {
-          pull(controller) {
-            read = true
-            controller.enqueue(Bun.gzipSync(' '.repeat(4_000_000)))
-            controller.close()
-          },
-        },
-        { highWaterMark: 0 },
-      )
-      const response = await gzipped(body, { Cookie: noSession })
-      expect(response.status).toBe(401)
-      expect(read).toBe(false)
+  /** Ce que le serveur décompresse pendant `run` : le nombre de `DecompressionStream` créés. */
+  async function decompressions(run: () => Promise<unknown>) {
+    const Original = globalThis.DecompressionStream
+    let count = 0
+    class Counted extends Original {
+      constructor(format: ConstructorParameters<typeof DecompressionStream>[0]) {
+        super(format)
+        count++
+      }
     }
-    // Pas plus du gzip illisible : 401, pas 400.
+    Object.assign(globalThis, { DecompressionStream: Counted })
+    try {
+      await run()
+    } finally {
+      Object.assign(globalThis, { DecompressionStream: Original })
+    }
+    return count
+  }
+
+  test('compressée, sans session : 401, sans rien décompresser', async () => {
+    const before = await stored()
+    // 4 Mo une fois décompressés, dans 4 Ko.
+    const heavy = Bun.gzipSync(' '.repeat(4_000_000))
+    for (const noSession of ['', 'better-auth.session_token=inconnu']) {
+      let status = 0
+      const count = await decompressions(async () => {
+        status = (await gzipped(heavy, { Cookie: noSession })).status
+      })
+      expect(status).toBe(401)
+      expect(count).toBe(0)
+    }
+    // Avec la session, le même corps est décompressé (le compteur compte bien) ; des espaces ne
+    // sont pas un document : 400.
+    expect(await decompressions(() => gzipped(heavy))).toBe(1)
+    // Du gzip illisible, sans session : 401, pas 400.
     expect((await gzipped('pas du gzip', { Cookie: '' })).status).toBe(401)
     expect(await stored()).toEqual(before)
+  })
+
+  test('la session ne peut pas être lue (une panne passagère) : 500, l’appareil réessaiera', async () => {
+    const before = await stored()
+    const lookup = spyOn(accounts.auth.api, 'getSession').mockRejectedValueOnce(
+      new Error('Base occupée'),
+    )
+    const errors = spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const sent = { account: sacha, baseVersion: before.body.version, ...second }
+      // Pas un 400 : l'appareil dirait « Envoi refusé », et ne réessaierait pas.
+      expect((await gzipped(Bun.gzipSync(JSON.stringify(sent)))).status).toBe(500)
+    } finally {
+      lookup.mockRestore()
+      errors.mockRestore()
+    }
+    expect(await stored()).toEqual(before)
+  })
+
+  test('derrière un vrai `Bun.serve` : enregistrée, sans erreur perdue en route', async () => {
+    const before = await stored()
+    // Une erreur que personne n'attrape (`server.handle` ne passe pas par le serveur HTTP de Bun).
+    const lost: unknown[] = []
+    const onLost = (error: unknown) => lost.push(error)
+    process.on('unhandledRejection', onLost)
+    const real = Bun.serve({
+      port: 0,
+      hostname: '127.0.0.1',
+      maxRequestBodySize: MAX_DOCUMENT,
+      fetch: (request) => server.handle(request),
+    })
+    try {
+      const sent = { account: sacha, baseVersion: before.body.version, ...first }
+      const response = await fetch(new URL('/api/collection', real.url), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Encoding': 'gzip',
+          Origin: ORIGIN,
+          Cookie: cookie,
+        },
+        body: Bun.gzipSync(JSON.stringify(sent)),
+      })
+      expect(response.status).toBe(200)
+      // Une erreur perdue arriverait juste après la réponse.
+      await Bun.sleep(100)
+    } finally {
+      process.off('unhandledRejection', onLost)
+      await real.stop(true)
+    }
+    expect(lost).toEqual([])
   })
 
   test('une session à renouveler : son cookie renouvelé repart avec la réponse d’un envoi compressé', async () => {

@@ -19,7 +19,8 @@ export const ORIGIN = process.env.BETTER_AUTH_URL!
 export const PASSWORD = 'mot-de-passe-d-essai'
 
 /**
- * Le serveur, sur la base de l'app (fermée à la fin du fichier qui l'ouvre) ; une action du compte
+ * Le serveur, sur la base de l'app (fermée à la fin du fichier qui l'ouvre), et ses comptes
+ * (`accounts` : Better Auth, pour simuler une panne de la session) ; une action du compte
  * (`authCall` : `/api/auth/…`, du site, avec la session `cookie`) ; un compte créé comme à
  * l'inscription (`createAccount` : le pseudo deux fois, l'e-mail vide, le serveur en donne une),
  * avec sa réponse, son id et la session ouverte avec lui.
@@ -32,7 +33,8 @@ export async function openServer() {
     app.close()
     Bun.gc(true)
   })
-  const server = createApp({ app, accounts: await createAuth(app) })
+  const accounts = await createAuth(app)
+  const server = createApp({ app, accounts })
 
   const authCall = (path: string, body: unknown, cookie = '') =>
     server.handle(
@@ -58,5 +60,5 @@ export async function openServer() {
     return { response, user: body.user, cookie }
   }
 
-  return { app, server, authCall, createAccount }
+  return { app, accounts, server, authCall, createAccount }
 }

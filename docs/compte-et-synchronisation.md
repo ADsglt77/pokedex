@@ -134,9 +134,13 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   compressé (`CompressionStream('gzip')`, `Content-Encoding: gzip` : 2 Mo en font 400 Ko),
   décompressé par le serveur en flux, 413 au-delà de 5 000 000 octets décompressés
   (`MAX_DOCUMENT`, `types.ts`), sans jamais décompresser plus (une « bombe » gzip, testée) ; et
-  seulement avec une session : sans elle, 401 avant de rien lire (le `parse` d'Elysia passe avant
-  la macro `auth` ; la session y est lue sans être renouvelée, le cookie renouvelé repart avec la
-  réponse, testé). Un envoi non compressé reste accepté : sans `CompressionStream` (Safari avant
+  seulement avec une session : sans elle, 401 sans rien décompresser (le `parse` d'Elysia passe
+  avant la macro `auth` ; la session y est lue sans être renouvelée, le cookie renouvelé repart
+  avec la réponse, testé). Le corps compressé (5 Mo au plus, comme un corps non compressé) y est
+  lu d'abord, tel quel : sous `Bun.serve`, le lire en flux après la lecture de la session levait
+  une erreur que personne n'attrapait (testé derrière un vrai `Bun.serve`, `server.handle` ne le
+  voit pas). Une panne en lisant la session (la base occupée) : 500, l'appareil réessaie (un 400
+  dirait « Envoi refusé », testé). Un envoi non compressé reste accepté : sans `CompressionStream` (Safari avant
   16.4, Firefox avant 113), le navigateur l'envoie tel quel (testé). Son délai grandit avec lui
   (15 s, plus 10 s par Mo envoyé). Le document est numéroté
   par le serveur : `PUT /api/collection` `{ account, baseVersion, collection, shopping }` est
@@ -163,7 +167,9 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   document passe les contrôles d'un import (`readSent` : refusé, la règle en cause au journal).
   Une modification d'une autre origine est refusée (403, plus haut) ; au journal, elle dit un
   réglage à revoir (`BETTER_AUTH_URL`) ou une tentative depuis un autre site. Sans réponse, ou une
-  panne passagère (502 pendant un redémarrage), la modification attend (« Hors ligne », seulement
+  panne passagère (502 pendant un redémarrage), ou trop d'envois d'affilée (429 : nginx limite
+  `/api/collection` à 2 requêtes par seconde et par visiteur, 20 d'un coup,
+  `deploy/nginx.conf.template` ; testé), la modification attend (« Hors ligne », seulement
   quand une modification attend : une relecture qui échoue sans rien en attente ne change pas
   l'état) : elle repart au retour du réseau ou de la page, sinon de plus en plus tard (30 s, 60 s,
   120 s… 5 min au plus), et quitter la page le demande d'abord (`beforeunload`). Un refus pour de
@@ -180,7 +186,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   cartes. Un compte qui progresse franchit donc le plafond sans commencer de collection : passé
   80 %, le menu du compte le dit (« Votre collection pèse 4,2 Mo sur les 5 Mo que garde le
   serveur… » ; le poids est connu dès la lecture du document, puis à chaque envoi), avec un toast
-  une fois par page au passage du seuil ; au-delà, chaque envoi est refusé (« elle dépasse
+  une fois par page (à l'affichage du menu, la collection déjà lourde, ou au passage du seuil) ;
+  au-delà, chaque envoi est refusé (« elle dépasse
   5 Mo »). Une session fermée (401, « Reconnectez-vous ») : plus rien ne part, ni ne se relit,
   jusqu'à « Se reconnecter » ; reconnecté au même compte, ce qui attendait reste et part, depuis sa
   version (changée ailleurs entre-temps : 409, puis relue) ; avec une modification en attente,
@@ -195,7 +202,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   refusée, 409, puis relue, comme plus haut). Testé avec le store tel quel contre le serveur entier
   (`tests/sync.test.ts`, sans DOM ; il attend chaque état attendu, et ne patiente un moment que
   pour vérifier que rien ne se passe) : le refus, la
-  reconnexion, le retour sur la page, l'autre compte, la réponse perdue (et son renvoi refusé),
+  reconnexion, le retour sur la page, l'autre compte, la réponse perdue (et son renvoi refusé), le
+  429 de nginx,
   une modification pendant la compression, l'envoi compressé ou tel quel, la page en
   arrière-plan et l'autre onglet. Le
   serveur garde une version remplacée par heure, 30 jours (`collection_versions`, à reprendre à la

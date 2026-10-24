@@ -57,7 +57,7 @@ const HEAVY = MAX_DOCUMENT * 0.8
 const heavyText = (weight: number) =>
   `Votre collection pèse ${formatDecimal(weight / 1_000_000)}\u00a0Mo sur les ${formatDecimal(MAX_DOCUMENT / 1_000_000)}\u00a0Mo que garde le serveur\u00a0: au-delà, plus rien ne s’enregistrerait.`
 
-/** L'avertissement des 80 % n'est donné en toast qu'une fois par page. */
+/** L'avertissement des 80 % n'est donné en toast qu'une fois par page (`StrictMode` compris). */
 let heavyWarned = false
 
 /**
@@ -79,25 +79,27 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   // La déconnexion attend le serveur (15 s au plus) : le bouton du compte le dit pendant ce temps.
   const [leaving, setLeaving] = useState(false)
 
-  // Au passage d'un état à l'autre seulement (pas à l'affichage du menu).
-  useEffect(
-    () =>
-      useAccountStore.subscribe((state, previous) => {
-        if (state.status !== previous.status && state.status === 'reloaded') {
-          notify('Vos dernières modifications ont été remplacées par celles d’un autre appareil.', {
-            tone: 'warn',
-          })
-        }
-        if (state.status !== previous.status && state.status === 'refused' && state.refusal) {
-          notify(refusalText(state.refusal), { tone: 'danger' })
-        }
-        if (state.weight > HEAVY && previous.weight <= HEAVY && !heavyWarned) {
-          heavyWarned = true
-          notify(heavyText(state.weight), { tone: 'warn' })
-        }
-      }),
-    [notify],
-  )
+  // « Rechargée » et « Envoi refusé » : au passage seulement, pas à l'affichage du menu. Les 80 % :
+  // une fois par page, à l'affichage (la collection déjà lourde à l'ouverture) ou au passage.
+  useEffect(() => {
+    const warnHeavy = (weight: number) => {
+      if (weight <= HEAVY || heavyWarned) return
+      heavyWarned = true
+      notify(heavyText(weight), { tone: 'warn' })
+    }
+    warnHeavy(useAccountStore.getState().weight)
+    return useAccountStore.subscribe((state, previous) => {
+      if (state.status !== previous.status && state.status === 'reloaded') {
+        notify('Vos dernières modifications ont été remplacées par celles d’un autre appareil.', {
+          tone: 'warn',
+        })
+      }
+      if (state.status !== previous.status && state.status === 'refused' && state.refusal) {
+        notify(refusalText(state.refusal), { tone: 'danger' })
+      }
+      warnHeavy(state.weight)
+    })
+  }, [notify])
   if (!account) return null
 
   const { label, icon: Icon } = STATUS[status]

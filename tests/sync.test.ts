@@ -7,7 +7,8 @@
  * fermée ; au retour sur la page, une collection inchangée n'est pas remplacée (« Annuler » garde
  * ses références), changée ailleurs elle est relue ; celle d'un autre compte (connecté dans un autre
  * onglet) n'est jamais prise ; un envoi dont la réponse s'est perdue est reconnu, et la
- * modification suivante part, même si ce renvoi est refusé ; une modification faite pendant la
+ * modification suivante part, même si ce renvoi est refusé ; trop d'envois d'affilée (429 de
+ * nginx) font réessayer, jamais « Envoi refusé » ; une modification faite pendant la
  * compression d'un envoi part aussi ; les envois partent compressés, ou tels quels sans
  * `CompressionStream` ; la page passée en arrière-plan envoie aussitôt ce qui attend ; un autre
  * onglet qui enregistre fait relire la collection. Le navigateur est simulé (`window`, `document`,
@@ -331,6 +332,20 @@ describe('store/account.ts : rien de perdu sans un mot, rien d’écrasé', () =
     withoutTimers(() => addCard('c'))
     store.save()
     await until(serverHas(cookie, ['a', 'b', 'c']))
+    await until(isSaved)
+  })
+
+  test('trop d’envois d’affilée (429 de nginx) : la modification attend et repart, jamais « Envoi refusé »', async () => {
+    const { cookie } = await signedIn('Limite')
+    change('a')
+    await until(isSaved)
+    browser.failNextPut = 429
+    change('b')
+    await until(() => status() === 'offline')
+    expect(store.hasUnsavedChanges()).toBe(true)
+    // Le nouvel essai (ici sans attendre ses 30 s) : elle part.
+    store.save()
+    await until(serverHas(cookie, ['a', 'b']))
     await until(isSaved)
   })
 
