@@ -154,11 +154,12 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   numéros se répètent, un appareil resté sur la version 6 d'avant la lirait « inchangée » dans la
   copie, aussi à 6 mais d'un autre contenu, et son envoi, parti de la 6, serait accepté par-dessus
   ce qui a été enregistré depuis. Toute restauration d'`app.db` finit donc par relever chaque
-  numéro d'un million (`UPDATE collections SET version = version + 1000000`, README :
-  « Restaurer une sauvegarde », le retour du code, ou une ligne de `collection_versions` remise à
-  la main ; jamais le numéro de la ligne reprise) : aucun appareil n'en détient un pareil, il
-  relit la collection restaurée ou son envoi est refusé (409, puis relue). Sauf un envoi renvoyé tel
-  quel après une réponse perdue (délai dépassé, réseau coupé : le serveur l'avait enregistré) : parti
+  numéro de l'heure en millisecondes (`version = version + Date.now()`, README : « Restaurer une
+  sauvegarde », le retour du code, ou une ligne de `collection_versions` remise à la main ; jamais
+  le numéro de la ligne reprise) : aucun appareil n'en détient un pareil, et chaque restauration
+  relève plus que la précédente, même celle d'une copie plus ancienne ; il relit la collection
+  restaurée ou son envoi est refusé (409, puis relue). Sauf un envoi renvoyé tel quel après une
+  réponse perdue (délai dépassé, réseau coupé : le serveur l'avait enregistré) : parti
   de la version d'avant, le même document que celui enregistré, il reçoit cette version, sans
   rien écrire ni noter ; le navigateur renvoie toujours d'abord, tel quel, un envoi resté sans
   réponse, puis ce qui a changé depuis (rien de perdu, rien de « Rechargée » ; ce renvoi refusé,

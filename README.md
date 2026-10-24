@@ -296,7 +296,7 @@ docker compose build
 docker compose stop server
 mkdir -p sauvegardes && cp ~/avant-collections.db sauvegardes/
 docker compose run --rm --no-deps -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/app.db-wal /data/app.db-shm && cp /restore/avant-collections.db /data/app.db'
-docker compose run --rm --no-deps server bun -e 'new (require("bun:sqlite").Database)("/data/app.db").run("UPDATE collections SET version = version + 1000000"); console.log("fait")'
+docker compose run --rm --no-deps server bun -e 'new (require("bun:sqlite").Database)("/data/app.db").run("UPDATE collections SET version = version + ?", [Date.now()]); console.log("fait")'
 docker compose up -d
 ```
 
@@ -445,7 +445,7 @@ dossier (pas de `chown`) :
 ```sh
 docker compose stop server
 docker compose run --rm --no-deps -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/app.db-wal /data/app.db-shm && cp /restore/app-AAAA-MM-JJ.db /data/app.db'
-docker compose run --rm --no-deps server bun -e 'new (require("bun:sqlite").Database)("/data/app.db").run("UPDATE collections SET version = version + 1000000"); console.log("fait")'
+docker compose run --rm --no-deps server bun -e 'new (require("bun:sqlite").Database)("/data/app.db").run("UPDATE collections SET version = version + ?", [Date.now()]); console.log("fait")'
 docker compose up -d
 ```
 
@@ -460,17 +460,19 @@ numérote les suivants comme il l'a déjà fait. Un appareil resté sur la versi
 donc la 6 de la copie, qui est un autre contenu, comme « inchangée » (sa lecture
 `GET /api/collection?version=6`, de même quand un autre onglet annonce un envoi) et garderait son
 contenu d'avant ; son prochain envoi, parti de la 6, serait accepté par-dessus ce qui a été
-enregistré depuis la restauration. Relevée d'un million, la collection n'a plus aucun numéro
-qu'un appareil détienne : il relit la collection restaurée, ou son prochain envoi est refusé (409),
-puis relue, et sa dernière modification est perdue (`docs/compte-et-synchronisation.md`). `bun -e`
-avale les erreurs de SQLite (base introuvable ou verrouillée) sans code d'échec : sans `fait`
-affiché, rien n'est relevé, et on ne lance pas le `up -d`. Le million s'ajoute à ce que porte la
-copie : pour une copie d'avant une restauration déjà faite, davantage (`+ 2000000`, `+ 3000000`…),
-un appareil pouvant garder un numéro déjà relevé.
+enregistré depuis la restauration. Relevée de l'heure en millisecondes (`Date.now()`, environ
+1 800 milliards), la collection n'a plus aucun numéro qu'un appareil détienne : il relit la
+collection restaurée, ou son prochain envoi est refusé (409), puis relue, et sa dernière
+modification est perdue (`docs/compte-et-synchronisation.md`). `bun -e` avale les erreurs de SQLite
+(base introuvable ou verrouillée) sans code d'échec : sans `fait` affiché, rien n'est relevé, et on
+ne lance pas le `up -d`. On ajoute l'heure, et non un nombre fixe, pour que chaque restauration
+relève plus que la précédente, même celle d'une copie plus ancienne : les enregistrements sont
+limités à quelques-uns par seconde, loin d'un par milliseconde.
 
 Le serveur garde aussi, dans `app.db`, une version remplacée de la collection par heure pendant
 30 jours (table `collection_versions`, compressée) : de quoi revenir en arrière après une erreur,
 à la main. Remise dans `collections` (ses `collection` et `shopping`), la ligne reçoit le même
-relèvement, `UPDATE collections SET version = version + 1000000 WHERE user_id = '…'` (par la même
-commande `bun -e`, `fait` à lire), et jamais le numéro de la version reprise : les appareils qui
-le détiennent la verraient « inchangée ».
+relèvement, celui de ce compte seulement : la commande `bun -e` ci-dessus, avec
+`.run("UPDATE collections SET version = version + ? WHERE user_id = ?", [Date.now(), "<id>"])`
+(`fait` à lire), et jamais le numéro de la version reprise : les appareils qui le détiennent la
+verraient « inchangée ».
