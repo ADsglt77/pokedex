@@ -1,0 +1,39 @@
+# À chaque push et chaque pull request : les mêmes contrôles que la construction du VPS (`Dockerfile`,
+# étape `build` : tests, lint, TypeScript, Vite), mais sans toucher au VPS : un échec se voit ici,
+# avant de lancer le déploiement, et non après son `git pull`. Aucun secret ni accès au VPS ; Bun à
+# la version mineure du Dockerfile. Les actions sont à leur version majeure (et non épinglées sur un
+# commit, comme dans `deploy.yml`) : le job n'a aucun secret et un jeton en lecture seule.
+name: Vérifications
+
+on:
+  push:
+  pull_request:
+
+# Lecture du dépôt seulement.
+permissions:
+  contents: read
+
+# Un nouveau push d'une même branche annule la vérification d'avant, devenue sans objet.
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.x
+      - name: Installer les dépendances
+        run: bun install --frozen-lockfile
+      - name: Tests
+        run: bun test
+      # Le lint de la construction : `bun lint` échouerait sur l'import du dépôt `../pokedex-data`
+      # (`scripts/check-data-contracts.ts`), que ni le Dockerfile ni GitHub n'ont.
+      - name: Lint
+        run: bun run lint:docker
+      # `tsc -b` (le type-check), puis Vite.
+      - name: Construction
+        run: bun run build
