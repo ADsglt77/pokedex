@@ -5,9 +5,12 @@
 
 # Les images de l'API des données, gardées sur le disque de nginx : une image ne change jamais
 # (l'API ne réécrit pas un fichier qui existe), chacune ne traverse qu'une fois. Perdues à la
-# reconstruction du conteneur : l'API les redonne, sans rien télécharger. 12 Go : tous les scans,
-# japonais et français, y tiennent (environ 3 Go) avec de la marge.
-proxy_cache_path /var/cache/nginx/images levels=1:2 keys_zone=images:10m max_size=12g
+# reconstruction du conteneur : l'API les redonne, sans rien télécharger. Sur le disque, 12 Go :
+# tous les scans, japonais et français, y tiennent (environ 3 Go) avec de la marge. En clés, 30 Mo :
+# nginx en garde environ 8 000 par Mo, soit 240 000, pour environ 110 000 images (deux tailles par
+# carte, japonaises et françaises, plus les logos et les icônes) ; avec 10 Mo, il évincerait les
+# plus anciennes avant le disque, et « tous y tiennent » serait faux.
+proxy_cache_path /var/cache/nginx/images levels=1:2 keys_zone=images:30m max_size=12g
                  inactive=90d use_temp_path=off;
 
 # Par visiteur : l'adresse que Caddy écrit dans `x-forwarded-for` avant de joindre nginx. Caddy
