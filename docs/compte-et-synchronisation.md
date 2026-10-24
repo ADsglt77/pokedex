@@ -128,33 +128,64 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   d'usage hors ligne, pas de copie à synchroniser (décision de l'utilisateur, octobre 2026). Le
   navigateur lit le document à la connexion (ou au démarrage, avant le premier affichage : sans
   lui, « Le Pokédex ne peut pas s'afficher »), le garde en mémoire, et envoie chaque modification
-  une demi-seconde après, un échange à la fois. Le document est numéroté par le serveur :
-  `PUT /api/collection` `{ account, baseVersion, collection, shopping }` est refusé, 401, si
-  `account` n'est pas le compte de la session (un envoi parti juste après une connexion à un autre
-  compte, sur la même page, n'écrase jamais sa collection ; la connexion vide d'abord la mémoire et
-  les envois en attente, `signIn`), et 409, corps `null`, si
-  le navigateur part d'une autre version que celle du serveur (changée entre-temps par un autre
-  onglet ou un autre appareil ; en avance, la base restaurée d'une sauvegarde) ; testé sur le
-  serveur entier avec 401, 403, une mise à jour, la version remplacée gardée et un document refusé
-  (400), `tests/collection.test.ts`. Après un 409, le navigateur relit la version du serveur, à la
-  place de la sienne : rien n'est écrasé, sa dernière modification est perdue, et le menu du compte
-  le dit (« Rechargée ») ; sans réponse à cette relecture, « Hors ligne », et l'envoi repart 30 s
-  plus tard (refusé, puis relu). Accepté, la réponse donne `{ version }` ; le document passe les contrôles
-  d'un import (`readSent` : refusé, la règle en cause au journal). Une modification d'une autre
-  origine est refusée (403, plus haut) ; au journal, elle dit un réglage à revoir
-  (`BETTER_AUTH_URL`) ou une tentative depuis un autre site. Sans réponse, ou une panne passagère
-  (502 pendant un redémarrage), la modification attend (« Hors ligne ») : elle repart 30 s plus
-  tard, au retour du réseau ou de la page, et quitter la page le demande d'abord (`beforeunload`).
-  Un refus pour de bon (400 et 422 : un document qui ne passe pas les contrôles ; 413 : plus de
-  5 Mo ; 403 : une origine refusée) donne « Envoi refusé », avec sa raison (la règle en cause, relue
-  par le navigateur avec le même code, `documentProblem`) ; rien ne repart tout seul. Le plafond de
-  5 Mo (`MAX_BODY`, `server/app.ts`) tombe vers 16 000 à 18 000 cartes (une carte d'une collection
-  d'extension pèse environ 270 octets), soit 50 à 80 extensions selon leur taille ; au-delà,
-  chaque envoi est refusé (« Envoi refusé » : « elle dépasse 5 Mo ») : plus rien ne s'enregistre
-  tant que le document dépasse le plafond. Au retour sur la page, le document est relu (changé sur
-  un autre appareil), si rien n'attend d'être envoyé ; une modification faite pendant cette
-  relecture n'est pas écrasée : elle part, depuis la version
-  d'avant (changée ailleurs entre-temps : refusée, 409, puis relue, comme plus haut). Le
+  une demi-seconde après, un échange à la fois ; aussitôt si la page passe en arrière-plan (un
+  téléphone peut la geler, puis la fermer, avant la demi-seconde). L'envoi part compressé
+  (`CompressionStream('gzip')`, `Content-Encoding: gzip` : 2 Mo en font 400 Ko), décompressé par
+  le serveur en flux, 413 au-delà de 5 000 000 octets décompressés (`MAX_DOCUMENT`, `types.ts`),
+  sans jamais décompresser plus (une « bombe » gzip, testée) ; un envoi non compressé reste
+  accepté. Son délai grandit avec lui (15 s, plus 10 s par Mo envoyé). Le document est numéroté
+  par le serveur : `PUT /api/collection` `{ account, baseVersion, collection, shopping }` est
+  refusé, 401, si `account` n'est pas le compte de la session (un envoi parti juste après une
+  connexion à un autre compte, sur la même page, n'écrase jamais sa collection ; la connexion vide
+  d'abord la mémoire et les envois en attente, `signIn`), et 409, corps `null`, si le navigateur
+  part d'une autre version que celle du serveur (changée entre-temps par un autre onglet ou un
+  autre appareil ; en avance, la base restaurée d'une sauvegarde). Sauf un envoi renvoyé tel quel
+  après une réponse perdue (délai dépassé, réseau coupé : le serveur l'avait enregistré) : parti
+  de la version d'avant, le même document que celui enregistré, il reçoit cette version, sans
+  rien écrire ni noter ; le navigateur renvoie toujours d'abord, tel quel, un envoi resté sans
+  réponse, puis ce qui a changé depuis (rien de perdu, rien de « Rechargée »). Testé sur le
+  serveur entier avec 401, 403, une mise à jour, la version remplacée gardée, un document refusé
+  (400), un envoi compressé, la bombe, l'envoi renvoyé reconnu et un autre document de la même
+  version toujours refusé (409), `tests/collection.test.ts`. Après un 409, le navigateur relit la
+  version du serveur, à la place de la sienne : rien n'est écrasé, sa dernière modification est
+  perdue, et le menu du compte le dit (« Rechargée », et un toast : « Vos dernières modifications
+  ont été remplacées par celles d'un autre appareil. ») ; sans réponse à cette relecture, « Hors
+  ligne », et l'envoi repart plus tard (refusé, puis relu). Accepté, la réponse donne
+  `{ version }`, et les autres onglets du navigateur l'apprennent (`BroadcastChannel('collection')`
+  : `{ account, version }`) : un onglet sans rien en attente relit alors la collection. Le
+  document passe les contrôles d'un import (`readSent` : refusé, la règle en cause au journal).
+  Une modification d'une autre origine est refusée (403, plus haut) ; au journal, elle dit un
+  réglage à revoir (`BETTER_AUTH_URL`) ou une tentative depuis un autre site. Sans réponse, ou une
+  panne passagère (502 pendant un redémarrage), la modification attend (« Hors ligne », seulement
+  quand une modification attend : une relecture qui échoue sans rien en attente ne change pas
+  l'état) : elle repart au retour du réseau ou de la page, sinon de plus en plus tard (30 s, 60 s,
+  120 s… 5 min au plus), et quitter la page le demande d'abord (`beforeunload`). Un refus pour de
+  bon (400 et 422 : un document qui ne passe pas les contrôles ; 413 : plus de 5 Mo ; 403 : une
+  origine refusée) donne « Envoi refusé », avec sa raison (la règle en cause, relue par le
+  navigateur avec le même code, `documentProblem`) et un toast ; le document refusé ne repart pas
+  tel quel, mais il reste à enregistrer : la déconnexion propose l'export, quitter la page le
+  demande, et il n'est jamais remplacé par celui du serveur au retour sur la page ; seule une
+  nouvelle modification (« Annuler » compris) repart. Le plafond tombe plus tôt qu'on ne croit :
+  une case d'une collection d'extension pèse 320 octets pas encore obtenue, 463 possédée, 566
+  possédée et achetée par une commande (mesuré, octobre 2026) ; le Pokédex compris, 5 Mo font
+  environ 14 000, 9 700 ou 7 950 cases selon leur état, soit 61, 42 ou 34 extensions de 230
+  cartes. Un compte qui progresse franchit donc le plafond sans commencer de collection : passé
+  80 %, le menu du compte le dit (« Votre collection pèse 4,2 Mo sur les 5 Mo que garde le
+  serveur… »), avec un toast une fois par page ; au-delà, chaque envoi est refusé (« elle dépasse
+  5 Mo »). Une session fermée (401, « Reconnectez-vous ») : plus rien ne part, ni ne se relit,
+  jusqu'à « Se reconnecter » ; reconnecté au même compte, ce qui attendait reste et part, depuis sa
+  version (changée ailleurs entre-temps : 409, puis relue) ; avec une modification en attente,
+  « Se reconnecter » prévient d'abord qu'un autre compte la perdrait, avec le bouton d'export. Au
+  retour sur la page, le document est relu (changé sur un autre appareil), si rien n'attend d'être
+  envoyé, et seulement s'il a changé : `GET /api/collection?version=N` ne rend que
+  `{ version, account }` quand le serveur a encore cette version, et rien n'est remplacé
+  (« Annuler » garde ses références, rien ne se redessine). La lecture dit à quel compte est la
+  collection (`account`) : celle d'un autre compte (connecté entre-temps dans un autre onglet) n'est
+  jamais prise, l'état passe à « Reconnectez-vous ». Une modification faite pendant cette
+  relecture n'est pas écrasée : elle part, depuis la version d'avant (changée ailleurs entre-temps :
+  refusée, 409, puis relue, comme plus haut). Testé avec le store tel quel contre le serveur entier
+  (`tests/sync.test.ts`, sans DOM) : le refus, la reconnexion, le retour sur la page, l'autre
+  compte, la réponse perdue, l'envoi compressé, la page en arrière-plan et l'autre onglet. Le
   serveur garde une version remplacée par heure, 30 jours (`collection_versions`, à reprendre à la
   main). Il note au journal ce qui change d'une version à l'autre (`documentChanges`,
   `server/journal.ts`), la version d'avant relue comme un fichier (`readCollection` : un document
@@ -169,9 +200,11 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   (`AccountMenu`, en pied de la barre latérale, ou en icône dans la barre du haut sur petit écran ;
   seulement connecté) montre son pseudo et l'état : enregistrée, enregistrement, hors ligne
   (« Réessayer maintenant »), reconnectez-vous (« Se reconnecter »), rechargée, envoi refusé
-  (avec sa raison) ; puis « Se déconnecter » ; une modification pas encore enregistrée, la
-  déconnexion le demande d'abord, avec un bouton d'export (`ExportCollectionButton`). Se
-  déconnecter vide la mémoire de la page.
+  (avec sa raison), et le poids passé 80 % ; puis « Se déconnecter » ; une modification pas encore
+  enregistrée, la déconnexion le demande d'abord, avec un bouton d'export
+  (`ExportCollectionButton`). Sur téléphone, le menu n'est qu'une icône : « Rechargée », « Envoi
+  refusé » et les 80 % ont aussi leur toast, au passage seulement. Se déconnecter vide la mémoire
+  de la page.
 - Retirés à la demande de l'utilisateur, à ne pas réintroduire sans demande : le compte unique,
   puis les invitations ; la collection « dans ce navigateur » sans compte, sa copie hors ligne et
   le rappel de sauvegarde ; le réglage public ou privé du Pokédex public.

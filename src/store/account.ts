@@ -1,15 +1,20 @@
 /**
  * Le compte connecté et sa collection, gardée par le serveur seul (`/api/collection`,
  * `server/collection.ts`) : lue à la connexion, gardée en mémoire, et chaque modification envoyée
- * une demi-seconde après (un échange à la fois). Rien n'est gardé dans le navigateur : sans réseau,
- * rien ne s'enregistre (le menu du compte le dit, l'envoi repart au retour du réseau ou de la page,
- * et quitter la page le demande d'abord). Chaque envoi part de la version lue (`version`) : changée
- * ailleurs entre-temps (un autre onglet, un autre appareil), le serveur la refuse (409) et l'app
- * relit la sienne, sans rien écraser ; il porte aussi le compte d'où il vient : parti juste après
- * une connexion à un autre compte, le serveur le refuse (401). Au retour sur la page, la collection est relue, si rien
- * n'attend d'être envoyé ; une modification faite pendant cette lecture n'est pas écrasée (`load`).
- * Sans connexion, l'app ne s'ouvre pas : on voit la connexion, ou le Pokédex public d'un compte
- * (`router.tsx`).
+ * compressée une demi-seconde après (un échange à la fois), aussitôt si la page passe en
+ * arrière-plan (un téléphone peut la geler, puis la fermer). Rien n'est gardé dans le navigateur :
+ * sans réseau, rien ne s'enregistre (le menu du compte le dit, l'envoi repart au retour du réseau
+ * ou de la page, et de plus en plus espacé d'ici là ; quitter la page le demande d'abord). Chaque
+ * envoi part de la version lue (`version`) : changée ailleurs entre-temps (un autre onglet, un
+ * autre appareil), le serveur la refuse (409) et l'app relit la sienne, sans rien écraser ; il
+ * porte aussi le compte d'où il vient : parti juste après une connexion à un autre compte, le
+ * serveur le refuse (401). Un envoi resté sans réponse repart d'abord tel quel : déjà enregistré,
+ * le serveur le reconnaît. Refusée pour de bon (« Envoi refusé »), la collection reste à
+ * enregistrer, sans repartir telle quelle. Au retour sur la page, ou quand un autre onglet vient
+ * d'enregistrer, la collection est relue si rien n'attend d'être envoyé, et seulement si elle a
+ * changé ; jamais celle d'un autre compte ; une modification faite pendant cette lecture n'est pas
+ * écrasée (`load`). Sans connexion, l'app ne s'ouvre pas : on voit la connexion, ou le Pokédex
+ * public d'un compte (`router.tsx`).
  */
 
 import { create } from 'zustand'
@@ -26,10 +31,12 @@ import type { AccountUser, CollectionResponse, CollectionSaved } from '@/types'
 /**
  * - `saved` : tout est enregistré ; `saving` : un envoi en cours ;
  * - `offline` : le serveur ne répond pas, la modification attend ;
- * - `expired` : la session est fermée, il faut se reconnecter ;
+ * - `expired` : la session est fermée (ou c'est celle d'un autre compte), il faut se reconnecter ;
+ *   ce qui attend part alors ;
  * - `reloaded` : changée ailleurs, la collection a été relue (la dernière modification d'ici
  *   n'est pas enregistrée) ;
- * - `refused` : le serveur refuse la collection (`refusal` dit pourquoi).
+ * - `refused` : le serveur refuse la collection (`refusal` dit pourquoi) ; elle attend une
+ *   nouvelle modification.
  */
 export type SaveStatus = 'saved' | 'saving' | 'offline' | 'expired' | 'reloaded' | 'refused'
 
@@ -39,49 +46,77 @@ export const useAccountStore = create<{
   status: SaveStatus
   /** Pourquoi le serveur refuse la collection (statut `refused`). */
   refusal: string | null
-}>(() => ({ account: null, status: 'saved', refusal: null }))
+  /** Le poids du dernier document envoyé, en octets, décompressé (0 avant le premier envoi). */
+  weight: number
+}>(() => ({ account: null, status: 'saved', refusal: null, weight: 0 }))
 
 const setStatus = (status: SaveStatus) => useAccountStore.setState({ status })
 
 /** La version du serveur d'où part la collection en mémoire. */
 let version = 0
-/** Les modifications faites, et la dernière enregistrée (ou abandonnée) : égales, rien n'attend. */
+/**
+ * Les modifications faites, et la dernière enregistrée (ou abandonnée : relue après un 409,
+ * déconnexion) : égales, rien n'attend. La dernière refusée pour de bon (`refused`) attend encore,
+ * mais ne repart pas telle quelle.
+ */
 let edits = 0
 let saved = 0
+let refused = 0
 /** La collection relue du serveur : ce n'est pas une modification à envoyer. */
 let loading = false
+/** Le dernier envoi resté sans réponse (peut-être enregistré) : il repart tel quel, avant tout. */
+let unanswered: { sending: number; body: Blob } | null = null
+/** Les essais d'affilée restés sans réponse : le suivant attend d'autant plus. */
+let failures = 0
 
-/** Les échanges avec le serveur, un à la fois ; une erreur (réponse illisible) : hors ligne. */
+/** Une modification attend encore d'être enregistrée (refusée comprise) : à dire avant de partir. */
+export const hasUnsavedChanges = () => edits !== saved
+
+/**
+ * Les échanges avec le serveur, un à la fois. Une erreur (une réponse illisible : un portail Wi-Fi
+ * qui répond à la place du serveur) : « Hors ligne » et un nouvel essai, si une modification
+ * attend ; sinon rien ne change.
+ */
 let queue: Promise<unknown> = Promise.resolve()
 const inTurn = (task: () => Promise<unknown>) =>
   (queue = queue.then(task).catch((error: unknown) => {
     console.error('Échange avec le serveur interrompu', error)
-    setStatus('offline')
+    if (hasUnsavedChanges()) retryLater()
   }))
 
-/** Un appel à l'API ; `null` sans réponse (hors ligne, serveur arrêté). */
-const call = (method: 'GET' | 'PUT', body?: string) =>
-  fetch('/api/collection', {
+/**
+ * Un appel à l'API ; `null` sans réponse (hors ligne, serveur arrêté). Un envoi part compressé
+ * (`gzip`), et son délai grandit avec lui : 15 s, plus 10 s par Mo envoyé (un réseau lent).
+ */
+const call = (method: 'GET' | 'PUT', query = '', body?: Blob) =>
+  fetch(`/api/collection${query}`, {
     method,
     body,
     cache: 'no-store',
-    headers: { 'Content-Type': 'application/json' },
-    signal: AbortSignal.timeout(15_000),
+    headers: body && { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' },
+    signal: AbortSignal.timeout(15_000 + ((body?.size ?? 0) / 1_000_000) * 10_000),
   }).catch(() => null)
 
 /**
- * Relit la collection du serveur, à la place de celle en mémoire ; `false` sans réponse (ou la
- * session fermée : `expired`). Une modification faite pendant la lecture (au retour sur la page)
- * n'est pas écrasée : la collection en mémoire reste, et l'envoi qui attend part de la version
- * d'avant (changée ailleurs entre-temps, le serveur la refuse, 409, et elle est relue).
+ * Relit la collection du serveur, à la place de celle en mémoire ; `false` sans réponse, la session
+ * fermée, ou celle d'un autre compte (connecté entre-temps dans un autre onglet) : `expired`, et
+ * rien n'est remplacé. Sans rien en attente, elle n'est lue que changée depuis la version en
+ * mémoire (`?version=`) : inchangée, rien n'est remplacé (« Annuler » garde ses références, rien ne
+ * se redessine). Une modification faite pendant la lecture n'est pas écrasée : la collection en
+ * mémoire reste, et l'envoi qui attend part de la version d'avant (changée ailleurs entre-temps, le
+ * serveur la refuse, 409, et elle est relue).
  */
-async function load() {
+async function load(account: string) {
   const before = edits
-  const response = await call('GET')
+  const response = await call('GET', hasUnsavedChanges() ? '' : `?version=${version}`)
   if (response?.status === 401) setStatus('expired')
   if (!response?.ok) return false
   const body = (await response.json()) as CollectionResponse
-  if (edits !== before) return true
+  if (body.account !== account) {
+    setStatus('expired')
+    return false
+  }
+  if (edits !== before || body.collection === undefined) return true
   version = body.version
   saved = edits
   loading = true
@@ -94,43 +129,82 @@ async function load() {
   return true
 }
 
+/** Relit la collection, si rien n'attend d'être envoyé (changée sur un autre appareil, un autre onglet). */
+const refresh = (account: string) =>
+  void inTurn(async () => !hasUnsavedChanges() && (await load(account)) && setStatus('saved'))
+
 let retry: ReturnType<typeof setTimeout> | undefined
 
-/** Sans réponse, ou une panne passagère (502 pendant un redémarrage) : l'envoi repart dans 30 s. */
+/**
+ * Sans réponse, ou une panne passagère (502 pendant un redémarrage) : « Hors ligne », et l'envoi
+ * repart de plus en plus tard (30 s, 60 s, 120 s… 5 min au plus) ; au retour du réseau ou de la
+ * page, aussitôt.
+ */
 function retryLater() {
   setStatus('offline')
   clearTimeout(retry)
-  retry = setTimeout(save, 30_000)
+  retry = setTimeout(save, Math.min(30_000 * 2 ** failures++, 300_000))
 }
 
-/** Envoie la collection, si une modification attend. */
-async function push() {
-  const { account } = useAccountStore.getState()
-  if (edits === saved || !account) return
-  const sending = edits
+/** Un document à envoyer, compressé (`gzip`), et son poids décompressé, en octets. */
+async function pack(text: string) {
+  const raw = new Blob([text])
+  const compressed = raw.stream().pipeThrough(new CompressionStream('gzip'))
+  return { body: await new Response(compressed).blob(), weight: raw.size }
+}
+
+/** Un autre onglet de ce navigateur vient d'enregistrer : `{ account, version }`. */
+const channel = new BroadcastChannel('collection')
+
+/**
+ * Envoie la collection, si une modification attend : ni la session fermée (il faut se
+ * reconnecter), ni la collection refusée telle quelle (seule une nouvelle modification repart). Un
+ * envoi resté sans réponse repart d'abord tel quel (déjà enregistré, le serveur le reconnaît), puis
+ * ce qui a changé depuis.
+ */
+async function push(): Promise<void> {
+  const { account, status } = useAccountStore.getState()
+  if (edits === saved || !account || status === 'expired') return
+  if (edits === refused) return setStatus('refused')
   setStatus('saving')
   const document = currentDocument()
-  const body = { account: account.id, baseVersion: version, ...document }
-  const response = await call('PUT', JSON.stringify(body))
-  if (response?.ok) {
-    version = ((await response.json()) as CollectionSaved).version
+  const resent = unanswered !== null
+  if (!unanswered) {
+    const body = { account: account.id, baseVersion: version, ...document }
+    const packed = await pack(JSON.stringify(body))
+    unanswered = { sending: edits, body: packed.body }
+    useAccountStore.setState({ weight: packed.weight })
+  }
+  const { sending } = unanswered
+  const response = await call('PUT', '', unanswered.body)
+  if (!response || response.status >= 500) return retryLater()
+  failures = 0
+  // Refusé sans être lu (la session fermée), ou une réponse illisible (coupée) : l'envoi reste
+  // sans réponse, et repartira tel quel.
+  if (response.status === 401) return setStatus('expired')
+  const answer = response.ok ? ((await response.json()) as CollectionSaved) : null
+  unanswered = null
+  if (answer) {
+    version = answer.version
     saved = sending
+    channel.postMessage({ account: account.id, version })
     if (edits === saved) setStatus('saved')
+    // Renvoyé tel quel : ce qui a changé depuis part à son tour.
+    else if (resent) return push()
     return
   }
-  if (!response || response.status >= 500) return retryLater()
   if (response.status === 409) {
     // La version du serveur, relue à la place de celle d'ici ; une modification faite pendant la
     // lecture part encore (`load`). Sans réponse, l'envoi repartira : refusé, puis relu.
-    if (await load()) {
+    if (await load(account.id)) {
       if (!hasUnsavedChanges()) setStatus('reloaded')
     } else if (useAccountStore.getState().status !== 'expired') retryLater()
     return
   }
-  if (response.status === 401) return setStatus('expired')
-  // Refusée pour de bon, pas renvoyée : la règle en cause (relue ici avec le même code), trop
-  // grosse, ou une origine refusée (l'adresse du site n'est pas celle que connaît le serveur).
-  saved = sending
+  // Refusée pour de bon : la règle en cause (relue ici avec le même code), trop grosse, ou une
+  // origine refusée (l'adresse du site n'est pas celle que connaît le serveur). Elle reste à
+  // enregistrer (la déconnexion propose l'export), mais ne repart pas telle quelle.
+  refused = sending
   useAccountStore.setState({
     status: 'refused',
     refusal:
@@ -156,12 +230,20 @@ const forgetVitrine = (name: string) => forget(`/api/vitrine/${name.toLowerCase(
  * Connecté (démarrage, connexion, création du compte) : ce qu'un autre compte (une session
  * expirée) laissait en mémoire part d'abord, envois en attente compris ; puis la collection du
  * compte est lue, et le compte n'est posé qu'une fois elle lue ; `false` sans elle. Les espèces,
- * que la coquille attendra (`router.tsx`), sont demandées en même temps.
+ * que la coquille attendra (`router.tsx`), sont demandées en même temps. Reconnecté au même compte
+ * (« Se reconnecter », sa session fermée) avec une modification en attente : elle reste, et part
+ * depuis sa version (changée ailleurs entre-temps, le serveur la refuse, 409, et elle est relue).
  */
 export async function signIn(account: AccountUser) {
+  if (account.id === useAccountStore.getState().account?.id && hasUnsavedChanges()) {
+    forgetVitrine(account.name)
+    useAccountStore.setState({ account, status: 'saving' })
+    save()
+    return true
+  }
   await leave()
   void loadSpecies()
-  if (!(await inTurn(load))) return false
+  if (!(await inTurn(() => load(account.id)))) return false
   forgetVitrine(account.name)
   useAccountStore.setState({ account, status: 'saved', refusal: null })
   return true
@@ -198,21 +280,20 @@ export function renameAccount(name: string) {
   useAccountStore.setState({ account: { ...account, name } })
 }
 
-/** Une modification attend encore d'être enregistrée : à dire avant de se déconnecter. */
-export const hasUnsavedChanges = () => edits !== saved
-
 /**
  * Plus de compte en mémoire : ni sa collection (elle reste sur le serveur), ni ses envois en
  * attente.
  */
 async function leave() {
   const { account } = useAccountStore.getState()
-  useAccountStore.setState({ account: null, status: 'saved', refusal: null })
+  useAccountStore.setState({ account: null, status: 'saved', refusal: null, weight: 0 })
   clearTimeout(timer)
   clearTimeout(retry)
   await queue
   version = 0
   saved = edits
+  unanswered = null
+  failures = 0
   loading = true
   replaceDocument({ collection: emptyCollection(), shopping: emptyShopping() })
   loading = false
@@ -250,14 +331,26 @@ useShoppingStore.subscribe((state, previous) => {
   if (state.shopping !== previous.shopping) changed()
 })
 
-// Au retour du réseau, ce qui attend repart ; au retour sur la page, ce qui attend repart, ou la
-// collection est relue (changée sur un autre appareil).
+// Au retour du réseau, ce qui attend repart. La page passe en arrière-plan : ce qui attend part
+// aussitôt. Elle revient : ce qui attend repart, ou la collection est relue (changée sur un autre
+// appareil). Rien tant que la session est fermée.
 window.addEventListener('online', save)
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible' || !useAccountStore.getState().account) return
-  if (hasUnsavedChanges()) save()
-  else void inTurn(async () => !hasUnsavedChanges() && (await load()) && setStatus('saved'))
+  const { account, status } = useAccountStore.getState()
+  if (!account || status === 'expired') return
+  if (hasUnsavedChanges()) {
+    clearTimeout(timer)
+    save()
+  } else if (document.visibilityState === 'visible') refresh(account.id)
 })
+// Un autre onglet vient d'enregistrer : celui-ci relit la collection, si rien n'y attend (sinon,
+// son envoi est refusé, 409, et elle est relue).
+channel.onmessage = ({ data }: MessageEvent<{ account: string; version: number }>) => {
+  const { account, status } = useAccountStore.getState()
+  if (account?.id === data.account && data.version !== version && status !== 'expired') {
+    refresh(account.id)
+  }
+}
 // Quitter la page avec une modification pas encore enregistrée : le navigateur le demande.
 window.addEventListener('beforeunload', (event) => {
   if (hasUnsavedChanges()) event.preventDefault()
