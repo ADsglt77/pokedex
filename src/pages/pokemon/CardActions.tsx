@@ -57,11 +57,16 @@ export function AddCardButton({
   compact?: boolean
 }) {
   const [adding, setAdding] = useState(false)
+  // Une fiche quittée avant (← → d'un Pokémon à l'autre) : rien à préparer.
   useEffect(() => {
     if (compact) return
     const load = () => prepareAddition(species.id)
-    if ('requestIdleCallback' in window) requestIdleCallback(load, { timeout: 2000 })
-    else setTimeout(load, 1000)
+    if ('requestIdleCallback' in window) {
+      const idle = requestIdleCallback(load, { timeout: 2000 })
+      return () => cancelIdleCallback(idle)
+    }
+    const timer = setTimeout(load, 1000)
+    return () => clearTimeout(timer)
   }, [species.id, compact])
   const prepare = () => prepareAddition(species.id)
   return (

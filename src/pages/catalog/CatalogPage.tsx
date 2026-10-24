@@ -1,7 +1,6 @@
 import { Button, Card, EmptyState, Input, Skeleton, Stack } from '@camply/ui'
 import { ArrowLeftRight, Funnel, Library, Plus, Search } from '@camply/ui/icons'
 import { Suspense, use, useCallback, useDeferredValue, useMemo, useRef, useState } from 'react'
-import { flushSync } from 'react-dom'
 import { Link, useSearchParams } from 'react-router'
 import { CardFilters } from '@/components/CardFilters'
 import { CatalogGrid, CatalogGridSkeleton, CatalogTile } from '@/components/CatalogTile'
@@ -27,7 +26,7 @@ import {
   type SetSummary,
 } from '@/lib/card-catalog'
 import { catalogLanguage, catalogParams, searchForm, seriesPath } from '@/lib/filters'
-import { focusAfter } from '@/lib/focus'
+import { focusAfter, focusTileAfter } from '@/lib/focus'
 import { details, formatDate, formatInteger, formatList, pageTitle, plural } from '@/lib/format'
 import { priceText } from '@/lib/prices'
 import { findSeries } from '@/lib/series'
@@ -148,7 +147,8 @@ function SetBrowser({ catalog }: { catalog: CatalogSets }) {
               setParams(catalogParams(set.language, picked.id), { replace: true })
             }
           />
-          <SeriesAction set={set} />
+          {/* Une autre extension : un autre bouton, qui n'attend pas les cartes de la première. */}
+          <SeriesAction key={`${set.language} ${set.id}`} set={set} />
         </div>
       </Card>
       {/* Une autre extension : sa recherche et ses filtres repartent de zéro (un même code existe
@@ -250,18 +250,9 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
   const index = open === null ? -1 : shown.findIndex((card) => card.key === open)
   const searchField = useRef<HTMLInputElement>(null)
   const grid = useRef<HTMLUListElement>(null)
-  /**
-   * La fiche fermée : le focus va à la tuile de la carte montrée en dernier (parcourue avec ← et
-   * →), pas à celle ouverte au départ, à qui la fenêtre le rend en se fermant (un effet : une fois
-   * de plus après elle). Une tuile pas encore dessinée (loin dans la liste) : la fenêtre décide.
-   */
-  const closeCard = () => {
-    const tile = () =>
-      grid.current?.querySelectorAll('li')[index]?.querySelector<HTMLElement>('button')
-    flushSync(() => setOpen(null))
-    tile()?.focus()
-    requestAnimationFrame(() => tile()?.focus())
-  }
+  // La fiche fermée : le focus va à la tuile de la carte montrée en dernier (parcourue avec ← et
+  // →), pas à celle ouverte au départ.
+  const closeCard = () => focusTileAfter(() => setOpen(null), grid, index)
   // Le message et son bouton disparaissent : le focus va à la recherche.
   const clear = () =>
     focusAfter(() => {

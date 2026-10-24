@@ -142,10 +142,13 @@ const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pok
   const wide = useMediaQuery('(min-width: 64rem)')
 
   // À chaque nouvelle page, le focus va au contenu (lecteurs d'écran, navigation au clavier) ; de
-  // retour sur la page d'un lien suivi (une pochette du Pokédex), à ce lien.
+  // retour sur la page d'un lien suivi (une pochette du Pokédex), à ce lien. Sauf s'il est déjà
+  // dans une fenêtre que la page a ouverte d'emblée (`?carte=`, `SeriesGrid`) : ses effets passent
+  // avant celui-ci, et le contenu est derrière elle.
   useEffect(() => {
     if (shownPath.current === pathname) return
     shownPath.current = pathname
+    if (document.activeElement?.closest('[role="dialog"]')) return
     const target = main.current && (returnedLink(main.current, pathname) ?? main.current)
     target?.focus({ preventScroll: true })
   }, [pathname])

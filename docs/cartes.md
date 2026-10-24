@@ -82,7 +82,8 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   référence reste la sienne ; une saisie à la main ne va qu'au Pokémon de la fiche) et y mène le
   focus ; on la vérifie puis l'enregistre (« Enregistrer » attend que la carte soit choisie, ou
   l'onglet de saisie ; une carte que le Pokémon a déjà, `isCatalogCard`, est refusée : « Pikachu a
-  déjà cette carte. » ; une carte qu'un autre de ses Pokémon a déjà lui est ajoutée telle quelle,
+  déjà cette carte. », tant que la référence reste la sienne : corrigée, c'est une saisie, plus
+  refusée ; une carte qu'un autre de ses Pokémon a déjà lui est ajoutée telle quelle,
   statut, prix payé et commandes compris, la fenêtre le dit et n'offre pas « Ajouter comme » :
   « Carte … ajoutée à Pikachu (déjà dans votre collection). » ; une case pas encore obtenue d'une
   collection d'extension, qui n'est encore la carte d'aucun Pokémon (`useSeriesSlot`,
@@ -91,7 +92,10 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   collection ; la fenêtre le dit (« Cette carte fait partie de votre collection Méga Rêve ex : elle
   devient aussi celle de Pikachu, avec son statut. »), sans « Ajouter comme » : « Carte … ajoutée à
   Pikachu (déjà dans votre collection Méga Rêve ex). »). « Modifier la carte » n'a que la saisie : choisir une autre carte, ce serait
-  lui transmettre le statut, le prix payé et les commandes de celle-ci. Le catalogue n'est qu'une
+  lui transmettre le statut, le prix payé et les commandes de celle-ci. Une carte qui est une case
+  d'une collection d'extension (`seriesOf`) se corrige de même ; la fenêtre prévient seulement
+  (octobre 2026 : ni langue figée, ni code d'une autre extension refusé) : « Elle fait partie de
+  votre collection Méga Rêve ex : la modifier change aussi sa case. » Le catalogue n'est qu'une
   aide : la carte enregistrée est une carte saisie comme les autres (`manual:<uuid>`). La saisie a
   sa langue (`useCardDraft.language`, `CardFields` : son propre `LanguageSwitch` et « Carte
   japonaise » / « Carte française ») : celle de la carte corrigée, japonaise pour une nouvelle, ou

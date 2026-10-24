@@ -21,7 +21,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   reste la marque et l'action principale, pas une alerte ; le choix d'un `SegmentedControl` y est un
   bouton blanc en relief ; `--flag-*` : les couleurs des drapeaux de l'interrupteur des langues
   et de la langue d'une carte (`LanguageFlag`), les mêmes dans les deux thèmes, et leur liseré,
-  qui détache le blanc d'un fond blanc ou jaune).
+  qui détache le blanc d'un fond blanc ou jaune ; `--type-*` : la pastille du type d'un Pokémon,
+  `TypeChip`, des tons pastel, les mêmes dans les deux thèmes ; `config/pokedex.ts` n'a que leurs
+  noms).
   Le site s'appelle **PokéCodex** (cette graphie) : le nom à côté du logo
   (la coquille, les pages seules, celles du compte, la page d'erreur), le titre des onglets
   (« Pikachu – PokéCodex », `pageTitle`), le manifeste et l'aperçu d'un lien (`index.html`,
@@ -102,8 +104,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   marquée « Commencée » et mène à sa page ; une autre commence sa collection
   (`useStartCollection`) : ses cartes chargées (le bouton attend, un second clic ne la commence pas
   deux fois, le magasin non plus), la collection annoncée avec « Annuler » (« Collection Méga Rêve
-  ex commencée : 230 cartes. »), puis sa page ouverte ; sans ses cartes (l'API ne répond pas) : un
-  message, rien de commencé, et un nouvel essai les redemande. La page d'une collection
+  ex commencée : 230 cartes. »), puis sa page ouverte, si l'utilisateur est encore sur la page qui
+  l'a lancée (partie ailleurs, ou au Catalogue passée à une autre extension, dont le bouton est un
+  autre, clé par extension : elle reste commencée et annoncée, sans l'arracher à sa page) ; sans
+  ses cartes (l'API ne répond pas) : un message, rien de commencé, et un nouvel essai les
+  redemande. La page d'une collection
   (`SeriesPage`, `/collections/M6A`, `?langue=fr`) : en tête son nom et le drapeau de sa langue, son
   code et le jour où elle a été commencée, « Supprimer la collection » ; puis son logo (au-dessus
   de ses chiffres quand la page a moins de 56rem) et ses chiffres (`seriesProgress` : cartes
@@ -120,16 +125,24 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   pour un dresseur), « Je possède cette carte » et « Marquer comme commandée », le prix payé et la
   confirmation pour quitter « possédée » (`CardStatusControls`, les mêmes que sur la fiche d'un
   Pokémon), son prix Cardmarket et sa courbe (`PricePanel`) ; chaque action annoncée avec
-  « Annuler ». Le lien d'une carte ailleurs dans l'app (`cardPath`, plus bas) ouvre sa fenêtre
-  d'emblée : `?carte=<id>` (`seriesPath` avec la carte), lu par `seriesCard` (seulement une case
-  de la collection ; sinon, aucune fenêtre). « Supprimer la collection » demande confirmation, qui
+  « Annuler ». Le statut d'une carte se dit de même partout où l'utilisateur voit les siennes
+  (`statusLabel`, `lib/format.ts` : la grille, cette fenêtre, la fiche d'un Pokémon, le
+  Catalogue) : « Possédée », « Commandée », et sans statut « À acheter », comme la liste d'achats
+  et « Ajouter comme » ; le Pokédex public, qui ne dit rien des achats, dit « à débloquer »
+  (`publicStatusLabel`). Le lien d'une carte ailleurs dans l'app (`cardPath`, plus bas) ouvre sa
+  fenêtre d'emblée : `?carte=<id>` (`seriesPath` avec la carte), lu par `seriesCard` dans
+  `SeriesGrid` (seulement une case de la collection ; sinon, aucune fenêtre) ; fermée, l'adresse
+  perd `carte` (sans remonter la page) : un rechargement ou « Précédent » ne la rouvre pas, comme
+  une fenêtre ouverte depuis sa tuile. « Supprimer la collection » demande confirmation, qui
   dit ce qui reste (possédées, dans le compte, et au Pokédex pour celles d'un Pokémon ; commandées
   ou dans une commande, comme cartes seules ; ajoutées seules, telles quelles) et ce qui part (les
   cartes à acheter), d'après `seriesRemoval` ; la suppression est annoncée avec
   « Annuler » (« Collection Méga Rêve ex supprimée. »). Une collection inconnue (une autre
   extension, ou une autre langue) : la page introuvable. Une collection qui disparaît sous sa page
   (supprimée, son début annulé par « Annuler », supprimée sur un autre appareil) ramène aux
-  Collections (`Navigate`, qui remplace l'adresse). Le Pokédex : recherche, filtres rapides de
+  Collections (`Navigate`, qui remplace l'adresse) ; de même un début annulé avant que sa page,
+  chargée à la demande, ne s'affiche (`useStartCollection` l'ouvre avec l'état de navigation
+  `started`). Le Pokédex : recherche, filtres rapides de
   possession avec leur nombre (les autres filtres appliqués), les autres filtres dans un panneau
   (génération, type, carte), chacun rappelé en étiquette retirable ; quand tout ne tient pas sur
   une ligne, les filtres rapides passent dessous (sur téléphone, ils défilent de côté). Achats :
@@ -261,7 +274,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   `AppShell` : le `Progress` indéterminé de camply, sans fond, montré après 0,3 s). La fenêtre
   d'une carte est préparée dès que le pointeur ou le focus arrive sur « Modifier la carte » ou
   « Ajouter une carte » (`AddCardButton`, avec les cartes japonaises du Pokémon ; sur une fiche
-  sans carte, aussi quand le navigateur est libre), et une roue dit son ouverture si elle
+  sans carte, aussi quand le navigateur est libre, ce qui est annulé si la fiche est quittée
+  avant : parcourir les fiches avec ← et → ne prépare rien), et une roue dit son ouverture si elle
   tarde. Le client Better Auth non plus (`lib/auth.ts`, à part de `lib/account.ts` que lit le
   démarrage) : seules la connexion, l'inscription et Réglages › Mon compte l'importent, la
   déconnexion le charge à la demande. Une donnée chargée à la demande et lue par `use()` passe par
@@ -301,7 +315,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   garde). De retour sur une page d'où un lien a été suivi (une pochette du Pokédex,
   une carte de la liste d'achats), le focus revient à ce lien (`returnedLink` de `useFollowLinks`,
   la coquille) ; la fiche d'une carte du catalogue fermée, il va à la tuile de la carte montrée en
-  dernier (parcourue avec ← et →), pas à celle ouverte au départ. Le nombre de résultats est
+  dernier (parcourue avec ← et →), pas à celle ouverte au départ ; la fenêtre d'une carte d'une
+  collection fermée, à sa tuile, même ouverte d'emblée par `?carte=` (`focusTileAfter`,
+  `lib/focus.ts` : la fenêtre le rendrait sinon au document). Une page qui ouvre une fenêtre
+  d'emblée la garde : la coquille ne mène pas le focus au contenu, derrière elle, quand il est
+  déjà dans une fenêtre. Le nombre de résultats est
   annoncé (`aria-live`) dans le Pokédex, la liste d'achats, le catalogue, la fenêtre d'ajout et
   celle des extensions. « Annuler » se lance aussi par Ctrl+Z (⌘Z) tant que son toast est affiché
   (`useNotify` ; pas dans un champ, ni avec une fenêtre ouverte) : au clavier, le toast, rendu à la

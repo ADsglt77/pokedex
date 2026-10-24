@@ -24,6 +24,7 @@ import { LanguageSwitch } from '@/components/LanguageSwitch'
 import { ADD_AS_LABELS, ADDED_AS } from '@/config/shopping'
 import { usePokedex } from '@/hooks/usePokedex'
 import { toOptions } from '@/lib/format'
+import { seriesOf } from '@/lib/series'
 import { speciesNames } from '@/lib/species'
 
 /**
@@ -31,7 +32,8 @@ import { speciesNames } from '@/lib/species'
  * ou française, qui remplit la saisie, ou la saisir à la main ; une carte qu'il a déjà est
  * refusée, une carte déjà celle d'un autre de ses Pokémon n'est pas recopiée : il s'y ajoute ; une
  * case pas encore obtenue d'une collection d'extension non plus : elle devient une carte de ses
- * Pokémon, avec son statut), ou la corriger (`card`) : sa saisie seulement. Une autre carte ne
+ * Pokémon, avec son statut), ou la corriger (`card`) : sa saisie seulement (une case d'une
+ * collection d'extension prévient que sa case change avec elle). Une autre carte ne
  * remplace pas celle-ci : son statut, son prix payé et ses commandes lui appartiennent. Montée
  * seulement quand la fenêtre est ouverte.
  */
@@ -54,10 +56,13 @@ export function CardForm({
   // Ce Pokémon (`id`) a-t-il déjà cette carte du catalogue (même code, ou même id Cardmarket) ?
   const holds = (id: number, listed: CatalogCard) =>
     entryById.get(id)!.cards.some((view) => isCatalogCard(view.card, listed))
-  // La carte choisie est déjà l'une des siennes : l'ajouter ferait un doublon.
-  const duplicate = picked !== null && holds(species.id, picked)
   // La carte choisie, tant que la référence reste la sienne ; sinon, c'est une saisie.
   const listed = picked && draft.reference.trim() === picked.reference ? picked : null
+  // La carte choisie est déjà l'une des siennes : l'ajouter ferait un doublon. Sa référence
+  // corrigée, c'est une saisie : plus un doublon.
+  const duplicate = listed !== null && holds(species.id, listed)
+  // Corrigée, une case d'une collection d'extension le reste : la fenêtre le dit.
+  const series = useCollectionStore((state) => card && seriesOf(state.collection, card.id))
   // Les Pokémon qui recevront la carte : choisie dans le catalogue, tous les siens (TAG TEAM : une
   // seule carte, achetée une fois), sauf ceux qui l'ont déjà ; saisie à la main, celui-ci.
   const receivers =
@@ -165,7 +170,15 @@ export function CardForm({
       }
     >
       {card ? (
-        fields
+        <Stack gap={5}>
+          {series && (
+            <Alert
+              tone="warn"
+              title={`Elle fait partie de votre collection ${series.name} : la modifier change aussi sa case.`}
+            />
+          )}
+          {fields}
+        </Stack>
       ) : (
         <Tabs value={tab} defaultValue="catalogue" onChange={setTab}>
           <TabList>

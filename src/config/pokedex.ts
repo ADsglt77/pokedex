@@ -1,4 +1,4 @@
-/** Le Pokédex national : générations, couleurs des types, illustrations officielles (PokéAPI). */
+/** Le Pokédex national : générations, noms des types, illustrations officielles (PokéAPI). */
 
 import type { GenerationId, PokemonTypeId } from '@/types'
 
@@ -41,25 +41,26 @@ export const GENERATION_OPTIONS = [
   })),
 ]
 
-export const POKEMON_TYPES: Record<PokemonTypeId, { label: string; color: string }> = {
-  normal: { label: 'Normal', color: '#C9C7B6' },
-  fire: { label: 'Feu', color: '#F0A987' },
-  water: { label: 'Eau', color: '#9CC3EE' },
-  electric: { label: 'Électrik', color: '#F2DC8A' },
-  grass: { label: 'Plante', color: '#A8D9A0' },
-  ice: { label: 'Glace', color: '#B5E3E6' },
-  fighting: { label: 'Combat', color: '#DDA193' },
-  poison: { label: 'Poison', color: '#C9A6DD' },
-  ground: { label: 'Sol', color: '#DEC59A' },
-  flying: { label: 'Vol', color: '#BFC8F2' },
-  psychic: { label: 'Psy', color: '#F2A9C0' },
-  bug: { label: 'Insecte', color: '#C8D989' },
-  rock: { label: 'Roche', color: '#CFC198' },
-  ghost: { label: 'Spectre', color: '#B3A9D6' },
-  dragon: { label: 'Dragon', color: '#A9A6EE' },
-  dark: { label: 'Ténèbres', color: '#A99F99' },
-  steel: { label: 'Acier', color: '#BFCBD4' },
-  fairy: { label: 'Fée', color: '#F1BEDD' },
+/** Le nom français de chaque type ; sa couleur est un jeton de `styles/theme.css` (`--type-fire`…). */
+export const POKEMON_TYPES: Record<PokemonTypeId, string> = {
+  normal: 'Normal',
+  fire: 'Feu',
+  water: 'Eau',
+  electric: 'Électrik',
+  grass: 'Plante',
+  ice: 'Glace',
+  fighting: 'Combat',
+  poison: 'Poison',
+  ground: 'Sol',
+  flying: 'Vol',
+  psychic: 'Psy',
+  bug: 'Insecte',
+  rock: 'Roche',
+  ghost: 'Spectre',
+  dragon: 'Dragon',
+  dark: 'Ténèbres',
+  steel: 'Acier',
+  fairy: 'Fée',
 }
 
 // Les images des Pokémon, de PokéAPI, copiées par l'API des données.

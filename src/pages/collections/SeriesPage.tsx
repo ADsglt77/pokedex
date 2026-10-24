@@ -1,7 +1,7 @@
 import { Button, Card, Progress, Stat } from '@camply/ui'
 import { Trash2 } from '@camply/ui/icons'
 import { useState } from 'react'
-import { Navigate, useParams, useSearchParams } from 'react-router'
+import { Navigate, useLocation, useParams, useSearchParams } from 'react-router'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { LanguageFlag } from '@/components/LanguageSwitch'
 import { PageHeader } from '@/components/PageHeader'
@@ -11,7 +11,7 @@ import { SetLogo } from '@/components/SetLogo'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { useStatSize } from '@/hooks/useStatSize'
 import { cardLanguage } from '@/lib/collection'
-import { catalogLanguage, seriesCard } from '@/lib/filters'
+import { catalogLanguage } from '@/lib/filters'
 import {
   details,
   formatDate,
@@ -37,11 +37,14 @@ import styles from './SeriesPage.module.css'
  * toutes ses cartes (`SeriesGrid`), chacune ouvrant sa fenêtre, celle de `?carte=` ouverte
  * d'emblée (`seriesCard` : le lien d'une carte, `cardPath`). Une collection inconnue : la page
  * introuvable. Une collection qui disparaît sous la page (supprimée ici, son début annulé par
- * « Annuler », supprimée sur un autre appareil) ramène aux Collections.
+ * « Annuler », supprimée sur un autre appareil) ramène aux Collections ; de même un début annulé
+ * avant que la page ne s'affiche (l'adresse dit `started`, `useStartCollection`).
  */
 export function SeriesPage() {
   const { set = '' } = useParams()
   const [params] = useSearchParams()
+  // Ouverte à l'instant par le début de sa collection (`useStartCollection`).
+  const started = (useLocation().state as { started?: boolean } | null)?.started === true
   const language = catalogLanguage(params)
   const collection = useCollectionStore((state) => state.collection)
   const series = findSeries(collection, set, language)
@@ -49,7 +52,9 @@ export function SeriesPage() {
   const key = `${language} ${set}`
   const [shown, setShown] = useState<string | null>(null)
   if (series && shown !== key) setShown(key)
-  if (!series) return shown === key ? <Navigate to="/collections" replace /> : <NotFoundPage />
+  if (!series) {
+    return shown === key || started ? <Navigate to="/collections" replace /> : <NotFoundPage />
+  }
 
   // Une clé par collection : une carte ouverte, ou les cartes déjà dessinées, ne passent pas d'une
   // collection à l'autre (l'historique mène de l'une à l'autre sans changer de page).
@@ -70,12 +75,7 @@ export function SeriesPage() {
       <SeriesSummary collection={collection} series={series} />
       <section className={styles.cards}>
         <h2 className={styles.heading}>Ses cartes</h2>
-        <SeriesGrid
-          collection={collection}
-          series={series}
-          linked
-          opened={seriesCard(params, series)}
-        />
+        <SeriesGrid collection={collection} series={series} linked />
       </section>
     </div>
   )

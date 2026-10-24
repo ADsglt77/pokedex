@@ -25,6 +25,26 @@
   --flag-fr-blue: #0055a4;
   --flag-fr-red: #ef4135;
   --flag-edge: rgb(0 0 0 / 0.35);
+  /* Les pastilles des types d'un Pokémon (`TypeChip`) : des tons pastel, les mêmes dans les deux
+     thèmes (cerclées, pour que les plus claires se voient sur le blanc). */
+  --type-normal: #c9c7b6;
+  --type-fire: #f0a987;
+  --type-water: #9cc3ee;
+  --type-electric: #f2dc8a;
+  --type-grass: #a8d9a0;
+  --type-ice: #b5e3e6;
+  --type-fighting: #dda193;
+  --type-poison: #c9a6dd;
+  --type-ground: #dec59a;
+  --type-flying: #bfc8f2;
+  --type-psychic: #f2a9c0;
+  --type-bug: #c8d989;
+  --type-rock: #cfc198;
+  --type-ghost: #b3a9d6;
+  --type-dragon: #a9a6ee;
+  --type-dark: #a99f99;
+  --type-steel: #bfcbd4;
+  --type-fairy: #f1bedd;
   /* Le sprite grisé d'un Pokémon sans carte (`CardArt`) : sur fond sombre, il ressort de lui-même. */
   --empty-sprite-opacity: 0.35;
   --empty-sprite-opacity-large: 0.5;

@@ -152,10 +152,23 @@ export const formatDexNumber = (id: number) => `N°\u00a0${String(id).padStart(4
 const STATUS_LABELS: Record<CardStatus | 'none', string> = {
   owned: 'Possédée',
   ordered: 'Commandée',
-  none: 'Non possédée',
+  none: 'À acheter',
 }
 
+/**
+ * Le statut d'une carte, le même mot partout où l'utilisateur voit les siennes (la fiche d'un
+ * Pokémon, la grille d'une collection d'extension et la fenêtre d'une de ses cartes, le
+ * Catalogue) : « Possédée », « Commandée », et sans statut « À acheter », comme la liste d'achats
+ * qui la compte et « Ajouter comme ».
+ */
 export const statusLabel = (status: CardStatus | null) => STATUS_LABELS[status ?? 'none']
+
+/**
+ * Le statut d'une carte pour un visiteur du Pokédex public, qui ne dit rien des achats (et ne
+ * reçoit pas « commandée ») : « Possédée », sinon « À débloquer ».
+ */
+export const publicStatusLabel = (status: CardStatus | null) =>
+  status === 'owned' ? STATUS_LABELS.owned : 'À débloquer'
 
 /**
  * Ce que coûte de quitter « possédée » (`CardStatusControls`, retirer une carte possédée) : la date

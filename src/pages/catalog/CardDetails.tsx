@@ -23,9 +23,8 @@ import { addCard } from '@/store/collection'
 import type { CardStatus } from '@/types'
 import styles from './CardDetails.module.css'
 
-/** « possédée », « commandée », « à acheter ». */
-const statusText = (status: CardStatus | null) =>
-  status ? statusLabel(status).toLowerCase() : 'à acheter'
+/** « possédée », « commandée », « à acheter » (`statusLabel`). */
+const statusText = (status: CardStatus | null) => statusLabel(status).toLowerCase()
 
 /**
  * Où en est la carte dans la collection : la carte de la collection qui est celle-ci (`mine`),

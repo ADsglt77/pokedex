@@ -1,7 +1,8 @@
 /**
  * Le focus au clavier : où il va quand une action retire son propre bouton d'une liste
- * (`keepFocusInList`) ou de la page (`focusAfter`), quand un formulaire refuse un enregistrement
- * (`focusFirstError`), et quand un raccourci de la page ne s'applique pas (`shortcutBlocked`).
+ * (`keepFocusInList`) ou de la page (`focusAfter`), quand se ferme la fenêtre d'une tuile
+ * (`focusTileAfter`), quand un formulaire refuse un enregistrement (`focusFirstError`), et quand
+ * un raccourci de la page ne s'applique pas (`shortcutBlocked`).
  */
 
 import type { RefObject } from 'react'
@@ -41,6 +42,25 @@ export function keepFocusInList(
 export function focusAfter(action: () => void, target: RefObject<HTMLElement | null>) {
   flushSync(action)
   target.current?.focus()
+}
+
+/**
+ * La fenêtre d'une carte d'une grille de tuiles (`ul`), fermée par `close` : le focus va au bouton
+ * de la tuile `index` (la carte montrée en dernier). La fenêtre, en se fermant, le rend à
+ * l'élément actif à son ouverture : une autre tuile (parcourue avec ← et →), ou le document pour
+ * une fenêtre ouverte d'emblée (par l'adresse). `close` passe par `flushSync` : la tuile le
+ * reprend après elle, et une fois de plus à l'image suivante. Une tuile pas encore dessinée (loin
+ * dans la liste) : la fenêtre décide.
+ */
+export function focusTileAfter(
+  close: () => void,
+  list: RefObject<HTMLElement | null>,
+  index: number,
+) {
+  const tile = () => list.current?.children[index]?.querySelector<HTMLElement>('button')
+  flushSync(close)
+  tile()?.focus()
+  requestAnimationFrame(() => tile()?.focus())
 }
 
 /**

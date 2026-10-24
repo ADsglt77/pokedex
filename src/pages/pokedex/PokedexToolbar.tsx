@@ -41,9 +41,7 @@ const CARD_OPTIONS = [
 
 const TYPE_OPTIONS: { value: PokemonTypeId | ''; label: string }[] = [
   { value: '', label: 'Tous les types' },
-  ...Object.entries(POKEMON_TYPES)
-    .map(([value, { label }]) => ({ value: value as PokemonTypeId, label }))
-    .sort((a, b) => a.label.localeCompare(b.label, 'fr')),
+  ...toOptions(POKEMON_TYPES).sort((a, b) => a.label.localeCompare(b.label, 'fr')),
 ]
 
 interface PokedexToolbarProps {
@@ -103,7 +101,7 @@ export function PokedexToolbar({
   if (filters.type) {
     tags.push({
       key: 'type',
-      label: `Type ${POKEMON_TYPES[filters.type].label}`,
+      label: `Type ${POKEMON_TYPES[filters.type]}`,
       remove: () => setFilters({ type: null }),
     })
   }
