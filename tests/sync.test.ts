@@ -11,8 +11,9 @@
  * nginx) font réessayer, jamais « Envoi refusé » ; une modification faite pendant la
  * compression d'un envoi part aussi ; les envois partent compressés, ou tels quels sans
  * `CompressionStream` ; la page passée en arrière-plan envoie aussitôt ce qui attend ; un autre
- * onglet qui enregistre fait relire la collection. Le navigateur est simulé (`window`, `document`,
- * `fetch` vers le serveur) ; ni interface, ni DOM. On attend l'état voulu (`until`), jamais une
+ * onglet qui enregistre fait relire la collection ; une modification faite pendant cette relecture
+ * n'affiche jamais « Enregistrée » tant qu'elle attend. Le navigateur est simulé (`window`,
+ * `document`, `fetch` vers le serveur) ; ni interface, ni DOM. On attend l'état voulu (`until`), jamais une
  * durée fixe, sauf pour vérifier que rien ne se passe (`quietly` : trop court, le test passerait à
  * tort, il n'échouerait jamais à tort).
  */
@@ -54,10 +55,17 @@ const leavingWarns = () => {
 /**
  * Le navigateur : sa session (`cookie`) ; `loseNextAnswer` : le prochain envoi arrive au serveur,
  * mais sa réponse se perd (délai dépassé, réseau coupé) ; `failNextPut` : le prochain envoi
- * n'arrive pas au serveur, et reçoit ce statut (502 d'un relais, 400). `exchanges` : chaque échange
- * avec `/api/collection`, dans l'ordre (« GET ?version=3 », « PUT gzip »).
+ * n'arrive pas au serveur, et reçoit ce statut (502 d'un relais, 400) ; `duringNextGet` : ce qui
+ * se passe dans la page pendant la prochaine lecture. `exchanges` : chaque échange avec
+ * `/api/collection`, dans l'ordre (« GET ?version=3 », « PUT gzip »).
  */
-const browser = { cookie: '', loseNextAnswer: false, failNextPut: 0, exchanges: [] as string[] }
+const browser = {
+  cookie: '',
+  loseNextAnswer: false,
+  failNextPut: 0,
+  duringNextGet: null as (() => void) | null,
+  exchanges: [] as string[],
+}
 
 /**
  * `store/account.ts`, chargé par une adresse calculée, que TypeScript ne suit pas : il parle au
@@ -101,6 +109,11 @@ beforeAll(async () => {
     if (init?.method === 'PUT' && browser.loseNextAnswer) {
       browser.loseNextAnswer = false
       throw new TypeError('Réponse perdue')
+    }
+    if (init?.method === 'GET' && browser.duringNextGet) {
+      const during = browser.duringNextGet
+      browser.duringNextGet = null
+      during()
     }
     return response
   }) as typeof fetch)
@@ -407,5 +420,27 @@ describe('store/account.ts : rien de perdu sans un mot, rien d’écrasé', () =
     channel.close()
     await until(() => cardsInMemory().includes('onglet'))
     expect(cardsInMemory()).toEqual(['a', 'onglet'])
+  })
+
+  test('une modification faite pendant la relecture : « Enregistrée » n’est pas affiché tant qu’elle attend', async () => {
+    const { cookie } = await signedIn('Lecture')
+    change('a')
+    await until(isSaved)
+    // Une modification refusée (409, changée ailleurs) : relue, « Rechargée ».
+    await elsewhere(cookie, 'ailleurs')
+    change('b')
+    await until(() => status() === 'reloaded')
+    // Changée ailleurs encore : le retour sur la page la relit, et une modification arrive pendant
+    // la lecture (sans minuterie : seul ce que fait le test l'enverrait).
+    await elsewhere(cookie, 'encore')
+    browser.duringNextGet = () => withoutTimers(() => addCard('pendant'))
+    showPage()
+    await until(() => browser.duringNextGet === null)
+    await quietly()
+    expect(store.hasUnsavedChanges()).toBe(true)
+    expect(status()).toBe('reloaded')
+    // Elle part ensuite, depuis la version d'avant (changée ailleurs : refusée, puis relue).
+    store.save()
+    await until(() => !store.hasUnsavedChanges())
   })
 })

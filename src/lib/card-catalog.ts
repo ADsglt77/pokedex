@@ -355,14 +355,16 @@ const loads = (image: CardImage) =>
 
 /**
  * L'image de la carte dans cette langue : celle que le catalogue donne à cette référence, telle
- * quelle, comme l'ajoute la page Catalogue (son chemin ne change jamais d'image ; pas encore copiée
- * par l'API des données, elle s'affiche dès qu'elle l'est) ; hors du catalogue, celle que la
- * référence désigne (`cardImage`), si elle se charge (un chemin déduit peut ne mener à rien) ;
- * `null` sans image. La même promesse pour la même langue et la même référence (ce qu'attend
- * `use`). `retry`, au moment d'enregistrer, redemande une image qui a échoué : une panne passagère
- * ne doit pas compter pour une image absente. Sans réponse du catalogue en 15 s
- * (`CATALOG_TIMEOUT`, ses séries puis celle de la carte), ou de l'image en 10 s, elle compte pour
- * absente : l'enregistrement, qui l'attend, ne reste pas bloqué.
+ * quelle, comme l'ajoute la page Catalogue (son chemin, série et rang, ne change pas d'ordinaire
+ * d'image ; pas encore copiée par l'API des données, elle s'affiche dès qu'elle l'est). Une série
+ * renumérotée par la source en change : la carte enregistrée garde son chemin, le rang d'avant, et
+ * montre le scan de sa nouvelle occupante jusqu'à ce que son image soit choisie de nouveau
+ * (`docs/cartes.md`). Hors du catalogue, celle que la référence désigne (`cardImage`), si elle se
+ * charge (un chemin déduit peut ne mener à rien) ; `null` sans image. La même promesse pour la même
+ * langue et la même référence (ce qu'attend `use`). `retry`, au moment d'enregistrer, redemande une
+ * image qui a échoué : une panne passagère ne doit pas compter pour une image absente. Sans réponse
+ * du catalogue en 15 s (`CATALOG_TIMEOUT`, ses séries puis celle de la carte), ou de l'image en
+ * 10 s, elle compte pour absente : l'enregistrement, qui l'attend, ne reste pas bloqué.
  */
 export function findCardImage(
   reference: string,

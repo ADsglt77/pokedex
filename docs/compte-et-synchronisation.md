@@ -133,8 +133,9 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   la préparation d'un envoi n'est pas comptée avec lui : elle part ensuite (testé). L'envoi part
   compressé (`CompressionStream('gzip')`, `Content-Encoding: gzip` : 2 Mo en font 400 Ko),
   décompressé par le serveur en flux, 413 au-delà de 5 000 000 octets décompressés
-  (`MAX_DOCUMENT`, `types.ts`), sans jamais décompresser plus (une « bombe » gzip, testée) ; et
-  seulement avec une session : sans elle, 401 sans rien décompresser (le `parse` d'Elysia passe
+  (`MAX_DOCUMENT`, `types.ts`), sans jamais décompresser plus (une « bombe » gzip, testée : 1 Go
+  décompressé pour 1 Mo envoyé, suivi d'octets illisibles, qui feraient un 400 si elle était lue
+  jusqu'au bout) ; et seulement avec une session : sans elle, 401 sans rien décompresser (le `parse` d'Elysia passe
   avant la macro `auth` ; la session y est lue sans être renouvelée, le cookie renouvelé repart
   avec la réponse, testé). Le corps compressé (5 Mo au plus, comme un corps non compressé) y est
   lu d'abord, tel quel : sous `Bun.serve`, le lire en flux après la lecture de la session levait
@@ -149,8 +150,15 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   connexion à un autre compte, sur la même page, n'écrase jamais sa collection ; la connexion vide
   d'abord la mémoire et les envois en attente, `signIn`), et 409, corps `null`, si le navigateur
   part d'une autre version que celle du serveur (changée entre-temps par un autre onglet ou un
-  autre appareil ; en avance, la base restaurée d'une sauvegarde). Sauf un envoi renvoyé tel quel
-  après une réponse perdue (délai dépassé, réseau coupé : le serveur l'avait enregistré) : parti
+  autre appareil). Une base restaurée d'une sauvegarde ne le garantit pas d'elle-même : ses
+  numéros se répètent, un appareil resté sur la version 6 d'avant la lirait « inchangée » dans la
+  copie, aussi à 6 mais d'un autre contenu, et son envoi, parti de la 6, serait accepté par-dessus
+  ce qui a été enregistré depuis. Toute restauration d'`app.db` finit donc par relever chaque
+  numéro d'un million (`UPDATE collections SET version = version + 1000000`, README :
+  « Restaurer une sauvegarde », le retour du code, ou une ligne de `collection_versions` remise à
+  la main ; jamais le numéro de la ligne reprise) : aucun appareil n'en détient un pareil, il
+  relit la collection restaurée ou son envoi est refusé (409, puis relue). Sauf un envoi renvoyé tel
+  quel après une réponse perdue (délai dépassé, réseau coupé : le serveur l'avait enregistré) : parti
   de la version d'avant, le même document que celui enregistré, il reçoit cette version, sans
   rien écrire ni noter ; le navigateur renvoie toujours d'abord, tel quel, un envoi resté sans
   réponse, puis ce qui a changé depuis (rien de perdu, rien de « Rechargée » ; ce renvoi refusé,
@@ -200,7 +208,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   collection (`account`) : celle d'un autre compte (connecté entre-temps dans un autre onglet) n'est
   jamais prise, l'état passe à « Reconnectez-vous ». Une modification faite pendant cette
   relecture n'est pas écrasée : elle part, depuis la version d'avant (changée ailleurs entre-temps :
-  refusée, 409, puis relue, comme plus haut). Testé avec le store tel quel contre le serveur entier
+  refusée, 409, puis relue, comme plus haut), et le menu n'affiche pas « Enregistrée » tant qu'elle
+  attend (testé). Testé avec le store tel quel contre le serveur entier
   (`tests/sync.test.ts`, sans DOM ; il attend chaque état attendu, et ne patiente un moment que
   pour vérifier que rien ne se passe) : le refus, la
   reconnexion, le retour sur la page, l'autre compte, la réponse perdue (et son renvoi refusé), le
@@ -223,8 +232,10 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   (« Réessayer maintenant »), reconnectez-vous (« Se reconnecter »), rechargée, envoi refusé
   (avec sa raison), et le poids passé 80 % ; puis « Se déconnecter » ; une modification pas encore
   enregistrée, la déconnexion le demande d'abord, avec un bouton d'export
-  (`ExportCollectionButton`). Sur téléphone, le menu n'est qu'une icône : « Rechargée », « Envoi
-  refusé » et les 80 % ont aussi leur toast, au passage seulement. Se déconnecter vide la mémoire
+  (`ExportCollectionButton`). Sur téléphone, le menu n'est qu'une icône : « Rechargée » et « Envoi
+  refusé » ont aussi leur toast, au passage seulement (jamais à l'affichage du menu) ; les 80 %
+  aussi, une fois par page, à l'affichage du menu si la collection est déjà lourde ou au passage du
+  seuil (`warnHeavy`, `AccountMenu`). Se déconnecter vide la mémoire
   de la page.
 - Retirés à la demande de l'utilisateur, à ne pas réintroduire sans demande : le compte unique,
   puis les invitations ; la collection « dans ce navigateur » sans compte, sa copie hors ligne et

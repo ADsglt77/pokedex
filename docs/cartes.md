@@ -198,11 +198,19 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   cette référence, dans la langue donnée (celle de la carte, `cardLanguage` ; lue dans sa série :
   `/api/catalog/sets`, puis `/api/catalog/sets/<code>`, sous `fr/` en français), **prise telle
   quelle**, sans la charger, comme l'ajoute « Ajouter à la collection » de la page Catalogue : son
-  chemin ne change jamais d'image, et une image pas encore copiée par l'API des données (les
-  françaises, les heures qui suivent leur arrivée) s'affiche dès qu'elle l'est (d'ici là, la carte
-  de substitution) ; une carte que le catalogue dit sans image n'en a pas ; un catalogue sans
-  réponse en 15 s (`CATALOG_TIMEOUT`, ses séries puis celle de la carte) la compte pour absente,
-  pour ne pas bloquer l'enregistrement. Hors du catalogue, celle que la référence désigne (un
+  chemin (la série et le rang de la carte au catalogue) ne change pas d'ordinaire d'image, et une
+  image pas encore copiée par l'API des données (les françaises, les heures qui suivent leur
+  arrivée) s'affiche dès qu'elle l'est (d'ici là, la carte de substitution). Seule une
+  renumérotation d'une série par la source (jamais vue : aucun rang changé du 19 au 24 octobre
+  2026) change l'image d'un chemin : l'API recopie alors le scan de chaque carte déplacée, dont le
+  fichier est celui de la carte qui avait ce rang. Une carte déjà enregistrée garde son chemin, le
+  rang d'avant : celles à ce rang ou après le point d'insertion montrent le scan de leur nouvelle
+  occupante, jusqu'à ce que leur image soit choisie de nouveau (le journal de la tâche `catalog`
+  de l'API compte ces cartes, `docs/donnees.md` de son dépôt, « Une série renumérotée ») ; un
+  navigateur garde l'ancien scan de ce chemin jusqu'à ce que son cache se vide (`immutable`), le
+  nginx du site jusqu'à son prochain déploiement ; une carte que le catalogue dit sans image n'en a
+  pas ; un catalogue sans réponse en 15 s (`CATALOG_TIMEOUT`, ses séries puis celle de la carte) la
+  compte pour absente, pour ne pas bloquer l'enregistrement. Hors du catalogue, celle que la référence désigne (un
   chemin déduit, qui peut ne mener à rien), seulement si elle se charge (sans réponse en 10 s :
   absente, de même) ; la saisie le dit, sans nommer de source (aucun crédit dans l'app, à la demande de l'utilisateur, octobre
   2026 : CLAUDE.md). Un échec est redemandé à l'enregistrement (panne passagère), et une image

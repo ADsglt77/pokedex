@@ -286,7 +286,9 @@ voies : corriger en avant (un correctif déployé : la plus sûre), ou remettre 
 d'avant la livraison (« Une copie à la demande », section Sauvegardes) en perdant tout ce que les
 comptes ont enregistré depuis, comme l'API des données pour sa base. La remettre se fait avec le
 code d'avant déjà en place, jamais en démarrant le code d'après sur la copie : celle de « Restaurer
-une sauvegarde », sans passer par son `up -d` d'avant.
+une sauvegarde », sans passer par son `up -d` d'avant, et avec son relèvement des numéros de
+version (l'avant-dernière commande : sans lui, un appareil resté sur la version 6 lirait celle de
+la copie, aussi à 6 et d'avant, « inchangée » ; `fait` doit s'afficher avant le `up -d`).
 
 ```sh
 git checkout <commit d'avant>
@@ -294,8 +296,15 @@ docker compose build
 docker compose stop server
 mkdir -p sauvegardes && cp ~/avant-collections.db sauvegardes/
 docker compose run --rm --no-deps -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/app.db-wal /data/app.db-shm && cp /restore/avant-collections.db /data/app.db'
+docker compose run --rm --no-deps server bun -e 'new (require("bun:sqlite").Database)("/data/app.db").run("UPDATE collections SET version = version + 1000000"); console.log("fait")'
 docker compose up -d
 ```
+
+Dans les deux cas (le code seul, ou le code et la copie), **exportez, puis rechargez les onglets
+ouverts** : un onglet resté sur le code d'après ne sait plus enregistrer contre le serveur d'avant.
+Sa lecture ne dit plus à quel compte est la collection (il affiche « Reconnectez-vous »), et son
+envoi compressé est refusé (400). Avant de recharger, « Exporter ma collection » (Réglages ›
+Sauvegarde), dans un onglet qui a des modifications pas encore enregistrées.
 
 ## Mettre à jour un VPS en place (la livraison d'octobre 2026)
 
@@ -315,7 +324,7 @@ sauvegardes). Une fois passée, cette section se retire.
    docker compose exec server bun -e 'console.log(JSON.stringify(new (require("bun:sqlite").Database)("/data/app.db", { readonly: true }).query("select username from user where lower(username) = ?").all("collections")))'
    ```
    `[]` : rien à faire. `[{"username":"collections"}]` : ce compte change de pseudo (Réglages ›
-   Compte & partage › Mon compte) avant la livraison du site. **Aucun affichage n'est pas `[]`** :
+   Compte & partage › Mon compte) avant la livraison du site. **Une sortie vide n'est pas `[]`** :
    `bun -e` avale les erreurs de SQLite (serveur arrêté, base introuvable) sans code d'échec ; il
    faut alors corriger (`docker compose ps`) et relancer la commande, jusqu'à lire `[]` ou une ligne.
 3. **Déployer l'API des données** (le workflow de son dépôt), puis lancer `cards` dans un conteneur
@@ -335,8 +344,9 @@ sauvegardes). Une fois passée, cette section se retire.
    n'est pas un préalable : il continue pendant le déploiement du site. Garde-fou, pas preuve :
    `deploy/deploy.sh` échoue en rouge, avant de toucher au site (l'ancien reste en ligne), si
    `/api/catalog/fr/sets` ou le scan d'une carte de la série française la plus récente qui en a un
-   ne répondent pas (ou si le catalogue ne note aucune image française). Pour passer outre, à la main sur le VPS (la clé restreinte du workflow ne reçoit
-   aucune variable) : `SKIP_FRENCH_CHECK=1 sh deploy/deploy.sh`.
+   ne répondent pas (ou si le catalogue ne note aucune image française). Pour passer outre, à la
+   main sur le VPS (la clé restreinte du workflow ne reçoit aucune variable) :
+   `SKIP_FRENCH_CHECK=1 sh deploy/deploy.sh`.
 5. **Copier `app.db`, juste avant le site** (« Une copie à la demande », section Sauvegardes), sous
    le nom `avant-collections.db`, puis hors du conteneur, dans `~/` (en lisant ce que ces commandes
    affichent : sans `copie faite`, elle n'existe pas). C'est ce qu'on remettrait pour
@@ -415,20 +425,27 @@ docker compose exec server bun -e 'new (require("bun:sqlite").Database)("/data/a
 docker compose cp server:/backups/avant-collections.db ~/
 ls -l ~/avant-collections.db
 docker compose exec server ls -l /data/app.db
-docker compose exec server rm /backups/avant-collections.db   # quand elle ne sert plus
 ```
 
 Ce qu'il faut lire : `copie faite` (rien d'affiché : pas de copie, ne pas continuer), puis, pour
 `~/avant-collections.db`, une date et une heure d'à l'instant et une taille du même ordre que celle
 d'`app.db` (un peu moins, la copie est compacte). Une date d'avant, ou un fichier vide : recommencer.
 
+Quand elle ne sert plus (la livraison est passée, rien à remettre), on la retire du volume :
+
+```sh
+docker compose exec server rm /backups/avant-collections.db
+```
+
 **Restaurer une sauvegarde** : arrêter le serveur, remettre la copie à la place de la base, sans
-les fichiers `-wal` et `-shm` de l'ancienne, puis redémarrer. En tant que `bun`, l'utilisateur
-du conteneur, à qui appartiennent la base et son dossier (pas de `chown`) :
+les fichiers `-wal` et `-shm` de l'ancienne, relever les numéros de version (voir plus bas), puis
+redémarrer. En tant que `bun`, l'utilisateur du conteneur, à qui appartiennent la base et son
+dossier (pas de `chown`) :
 
 ```sh
 docker compose stop server
 docker compose run --rm --no-deps -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/app.db-wal /data/app.db-shm && cp /restore/app-AAAA-MM-JJ.db /data/app.db'
+docker compose run --rm --no-deps server bun -e 'new (require("bun:sqlite").Database)("/data/app.db").run("UPDATE collections SET version = version + 1000000"); console.log("fait")'
 docker compose up -d
 ```
 
@@ -436,10 +453,24 @@ Pour un retour du code (« Revenir à la version d'avant »), ne pas finir par c
 sur le code d'après : remettre d'abord le code d'avant, comme le fait « Revenir à la version
 d'avant » (plus haut), pour que le serveur démarre dessus, sur la copie.
 
-Après une restauration d'`app.db`, un appareil resté sur une version plus récente voit son
-prochain envoi refusé (409) : il relit celle du serveur, la restaurée, et sa dernière modification
-est perdue (`docs/compte-et-synchronisation.md`).
+**Le relèvement des numéros de version termine toute restauration d'`app.db`** (celle-ci, celle
+d'un retour du code, ou une version de la collection remise à la main) : il doit dépasser tout
+numéro qu'un appareil a pu garder. La copie date d'avant des enregistrements, et le serveur y
+numérote les suivants comme il l'a déjà fait. Un appareil resté sur la version 6 d'avant lirait
+donc la 6 de la copie, qui est un autre contenu, comme « inchangée » (sa lecture
+`GET /api/collection?version=6`, de même quand un autre onglet annonce un envoi) et garderait son
+contenu d'avant ; son prochain envoi, parti de la 6, serait accepté par-dessus ce qui a été
+enregistré depuis la restauration. Relevée d'un million, la collection n'a plus aucun numéro
+qu'un appareil détienne : il relit la collection restaurée, ou son prochain envoi est refusé (409),
+puis relue, et sa dernière modification est perdue (`docs/compte-et-synchronisation.md`). `bun -e`
+avale les erreurs de SQLite (base introuvable ou verrouillée) sans code d'échec : sans `fait`
+affiché, rien n'est relevé, et on ne lance pas le `up -d`. Le million s'ajoute à ce que porte la
+copie : pour une copie d'avant une restauration déjà faite, davantage (`+ 2000000`, `+ 3000000`…),
+un appareil pouvant garder un numéro déjà relevé.
 
 Le serveur garde aussi, dans `app.db`, une version remplacée de la collection par heure pendant
 30 jours (table `collection_versions`, compressée) : de quoi revenir en arrière après une erreur,
-à la main.
+à la main. Remise dans `collections` (ses `collection` et `shopping`), la ligne reçoit le même
+relèvement, `UPDATE collections SET version = version + 1000000 WHERE user_id = '…'` (par la même
+commande `bun -e`, `fait` à lire), et jamais le numéro de la version reprise : les appareils qui
+le détiennent la verraient « inchangée ».

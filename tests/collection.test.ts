@@ -1,13 +1,14 @@
 /**
  * La garde du serveur contre l'écrasement (`server/collection.ts`) : un appareil qui envoie une
  * collection partie d'une version dépassée (un autre onglet, un autre appareil l'a changée), ou en
- * avance (la base restaurée), est refusé (409), et la version du serveur reste telle quelle ; sans
- * session rien ne passe, ni d'un autre site (une modification, sur toute adresse, avant même la
- * lecture de son corps ; une lecture, si) ; un document abîmé est refusé (400). Une erreur ici écraserait les
- * commandes d'un autre appareil. La lecture dit à quel compte est la collection, et seulement sa
+ * avance (une base restaurée, dont le README fait relever les numéros), est refusé (409), et la
+ * version du serveur reste telle quelle ; sans session rien ne passe, ni d'un autre site (une
+ * modification, sur toute adresse, avant même la lecture de son corps ; une lecture, si) ; un
+ * document abîmé est refusé (400). Une erreur ici écraserait les commandes d'un autre appareil. La lecture dit à quel compte est la collection, et seulement sa
  * version quand l'appareil a déjà celle-là (`?version=`) ; un envoi compressé (`gzip`, celui du
  * site) est enregistré, aussi derrière un vrai `Bun.serve`, mais refusé (413) au-delà de 5 000 000
- * octets décompressés, sans jamais décompresser plus ; sans session, 401 sans rien décompresser
+ * octets décompressés, sans jamais décompresser plus (une bombe de 1 Go suivie d'octets illisibles :
+ * lue jusqu'au bout, elle ferait un 400) ; sans session, 401 sans rien décompresser
  * (le cookie renouvelé d'une session repart toujours) ; une panne en lisant la session, 500 (pas
  * le 400 d'un document refusé) ; un envoi renvoyé tel quel après une réponse perdue est reconnu (200, la même
  * version), un autre parti de la même version reste refusé (409). Chaque compte ne touche qu'à sa
@@ -429,11 +430,14 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
 
   test('plus de 5 000 000 octets une fois décompressée : 413, sans décompresser plus', async () => {
     const before = await stored()
-    // Une « bombe » : 50 Go une fois décompressée (500 membres gzip de 100 Mo de zéros), 48 Mo
-    // compressés. Décompressée en entier, il faudrait des dizaines de secondes, et autant de Go.
+    // Une « bombe » : 1 Go une fois décompressée (dix membres gzip de 100 Mo de zéros), 1 Mo
+    // compressé (le build Docker du VPS la garde en mémoire : pas davantage), suivie de trois octets
+    // qui ne sont pas du gzip. Décompressée jusqu'au bout, elle lèverait une erreur (400) ; arrêtée
+    // au plafond, elle n'y arrive jamais (413), quelle que soit la vitesse de la machine.
     const member = Bun.gzipSync(new Uint8Array(100_000_000))
-    const bomb = new Uint8Array(member.length * 500)
-    for (let i = 0; i < 500; i++) bomb.set(member, i * member.length)
+    const bomb = new Uint8Array(member.length * 10 + 3)
+    for (let i = 0; i < 10; i++) bomb.set(member, i * member.length)
+    bomb.set([1, 2, 3], member.length * 10)
     const start = performance.now()
     const response = await gzipped(bomb)
     expect(response.status).toBe(413)

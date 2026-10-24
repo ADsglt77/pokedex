@@ -1,6 +1,7 @@
 /**
  * La liste d'achats (toutes les cartes du compte à acheter : celles des Pokémon, favorites ou non,
- * et les cases des collections d'extensions, dresseurs compris, chacune une fois) et la prochaine
+ * et les cases des collections d'extensions, dresseurs compris, chacune une fois ; pas une carte
+ * sans Pokémon ni collection, que rien ne veut : elle reste hors de la liste) et la prochaine
  * commande qui la lit : budget, une carte par Pokémon pour les cartes du Pokédex (une case
  * d'extension en est libre), la moins chère d'abord, ajouts et retraits.
  */

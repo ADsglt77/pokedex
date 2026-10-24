@@ -150,9 +150,15 @@ async function load(account: string) {
   return true
 }
 
-/** Relit la collection, si rien n'attend d'être envoyé (changée sur un autre appareil, un autre onglet). */
+/**
+ * Relit la collection, si rien n'attend d'être envoyé (changée sur un autre appareil, un autre
+ * onglet). « Enregistrée » seulement si rien n'a été modifié pendant la lecture.
+ */
 const refresh = (account: string) =>
-  void inTurn(async () => !hasUnsavedChanges() && (await load(account)) && setStatus('saved'))
+  void inTurn(
+    async () =>
+      !hasUnsavedChanges() && (await load(account)) && !hasUnsavedChanges() && setStatus('saved'),
+  )
 
 let retry: ReturnType<typeof setTimeout> | undefined
 
