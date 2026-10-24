@@ -91,7 +91,7 @@ function VitrineSkeleton() {
         </div>
       </div>
       <div className="stat-grid">
-        {['unlocked', 'value', 'chosen', 'regions'].map((stat) => (
+        {['unlocked', 'value', 'wanted', 'regions'].map((stat) => (
           <Skeleton key={stat} variant="rect" className={styles.statSkeleton} />
         ))}
       </div>
@@ -140,10 +140,10 @@ function VitrineContent({ pseudo }: { pseudo: string }) {
   )
 }
 
-type Shown = 'all' | 'unlocked' | 'chosen'
+type Shown = 'all' | 'unlocked' | 'wanted'
 
-/** Une carte choisie, pas encore obtenue : l'objectif. */
-const isChosen = (entry: PokedexEntry) => entry.card !== null && !entry.unlocked
+/** Un Pokémon à obtenir : une carte choisie, aucune obtenue. L'objectif. */
+const isWanted = (entry: PokedexEntry) => entry.card !== null && !entry.unlocked
 
 /**
  * `owner` : le pseudo du compte, pour « Le Pokédex de … » ; `prices` : ceux de ses cartes
@@ -162,11 +162,11 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
   const [shown, setShown] = useState<Shown>('all')
   // Sur téléphone, la réglette n'est qu'une image : la liste des régions la remplace.
   const narrow = useMediaQuery('(max-width: 40rem)')
-  const chosen = entries.filter(isChosen).length
+  const wanted = entries.filter(isWanted).length
   const visible =
     shown === 'all'
       ? entries
-      : entries.filter(shown === 'unlocked' ? (entry) => entry.unlocked : isChosen)
+      : entries.filter(shown === 'unlocked' ? (entry) => entry.unlocked : isWanted)
   const updated = formatDate(collection.updatedAt)
 
   return (
@@ -185,8 +185,7 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
           <title>{heading}</title>
           <h1 className={styles.title}>{heading}</h1>
           <p className="muted">
-            Une carte par Pokémon&nbsp;: {unlockedOf(progress, 'Pokémon')}.
-            {updated && ` Mis à jour le ${updated}.`}
+            {unlockedOf(progress, 'Pokémon')}.{updated && ` Mis à jour le ${updated}.`}
             {collection.series.length > 0 && (
               // Le classeur compte plus de 1 000 pochettes : les collections sont loin sous lui.
               <>
@@ -215,10 +214,10 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
         />
         <Stat
           size={statSize}
-          label="Cartes choisies"
+          label="Pokémon à obtenir"
           icon={<Layers size={18} />}
-          value={formatInteger(chosen)}
-          hint="pas encore obtenues"
+          value={formatInteger(wanted)}
+          hint="une carte choisie, aucune obtenue"
         />
         <Stat
           size={statSize}
@@ -255,7 +254,7 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
             options={[
               { value: 'all', label: 'Tous' },
               { value: 'unlocked', label: `Débloqués (${formatInteger(progress.unlocked)})` },
-              { value: 'chosen', label: `Choisies (${formatInteger(chosen)})` },
+              { value: 'wanted', label: `À obtenir (${formatInteger(wanted)})` },
             ]}
             value={shown}
             onChange={setShown}
@@ -278,8 +277,8 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
         ) : (
           <EmptyState
             icon={<Layers size={22} />}
-            title="Aucune carte choisie à obtenir"
-            description="Les cartes choisies, pas encore obtenues, apparaissent ici."
+            title="Aucun Pokémon à obtenir"
+            description="Les Pokémon dont une carte est choisie, aucune obtenue, apparaissent ici."
             actions={<Button onClick={() => setShown('all')}>Voir tous les Pokémon</Button>}
           />
         )}

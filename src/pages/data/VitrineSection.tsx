@@ -30,7 +30,7 @@ export function VitrineSection() {
     <DataSection
       id="public"
       title="Pokédex public"
-      description="Ce que voit tout visiteur, en lecture seule : votre progression, vos Pokémon débloqués et les cartes que vous avez choisies, la valeur de la collection au prix du jour et la courbe des Pokémon débloqués. Jamais vos prix payés, vos commandes ni votre budget."
+      description="Ce que voit tout visiteur, en lecture seule : votre progression, vos Pokémon débloqués et les cartes que vous avez choisies, la valeur de la collection au prix du jour, la courbe des Pokémon débloqués et vos collections d’extensions, avec toutes leurs cartes. Jamais vos prix payés, vos commandes ni votre budget."
     >
       <Stack gap={2} align="start">
         <p>

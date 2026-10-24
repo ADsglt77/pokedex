@@ -121,7 +121,7 @@ export function PlannerPanel({
         className={page.panel}
         icon={<Sparkles size={22} />}
         title="Rien à planifier pour l’instant"
-        description="L’assistant choisit parmi les cartes de vos Pokémon pas encore obtenues : choisissez-les dans le catalogue ou sur la fiche d’un Pokémon."
+        description="L’assistant choisit parmi les cartes de vos Pokémon et de vos collections d’extensions pas encore obtenues : choisissez-les dans le catalogue ou sur la fiche d’un Pokémon, ou commencez la collection d’une extension."
       />
     )
   }

@@ -203,8 +203,8 @@ function DeleteForm() {
         <Stack gap={3} align="start">
           <Input
             ref={field}
-            label="Supprimer mon compte"
-            hint="Votre mot de passe, pour confirmer."
+            label="Mot de passe"
+            hint="Pour confirmer la suppression du compte."
             type="password"
             autoComplete="current-password"
             required

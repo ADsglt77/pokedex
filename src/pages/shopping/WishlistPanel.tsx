@@ -64,7 +64,7 @@ export function WishlistPanel({
         className={page.panel}
         icon={<ListChecks size={22} />}
         title="Rien à acheter pour l’instant"
-        description="Choisissez les cartes de vos Pokémon, dans le catalogue ou sur leur fiche : celles que vous n’avez pas encore arrivent ici."
+        description="Les cartes de vos Pokémon et de vos collections d’extensions que vous n’avez pas encore arrivent ici : choisissez-les dans le catalogue ou sur la fiche d’un Pokémon, ou commencez la collection d’une extension."
         actions={
           <>
             <Button asChild>

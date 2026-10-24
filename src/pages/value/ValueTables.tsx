@@ -186,15 +186,16 @@ export function CompletionTable({
           ),
         },
         {
-          // Les cartes commandées n'y sont pas : elles comptent dans les commandes.
-          key: 'toBuy',
-          header: 'À acheter',
+          // Des Pokémon, sans carte compris ; ceux dont une carte est commandée n'y sont pas : ils
+          // comptent dans les commandes.
+          key: 'toUnlock',
+          header: 'À débloquer',
           align: 'right',
           cell: ({ cost }) => (
             <TableCount
               count={cost.priced + cost.unpriced + cost.noCard}
-              one="à acheter"
-              many="à acheter"
+              one="à débloquer"
+              many="à débloquer"
             />
           ),
         },
