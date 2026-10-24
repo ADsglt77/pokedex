@@ -48,7 +48,7 @@ import { seriesOf } from '@/lib/series'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
 import { loadPriceHistories, usePrices, usePricesMissing } from '@/store/prices'
-import type { PokemonCard } from '@/types'
+import type { CardPriceHistory, PokemonCard } from '@/types'
 import { CardsTable, CompletionTable } from './ValueTables'
 import styles from './ValuePage.module.css'
 import { useStatSize } from '@/hooks/useStatSize'
@@ -163,10 +163,11 @@ function Evolution({ owned }: { owned: PokemonCard[] }) {
     <Panel
       title="Évolution"
       description="Jour par jour, sur la période choisie."
-      // Sans courbe, pas de période à choisir : la valeur et les Pokémon débloqués en ont une dès
-      // qu'une carte est possédée, les dépenses dès la première commande.
+      // Sans courbe, pas de période à choisir : la valeur en a une dès qu'une carte est possédée
+      // (un dresseur ou une énergie aussi, qui ne débloque aucun Pokémon), les Pokémon débloqués
+      // dès le premier, les dépenses dès la première commande.
       actions={
-        (unlocks.length > 0 || spending.length > 0) && (
+        (owned.length > 0 || unlocks.length > 0 || spending.length > 0) && (
           <ChartPeriodControl value={period} onChange={setPeriod} />
         )
       }
@@ -198,20 +199,25 @@ function Evolution({ owned }: { owned: PokemonCard[] }) {
   )
 }
 
+/** Sans carte reliée à Cardmarket, aucun historique : toujours le même tableau (`useMemo`). */
+const NO_HISTORIES: CardPriceHistory[] = []
+
 function CollectionChart({ cards, period }: { cards: PokemonCard[]; period: ChartPeriod }) {
   // Les cartes sans id Cardmarket n'ont pas d'historique : elles ne pèsent pas sur la courbe (sans
   // aucune, rien à demander). La même carte Cardmarket possédée pour deux Pokémon compte deux fois,
   // comme dans la valeur du jour ; son historique n'est demandé qu'une fois.
   const ids = cards.flatMap((card) => card.cardmarket ?? []).sort((a, b) => a - b)
-  const histories = ids.length > 0 ? use(loadPriceHistories(ids)) : []
-  if (!histories) {
+  const histories = ids.length > 0 ? use(loadPriceHistories(ids)) : NO_HISTORIES
+  // Calculée une fois par réponse (la même liste rend le même tableau) : ni la période ni les prix
+  // du jour ne la changent, et des milliers d'historiques prennent plus de 100 ms.
+  const series = useMemo(() => histories && collectionHistory(histories), [histories])
+  if (!series) {
     return (
       <p className="muted">
         L’historique des prix n’est pas disponible pour le moment : réessayez dans quelques minutes.
       </p>
     )
   }
-  const series = collectionHistory(histories)
   const window = periodWindow(period, today(), series[0]?.date ?? null)
   const points = inWindow(series, window)
   return (
