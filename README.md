@@ -284,9 +284,18 @@ d'extension, une case de dresseur ou d'énergie (il exige un Pokémon à chaque 
 sans rien dire les favorites et les collections d'extension au premier envoi qu'il accepte. Deux
 voies : corriger en avant (un correctif déployé : la plus sûre), ou remettre la copie d'`app.db`
 d'avant la livraison (« Une copie à la demande », section Sauvegardes) en perdant tout ce que les
-comptes ont enregistré depuis, comme l'API des données pour sa base. Pour la remettre : l'arrêt du
-serveur, `mkdir -p sauvegardes && cp ~/avant-collections.db sauvegardes/`, puis la commande de
-« Restaurer une sauvegarde » avec ce nom de fichier, avant de déployer le code d'avant.
+comptes ont enregistré depuis, comme l'API des données pour sa base. La remettre se fait avec le
+code d'avant déjà en place, jamais en démarrant le code d'après sur la copie : celle de « Restaurer
+une sauvegarde », sans passer par son `up -d` d'avant.
+
+```sh
+git checkout <commit d'avant>
+docker compose build
+docker compose stop server
+mkdir -p sauvegardes && cp ~/avant-collections.db sauvegardes/
+docker compose run --rm --no-deps -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/app.db-wal /data/app.db-shm && cp /restore/avant-collections.db /data/app.db'
+docker compose up -d
+```
 
 ## Mettre à jour un VPS en place (la livraison d'octobre 2026)
 
@@ -303,10 +312,12 @@ sauvegardes). Une fois passée, cette section se retire.
    compte qui le porte déjà perdrait son Pokédex public (404). Lecture seule, sur le VPS, dans le
    clone du site :
    ```sh
-   docker compose exec server bun -e 'console.log(new (require("bun:sqlite").Database)("/data/app.db", { readonly: true }).query("select username from user where lower(username) = ?").all("collections"))'
+   docker compose exec server bun -e 'console.log(JSON.stringify(new (require("bun:sqlite").Database)("/data/app.db", { readonly: true }).query("select username from user where lower(username) = ?").all("collections")))'
    ```
-   `[]` : rien à faire. Une ligne : ce compte change de pseudo (Réglages › Compte & partage › Mon
-   compte) avant la livraison du site.
+   `[]` : rien à faire. `[{"username":"collections"}]` : ce compte change de pseudo (Réglages ›
+   Compte & partage › Mon compte) avant la livraison du site. **Aucun affichage n'est pas `[]`** :
+   `bun -e` avale les erreurs de SQLite (serveur arrêté, base introuvable) sans code d'échec ; il
+   faut alors corriger (`docker compose ps`) et relancer la commande, jusqu'à lire `[]` ou une ligne.
 3. **Déployer l'API des données** (le workflow de son dépôt), puis lancer `cards` dans un conteneur
    ponctuel, comme le dit son README. Entre les deux déploiements, l'ancien site continue de
    tourner : ses routes japonaises sont inchangées, seule la copie d'images à la demande a disparu
@@ -315,17 +326,20 @@ sauvegardes). Une fois passée, cette section se retire.
    site montrerait « Catalogue indisponible » et des pochettes de substitution pour tout le
    français. Le journal le dit :
    ```sh
-   docker logs pokedex-data-cards 2>&1 | grep -E '^\[[0-9]/3\]|Terminée|Échec'
+   docker logs pokedex-data-cards 2>&1 | grep -aE '\[[0-9]/3\]|Terminée|Échec|ignorée'
    ```
-   Prêt quand `[3/3] Historique des prix` suit deux `✓ Terminée en …` (un `✗ Échec` : relancer
-   `cards`, qui ne refait que ce qui manque, comme son README). L'historique, 21 heures de plus,
+   Prêt quand `[3/3] Historique des prix` suit deux `✓ Terminée en …` (un `✗ Échec` ou un
+   `✗ Étape ignorée` : relancer `cards`, qui ne refait que ce qui manque, comme son README). Le
+   motif n'est pas ancré : avec un terminal (`docker compose run -d` en SSH en alloue souvent un), le
+   journal colore les titres d'étape. L'historique, 21 heures de plus,
    n'est pas un préalable : il continue pendant le déploiement du site. Garde-fou, pas preuve :
    `deploy/deploy.sh` échoue en rouge, avant de toucher au site (l'ancien reste en ligne), si
-   `/api/catalog/fr/sets` ou le scan de la dernière carte de la série française la plus récente ne
-   répondent pas. Pour passer outre, à la main sur le VPS (la clé restreinte du workflow ne reçoit
+   `/api/catalog/fr/sets` ou le scan d'une carte de la série française la plus récente qui en a un
+   ne répondent pas (ou si le catalogue ne note aucune image française). Pour passer outre, à la main sur le VPS (la clé restreinte du workflow ne reçoit
    aucune variable) : `SKIP_FRENCH_CHECK=1 sh deploy/deploy.sh`.
 5. **Copier `app.db`, juste avant le site** (« Une copie à la demande », section Sauvegardes), sous
-   le nom `avant-collections.db`, puis hors du conteneur, dans `~/`. C'est ce qu'on remettrait pour
+   le nom `avant-collections.db`, puis hors du conteneur, dans `~/` (en lisant ce que ces commandes
+   affichent : sans `copie faite`, elle n'existe pas). C'est ce qu'on remettrait pour
    revenir en arrière, et plus elle date, plus un retour fait perdre d'enregistrements : d'où
    maintenant, et non avec l'étape 2 (la copie quotidienne, qui date de 24 h au plus et que rien ne
    rafraîchit, ne suffit pas).
@@ -389,14 +403,24 @@ irremplaçable :
 par SQLite pendant que le serveur tourne, dans le volume `backups`, puis sortie du conteneur. La
 sauvegarde du jour ne la remplace pas : un seul fichier par jour, jamais rafraîchi, de 24 heures
 au plus. Son nom ne doit pas commencer par `app-` : la purge des 30 copies quotidiennes ne
-supprime que les `app-….db`, celle-ci reste jusqu'à ce qu'on la retire (SQLite refuse d'écrire sur
-un fichier qui existe : le retirer avant de la refaire).
+supprime que les `app-….db`, celle-ci reste jusqu'à ce qu'on la retire.
+
+SQLite refuse d'écrire sur un fichier qui existe, et `bun -e` avale l'erreur : sans un mot, avec un
+code de sortie 0. Une ancienne copie du même nom serait alors sortie du conteneur comme si elle
+était fraîche. D'où le `rm -f` d'abord, et un affichage qui n'a lieu que si la copie est faite :
 
 ```sh
-docker compose exec server bun -e 'new (require("bun:sqlite").Database)("/data/app.db").run("VACUUM INTO ?", ["/backups/avant-collections.db"])'
+docker compose exec server rm -f /backups/avant-collections.db
+docker compose exec server bun -e 'new (require("bun:sqlite").Database)("/data/app.db").run("VACUUM INTO ?", ["/backups/avant-collections.db"]); console.log("copie faite")'
 docker compose cp server:/backups/avant-collections.db ~/
+ls -l ~/avant-collections.db
+docker compose exec server ls -l /data/app.db
 docker compose exec server rm /backups/avant-collections.db   # quand elle ne sert plus
 ```
+
+Ce qu'il faut lire : `copie faite` (rien d'affiché : pas de copie, ne pas continuer), puis, pour
+`~/avant-collections.db`, une date et une heure d'à l'instant et une taille du même ordre que celle
+d'`app.db` (un peu moins, la copie est compacte). Une date d'avant, ou un fichier vide : recommencer.
 
 **Restaurer une sauvegarde** : arrêter le serveur, remettre la copie à la place de la base, sans
 les fichiers `-wal` et `-shm` de l'ancienne, puis redémarrer. En tant que `bun`, l'utilisateur
@@ -407,6 +431,10 @@ docker compose stop server
 docker compose run --rm --no-deps -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/app.db-wal /data/app.db-shm && cp /restore/app-AAAA-MM-JJ.db /data/app.db'
 docker compose up -d
 ```
+
+Pour un retour du code (« Revenir à la version d'avant »), ne pas finir par ce `docker compose up -d`
+sur le code d'après : remettre d'abord le code d'avant, comme le fait « Revenir à la version
+d'avant » (plus haut), pour que le serveur démarre dessus, sur la copie.
 
 Après une restauration d'`app.db`, un appareil resté sur une version plus récente voit son
 prochain envoi refusé (409) : il relit celle du serveur, la restaurée, et sa dernière modification

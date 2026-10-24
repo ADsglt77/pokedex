@@ -11,14 +11,24 @@ cd "$(dirname "$0")/.."
 # indisponible » et des pochettes de substitution pour tout le français : l'API ne copie aucune
 # image à la demande, une image absente est un 404. Demandé à l'ancien site, dont nginx renvoie
 # ces routes à l'API (il n'y en a pas au tout premier déploiement : rien à vérifier alors) :
-# le catalogue, puis le scan de la dernière carte de sa série la plus récente. Une réussite ne dit
-# pas que la tâche `cards` a fini, seulement que le site n'en est pas vide (README, « Mettre à
-# jour un VPS en place »). `SKIP_FRENCH_CHECK=1 sh deploy/deploy.sh`, à la main sur le VPS,
-# saute ce contrôle (la clé restreinte du déploiement automatique n'en reçoit aucune variable).
+# le catalogue, puis le scan de la dernière carte à image de la série la plus récente qui en a une
+# (une série dont aucune carte n'a de scan est passée : son chemin d'image n'existerait pas). Une
+# réussite ne dit pas que la tâche `cards` a fini, seulement que le site n'en est pas vide (README,
+# « Mettre à jour un VPS en place »). `SKIP_FRENCH_CHECK=1 sh deploy/deploy.sh`, à la main sur le
+# VPS, saute ce contrôle (la clé restreinte du déploiement automatique n'en reçoit aucune variable).
 french_ready() {
   sets=$(curl -fsS --compressed "$live/api/catalog/fr/sets") || return 1
-  code=$(printf '%s' "$sets" | sed -n 's/.*"sets":\[\["\([^"]*\)".*/\1/p')
-  rank=$(curl -fsS --compressed "$live/api/catalog/fr/sets/$code" | grep -o '"image":[1-9][0-9]*' | tail -1 | cut -d: -f2)
+  rank=
+  # Les codes des séries, des plus récentes aux plus anciennes (le premier champ de chaque ligne de
+  # `sets`) ; le rang de l'image d'une carte est son `"image":` (0 : aucune).
+  for code in $(printf '%s' "$sets" | sed 's/.*"sets"://' | grep -o '\["[^"]*","' | cut -d'"' -f2); do
+    rank=$(curl -fsS --compressed "$live/api/catalog/fr/sets/$code" | grep -o '"image":[1-9][0-9]*' | tail -1 | cut -d: -f2)
+    if [ -n "$rank" ]; then break; fi
+  done
+  if [ -z "$rank" ]; then
+    echo "Aucune image française notée dans le catalogue."
+    return 1
+  fi
   curl -fsS -o /dev/null "$live/images/cards/fr/$code/$rank-md.webp"
 }
 if [ -z "$SKIP_FRENCH_CHECK" ] && [ -n "$(docker compose ps -q pokedex)" ]; then
