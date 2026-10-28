@@ -1,3 +1,4 @@
-# `bun test` : l'environnement du serveur, posé avant le premier fichier de test (`tests/setup.ts`).
+# `bun test` : les tests de `tests/` seulement, les règles pures de l'app (ceux du Worker,
+# `worker/tests`, tournent dans le moteur de Cloudflare : `bun run test:worker`).
 [test]
-preload = ["./tests/setup.ts"]
+root = "./tests"

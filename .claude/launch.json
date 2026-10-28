@@ -8,16 +8,10 @@
       "port": 5173
     },
     {
-      "name": "server",
-      "runtimeExecutable": "bun",
-      "runtimeArgs": ["run", "dev:server"],
-      "port": 3000
-    },
-    {
       "name": "preview",
       "runtimeExecutable": "bun",
       "runtimeArgs": ["run", "preview"],
-      "port": 4173
+      "port": 5173
     },
     {
       "name": "data-api",

@@ -1,5 +1,5 @@
 /**
- * La connexion côté navigateur : le serveur du site (`/api/account`, `server/auth.ts`). La session
+ * La connexion côté navigateur : le serveur du site (`/api/account`, `worker/auth.ts`). La session
  * vit dans un cookie ; qui est connecté se lit une fois au démarrage (`loadAccount`), puis le store
  * du compte le suit (`store/account.ts`) ; la règle du pseudo (`isPseudo`) ; et les messages d'un refus
  * (`refusalMessage`). Lu par le premier affichage : le client Better Auth, plus lourd, est à part
@@ -9,7 +9,7 @@
 import { PSEUDO, RESERVED_PSEUDOS } from '@/config/account'
 import type { AccountState, AccountUser } from '@/types'
 
-/** Trop de tentatives (`server/auth.ts`) : la réponse 429 du serveur. */
+/** Trop de tentatives (`worker/auth.ts`) : la réponse 429 du serveur. */
 const TOO_MANY_ATTEMPTS = 'Trop de tentatives\u00a0: réessayez un peu plus tard.'
 
 /**
@@ -36,7 +36,7 @@ const PSEUDO_RULE = new RegExp(`^${PSEUDO.pattern}$`)
 
 /**
  * Un pseudo possible (`PSEUDO`) : sa longueur, ses caractères, et pas une adresse du site. La règle
- * du serveur (`server/auth.ts`) et du Pokédex public (`/sacha` : `router.tsx`, `VitrinePage`).
+ * du serveur (`worker/auth.ts`) et du Pokédex public (`/sacha` : `router.tsx`, `VitrinePage`).
  */
 export const isPseudo = (value: string) =>
   value.length >= PSEUDO.min &&

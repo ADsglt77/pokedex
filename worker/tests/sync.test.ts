@@ -1,33 +1,55 @@
 /**
  * L'enregistrement de la collection, du navigateur au serveur : `store/account.ts` tel quel, contre
- * le serveur entier (`createApp`, `tests/server.ts`). Une erreur ici perdrait des modifications
+ * le Worker entier (`worker.request`). Une erreur ici perdrait des modifications
  * sans un mot, ou écraserait la collection d'un compte avec celle d'un autre. Couvert : une
  * collection refusée (« Envoi refusé ») reste à enregistrer, jamais relue ni renvoyée telle quelle ;
  * « Se reconnecter » au même compte envoie ce qui attendait, et rien ne part tant que la session est
  * fermée ; au retour sur la page, une collection inchangée n'est pas remplacée (« Annuler » garde
  * ses références), changée ailleurs elle est relue ; celle d'un autre compte (connecté dans un autre
  * onglet) n'est jamais prise ; un envoi dont la réponse s'est perdue est reconnu, et la
- * modification suivante part, même si ce renvoi est refusé ; trop d'envois d'affilée (429 de
- * nginx) font réessayer, jamais « Envoi refusé » ; une modification faite pendant la
+ * modification suivante part, même si ce renvoi est refusé ; trop d'envois d'affilée (429) font réessayer, jamais « Envoi refusé » ; une modification faite pendant la
  * compression d'un envoi part aussi ; les envois partent compressés, ou tels quels sans
  * `CompressionStream` ; la page passée en arrière-plan envoie aussitôt ce qui attend ; un autre
  * onglet qui enregistre fait relire la collection ; une modification faite pendant cette relecture
  * n'affiche jamais « Enregistrée » tant qu'elle attend. Le navigateur est simulé (`window`,
- * `document`, `fetch` vers le serveur) ; ni interface, ni DOM. On attend l'état voulu (`until`), jamais une
+ * `document`, `BroadcastChannel`, `fetch` vers le Worker) ; ni interface, ni DOM. On attend l'état voulu (`until`), jamais une
  * durée fixe, sauf pour vérifier que rien ne se passe (`quietly` : trop court, le test passerait à
  * tort, il n'échouerait jamais à tort).
  */
 
-import { afterAll, beforeAll, describe, expect, spyOn, test } from 'bun:test'
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest'
 import type { CollectionData, CollectionResponse } from '@/types'
-import { card } from './fixtures'
-import { openServer, ORIGIN } from './server'
+import { card } from '../../tests/fixtures'
+import worker from '../index'
+import { createAccount, ORIGIN, sleep } from './helpers'
 
-// Le journal du serveur : muet pendant ces tests.
-const log = spyOn(console, 'log').mockImplementation(() => {})
+// Le journal du Worker : muet pendant ces tests.
+const log = vi.spyOn(console, 'log').mockImplementation(() => {})
 afterAll(() => log.mockRestore())
 
-const { server, createAccount } = await openServer()
+/**
+ * Les onglets d'un même navigateur (`BroadcastChannel`, que le moteur de Cloudflare n'a pas) : un
+ * message posté sur un canal arrive, aussitôt après, aux autres canaux du même nom.
+ */
+class Channel {
+  static open = new Set<Channel>()
+  name: string
+  onmessage: ((event: { data: unknown }) => void) | null = null
+  constructor(name: string) {
+    this.name = name
+    Channel.open.add(this)
+  }
+  postMessage(data: unknown) {
+    for (const other of Channel.open) {
+      if (other !== this && other.name === this.name) {
+        queueMicrotask(() => other.onmessage?.({ data }))
+      }
+    }
+  }
+  close() {
+    Channel.open.delete(this)
+  }
+}
 
 /** Ce que `store/account.ts` écoute : la page (`document`) et la fenêtre (`window`). */
 const listeners = new Map<string, (event?: unknown) => void>()
@@ -70,7 +92,7 @@ const browser = {
 /**
  * `store/account.ts`, chargé par une adresse calculée, que TypeScript ne suit pas : il parle au
  * navigateur (`window`, `document`), dont les types manquent exprès aux tests
- * (`tsconfig.bun.json`). Ce que le test en emploie.
+ * (`tsconfig.worker.json`). Ce que le test en emploie.
  */
 interface AccountStore {
   signIn: (account: { id: string; name: string }) => Promise<boolean>
@@ -81,7 +103,7 @@ interface AccountStore {
 }
 const ACCOUNT_STORE: string = '@/store/account'
 
-const fetchSpy = spyOn(globalThis, 'fetch')
+const fetchSpy = vi.spyOn(globalThis, 'fetch')
 let store: AccountStore
 let collectionStore: typeof import('@/store/collection')
 
@@ -90,8 +112,11 @@ beforeAll(async () => {
   Object.assign(globalThis, {
     window: { addEventListener: page.addEventListener },
     document: page,
+    BroadcastChannel: Channel,
   })
   fetchSpy.mockImplementation((async (input: string | URL | Request, init?: RequestInit) => {
+    // Ce que le Worker demande lui-même à l'API des données (les espèces) : absente.
+    if (input instanceof Request) return new Response(null, { status: 404 })
     const url = new URL(String(input), ORIGIN)
     const headers = new Headers(init?.headers)
     headers.set('Origin', ORIGIN)
@@ -105,7 +130,7 @@ beforeAll(async () => {
       browser.failNextPut = 0
       return new Response('null', { status })
     }
-    const response = await server.handle(new Request(url.href, { ...init, headers }))
+    const response = await worker.request(new Request(url.href, { ...init, headers }))
     if (init?.method === 'PUT' && browser.loseNextAnswer) {
       browser.loseNextAnswer = false
       throw new TypeError('Réponse perdue')
@@ -126,18 +151,19 @@ afterAll(async () => {
   fetchSpy.mockRestore()
   Reflect.deleteProperty(globalThis, 'window')
   Reflect.deleteProperty(globalThis, 'document')
+  Reflect.deleteProperty(globalThis, 'BroadcastChannel')
 })
 
-/** Attend que `done` soit vrai : le serveur répond dans le même processus ; 3 s au plus. */
+/** Attend que `done` soit vrai : le Worker répond dans le même processus ; 3 s au plus. */
 async function until(done: () => boolean | Promise<boolean>) {
   const deadline = Date.now() + 3_000
   while (!(await done())) {
     if (Date.now() > deadline) throw new Error('L’état attendu n’est pas venu en 3 s')
-    await Bun.sleep(10)
+    await sleep(10)
   }
 }
 /** Laisse passer un moment, pour vérifier que rien ne se passe. */
-const quietly = () => Bun.sleep(150)
+const quietly = () => sleep(150)
 
 const status = () => store.useAccountStore.getState().status
 const inMemory = () => collectionStore.useCollectionStore.getState().collection
@@ -159,7 +185,7 @@ const change = (id: string) => {
  * seul ce que teste le test peut l'envoyer.
  */
 function withoutTimers(run: () => void) {
-  const timers = spyOn(globalThis, 'setTimeout').mockImplementation((() => 0) as never)
+  const timers = vi.spyOn(globalThis, 'setTimeout').mockImplementation((() => 0) as never)
   try {
     run()
   } finally {
@@ -178,7 +204,7 @@ async function signedIn(pseudo: string) {
 
 /** La collection enregistrée sur le serveur pour la session `cookie`. */
 async function onServer(cookie: string) {
-  const response = await server.handle(
+  const response = await worker.request(
     new Request(`${ORIGIN}/api/collection`, { headers: { Cookie: cookie } }),
   )
   const body = (await response.json()) as CollectionResponse
@@ -190,7 +216,7 @@ const serverHas = (cookie: string, ids: string[]) => async () =>
 
 /** Un autre appareil (ou un autre onglet) du compte enregistre une carte de plus. */
 async function elsewhere(cookie: string, id: string) {
-  const response = await server.handle(
+  const response = await worker.request(
     new Request(`${ORIGIN}/api/collection`, { headers: { Cookie: cookie } }),
   )
   const body = (await response.json()) as CollectionResponse
@@ -205,7 +231,7 @@ async function elsewhere(cookie: string, id: string) {
     } satisfies CollectionData,
     shopping: body.shopping,
   }
-  const saved = await server.handle(
+  const saved = await worker.request(
     new Request(`${ORIGIN}/api/collection`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie },
@@ -348,7 +374,7 @@ describe('store/account.ts : rien de perdu sans un mot, rien d’écrasé', () =
     await until(isSaved)
   })
 
-  test('trop d’envois d’affilée (429 de nginx) : la modification attend et repart, jamais « Envoi refusé »', async () => {
+  test('trop d’envois d’affilée (429) : la modification attend et repart, jamais « Envoi refusé »', async () => {
     const { cookie } = await signedIn('Limite')
     change('a')
     await until(isSaved)
@@ -367,7 +393,7 @@ describe('store/account.ts : rien de perdu sans un mot, rien d’écrasé', () =
     change('a')
     await until(isSaved)
     // Le clic arrive pendant que l'envoi de « b » est compressé (ici, au début de la compression).
-    const Original = globalThis.CompressionStream
+    const Original = CompressionStream
     let once = true
     class Clicked extends Original {
       constructor(format: ConstructorParameters<typeof CompressionStream>[0]) {
@@ -389,7 +415,7 @@ describe('store/account.ts : rien de perdu sans un mot, rien d’écrasé', () =
 
   test('sans `CompressionStream` (Safari avant 16.4, Firefox avant 113) : l’envoi part tel quel', async () => {
     const { cookie } = await signedIn('Vieux')
-    const Original = globalThis.CompressionStream
+    const Original = CompressionStream
     Object.assign(globalThis, { CompressionStream: undefined })
     try {
       change('a')
@@ -415,7 +441,7 @@ describe('store/account.ts : rien de perdu sans un mot, rien d’écrasé', () =
     change('a')
     await until(isSaved)
     const version = await elsewhere(cookie, 'onglet')
-    const channel = new BroadcastChannel('collection')
+    const channel = new Channel('collection')
     channel.postMessage({ account: account.id, version })
     channel.close()
     await until(() => cardsInMemory().includes('onglet'))

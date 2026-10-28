@@ -20,14 +20,14 @@ export default defineConfig([
       '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
     },
   },
-  // L'app tourne dans le navigateur ; le serveur, les tests et la configuration de Vite sous Bun :
-  // chacun ses objets globaux (un `window` dans le serveur serait signalé).
+  // L'app tourne dans le navigateur ; les tests de `tests/` sous Bun, les configurations sous Node :
+  // chacun ses objets globaux. Le Worker (`worker/`) n'a que ceux que TypeScript lui connaît.
   {
     files: ['src/**/*.{ts,tsx}'],
     languageOptions: { globals: globals.browser },
   },
   {
-    files: ['server/**/*.ts', 'tests/**/*.ts', '*.ts'],
+    files: ['tests/**/*.ts', '*.ts'],
     languageOptions: { globals: globals.node },
   },
   // Le script de `public/` : le thème (`theme.js`), tel quel dans le navigateur.

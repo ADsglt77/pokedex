@@ -39,7 +39,7 @@ import { useStatSize } from '@/hooks/useStatSize'
  * `/pseudo` : le Pokédex public d'un compte, toujours montré ; en lecture seule, hors de la
  * coquille : la progression, la valeur au prix du jour, la courbe des Pokémon débloqués, le
  * classeur, puis les collections d'extensions (leur progression, leur valeur et toutes leurs
- * cartes, `SeriesGrid`), d'après ce que le serveur montre (`server/vitrine.ts`). En tête, « Se
+ * cartes, `SeriesGrid`), d'après ce que le serveur montre (`worker/vitrine.ts`). En tête, « Se
  * connecter » et « Créer un compte », ou, connecté, « Mon Pokédex ». Toute adresse d'un seul
  * segment qui n'est pas une page du site y mène : un pseudo inconnu, ou ce qui n'en est pas un
  * (`/achat`), est une page introuvable. Pas proposé aux moteurs de recherche.

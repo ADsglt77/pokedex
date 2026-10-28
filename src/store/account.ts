@@ -1,6 +1,6 @@
 /**
  * Le compte connecté et sa collection, gardée par le serveur seul (`/api/collection`,
- * `server/collection.ts`) : lue à la connexion, gardée en mémoire, et chaque modification envoyée
+ * `worker/collection.ts`) : lue à la connexion, gardée en mémoire, et chaque modification envoyée
  * compressée une demi-seconde après (un échange à la fois), aussitôt si la page passe en
  * arrière-plan (un téléphone peut la geler, puis la fermer). Rien n'est gardé dans le navigateur :
  * sans réseau, rien ne s'enregistre (le menu du compte le dit, l'envoi repart au retour du réseau

@@ -27,7 +27,7 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   Le site s'appelle **PokéCodex** (cette graphie) : le nom à côté du logo
   (la coquille, les pages seules, celles du compte, la page d'erreur), le titre des onglets
   (« Pikachu – PokéCodex », `pageTitle`), le manifeste et l'aperçu d'un lien (`index.html`,
-  `SITE_SUMMARY` de `server/vitrine.ts`). « Mon Pokédex » n'est que le Pokédex de l'utilisateur :
+  `SITE_SUMMARY` de `worker/vitrine.ts`). « Mon Pokédex » n'est que le Pokédex de l'utilisateur :
   le titre de l'accueil, le bouton du Pokédex public pour qui est connecté. Le logo est une Poké
   Ball plate (`Logo`, `AppShell` ; couleurs `--brand-*`, les mêmes dans les deux thèmes), la même
   que l'icône de l'onglet (`public/favicon.svg`).

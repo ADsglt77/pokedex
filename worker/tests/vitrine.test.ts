@@ -1,13 +1,13 @@
 /**
- * Ce que montre le Pokédex public (`server/vitrine.ts`) : ce qu'il laisserait passer serait public.
+ * Ce que montre le Pokédex public (`worker/vitrine.ts`) : ce qu'il laisserait passer serait public.
  * Jamais un prix payé, une page Cardmarket notée, ni ce qui dit un achat (« commandée ») ; la
  * favorite de chaque Pokémon, elle, est montrée, comme les collections d'extensions et leurs cases.
  */
 
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, test } from 'vitest'
 import type { SeriesCollection } from '@/types'
-import { shownCollection, vitrineSummary } from '../server/vitrine'
-import { card, collectionWith, NOW, ownership, withCards } from './fixtures'
+import { shownCollection, vitrineSummary } from '../vitrine'
+import { card, collectionWith, NOW, ownership, withCards } from '../../tests/fixtures'
 
 describe('shownCollection', () => {
   const collection = {
@@ -133,7 +133,7 @@ describe('vitrineSummary', () => {
     }
     const summary = vitrineSummary('Sacha', collection)
     expect(summary.title).toBe('Le Pokédex de Sacha')
-    expect(summary.description).toStartWith('1 Pokémon débloqué sur 1')
+    expect(summary.description).toMatch(/^1 Pokémon débloqué sur 1/)
     expect(JSON.stringify(summary)).not.toMatch(/30|12|commandée/)
     expect(vitrineSummary('Adrien', collection).title).toBe('Le Pokédex d’Adrien')
   })

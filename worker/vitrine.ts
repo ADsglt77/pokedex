@@ -13,16 +13,16 @@
  *   l'API des données (`dataPrices`), dans la forme de `/api/prices` (`null` sans guide des prix,
  *   l'API muette, ou plus de 5 000 cartes possédées : la page s'affiche sans valeur) : la page n'en
  *   montre que la valeur, sans charger ceux de toutes les cartes.
- * - `GET /api/vitrine/<pseudo>/apercu` : la page que lisent les robots d'aperçu (Discord,
- *   WhatsApp…) quand on partage le lien : « Le Pokédex de … » et sa progression (ils ne lancent pas
- *   le JavaScript de l'app). nginx les y envoie pour toute adresse d'un seul segment
- *   (`deploy/nginx.conf.template`) : une page du site (`/connexion`), ou un pseudo à personne, a l'aperçu
- *   du site.
- * Chacune au journal, une fois par heure au plus par visiteur et par Pokédex (`journalOnce`).
+ * - L'aperçu d'un lien partagé (`linkPreview`) : un robot d'aperçu (Discord, WhatsApp…) qui lit une
+ *   adresse d'un seul segment reçoit une page à lui, « Le Pokédex de … » et sa progression (il ne
+ *   lance pas le JavaScript de l'app) ; une page du site (`/connexion`), ou un pseudo à personne, a
+ *   l'aperçu du site. Tout autre visiteur reçoit la page de l'app.
+ * Chacun au journal, une fois par heure au plus par visiteur et par Pokédex (`journalOnce`).
  */
 
-import type { Database } from 'bun:sqlite'
-import { Elysia, NotFoundError } from 'elysia'
+import { env } from 'cloudflare:workers'
+import { eq } from 'drizzle-orm'
+import { Hono, type MiddlewareHandler } from 'hono'
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { isPseudo } from '@/lib/account'
 import { emptyCollection } from '@/lib/collection'
@@ -32,7 +32,11 @@ import { idBatches } from '@/lib/prices'
 import { HOUR, MINUTE } from '@/lib/time'
 import { readCollection } from '@/lib/transfer'
 import type { CardOwnership, CollectionData, PokemonCard, PriceFile, VitrineData } from '@/types'
-import { journalOnce, reasonOf, visitorOf } from './journal'
+import { ORIGIN } from './auth'
+import { dataFetch } from './data'
+import { db } from './db'
+import { journalOnce, reasonOf, visitorOf, type JournalEntry } from './journal'
+import { collections, user } from './schema'
 
 /**
  * La collection telle que la voit un visiteur (testé : jamais un prix payé ni un achat). Chaque
@@ -101,16 +105,15 @@ const SITE_SUMMARY = {
 const escape = (text: string) =>
   text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')
 
-/** Les robots d'aperçu, pour le journal (la même liste que `deploy/nginx.conf.template`). */
+/** Les robots d'aperçu des messageries, qui lisent un lien partagé. */
 const PREVIEW_BOTS =
   /discordbot|whatsapp|facebookexternalhit|twitterbot|slackbot|telegrambot|linkedinbot|skypeuripreview|redditbot|embedly/i
 
 /**
  * Une visite au journal, une fois par heure au plus par visiteur, par message et par Pokédex : des
- * visites répétées (un rechargement sans fin, un robot) ne font pas tourner le journal de Docker,
- * qui effacerait les connexions.
+ * visites répétées (un rechargement sans fin, un robot) ne noient pas le journal.
  */
-const journalVisit = (entry: Parameters<typeof journalOnce>[1], request: Request) =>
+const journalVisit = (entry: JournalEntry, request: Request) =>
   journalOnce(
     `${entry.message} ${entry.details?.pseudo} ${visitorOf(request)}`,
     entry,
@@ -126,11 +129,11 @@ const journalVisit = (entry: Parameters<typeof journalOnce>[1], request: Request
 const MAX_PRICE_BATCHES = 5
 
 /**
- * Les prix du jour des cartes `ids`, demandés à l'API des données (`DATA_API_URL`, avec le token du
- * site, `DATA_API_TOKEN`, lus à chaque demande) par paquets de 1 000 (`idBatches` : elle en refuse
- * plus de 1 025), l'un après l'autre, puis réunis ; `null` sans carte, au-delà de
- * `MAX_PRICE_BATCHES` paquets (sans rien demander), sans guide des prix, ou l'API muette pour l'un
- * des paquets (les suivants ne sont pas demandés : une valeur partielle serait fausse).
+ * Les prix du jour des cartes `ids`, demandés à l'API des données par paquets de 1 000
+ * (`idBatches` : elle en refuse plus de 1 025), l'un après l'autre, puis réunis ; `null` sans
+ * carte, au-delà de `MAX_PRICE_BATCHES` paquets (sans rien demander), sans guide des prix, ou
+ * l'API muette pour l'un des paquets (les suivants ne sont pas demandés : une valeur partielle
+ * serait fausse).
  */
 async function dataPrices(ids: number[]): Promise<PriceFile | null> {
   const batches = idBatches(ids)
@@ -150,13 +153,11 @@ async function dataPrices(ids: number[]): Promise<PriceFile | null> {
  * muette (5 s au plus, et une ligne au journal par minute au plus).
  */
 async function dataPricesOf(ids: number[]): Promise<PriceFile | null> {
-  const url = `${process.env.DATA_API_URL ?? 'http://127.0.0.1:3001'}/v1/prices?ids=${ids.join()}`
   try {
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${process.env.DATA_API_TOKEN ?? ''}` },
+    const response = await dataFetch(`/prices?ids=${ids.join()}`, {
       signal: AbortSignal.timeout(5000),
     })
-    if (response.ok) return (await response.json()) as PriceFile
+    if (response.ok) return await response.json<PriceFile>()
     // Sans guide des prix (404) : rien à dire. Un token refusé ou une panne : à voir.
     if (response.status === 404) return null
     throw new Error(`HTTP ${response.status}`)
@@ -178,107 +179,101 @@ async function dataPricesOf(ids: number[]): Promise<PriceFile | null> {
 
 /**
  * Une réponse JSON et son ETag, tiré de son contenu : un visiteur qui revient sur un Pokédex
- * inchangé reçoit un 304, sans corps (un relais peut affaiblir l'ETag en `W/"…"` :
- * c'est le même).
+ * inchangé reçoit un 304, sans corps (un relais peut affaiblir l'ETag en `W/"…"` : c'est le même).
  */
-function serveJson(request: Request, body: unknown) {
+async function serveJson(request: Request, body: unknown) {
   const text = JSON.stringify(body)
-  const etag = `"${Bun.hash(text).toString(36)}"`
-  const headers = { 'Cache-Control': 'no-cache', ETag: etag }
-  if (request.headers.get('if-none-match')?.replace(/^W\//, '') === etag) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+  const hex = [...new Uint8Array(digest).slice(0, 12)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+  const headers = { 'Cache-Control': 'no-cache', ETag: `"${hex}"` }
+  if (request.headers.get('if-none-match')?.replace(/^W\//, '') === headers.ETag) {
     return new Response(null, { status: 304, headers })
   }
   return new Response(text, { headers: { ...headers, 'Content-Type': 'application/json' } })
 }
 
-/** Le compte d'un pseudo. */
-interface Owner {
-  id: string
-  name: string
-  username: string
-}
+/**
+ * Le compte d'un pseudo : seulement un pseudo possible, jamais une adresse du site
+ * (`RESERVED_PSEUDOS`), même portée par un compte créé avant qu'elle ne le devienne.
+ */
+const ownerOf = async (pseudo: string) =>
+  isPseudo(pseudo)
+    ? ((await db
+        .select({ id: user.id, name: user.name })
+        .from(user)
+        .where(eq(user.username, pseudo.toLowerCase()))
+        .get()) ?? null)
+    : null
 
 /**
- * `app` : les comptes et leurs collections ; `origin` : l'adresse publique du site
- * (`BETTER_AUTH_URL`), pour les liens de l'aperçu.
+ * Ce que montre le Pokédex d'un compte : sa collection relue comme celle d'un fichier (un document
+ * enregistré avant les favorites n'en a pas, et chaque Pokémon y reçoit sa première carte).
  */
-export function vitrineRoutes(app: Database, origin: string) {
-  // `username` : le pseudo en minuscules (`server/auth.ts`).
-  const readOwner = app.query('SELECT id, name, username FROM "user" WHERE username = ?')
-  const readShown = app.query('SELECT collection FROM collections WHERE user_id = ?')
-  // Seulement un pseudo possible : jamais une adresse du site (`RESERVED_PSEUDOS`), même portée par
-  // un compte créé avant qu'elle ne le devienne.
-  const ownerOf = (pseudo: string) =>
-    isPseudo(pseudo) ? (readOwner.get(pseudo.toLowerCase()) as Owner | null) : null
-  const shown = (owner: Owner) => {
-    const row = readShown.get(owner.id) as { collection: string } | null
-    // Relue comme celle d'un fichier : un document enregistré avant les favorites n'en a pas, et
-    // chaque Pokémon y reçoit sa première carte, celle que le Pokédex public montrait.
-    return row ? shownCollection(readCollection(JSON.parse(row.collection))!) : emptyCollection()
-  }
+async function shownOf(userId: string) {
+  const row = await db
+    .select({ collection: collections.collection })
+    .from(collections)
+    .where(eq(collections.userId, userId))
+    .get()
+  return row ? shownCollection(readCollection(JSON.parse(row.collection))!) : emptyCollection()
+}
 
-  return new Elysia({ name: 'vitrine' })
-    .get(
-      '/vitrine/:pseudo',
-      async ({ params, request }) => {
-        const owner = ownerOf(params.pseudo)
-        if (!owner) throw new NotFoundError()
-        const collection = shown(owner)
-        journalVisit(
-          {
-            topic: 'vitrine',
-            message: 'Pokédex public consulté',
-            details: { pseudo: owner.username },
-          },
-          request,
-        )
-        const owned = Object.values(collection.customCards).flatMap(({ id, cardmarket }) =>
-          cardmarket && collection.cards[id] ? [cardmarket] : [],
-        )
-        const vitrine: VitrineData = {
-          owner: owner.name,
-          collection,
-          prices: await dataPrices(owned),
-        }
-        return serveJson(request, vitrine)
+export const vitrineRoutes = new Hono().get('/vitrine/:pseudo', async (c) => {
+  const pseudo = c.req.param('pseudo')
+  const owner = await ownerOf(pseudo)
+  if (!owner) return c.body(null, 404, { 'Cache-Control': 'no-cache' })
+  const collection = await shownOf(owner.id)
+  journalVisit(
+    {
+      topic: 'vitrine',
+      message: 'Pokédex public consulté',
+      details: { pseudo: pseudo.toLowerCase() },
+    },
+    c.req.raw,
+  )
+  const owned = Object.values(collection.customCards).flatMap(({ id, cardmarket }) =>
+    cardmarket && collection.cards[id] ? [cardmarket] : [],
+  )
+  const vitrine: VitrineData = { owner: owner.name, collection, prices: await dataPrices(owned) }
+  return serveJson(c.req.raw, vitrine)
+})
+
+/**
+ * `/<segment>` : pour un robot d'aperçu, la page qu'il lit (le Pokédex du pseudo, ou le site) ;
+ * pour tout autre visiteur, la page de l'app (`env.ASSETS`).
+ */
+export const linkPreview: MiddlewareHandler = async (c) => {
+  const robot = c.req.header('user-agent')?.match(PREVIEW_BOTS)?.[0]
+  if (!robot) return env.ASSETS.fetch(c.req.raw)
+  const pseudo = c.req.path.slice(1)
+  const owner = await ownerOf(pseudo)
+  if (owner) {
+    journalVisit(
+      {
+        topic: 'vitrine',
+        message: 'Lien partagé lu',
+        details: { pseudo: pseudo.toLowerCase(), robot },
       },
-      { detail: { summary: 'Le Pokédex public d’un compte' } },
+      c.req.raw,
     )
-    .get(
-      '/vitrine/:pseudo/apercu',
-      ({ params, request }) => {
-        const owner = ownerOf(params.pseudo)
-        const robot = request.headers.get('user-agent')?.match(PREVIEW_BOTS)?.[0]
-        if (owner) {
-          journalVisit(
-            {
-              topic: 'vitrine',
-              message: 'Lien partagé lu',
-              details: { pseudo: owner.username, robot },
-            },
-            request,
-          )
-        }
-        const { title, description } = owner
-          ? vitrineSummary(owner.name, shown(owner))
-          : SITE_SUMMARY
-        const url = owner ? `${origin}/${owner.username}` : origin
-        const meta = (property: string, content: string) =>
-          `<meta property="${property}" content="${escape(content)}">`
-        const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${escape(title)}</title>${[
-          meta('og:type', 'website'),
-          meta('og:site_name', 'PokéCodex'),
-          meta('og:title', title),
-          meta('og:description', description),
-          meta('og:url', url),
-          meta('og:image', `${origin}/icons/icon-512.png`),
-        ].join(
-          '',
-        )}<meta name="twitter:card" content="summary"><meta name="description" content="${escape(description)}"></head><body><a href="${escape(url)}">${escape(title)}</a></body></html>`
-        return new Response(html, {
-          headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' },
-        })
-      },
-      { detail: { summary: 'L’aperçu d’un lien partagé vers un Pokédex public (robots)' } },
-    )
+  }
+  const { title, description } = owner
+    ? vitrineSummary(owner.name, await shownOf(owner.id))
+    : SITE_SUMMARY
+  const url = owner ? `${ORIGIN}/${pseudo.toLowerCase()}` : ORIGIN
+  const meta = (property: string, content: string) =>
+    `<meta property="${property}" content="${escape(content)}">`
+  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${escape(title)}</title>${[
+    meta('og:type', 'website'),
+    meta('og:site_name', 'PokéCodex'),
+    meta('og:title', title),
+    meta('og:description', description),
+    meta('og:url', url),
+    meta('og:image', `${ORIGIN}/icons/icon-512.png`),
+  ].join(
+    '',
+  )}<meta name="twitter:card" content="summary"><meta name="description" content="${escape(description)}"></head><body><a href="${escape(url)}">${escape(title)}</a></body></html>`
+  return c.html(html, 200, { 'Cache-Control': 'no-cache' })
 }

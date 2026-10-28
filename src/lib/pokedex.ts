@@ -53,7 +53,7 @@ export interface Pokedex {
 
 /**
  * La part débloquée, en pour cent au dixième : jamais 0 % dès un Pokémon, ni 100 % avant le dernier
- * (le Pokédex public la montre aussi, `server/vitrine.ts`).
+ * (le Pokédex public la montre aussi, `worker/vitrine.ts`).
  */
 export function progressPercent(unlocked: number, total: number) {
   const tenths = Math.round((unlocked * 1000) / total)

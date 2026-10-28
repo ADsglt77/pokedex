@@ -9,11 +9,13 @@ cartes, images et prix relus par l'API des données, un dépôt à part (plus ba
 
 ```sh
 bun install
-bun dev          # serveur de dev Vite
+bun dev          # Vite et le Worker du site, sur sa base D1 locale (migrée au démarrage)
 bun run build    # type-check + build
 bun lint         # ESLint, puis knip (code mort : exports, fichiers, dépendances)
 bun run contracts # vérifie les types partagés avec ../pokedex-data (facultatif pour le build Docker)
 bun test         # tests de ce qui coûterait de l'argent (chaque fichier de tests/ le dit en tête)
+bun run test:worker # tests du Worker, dans le moteur de Cloudflare (worker/tests)
+bun run db:generate # après une modification de worker/schema.ts : sa migration
 bun run format   # Prettier
 ```
 
@@ -73,11 +75,12 @@ bun run format   # Prettier
 
 Les données (espèces, catalogue des cartes japonaises et françaises, images, prix Cardmarket et
 leur historique) viennent de **l'API des données**, un dépôt à part (`pokedex-data`) : privée, sans
-token aucune donnée. Le navigateur ne parle qu'au site (`/api/…`, `/images/…`) : nginx (Vite en
-développement) renvoie les adresses des données à l'API, avec le token du site, que le navigateur
+token aucune donnée. Le navigateur ne parle qu'au site (`/api/…`, `/images/…`) : le Worker du site
+renvoie les adresses des données à l'API, avec le token du site, que le navigateur
 ne voit jamais. Aucune adresse de la source n'apparaît dans le navigateur :
-les images ont des chemins neutres (`/images/cards/SV2A/166-md.webp`). Le serveur de l'app
-(`server/`, Elysia et SQLite) garde les comptes et les collections. Seule une image à l'adresse
+les images ont des chemins neutres (`/images/cards/SV2A/166-md.webp`). Le Worker du site
+(`worker/`, Hono, Drizzle et D1, sur Cloudflare Workers) garde les comptes et les collections, et
+montre les Pokédex publics. Seule une image à l'adresse
 collée se charge ailleurs ; pas celles de Cardmarket, qui ne s'affichent que sur son site.
 
 **Les données et les images se lisent sans connexion** (décision de conception) : nginx pose le
@@ -87,23 +90,25 @@ donc à n'importe qui, limitées par visiteur (429 au-delà : `deploy/nginx.conf
 l'interface demande d'être connecté. Ce que la connexion garde, ce sont les comptes et les
 collections (`/api/collection`, `/api/auth/…`), pas le catalogue, les prix ni les scans.
 
-En développement, trois terminaux : l'API des données (`bun run dev` dans `../pokedex-data`, sur
-le port 3001 ; sa base et ses tâches : son README), `bun run dev:server` (le serveur de l'app, sur
-le port 3000) et `bun dev`, qui renvoie à chacun ce qui est à lui. La base de l'app vit dans
-`.data/`. Un fichier `.env` (ignoré par git), avec le token du site, le même que dans
-`API_TOKENS` de l'API des données :
+En développement, deux terminaux : l'API des données (`bun run dev` dans `../pokedex-data`, sur
+le port 3001 ; sa base et ses tâches : son README) et `bun dev` : Vite, avec le Worker du site
+dans le moteur de Cloudflare (le plugin `@cloudflare/vite-plugin`), qui répond à `/api` et
+joint lui-même l'API des données. Sa base D1 locale vit dans `.wrangler/` ; `bun dev` lui applique
+d'abord les migrations qui manquent (`worker/migrations`). Il faut **Node 22 ou plus** (Wrangler),
+et sur un Windows ARM64 **Node ARM64** (Bun reste le gestionnaire de paquets : le plugin ne tourne
+pas sous Bun). Un fichier `.env` (ignoré par git), copié de `.env.example`, avec le token du
+site, le même que dans `API_TOKENS` de l'API des données :
 
 ```sh
 BETTER_AUTH_URL=http://localhost:5173
-BETTER_AUTH_SECRET=…        # openssl rand -base64 32
+BETTER_AUTH_SECRET=…        # 32 caractères au moins, pour ce poste seulement
+DATA_API_URL=http://127.0.0.1:3001
 DATA_API_TOKEN=…            # le token « pokedex » de l'API des données
 ```
 
 Un visiteur arrive sur la connexion ; `/inscription` crée un compte (pseudo, mot de passe). Pseudo
 et mot de passe se changent ensuite dans Réglages › Compte & partage › Mon compte, où le compte
-se supprime aussi. La
-documentation de l'API (Elysia, OpenAPI) est à `http://localhost:5173/api/docs`, en développement
-seulement.
+se supprime aussi.
 
 Votre collection : le site ne s'ouvre que connecté ; elle n'est gardée que sur le serveur (rien
 dans le navigateur, pas d'usage hors ligne) et vous suit d'un appareil à l'autre : un seul
@@ -111,6 +116,10 @@ connecté à la fois (se connecter ailleurs déconnecte le précédent). Chaque 
 aussitôt ; si le serveur ne répond pas, le menu du compte le dit et elle repart à son retour.
 
 ## Déploiement (VPS + Caddy)
+
+> **Périmé** : le site passera sur Cloudflare Workers, relié à GitHub, à la fin du développement.
+> Ce qui suit décrit l'ancien VPS (Docker, nginx, Caddy), qui sera retiré ; il ne marche plus tel
+> quel (l'ancien serveur, `server/`, n'existe plus).
 
 ### La liste de mise en ligne
 
@@ -140,17 +149,15 @@ retard ; une erreur de nginx (502) si l'API ne répond plus. Sans surveillance, 
 l'historique des prix passerait inaperçu : Cardmarket ne le garde pas, un jour manqué l'est pour
 toujours.
 
-**Le journal** : le serveur écrit une ligne par évènement, alignée, à l'heure de Paris : un symbole
-de niveau en couleur (✔ réussi, • info, ▲ à surveiller, ✖ refusé), le thème, un message court et
-ses détails en `clé=valeur` ; au démarrage, une Poké Ball en pixel art avec les adresses et le
-compte (pas les requêtes une à une : seulement ce qui se passe). Sans couleurs
-avec `NO_COLOR=1`. Il note les connexions
+**Le journal** : le Worker écrit une ligne par évènement, alignée, à l'heure de Paris : un symbole
+de niveau (✔ réussi, • info, ▲ à surveiller, ✖ refusé, en couleur en développement), le thème, un
+message court et ses détails en `clé=valeur` (pas les requêtes une à une : seulement ce qui se
+passe). Il note les connexions
 (réussies ou refusées, avec l'adresse du visiteur), création du compte, pseudo et mot de passe
 changés, cartes ajoutées, possédées ou retirées, commandes enregistrées, reçues ou annulées, budget,
 exports et imports, visites du Pokédex public, l'API des données muette, et les erreurs
 du serveur (avec leur cause). Pour le
-suivre : `docker compose logs -f server` (en développement, le terminal de
-`bun run dev:server`).
+suivre : le terminal de `bun dev` ; en ligne, les journaux du Worker chez Cloudflare.
 
 Les services (`pokedex` : le site, nginx, sur `127.0.0.1:8080`, joignable seulement par Caddy ;
 `server` : les comptes et les collections) et leurs volumes :

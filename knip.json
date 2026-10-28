@@ -1,4 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["server/index.ts!", "scripts/check-data-contracts.ts!"]
+  "entry": ["scripts/check-data-contracts.ts!"],
+  // Les modules du moteur de Cloudflare (`cloudflare:workers`, `cloudflare:test`) : pas des paquets.
+  "ignoreDependencies": ["cloudflare"]
 }

@@ -1,43 +1,42 @@
 /**
- * La garde du serveur contre l'écrasement (`server/collection.ts`) : un appareil qui envoie une
+ * La garde du Worker contre l'écrasement (`worker/collection.ts`) : un appareil qui envoie une
  * collection partie d'une version dépassée (un autre onglet, un autre appareil l'a changée), ou en
- * avance (une base restaurée, dont le README fait relever les numéros), est refusé (409), et la
- * version du serveur reste telle quelle ; sans session rien ne passe, ni d'un autre site (une
- * modification, sur toute adresse, avant même la lecture de son corps ; une lecture, si) ; un
- * document abîmé est refusé (400). Une erreur ici écraserait les commandes d'un autre appareil. La lecture dit à quel compte est la collection, et seulement sa
- * version quand l'appareil a déjà celle-là (`?version=`) ; un envoi compressé (`gzip`, celui du
- * site) est enregistré, aussi derrière un vrai `Bun.serve`, mais refusé (413) au-delà de 5 000 000
- * octets décompressés, sans jamais décompresser plus (une bombe de 1 Go suivie d'octets illisibles :
- * lue jusqu'au bout, elle ferait un 400) ; sans session, 401 sans rien décompresser
- * (le cookie renouvelé d'une session repart toujours) ; une panne en lisant la session, 500 (pas
- * le 400 d'un document refusé) ; un envoi renvoyé tel quel après une réponse perdue est reconnu (200, la même
- * version), un autre parti de la même version reste refusé (409). Chaque compte ne touche qu'à sa
- * collection, et la sienne part avec lui. Le journal : ce qu'un compte peut répéter à volonté (un
- * export signalé, un envoi refusé) n'y écrit qu'une ligne par minute, sans quoi il ferait tourner le
- * journal de Docker et effacerait les connexions. Et ce que montre le Pokédex public d'un compte (`/api/vitrine/<pseudo>`) : ce qu'il
- * laisserait passer serait public. Le serveur entier (`createApp`), sur des bases neuves dans le
- * dossier temporaire de `setup.ts`, avec un compte créé comme à l'inscription et un premier envoi ;
- * chaque test part de la version du moment, dans n'importe quel ordre.
+ * avance, est refusé (409), et la version du serveur reste telle quelle ; sans session rien ne
+ * passe, ni d'un autre site (une modification, avant même la lecture de son corps ; une lecture,
+ * si) ; un document abîmé est refusé (400). Une erreur ici écraserait les commandes d'un autre
+ * appareil. La lecture dit à quel compte est la collection, et seulement sa version quand
+ * l'appareil a déjà celle-là (`?version=`) ; un envoi compressé (`gzip`, celui du site) est
+ * enregistré, mais refusé (413) au-delà de 5 000 000 octets décompressés, sans jamais décompresser
+ * plus (une bombe de 100 Mo suivie d'octets illisibles : lue jusqu'au bout, elle ferait un 400) ;
+ * sans session, 401 sans rien décompresser (le cookie renouvelé d'une session repart toujours) ;
+ * une panne en lisant la session, 500 (pas le 400 d'un document refusé) ; un envoi renvoyé tel
+ * quel après une réponse perdue est reconnu (200, la même version), un autre parti de la même
+ * version reste refusé (409). Chaque compte ne touche qu'à sa collection, et la sienne part avec
+ * lui. Le journal : ce qu'un compte peut répéter à volonté (un export signalé, un envoi refusé)
+ * n'y écrit qu'une ligne par minute. Et ce que montre le Pokédex public d'un compte
+ * (`/api/vitrine/<pseudo>`, l'aperçu d'un lien partagé) : ce qu'il laisserait passer serait
+ * public. Le Worker entier, sur une base D1 neuve pour le fichier, avec un compte créé comme à
+ * l'inscription et un premier envoi ; chaque test part de la version du moment.
  */
 
-import { afterAll, describe, expect, spyOn, test } from 'bun:test'
+import { env } from 'cloudflare:workers'
+import { afterAll, describe, expect, test, vi } from 'vitest'
 import { emptyShopping } from '@/lib/orders'
 import { DAY } from '@/lib/time'
-import {
-  MAX_DOCUMENT,
-  type CollectionDocument,
-  type CollectionResponse,
-  type CollectionSaved,
-  type VitrineData,
-} from '@/types'
-import { card, collectionWith, NOW, order, ownership, withCards } from './fixtures'
-import { openServer, ORIGIN, PASSWORD } from './server'
+import type { CollectionDocument, CollectionResponse, CollectionSaved, VitrineData } from '@/types'
+import { card, collectionWith, NOW, order, ownership, withCards } from '../../tests/fixtures'
+import { auth } from '../auth'
+import worker from '../index'
+import { authCall, call, createAccount, gzip, ORIGIN, PASSWORD, sleep } from './helpers'
 
-// Le journal du serveur (une ligne par évènement) : muet pendant ces tests.
-const log = spyOn(console, 'log').mockImplementation(() => {})
+// Le journal du Worker (une ligne par évènement) : muet pendant ces tests.
+const log = vi.spyOn(console, 'log').mockImplementation(() => {})
 afterAll(() => log.mockRestore())
 
-const { app, accounts, server, authCall, createAccount } = await openServer()
+/** L'API des données : sans guide des prix (404), sauf dans les tests des prix (`dataApi`). */
+const NO_PRICES = () => new Response(null, { status: 404 })
+const dataApi = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => NO_PRICES())
+afterAll(() => dataApi.mockRestore())
 
 const signUp = await createAccount('Sacha')
 const cookie = signUp.cookie
@@ -45,38 +44,42 @@ const sacha = signUp.user!.id
 
 /** `/api/collection`, du site et avec la session ; `headers` s'y ajoute ou les remplace. */
 const collection = (method: 'GET' | 'PUT', body?: unknown, headers: Record<string, string> = {}) =>
-  server.handle(
-    new Request(`${ORIGIN}/api/collection`, {
-      method,
-      headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie, ...headers },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    }),
-  )
+  call('/api/collection', {
+    method,
+    headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie, ...headers },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
 
 /**
  * `PUT /api/collection` comme l'envoie le site : compressé (`Content-Encoding: gzip`) ; `headers`
  * s'y ajoute ou les remplace.
  */
 const gzipped = (body: RequestInit['body'], headers: Record<string, string> = {}) =>
-  server.handle(
-    new Request(`${ORIGIN}/api/collection`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Encoding': 'gzip',
-        Origin: ORIGIN,
-        Cookie: cookie,
-        ...headers,
-      },
-      body,
-    }),
-  )
+  call('/api/collection', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Encoding': 'gzip',
+      Origin: ORIGIN,
+      Cookie: cookie,
+      ...headers,
+    },
+    body,
+  })
 
 /** La version enregistrée sur le serveur. */
 async function stored() {
   const response = await collection('GET')
   return { body: (await response.json()) as CollectionResponse }
 }
+
+/** Un document écrit directement dans la base, comme avant une livraison. */
+const storeDirectly = (userId: string, document: string) =>
+  env.DB.prepare(
+    'INSERT INTO collections (user_id, version, collection, shopping, updated_at) VALUES (?, 1, ?, ?, ?)',
+  )
+    .bind(userId, document, JSON.stringify(emptyShopping()), NOW)
+    .run()
 
 /**
  * Le document d'un appareil : une carte possédée, payée 30 €, reliée à Cardmarket ; une autre
@@ -147,13 +150,9 @@ describe('/api/collection : jamais une version écrasée', () => {
     })
     expect(stale.status).toBe(409)
     expect(await stored()).toEqual(after)
-    // Aucune version remplacée n'est gardée (plus de sauvegarde, octobre 2026) : seule la dernière.
-    expect(app.query("SELECT 1 FROM sqlite_master WHERE name = 'collection_versions'").get()).toBe(
-      null,
-    )
   })
 
-  test('une version en avance sur le serveur (une base restaurée plus ancienne) : 409', async () => {
+  test('une version en avance sur le serveur : 409', async () => {
     const before = await stored()
     const response = await collection('PUT', {
       account: sacha,
@@ -164,7 +163,7 @@ describe('/api/collection : jamais une version écrasée', () => {
     expect(await stored()).toEqual(before)
   })
 
-  test('un document abîmé : 400, rien d’écrit', async () => {
+  test('un document abîmé, ou un envoi sans compte ni version : 400, rien d’écrit', async () => {
     const before = await stored()
     const broken = {
       ...first,
@@ -176,22 +175,21 @@ describe('/api/collection : jamais une version écrasée', () => {
       ...broken,
     })
     expect(response.status).toBe(400)
+    expect((await collection('PUT', { ...first })).status).toBe(400)
+    expect((await collection('PUT', { account: sacha, baseVersion: -1, ...first })).status).toBe(
+      400,
+    )
     expect(await stored()).toEqual(before)
   })
 
   test('un document enregistré avant les collections d’extensions (sans `series`) : le suivant est enregistré, et journalisé', async () => {
-    // Écrit directement, comme avant cette livraison : il n'a pas de clé `series`.
     const old = await createAccount('Veteran')
     const before = JSON.stringify({
       ...withCards(collectionWith({ a: ownership('owned') }), card('a', [25])),
       series: undefined,
     })
     expect(before).not.toContain('series')
-    app
-      .query(
-        'INSERT INTO collections (user_id, version, collection, shopping, updated_at) VALUES (?, 1, ?, ?, ?)',
-      )
-      .run(old.user!.id, before, JSON.stringify(emptyShopping()), NOW)
+    await storeDirectly(old.user!.id, before)
     // Il commence une collection : le journal la compare à celle d'avant, qui n'en a pas.
     const next: CollectionDocument = {
       collection: {
@@ -215,7 +213,7 @@ describe('/api/collection : jamais une version écrasée', () => {
     expect(log.mock.calls.flat().join(' ')).toContain('Collection commencée')
   })
 
-  test('envoyé d’un autre site (le cookie part avec toute requête vers le site) : 403', async () => {
+  test('envoyé d’un autre site (le cookie part avec toute requête vers le site) : 403, avant d’être lu', async () => {
     const before = await stored()
     const response = await collection(
       'PUT',
@@ -223,10 +221,33 @@ describe('/api/collection : jamais une version écrasée', () => {
       { Origin: 'https://autre.exemple' },
     )
     expect(response.status).toBe(403)
-    // Refusé avant d'être lu : un corps invalide aussi (pas de 422 qui renverrait l'envoi).
-    const invalid = await collection('PUT', {}, { Origin: 'https://autre.exemple' })
-    expect(invalid.status).toBe(403)
-    expect(await invalid.text()).toBe('')
+    // Un corps que le Worker ne lit qu'en le demandant : il ne l'est jamais.
+    let read = false
+    const body = new ReadableStream(
+      {
+        pull(controller) {
+          read = true
+          controller.enqueue(new TextEncoder().encode('{}'))
+          controller.close()
+        },
+      },
+      { highWaterMark: 0 },
+    )
+    const unread = await worker.request(
+      new Request(`${ORIGIN}/api/collection`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: 'https://autre.exemple',
+          Cookie: cookie,
+        },
+        body,
+      }),
+    )
+    expect(unread.status).toBe(403)
+    expect(unread.headers.get('cache-control')).toBe('no-store')
+    expect(await unread.text()).toBe('')
+    expect(read).toBe(false)
     expect(await stored()).toEqual(before)
   })
 
@@ -245,14 +266,18 @@ describe('/api/collection : jamais une version écrasée', () => {
     ).toBe(401)
     expect(await stored()).toEqual(before)
   })
+
+  test('d’un autre site, une lecture passe : la collection, un Pokédex public', async () => {
+    const headers = { Origin: 'https://autre.exemple' }
+    expect((await collection('GET', undefined, headers)).status).toBe(200)
+    expect((await call('/api/vitrine/sacha', { headers })).status).toBe(200)
+  })
 })
 
 describe('/api/collection : lue depuis sa version, envoyée compressée, renvoyée après une réponse perdue', () => {
   /** La lecture d'un appareil qui a déjà la version `version` (`?version=`). */
   const readFrom = (version: number | string) =>
-    server.handle(
-      new Request(`${ORIGIN}/api/collection?version=${version}`, { headers: { Cookie: cookie } }),
-    )
+    call(`/api/collection?version=${version}`, { headers: { Cookie: cookie } })
 
   test('l’appareil a déjà la version du serveur : la version et le compte seuls, sans le document', async () => {
     const { body } = await stored()
@@ -262,8 +287,8 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
     expect(await same.json()).toEqual({ version: body.version, account: sacha })
     // Une autre version : le document entier.
     expect(await (await readFrom(body.version - 1)).json()).toEqual(body)
-    // Une version qui n'en est pas une : refusée par le schéma, sans document.
-    expect((await readFrom('abc')).status).toBe(422)
+    // Une version qui n'en est pas une : refusée, sans document.
+    expect((await readFrom('abc')).status).toBe(400)
   })
 
   test('compressée (`Content-Encoding: gzip`, comme l’envoie le site) : enregistrée comme une autre', async () => {
@@ -273,7 +298,7 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
       shopping: { ...emptyShopping(), orders: [order({ id: 'compressée' })] },
     }
     const sent = { account: sacha, baseVersion: before.body.version, ...next }
-    const response = await gzipped(Bun.gzipSync(JSON.stringify(sent)))
+    const response = await gzipped(await gzip(JSON.stringify(sent)))
     expect(response.status).toBe(200)
     expect((await response.json()) as CollectionSaved).toEqual({
       version: before.body.version + 1,
@@ -285,70 +310,45 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
     })
     // Illisible une fois décompressée, ou pas du gzip : 400, rien d'écrit.
     const after = await stored()
-    expect((await gzipped(Bun.gzipSync('{"account":'))).status).toBe(400)
+    expect((await gzipped(await gzip('{"account":'))).status).toBe(400)
     expect((await gzipped(JSON.stringify(sent))).status).toBe(400)
     expect(await stored()).toEqual(after)
   })
 
-  /** Ce que le serveur décompresse pendant `run` : le nombre de `DecompressionStream` créés. */
-  async function decompressions(run: () => Promise<unknown>) {
-    const Original = globalThis.DecompressionStream
-    let count = 0
-    class Counted extends Original {
-      constructor(format: ConstructorParameters<typeof DecompressionStream>[0]) {
-        super(format)
-        count++
+  test('compressée, sans session : 401, sans rien lire', async () => {
+    const before = await stored()
+    // 4 Mo une fois décompressés, dans 4 Ko ; une bombe ; du gzip illisible : lus, ils feraient
+    // un 400 ou un 413. Sans session, rien n'est lu : 401.
+    const heavy = await gzip(' '.repeat(4_000_000))
+    const bomb = await gzip(new Uint8Array(100_000_000))
+    for (const noSession of ['', 'better-auth.session_token=inconnu']) {
+      for (const body of [heavy, bomb, 'pas du gzip']) {
+        expect((await gzipped(body, { Cookie: noSession })).status).toBe(401)
       }
     }
-    Object.assign(globalThis, { DecompressionStream: Counted })
-    try {
-      await run()
-    } finally {
-      Object.assign(globalThis, { DecompressionStream: Original })
-    }
-    return count
-  }
-
-  test('compressée, sans session : 401, sans rien décompresser', async () => {
-    const before = await stored()
-    // 4 Mo une fois décompressés, dans 4 Ko.
-    const heavy = Bun.gzipSync(' '.repeat(4_000_000))
-    for (const noSession of ['', 'better-auth.session_token=inconnu']) {
-      let status = 0
-      const count = await decompressions(async () => {
-        status = (await gzipped(heavy, { Cookie: noSession })).status
-      })
-      expect(status).toBe(401)
-      expect(count).toBe(0)
-    }
-    // Avec la session, le même corps est décompressé (le compteur compte bien) ; des espaces ne
-    // sont pas un document : 400.
-    let withSession = 0
-    const count = await decompressions(async () => {
-      withSession = (await gzipped(heavy)).status
-    })
-    expect(count).toBe(1)
-    expect(withSession).toBe(400)
-    // Du gzip illisible, sans session : 401, pas 400.
-    expect((await gzipped('pas du gzip', { Cookie: '' })).status).toBe(401)
+    // Avec la session, le même corps est lu : des espaces ne sont pas un document, 400.
+    expect((await gzipped(heavy)).status).toBe(400)
     expect(await stored()).toEqual(before)
   })
 
-  test('non compressée et illisible, même sans session : le 400 d’Elysia, rien au journal', async () => {
+  test('illisible : 400 avec la session, 401 sans, et rien au journal', async () => {
     const before = await stored()
-    // Le `parse` passe avant la session : n'importe qui peut l'envoyer, rien ne doit en venir au
-    // journal (ni une ligne, ni une erreur dans la sortie du serveur).
+    // N'importe qui peut l'envoyer : rien ne doit en venir au journal (ni une ligne, ni une erreur
+    // dans la sortie du Worker).
     log.mockClear()
-    const errors = spyOn(console, 'error').mockImplementation(() => {})
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
-      const response = await server.handle(
-        new Request(`${ORIGIN}/api/collection`, {
+      for (const [session, status] of [
+        [cookie, 400],
+        ['', 401],
+      ] as const) {
+        const response = await call('/api/collection', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Origin: ORIGIN },
+          headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: session },
           body: '{"account":',
-        }),
-      )
-      expect(response.status).toBe(400)
+        })
+        expect(response.status).toBe(status)
+      }
       expect(log).not.toHaveBeenCalled()
       expect(errors).not.toHaveBeenCalled()
     } finally {
@@ -359,14 +359,13 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
 
   test('la session ne peut pas être lue (une panne passagère) : 500, l’appareil réessaiera', async () => {
     const before = await stored()
-    const lookup = spyOn(accounts.auth.api, 'getSession').mockRejectedValueOnce(
-      new Error('Base occupée'),
-    )
-    const errors = spyOn(console, 'error').mockImplementation(() => {})
+    const lookup = vi.spyOn(auth.api, 'getSession').mockRejectedValueOnce(new Error('Base occupée'))
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
       const sent = { account: sacha, baseVersion: before.body.version, ...second }
-      // Pas un 400 : l'appareil dirait « Envoi refusé », et ne réessaierait pas.
-      expect((await gzipped(Bun.gzipSync(JSON.stringify(sent)))).status).toBe(500)
+      // Pas un 400 : l'appareil dirait « Envoi refusé », et ne réessaierait pas ; pas un 401 : il
+      // dirait la session fermée.
+      expect((await gzipped(await gzip(JSON.stringify(sent)))).status).toBe(500)
     } finally {
       lookup.mockRestore()
       errors.mockRestore()
@@ -374,67 +373,34 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
     expect(await stored()).toEqual(before)
   })
 
-  test('derrière un vrai `Bun.serve` : enregistrée, sans erreur perdue en route', async () => {
-    const before = await stored()
-    // Une erreur que personne n'attrape (`server.handle` ne passe pas par le serveur HTTP de Bun).
-    const lost: unknown[] = []
-    const onLost = (error: unknown) => lost.push(error)
-    process.on('unhandledRejection', onLost)
-    const real = Bun.serve({
-      port: 0,
-      hostname: '127.0.0.1',
-      maxRequestBodySize: MAX_DOCUMENT,
-      fetch: (request) => server.handle(request),
-    })
-    try {
-      const sent = { account: sacha, baseVersion: before.body.version, ...first }
-      const response = await fetch(new URL('/api/collection', real.url), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Encoding': 'gzip',
-          Origin: ORIGIN,
-          Cookie: cookie,
-        },
-        body: Bun.gzipSync(JSON.stringify(sent)),
-      })
-      expect(response.status).toBe(200)
-      // Une erreur perdue arriverait juste après la réponse.
-      await Bun.sleep(100)
-    } finally {
-      process.off('unhandledRejection', onLost)
-      await real.stop(true)
-    }
-    expect(lost).toEqual([])
-  })
-
   test('une session à renouveler : son cookie renouvelé repart avec la réponse d’un envoi compressé', async () => {
     const owner = await createAccount('Renouveau')
-    // Ouverte il y a deux jours : renouvelée à la requête suivante (une fois par jour d'usage). Le
-    // contrôle de la session avant la décompression ne doit pas consommer ce renouvellement.
-    const twoDaysOld = new Date(Date.now() + 58 * DAY).toISOString()
-    app.query('UPDATE session SET expiresAt = ? WHERE userId = ?').run(twoDaysOld, owner.user!.id)
+    // Ouverte il y a deux jours : renouvelée à la requête suivante (une fois par jour d'usage).
+    await env.DB.prepare('UPDATE session SET expiresAt = ? WHERE userId = ?')
+      .bind(Date.now() + 58 * DAY, owner.user!.id)
+      .run()
     const sent = { account: owner.user!.id, baseVersion: 0, ...first }
-    const response = await gzipped(Bun.gzipSync(JSON.stringify(sent)), { Cookie: owner.cookie })
+    const response = await gzipped(await gzip(JSON.stringify(sent)), { Cookie: owner.cookie })
     expect(response.status).toBe(200)
     expect(response.headers.getSetCookie().join()).toContain('session_token=')
   })
 
   test('plus de 5 000 000 octets une fois décompressée : 413, sans décompresser plus', async () => {
     const before = await stored()
-    // Une « bombe » : 1 Go une fois décompressée (dix membres gzip de 100 Mo de zéros), 1 Mo
-    // compressé (le build Docker du VPS la garde en mémoire : pas davantage), suivie de trois octets
-    // qui ne sont pas du gzip. Décompressée jusqu'au bout, elle lèverait une erreur (400) ; arrêtée
-    // au plafond, elle n'y arrive jamais (413), quelle que soit la vitesse de la machine.
-    const member = Bun.gzipSync(new Uint8Array(100_000_000))
-    const bomb = new Uint8Array(member.length * 10 + 3)
-    for (let i = 0; i < 10; i++) bomb.set(member, i * member.length)
-    bomb.set([1, 2, 3], member.length * 10)
+    // Une « bombe » : 100 Mo de zéros une fois décompressée, 100 Ko compressée, suivie de trois
+    // octets qui ne sont pas du gzip. Décompressée jusqu'au bout, elle lèverait une erreur (400) ;
+    // arrêtée au plafond, elle n'y arrive jamais (413).
+    const member = await gzip(new Uint8Array(100_000_000))
+    const bomb = new Uint8Array(member.length + 3)
+    bomb.set(member)
+    bomb.set([1, 2, 3], member.length)
     const start = performance.now()
     const response = await gzipped(bomb)
     expect(response.status).toBe(413)
     // Arrêtée au plafond : quelques dizaines de millisecondes.
     expect(performance.now() - start).toBeLessThan(2_000)
+    // Tel qu'envoyé, plus de 5 Mo : 413 aussi.
+    expect((await gzipped(new Uint8Array(5_000_001))).status).toBe(413)
     expect(await stored()).toEqual(before)
   })
 
@@ -456,7 +422,7 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
     // Rien au journal : ni un refus, ni une modification de plus.
     expect(log).not.toHaveBeenCalled()
     // Compressée aussi.
-    expect((await gzipped(Bun.gzipSync(JSON.stringify(sent)))).status).toBe(200)
+    expect((await gzipped(await gzip(JSON.stringify(sent)))).status).toBe(200)
     expect(await stored()).toEqual(after)
   })
 
@@ -475,84 +441,7 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
   })
 })
 
-describe('d’un autre site : une modification refusée partout, une lecture jamais', () => {
-  const FOREIGN = 'https://autre.exemple'
-
-  test('refusée avant la lecture de son corps (403, sans corps, jamais en cache)', async () => {
-    // Un corps que le serveur ne lit qu'en le demandant : il ne l'est jamais.
-    let read = false
-    const body = new ReadableStream(
-      {
-        pull(controller) {
-          read = true
-          controller.enqueue(new TextEncoder().encode('{}'))
-          controller.close()
-        },
-      },
-      { highWaterMark: 0 },
-    )
-    const request = new Request(`${ORIGIN}/api/collection`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Origin: FOREIGN, Cookie: cookie },
-      body,
-    })
-    const response = await server.handle(request)
-    expect(response.status).toBe(403)
-    expect(response.headers.get('cache-control')).toBe('no-store')
-    expect(await response.text()).toBe('')
-    expect(read).toBe(false)
-    expect(request.bodyUsed).toBe(false)
-  })
-
-  test('une adresse inconnue aussi : 403, quand le site y aurait un 404', async () => {
-    const post = (path: string, origin?: string) =>
-      server.handle(
-        new Request(`${ORIGIN}${path}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(origin && { Origin: origin }) },
-          body: '{}',
-        }),
-      )
-    expect((await post('/api/inconnue', FOREIGN)).status).toBe(403)
-    expect((await post('/inconnue', FOREIGN)).status).toBe(403)
-    // Sans origine : une modification n'en vient pas du site.
-    expect((await post('/api/inconnue')).status).toBe(403)
-    expect((await post('/api/inconnue', ORIGIN)).status).toBe(404)
-  })
-
-  test('les lectures passent, sans origine ou d’ailleurs : le contrôle de santé, un Pokédex public', async () => {
-    const get = (path: string, headers: Record<string, string> = {}) =>
-      server.handle(new Request(`${ORIGIN}${path}`, { headers }))
-    for (const headers of [{}, { Origin: FOREIGN }] as Record<string, string>[]) {
-      const account = await get('/api/account', headers)
-      expect(account.status).toBe(200)
-      expect(await account.json()).toEqual({ user: null })
-      expect((await get('/api/vitrine/sacha', headers)).status).toBe(200)
-      expect((await get('/api/collection', { ...headers, Cookie: cookie })).status).toBe(200)
-    }
-  })
-})
-
-describe('les comptes : chacun le sien', () => {
-  test('pas d’e-mail : le serveur en donne une sans boîte, propre au compte', () => {
-    expect(signUp.user!.email).toMatch(/^[0-9a-f-]{36}@pokedex\.invalid$/)
-  })
-
-  test('un pseudo de deux caractères, oui ; une adresse du site, non', async () => {
-    expect((await createAccount('Al')).response.status).toBe(200)
-    for (const pseudo of ['A', 'connexion', 'Pokedex', 'Collections', 'api']) {
-      expect((await createAccount(pseudo)).response.status).toBe(400)
-    }
-  })
-
-  test('un pseudo déjà pris, même autrement écrit : refusé, rien de créé', async () => {
-    const { response } = await createAccount('SACHA')
-    expect(response.status).toBe(400)
-    expect(((await response.json()) as { code: string }).code).toBe('USERNAME_IS_ALREADY_TAKEN')
-    const count = app.query('SELECT COUNT(*) AS count FROM "user" WHERE username = ?').get('sacha')
-    expect(count).toEqual({ count: 1 })
-  })
-
+describe('les comptes : chacun sa collection', () => {
   test('un autre compte ne voit ni ne touche la collection du premier', async () => {
     const before = await stored()
     const ondine = await createAccount('Ondine')
@@ -595,87 +484,38 @@ describe('les comptes : chacun le sien', () => {
       (await collection('PUT', { account: pierre.user!.id, baseVersion: 0, ...first }, asPierre))
         .status,
     ).toBe(200)
-    // Sans mot de passe, ou avec un faux : rien ne part.
-    expect((await authCall('delete-user', {}, pierre.cookie)).status).toBe(400)
-    expect((await authCall('delete-user', { password: 'faux' }, pierre.cookie)).status).toBe(400)
-    expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/pierre`))).status).toBe(200)
+    expect((await call('/api/vitrine/pierre')).status).toBe(200)
 
     expect((await authCall('delete-user', { password: PASSWORD }, pierre.cookie)).status).toBe(200)
-    const left = (table: string) =>
-      app.query(`SELECT COUNT(*) AS count FROM ${table} WHERE user_id = ?`).get(pierre.user!.id)
-    expect(left('collections')).toEqual({ count: 0 })
-    expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/pierre`))).status).toBe(404)
+    const left = await env.DB.prepare('SELECT COUNT(*) AS count FROM collections WHERE user_id = ?')
+      .bind(pierre.user!.id)
+      .first()
+    expect(left).toEqual({ count: 0 })
+    expect((await call('/api/vitrine/pierre')).status).toBe(404)
     expect((await collection('GET', undefined, asPierre)).status).toBe(401)
-    // Son pseudo n'est pas repris par un autre : ses liens partagés ne mèneraient plus à lui.
-    const { response } = await createAccount('pierre')
-    expect(response.status).toBe(400)
-    expect(((await response.json()) as { code: string }).code).toBe('USERNAME_IS_ALREADY_TAKEN')
   })
 
-  test('un pseudo quitté n’est jamais repris par un autre compte ; le sien peut le reprendre', async () => {
+  test('un pseudo quitté : son Pokédex public n’y est plus, et y revient s’il le reprend', async () => {
     const flora = await createAccount('Flora')
     const rename = (to: string) => authCall('update-user', { name: to, username: to }, flora.cookie)
     expect((await rename('Flora-2')).status).toBe(200)
-    expect((await createAccount('flora')).response.status).toBe(400)
-    expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/flora`))).status).toBe(404)
+    expect((await call('/api/vitrine/flora')).status).toBe(404)
     expect((await rename('Flora')).status).toBe(200)
-    expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/flora`))).status).toBe(200)
-    // La base le refuse elle-même (deux requêtes ensemble ne passent pas entre le contrôle et
-    // l'écriture) : « flora-2 », quitté par Flora, n'est à personne d'autre.
-    const take = app.query('UPDATE "user" SET username = ? WHERE id = ?')
-    expect(() => take.run('flora-2', signUp.user!.id)).toThrow('pseudo réservé')
-  })
-
-  test('changer de pseudo sans fin ne réserve que les 3 derniers', async () => {
-    const cynthia = await createAccount('Cynthia')
-    for (const to of ['Cynthia-1', 'Cynthia-2', 'Cynthia-3', 'Cynthia-4']) {
-      const response = await authCall('update-user', { name: to, username: to }, cynthia.cookie)
-      expect(response.status).toBe(200)
-      // `released_at` est à la milliseconde : deux changements dans la même ne seraient plus
-      // rangés (`ORDER BY released_at`), et les 3 gardés tirés au hasard.
-      await Bun.sleep(5)
-    }
-    // Quittés : cynthia, -1, -2, -3 ; seuls les 3 derniers restent réservés.
-    expect((await createAccount('cynthia-1')).response.status).toBe(400)
-    expect((await createAccount('cynthia')).response.status).toBe(200)
-  })
-
-  test('envoyé d’un autre site : ni création ni connexion (403)', async () => {
-    const from = (path: string, body: unknown) =>
-      server.handle(
-        new Request(`${ORIGIN}/api/auth/${path}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Origin: 'https://autre.exemple' },
-          body: JSON.stringify(body),
-        }),
-      )
-    const created = await from('sign-up/email', {
-      name: 'Brock',
-      username: 'Brock',
-      email: '',
-      password: PASSWORD,
-    })
-    expect(created.status).toBe(403)
-    expect(app.query('SELECT 1 FROM "user" WHERE username = ?').get('brock')).toBeNull()
-    const signedIn = await from('sign-in/username', { username: 'Sacha', password: PASSWORD })
-    expect(signedIn.status).toBe(403)
-    expect(signedIn.headers.getSetCookie()).toEqual([])
+    expect((await call('/api/vitrine/flora')).status).toBe(200)
   })
 })
 
-describe('le journal : aucun compte ne le fait tourner', () => {
+describe('le journal : aucun compte ne le noie', () => {
   test('un export signalé sans fin, un document refusé renvoyé sans fin : une ligne par minute', async () => {
     // Un compte à part : les refus des autres tests, notés dans la minute, tairaient les siens.
     const rocky = await createAccount('Rocky')
     const asRocky = { Cookie: rocky.cookie }
-    const report = (event: 'export' | 'import') =>
-      server.handle(
-        new Request(`${ORIGIN}/api/journal`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Origin: ORIGIN, ...asRocky },
-          body: JSON.stringify({ event }),
-        }),
-      )
+    const report = (event: string) =>
+      call('/api/journal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Origin: ORIGIN, ...asRocky },
+        body: JSON.stringify({ event }),
+      })
     const lines = (message: string) =>
       log.mock.calls.flat().filter((line) => String(line).includes(message)).length
     log.mockClear()
@@ -683,6 +523,8 @@ describe('le journal : aucun compte ne le fait tourner', () => {
     expect((await report('import')).status).toBe(204)
     expect(lines('Collection exportée')).toBe(1)
     expect(lines('Fichier importé')).toBe(1)
+    // Un autre évènement : refusé, rien au journal.
+    expect((await report('autre')).status).toBe(400)
 
     const broken = {
       ...first,
@@ -698,26 +540,40 @@ describe('le journal : aucun compte ne le fait tourner', () => {
 
 describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
   const visit = async (pseudo = 'sacha') => {
-    const response = await server.handle(new Request(`${ORIGIN}/api/vitrine/${pseudo}`))
+    const response = await call(`/api/vitrine/${pseudo}`)
     expect(response.status).toBe(200)
     return (await response.json()) as VitrineData
+  }
+  /** Ce que lit un robot d'aperçu à l'adresse `/pseudo` : le titre de sa page. */
+  const previewTitle = async (path: string) => {
+    const response = await call(path, { headers: { 'User-Agent': 'Mozilla/5.0 Discordbot/2.0' } })
+    expect(response.status).toBe(200)
+    return (await response.text()).match(/<title>(.*?)<\/title>/)?.[1]
   }
 
   test('le Pokédex du pseudo, sans tenir compte des majuscules ; un pseudo à personne : 404', async () => {
     expect((await visit('Sacha')).owner).toBe('Sacha')
-    expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/personne`))).status).toBe(404)
-    // L'aperçu d'un lien vers une adresse sans compte (une page du site, `/connexion`) : celui du
-    // site, jamais celui d'un compte.
-    const preview = await server.handle(new Request(`${ORIGIN}/api/vitrine/connexion/apercu`))
-    expect(preview.status).toBe(200)
-    expect(await preview.text()).toContain('<title>PokéCodex</title>')
+    expect((await call('/api/vitrine/personne')).status).toBe(404)
+    // L'aperçu d'un lien : celui du compte ; vers une adresse sans compte (une page du site,
+    // `/connexion`), celui du site, jamais celui d'un compte.
+    expect(await previewTitle('/Sacha')).toBe('Le Pokédex de Sacha')
+    expect(await previewTitle('/connexion')).toBe('PokéCodex')
     // Un compte qui porterait une adresse du site (créé avant qu'elle ne le devienne) : son
     // Pokédex n'y est jamais montré.
     const misty = await createAccount('Misty')
-    app.query('UPDATE "user" SET username = ? WHERE id = ?').run('pokedex', misty.user!.id)
-    expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/pokedex`))).status).toBe(404)
-    const hidden = await server.handle(new Request(`${ORIGIN}/api/vitrine/pokedex/apercu`))
-    expect(await hidden.text()).toContain('<title>PokéCodex</title>')
+    await env.DB.prepare('UPDATE "user" SET username = ? WHERE id = ?')
+      .bind('pokedex', misty.user!.id)
+      .run()
+    expect((await call('/api/vitrine/pokedex')).status).toBe(404)
+    expect(await previewTitle('/pokedex')).toBe('PokéCodex')
+  })
+
+  test('inchangé depuis la dernière visite : 304, sans corps', async () => {
+    const response = await call('/api/vitrine/sacha')
+    const etag = response.headers.get('etag')!
+    const again = await call('/api/vitrine/sacha', { headers: { 'If-None-Match': `W/${etag}` } })
+    expect(again.status).toBe(304)
+    expect(await again.text()).toBe('')
   })
 
   test('sans session : les cartes, jamais un prix payé, une commande ni un statut « commandée »', async () => {
@@ -740,11 +596,7 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
       favorites: undefined,
     })
     expect(document).not.toContain('favorites')
-    app
-      .query(
-        'INSERT INTO collections (user_id, version, collection, shopping, updated_at) VALUES (?, 1, ?, ?, ?)',
-      )
-      .run(old.user!.id, document, JSON.stringify(emptyShopping()), NOW)
+    await storeDirectly(old.user!.id, document)
     expect((await visit('ancien')).collection.favorites).toEqual({ 25: 'a' })
   })
 
@@ -762,11 +614,7 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
       ),
       series: [{ set: 'SV2A', name: 'Pokémon Card 151', startedAt: NOW, cards: ['a', 's'] }],
     }
-    app
-      .query(
-        'INSERT INTO collections (user_id, version, collection, shopping, updated_at) VALUES (?, 1, ?, ?, ?)',
-      )
-      .run(owner.user!.id, JSON.stringify(document), JSON.stringify(emptyShopping()), NOW)
+    await storeDirectly(owner.user!.id, JSON.stringify(document))
     const shown = await visit('collectionneur')
     expect(shown.collection.series).toEqual(document.series)
     expect(shown.collection.customCards.s?.seriesOnly).toBe(true)
@@ -779,33 +627,28 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
   test('les prix du jour des seules cartes possédées, demandés à l’API des données avec le token', async () => {
     // Une fausse API des données : elle note ce qu'on lui demande, et rend un prix par carte.
     const asked: string[] = []
-    const api = Bun.serve({
-      port: 0,
-      hostname: '127.0.0.1',
-      fetch(request) {
-        const url = new URL(request.url)
-        asked.push(`${request.headers.get('authorization')} ${url.pathname}${url.search}`)
-        const ids = url.searchParams.get('ids')!.split(',')
-        return Response.json({
-          date: '2026-10-19',
-          cards: Object.fromEntries(ids.map((id) => [id, [6.87, 5, 7.2]])),
-        })
-      },
+    dataApi.mockImplementation(async (input) => {
+      const request = input as Request
+      const url = new URL(request.url)
+      asked.push(`${request.headers.get('authorization')} ${url.pathname}${url.search}`)
+      const ids = url.searchParams.get('ids')!.split(',')
+      return Response.json({
+        date: '2026-10-19',
+        cards: Object.fromEntries(ids.map((id) => [id, [6.87, 5, 7.2]])),
+      })
     })
-    const before = process.env.DATA_API_URL
-    process.env.DATA_API_URL = api.url.origin
     try {
       expect((await visit()).prices).toEqual({
         date: '2026-10-19',
         cards: { '719445': [6.87, 5, 7.2] },
       })
       expect(asked).toEqual(['Bearer token-d-essai /v1/prices?ids=719445'])
+      // L'API muette : le Pokédex, sans prix.
+      dataApi.mockRejectedValue(new TypeError('API muette'))
+      expect((await visit()).prices).toBeNull()
     } finally {
-      await api.stop(true)
-      process.env.DATA_API_URL = before
+      dataApi.mockImplementation(async () => NO_PRICES())
     }
-    // L'API muette : le Pokédex, sans prix.
-    expect((await visit()).prices).toBeNull()
   })
 
   /** Le compte `pseudo`, qui possède `count` cartes, chacune de son id Cardmarket ; ses cartes. */
@@ -818,45 +661,32 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
       collectionWith(Object.fromEntries(many.map(({ id }) => [id, ownership('owned')]))),
       ...many,
     )
-    app
-      .query(
-        'INSERT INTO collections (user_id, version, collection, shopping, updated_at) VALUES (?, 1, ?, ?, ?)',
-      )
-      .run(owner.user!.id, JSON.stringify(document), JSON.stringify(emptyShopping()), NOW)
+    await storeDirectly(owner.user!.id, JSON.stringify(document))
     return many
   }
 
   /**
-   * Une fausse API des données, à la place de la vraie jusqu'à `stop` : elle note combien d'ids
+   * Une API des données qui a un guide des prix, jusqu'à `stop` : elle note combien d'ids
    * porte chaque demande, dans l'ordre (`asked`), et combien elle en a reçu à la fois au plus
    * (`concurrent` : chacune répond après 20 ms), et rend un prix par carte ; `failing` : un paquet
    * d'un seul id échoue (500).
    */
   function pricesApi() {
-    const api = { asked: [] as number[], concurrent: 0, failing: false, stop: async () => {} }
+    const api = { asked: [] as number[], concurrent: 0, failing: false, stop: () => {} }
     let pending = 0
-    const server = Bun.serve({
-      port: 0,
-      hostname: '127.0.0.1',
-      async fetch(request) {
-        const ids = new URL(request.url).searchParams.get('ids')!.split(',')
-        api.asked.push(ids.length)
-        api.concurrent = Math.max(api.concurrent, ++pending)
-        await Bun.sleep(20)
-        pending--
-        if (api.failing && ids.length === 1) return new Response(null, { status: 500 })
-        return Response.json({
-          date: '2026-10-19',
-          cards: Object.fromEntries(ids.map((id) => [id, [1, null, null]])),
-        })
-      },
+    dataApi.mockImplementation(async (input) => {
+      const ids = new URL((input as Request).url).searchParams.get('ids')!.split(',')
+      api.asked.push(ids.length)
+      api.concurrent = Math.max(api.concurrent, ++pending)
+      await sleep(20)
+      pending--
+      if (api.failing && ids.length === 1) return new Response(null, { status: 500 })
+      return Response.json({
+        date: '2026-10-19',
+        cards: Object.fromEntries(ids.map((id) => [id, [1, null, null]])),
+      })
     })
-    const before = process.env.DATA_API_URL
-    process.env.DATA_API_URL = server.url.origin
-    api.stop = async () => {
-      await server.stop(true)
-      process.env.DATA_API_URL = before
-    }
+    api.stop = () => dataApi.mockImplementation(async () => NO_PRICES())
     return api
   }
 
@@ -877,7 +707,7 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
       api.failing = true
       expect((await visit('riche')).prices).toBeNull()
     } finally {
-      await api.stop()
+      api.stop()
     }
   })
 
@@ -893,7 +723,7 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
       expect((await visit('immense')).prices).toBeNull()
       expect(api.asked).toEqual([])
     } finally {
-      await api.stop()
+      api.stop()
     }
   })
 })

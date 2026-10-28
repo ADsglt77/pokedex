@@ -1,5 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["server/index.ts!", "scripts/check-data-contracts.ts!"],
-  "ignoreUnresolved": ["^\\.\\./\\.\\./pokedex-data/src/contract$"]
+  "entry": ["scripts/check-data-contracts.ts!"],
+  "ignoreUnresolved": ["^\\.\\./\\.\\./pokedex-data/src/contract$"],
+  "ignoreDependencies": ["cloudflare"]
 }

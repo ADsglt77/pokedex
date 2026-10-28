@@ -1,24 +1,24 @@
 /**
- * Le visiteur d'une requête (`visitorOf`, `server/journal.ts`), derrière Caddy : la clé qui limite
- * le journal par visiteur (`journalOnce` : les connexions refusées, les visites d'un Pokédex
+ * Le visiteur d'une requête (`visitorOf`, `worker/journal.ts`), derrière Cloudflare : la clé qui
+ * limite le journal par visiteur (`journalOnce` : les connexions refusées, les visites d'un Pokédex
  * public). Fausse, tous les visiteurs n'en feraient qu'un (les lignes de l'un tairaient celles des
- * autres), ou un seul en ferait des milliers (une adresse IPv6 par requête : un afflux ferait
- * tourner le journal de Docker, qui effacerait les connexions). Et ce que dit le journal d'un
- * changement de collection (`documentChanges`) : commencer une collection d'extension, ce sont des
- * centaines de cartes ajoutées, une ligne seulement ; une erreur ici ferait tourner le journal.
+ * autres), ou un seul en ferait des milliers (une adresse IPv6 par requête : un afflux noierait le
+ * journal, et les connexions avec). Et ce que dit le journal d'un changement de collection
+ * (`documentChanges`) : commencer une collection d'extension, ce sont des centaines de cartes
+ * ajoutées, une ligne seulement ; une erreur ici noierait le journal.
  */
 
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, test } from 'vitest'
 import { emptyCollection, saveCard, setCardStatus } from '@/lib/collection'
 import { emptyShopping } from '@/lib/orders'
 import { removeSeries, startSeries } from '@/lib/series'
-import { documentChanges, visitorOf } from '../server/journal'
-import { card, collectionWith, NOW } from './fixtures'
+import { documentChanges, visitorOf } from '../journal'
+import { card, collectionWith, NOW } from '../../tests/fixtures'
 
-describe('adresse du visiteur derrière Caddy', () => {
-  test('lit la première adresse transmise par le proxy', () => {
+describe('adresse du visiteur derrière Cloudflare', () => {
+  test('lit l’adresse que Cloudflare écrit lui-même', () => {
     const request = new Request('https://pokecodex.fr', {
-      headers: { 'x-forwarded-for': '198.51.100.24, 127.0.0.1' },
+      headers: { 'cf-connecting-ip': '198.51.100.24', 'x-forwarded-for': '10.0.0.1' },
     })
 
     expect(visitorOf(request)).toBe('198.51.100.24')
@@ -26,13 +26,13 @@ describe('adresse du visiteur derrière Caddy', () => {
 
   test('regroupe les IPv6 par réseau /64', () => {
     const request = new Request('https://pokecodex.fr', {
-      headers: { 'x-forwarded-for': '2001:db8:1234:5678:abcd::1' },
+      headers: { 'cf-connecting-ip': '2001:db8:1234:5678:abcd::1' },
     })
 
     expect(visitorOf(request)).toBe('2001:db8:1234:5678::/64')
   })
 
-  test('reste vide sans reverse proxy en développement', () => {
+  test('reste vide sans adresse', () => {
     expect(visitorOf(new Request('http://localhost'))).toBe('')
   })
 })

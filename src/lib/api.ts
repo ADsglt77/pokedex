@@ -1,6 +1,6 @@
 /**
- * La lecture de l'API du site (`/api/…`, `server/app.ts` ; les données de référence : l'API des
- * données, que nginx joint) : les espèces, le catalogue, les prix et leur historique, les lignes
+ * La lecture de l'API du site (`/api/…`, `worker/index.ts` ; les données de référence : l'API des
+ * données, que le Worker joint) : les espèces, le catalogue, les prix et leur historique, les lignes
  * d'une liste de souhaits Cardmarket (`store/prices.ts`), l'état des tâches de l'API des données.
  * Facultative, sauf les espèces pour la coquille et le Pokédex public (`router.tsx`) : sans
  * serveur, ou base encore vide, l'app s'affiche sans ces données, et la connexion, l'inscription
@@ -11,7 +11,7 @@ import { settled } from '@/lib/settled'
 import type { ServerStatus } from '@/types'
 
 /**
- * Note dans le journal du serveur ce que le navigateur fait seul (`server/journal.ts`) : un export,
+ * Note dans le journal du serveur ce que le navigateur fait seul (`worker/collection.ts`) : un export,
  * un import. Sans réponse, tant pis : ce n'est qu'un journal.
  */
 export function report(event: 'export' | 'import') {

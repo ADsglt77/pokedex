@@ -1,9 +1,9 @@
 /**
  * Des données d'essai : une carte, une collection, des commandes, des cartes de liste d'achats, et
- * les espèces d'un Pokédex.
+ * les espèces d’un Pokédex. Sans rien de propre à un lanceur de tests : `bun test` (`tests/`) et
+ * les tests du Worker (`worker/tests`) s’en servent.
  */
 
-import { spyOn } from 'bun:test'
 import { completeFavorites, emptyCollection } from '@/lib/collection'
 import { newOrder } from '@/lib/orders'
 import type { PlannableCard } from '@/lib/purchase-planner'
@@ -38,11 +38,14 @@ const TEST_SPECIES: PokemonSpecies[] = [
  * les donne lui-même (`beforeAll`), sans compter sur un autre.
  */
 export async function loadTestSpecies() {
-  const fetch = spyOn(globalThis, 'fetch').mockResolvedValue(
-    Response.json({ species: TEST_SPECIES }),
-  )
-  await loadSpecies()
-  fetch.mockRestore()
+  const real = globalThis.fetch
+  // Avec les propriétés du vrai (`preconnect` sous Bun), pour en avoir le type.
+  globalThis.fetch = Object.assign(async () => Response.json({ species: TEST_SPECIES }), real)
+  try {
+    await loadSpecies()
+  } finally {
+    globalThis.fetch = real
+  }
 }
 
 /** Une carte choisie : sa référence, sans image ; `extra` pour le reste (id Cardmarket…). */

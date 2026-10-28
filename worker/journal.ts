@@ -1,7 +1,8 @@
 /**
- * Le journal de l'app, dans la sortie du serveur (`docker compose logs -f server`, ou le terminal de
- * `bun run dev:server`) : une ligne par évènement, alignée, à l'heure de Paris, son niveau en
- * symbole de couleur, son thème, un message court et ses détails en `clé=valeur` :
+ * Le journal du site, dans la sortie du Worker (le terminal de `bun dev` ; en ligne, les journaux
+ * du Worker chez Cloudflare, `observability` de `wrangler.jsonc`) : une ligne par évènement,
+ * alignée, à l'heure de Paris, son niveau en symbole, son thème, un message court et ses détails en
+ * `clé=valeur` :
  *
  *   16/10 14:03:12  ✔  compte      Connexion                  pseudo=sacha ip=1.2.3.4
  *
@@ -12,26 +13,24 @@
  *   comparé à la version d'avant (`documentChanges`, `collection.ts`) : cartes ajoutées, possédées,
  *   commandes, budget… ; une collection d'extension commencée ou supprimée, une ligne chacune, pas
  *   une par carte (des centaines de cases) ;
- * - `données` : l'export et l'import, que le navigateur signale (`POST /api/journal`) : le serveur
- *   ne les voit pas autrement ;
+ * - `données` : l'export et l'import, que le navigateur signale (`POST /api/journal`,
+ *   `collection.ts`) : le Worker ne les voit pas autrement ;
  * - `vitrine` : une visite du Pokédex public d'un compte, un lien partagé lu par un robot
  *   d'aperçu (une ligne par visiteur, par Pokédex et par heure au plus, `vitrine.ts`) ;
  * - `serveur` : une erreur imprévue de l'API ou de Better Auth, l'API des données muette
  *   (`vitrine.ts`).
- * Pas les requêtes une à une : seulement ce qui se passe.
- * Au démarrage, une Poké Ball en pixel art (`banner`). Jamais un mot de passe ; l'adresse du
- * visiteur quand Caddy la donne (`x-forwarded-for`). Ce qu'un visiteur peut provoquer à
- * volonté (une connexion refusée, une visite) : une ligne par visiteur et par minute au plus
- * (`journalOnce`) ; un compte (un export ou un import signalé, un envoi refusé), de même par compte. Sans couleurs avec `NO_COLOR` (la convention des terminaux).
+ * Pas les requêtes une à une : seulement ce qui se passe. Jamais un mot de passe ; l'adresse du
+ * visiteur que donne Cloudflare (`cf-connecting-ip`). Ce qu'un visiteur peut provoquer à volonté
+ * (une connexion refusée, une visite) : une ligne par visiteur et par minute au plus
+ * (`journalOnce`) ; un compte (un export ou un import signalé, un envoi refusé), de même par compte.
+ * En couleurs en développement seulement : les journaux de Cloudflare les montreraient en codes.
  */
 
-import { Elysia, t } from 'elysia'
 import { ORDER_STATE_LABELS } from '@/config/shopping'
 import { cardLanguage } from '@/lib/collection'
-import { formatEuro, formatInteger } from '@/lib/format'
+import { formatEuro } from '@/lib/format'
 import { cardCount, orderSpent, supplierLabel } from '@/lib/orders'
 import { seriesId } from '@/lib/series'
-import { MINUTE } from '@/lib/time'
 import type {
   CollectionData,
   CollectionDocument,
@@ -40,17 +39,16 @@ import type {
   SeriesCollection,
   ShoppingData,
 } from '@/types'
-import type { accountRoutes } from './auth'
 
 type JournalTopic = 'compte' | 'collection' | 'achats' | 'données' | 'vitrine' | 'serveur'
 
 /** Réussi, simple information, à surveiller, refusé ou en erreur. */
 export type JournalLevel = 'ok' | 'info' | 'warn' | 'error'
 
-interface JournalEntry {
+export interface JournalEntry {
   topic: JournalTopic
   level?: JournalLevel
-  /** Court : ce qui s'est passé (« Carte possédée »). */
+  /** Court : ce qui s'est passé (« Connexion »). */
   message: string
   /** Le reste, en `clé=valeur` ; une valeur absente n'est pas écrite. */
   details?: Record<string, string | number | undefined>
@@ -58,10 +56,9 @@ interface JournalEntry {
 
 /* Les couleurs du terminal (codes ANSI) */
 
-const COLOR = !process.env.NO_COLOR
+const COLOR = process.env.NODE_ENV === 'development'
 const paint = (code: string) => (text: string) => (COLOR ? `\x1b[${code}m${text}\x1b[0m` : text)
 const dim = paint('2')
-const bold = paint('1')
 const red = paint('31')
 const green = paint('32')
 const yellow = paint('33')
@@ -85,7 +82,7 @@ const TOPICS: Record<JournalTopic, (text: string) => string> = {
   serveur: red,
 }
 
-/** « 16/10 14:03:12 », à l'heure de Paris (le VPS est à l'heure universelle). */
+/** « 16/10 14:03:12 », à l'heure de Paris (Cloudflare est à l'heure universelle). */
 const TIME = new Intl.DateTimeFormat('fr-FR', {
   timeZone: 'Europe/Paris',
   day: '2-digit',
@@ -116,22 +113,16 @@ export const safeText = (text: string) => escapeControls(cut(text))
 /** La raison d'un échec, pour les détails d'une ligne (`raison=`) : le message d'une erreur. */
 export const reasonOf = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
-/**
- * L'adresse posée par Caddy avant nginx. Caddy ignore la valeur reçue du visiteur et écrit la
- * sienne, seule (l'invariant, et ce qu'exigerait un second relais : `advanced.ipAddress` de
- * `auth.ts`) ; le premier élément resterait le visiteur si un relais de confiance ajoutait le sien.
- */
-const requestIp = (request?: Request) =>
-  request?.headers.get('x-forwarded-for')?.split(',', 1)[0]?.trim() || undefined
+/** L'adresse du visiteur, que Cloudflare écrit lui-même (celle reçue du visiteur est remplacée). */
+const requestIp = (request?: Request) => request?.headers.get('cf-connecting-ip') || undefined
 
 /**
- * `carte="Pikachu ex (SV8 033)"` : entre guillemets, échappée comme en JSON, dès qu'il y a une
- * espace, un guillemet, un `=` ou un caractère de contrôle. Une valeur peut venir d'un visiteur
- * (le pseudo d'une connexion refusée) : un retour à la ligne lui ferait écrire une
- * fausse ligne du journal, un échappement ANSI piloter le terminal. Ceux que JSON laisse passer
- * (DEL, les contrôles C1) sont échappés aussi. Coupée au-delà de `MAX_VALUE` caractères : un
- * pseudo de 2 Mo ferait une ligne de 2 Mo, et quelques-unes suffiraient à faire tourner le journal
- * de Docker (3 × 10 Mo) et à effacer les connexions.
+ * `carte="Pikachu ex (SV8 033)"` : entre guillemets, échappée comme en JSON, dès qu'il y a une espace, un
+ * guillemet, un `=` ou un caractère de contrôle. Une valeur peut venir d'un visiteur (le pseudo
+ * d'une connexion refusée) : un retour à la ligne lui ferait écrire une fausse ligne du journal,
+ * un échappement ANSI piloter le terminal. Ceux que JSON laisse passer (DEL, les contrôles C1)
+ * sont échappés aussi. Coupée au-delà de `MAX_VALUE` caractères : un pseudo de 2 Mo ferait une
+ * ligne de 2 Mo.
  */
 const detail = (key: string, value: string | number) => {
   const text = cut(String(value))
@@ -167,9 +158,8 @@ export function journal(
 }
 
 /**
- * Le visiteur d'une requête, pour compter ses actions : son adresse (`x-forwarded-for`), ramenée à
- * son réseau /64 pour une IPv6 (un fournisseur en donne des milliards à chacun) ; `''` sans proxy
- * (en développement).
+ * Le visiteur d'une requête, pour compter ses actions : son adresse, ramenée à son réseau /64 pour
+ * une IPv6 (un fournisseur en donne des milliards à chacun) ; `''` sans adresse.
  */
 export function visitorOf(request?: Request) {
   const ip = requestIp(request) ?? ''
@@ -191,9 +181,9 @@ const MAX_NOTED = 10_000
 
 /**
  * Écrit une ligne au plus par `key` (un visiteur et ce qu'il fait) et par `windowMs` : un afflux de
- * requêtes (des connexions refusées, des visites) ne fait pas tourner le journal de Docker
- * (3 × 10 Mo), ce qui effacerait les connexions. Les lignes tues sont comptées, et dites par la
- * suivante (`tues=…`).
+ * requêtes (des connexions refusées, des visites) ne noie pas le journal. Les lignes tues sont comptées, et
+ * dites par la suivante (`tues=…`). Chaque exemplaire du Worker compte de son côté : c'est une
+ * ligne par exemplaire au plus, assez pour ne pas être noyé.
  */
 export function journalOnce(
   key: string,
@@ -213,75 +203,6 @@ export function journalOnce(
   if (noted.size > MAX_NOTED) noted.delete(noted.keys().next().value!)
   const tues = known?.silenced || undefined
   journal({ ...entry, details: { ...entry.details, tues } }, request)
-}
-
-/*
- * La Poké Ball du démarrage, 14 × 14 pixels : deux pixels par caractère (demi-bloc « ▀ », couleur
- * du haut en avant-plan, du bas en arrière-plan), en couleurs 24 bits. `.` : transparent.
- */
-
-const PIXELS = [
-  '....KKKKKK....',
-  '..KKRRRRRRKK..',
-  '.KRRhhRRRRRRK.',
-  '.KRhRRRRRRRRK.',
-  'KRRRRRRRRRRRRK',
-  'KRRRRKKKKRRRRK',
-  'KKKKKKWWKKKKKK',
-  'KKKKKKWWKKKKKK',
-  'KWWWWKKKKWWWWK',
-  'KWWWWWWWWWWWWK',
-  '.KWWWWWWWWWWK.',
-  '.KWWWWWWWWSSK.',
-  '..KKSWWWWSKK..',
-  '....KKKKKK....',
-]
-
-const PALETTE: Record<string, readonly [number, number, number]> = {
-  K: [38, 38, 44],
-  R: [227, 53, 13],
-  h: [255, 140, 120],
-  W: [242, 242, 246],
-  S: [190, 190, 200],
-}
-
-/** Deux rangées de pixels en une ligne de caractères. */
-function pixelRow(top: string, bottom: string) {
-  return [...top]
-    .map((pixel, index) => {
-      const above = PALETTE[pixel]
-      const below = PALETTE[bottom[index]!]
-      if (!above && !below) return ' '
-      if (!above) return `\x1b[38;2;${below!.join(';')}m▄\x1b[0m`
-      if (!below) return `\x1b[38;2;${above.join(';')}m▀\x1b[0m`
-      return `\x1b[38;2;${above.join(';')};48;2;${below.join(';')}m▀\x1b[0m`
-    })
-    .join('')
-}
-
-/**
- * Le démarrage du serveur : la Poké Ball, et à côté l'adresse de l'API et du site, le compte (ou
- * où le créer), le mode, la version de Bun et le temps de démarrage. Sans couleurs, le texte seul.
- */
-export function banner({ api, site, accounts }: { api: string; site: string; accounts: number }) {
-  const mode = process.env.NODE_ENV === 'production' ? 'production' : 'développement'
-  const ready = formatInteger(Math.round(performance.now()))
-  const text = [
-    '',
-    `${bold('Pokédex')} ${dim('· le serveur de l’app')}`,
-    dim('─'.repeat(38)),
-    `${dim('API     ')}${api}`,
-    `${dim('Site    ')}${site}`,
-    `${dim('Comptes ')}${accounts ? formatInteger(accounts) : yellow(`aucun : ${site}/inscription`)}`,
-    dim(`${mode} · Bun ${Bun.version} · prêt en ${ready} ms`),
-  ]
-  const ball = COLOR
-    ? Array.from({ length: PIXELS.length / 2 }, (_, row) =>
-        pixelRow(PIXELS[row * 2]!, PIXELS[row * 2 + 1]!),
-      )
-    : []
-  const lines = text.map((line, row) => (ball[row] ? `  ${ball[row]}   ${line}` : `  ${line}`))
-  console.log(['', ...lines, ''].join('\n'))
 }
 
 /* Ce qui change dans la collection et les achats */
@@ -450,32 +371,3 @@ function shoppingChanges(before: ShoppingData, after: ShoppingData): JournalEntr
   }
   return lines
 }
-
-const EVENTS: Record<'export' | 'import', JournalEntry> = {
-  export: { topic: 'données', message: 'Collection exportée', details: { format: 'JSON' } },
-  import: {
-    topic: 'données',
-    level: 'warn',
-    message: 'Fichier importé',
-    details: { effet: 'collection remplacée' },
-  },
-}
-
-/**
- * `POST /api/journal` `{ event }` : ce que le navigateur fait seul (export, import). Une ligne par
- * compte, par évènement et par minute au plus : n'importe quel compte peut l'appeler à volonté, et
- * sans limite ferait tourner le journal de Docker en quelques secondes (les connexions avec).
- */
-export const journalRoutes = (account: ReturnType<typeof accountRoutes>) =>
-  new Elysia({ name: 'journal' }).use(account).post(
-    '/journal',
-    ({ body, request, status, user }) => {
-      journalOnce(`${user.id} ${body.event}`, EVENTS[body.event], request, MINUTE)
-      return status(204, null)
-    },
-    {
-      auth: true,
-      body: t.Object({ event: t.Union([t.Literal('export'), t.Literal('import')]) }),
-      detail: { summary: 'Note un export ou un import dans le journal du serveur' },
-    },
-  )

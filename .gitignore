@@ -26,10 +26,13 @@ dist-ssr
 # Les sauvegardes sorties du VPS (README) : le compte et la collection, jamais dans le dépôt.
 /sauvegardes
 
-# Bases SQLite et images du serveur en développement (`DATA_DIR`, sur le VPS : volumes Docker)
+# La base de l'ancien serveur en développement (avant le Worker : `.wrangler/` aujourd'hui)
 /.data
 
 # Secrets du VPS (BETTER_AUTH_SECRET…), lus par docker compose ; toutes leurs variantes
 # (`.env.production`…), sauf un exemple sans secret.
 .env*
 !.env.example
+
+# L’état local du Worker (`bun dev`) : sa base D1, jamais dans le dépôt.
+/.wrangler

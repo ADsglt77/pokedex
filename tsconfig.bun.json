@@ -1,13 +1,12 @@
 {
-  // Ce que lance Bun : le serveur, les tests (`bun test`, qui importent le serveur et du code de
-  // l'app) et la configuration de Vite (`bun --bun vite`). Sans les types du navigateur (`DOM`) : un
-  // `document` ou un `window` glissé dans le code qu'ils partagent avec l'app (`src/lib`) ne
-  // passerait pas.
+  // Les tests que lance Bun (`bun test`, qui importent du code de l'app), et les configurations de
+  // Vite, Vitest et Drizzle Kit (sous Node). Sans les types du navigateur (`DOM`) : un `document`
+  // ou un `window` glissé dans le code qu'ils partagent avec l'app (`src/lib`) ne passerait pas.
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.bun.tsbuildinfo",
     "lib": ["ES2023"],
     "types": ["bun"]
   },
-  "include": ["server", "tests", "vite.config.ts"]
+  "include": ["tests", "vite.config.ts", "vitest.config.ts", "drizzle.config.ts"]
 }

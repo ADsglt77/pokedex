@@ -2,6 +2,10 @@
 
 Le VPS, Docker, nginx et les services. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
+> **Périmé** : le site passera sur Cloudflare Workers, relié à GitHub, à la fin du développement.
+> Cette page décrit l'ancien VPS, qui sera retiré ; il ne marche plus tel quel (l'ancien serveur,
+> `server/`, n'existe plus : le Worker, `worker/`, l'a remplacé).
+
 VPS publié directement par Caddy, à côté de l'API des données (le dépôt `pokedex-data`, ses propres
 conteneurs, à installer d'abord : son README). Caddy écoute publiquement sur 80 et 443, gère le
 certificat de `pokecodex.fr`, puis relaie vers `127.0.0.1:8080`. Le port du site reste donc local au

@@ -1,0 +1,31 @@
+// Le Worker du site (pokecodex.fr), lu par Wrangler, le plugin Cloudflare de Vite (`bun dev`,
+// `bun run build`) et les tests du Worker (`vitest.config.ts`).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pokecodex",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-20",
+  // Better Auth s'appuie sur des modules de Node (`AsyncLocalStorage`).
+  "compatibility_flags": ["nodejs_compat"],
+  // Les fichiers de l'app, construits par Vite. Toute requête passe d'abord par le Worker, qui les
+  // demande à `ASSETS` (`worker/index.ts`) : seul lui peut donner son aperçu à un robot qui lit
+  // `/pseudo`. Une adresse qui n'est pas un fichier donne `index.html` : le routeur de l'app s'en
+  // charge.
+  "assets": {
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true,
+  },
+  // Les comptes (`worker/schema.ts`), leurs migrations écrites par Drizzle (`bun run db:generate`).
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "pokecodex",
+      "migrations_dir": "worker/migrations",
+    },
+  ],
+  // L'adresse publique du site ; en développement, celle de Vite (`.env`, qui la remplace). La clé
+  // des sessions (`BETTER_AUTH_SECRET`) est un secret du Worker, jamais dans ce fichier.
+  "vars": { "BETTER_AUTH_URL": "https://pokecodex.fr" },
+  "observability": { "enabled": true },
+}

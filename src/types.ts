@@ -360,7 +360,7 @@ export interface PriceFile {
   cards: Record<string, CardPriceRow | null>
 }
 
-/* Le compte (`/api/account`) et sa collection (`/api/collection`), `server/` */
+/* Le compte (`/api/account`) et sa collection (`/api/collection`), `worker/` */
 
 /**
  * Le compte connecté : son id et son pseudo, tel que tapé (« Le Pokédex de Sacha ») ; en
@@ -394,7 +394,7 @@ export interface CollectionResponse {
 
 /**
  * Le plus gros document que garde le serveur (`PUT /api/collection`), en octets, décompressé : 413
- * au-delà (`server/collection.ts`) ; l'app avertit à 80 % (`store/account.ts`).
+ * au-delà (`worker/collection.ts`) ; l'app avertit à 80 % (`store/account.ts`).
  */
 export const MAX_DOCUMENT = 5_000_000
 
@@ -403,7 +403,7 @@ export interface CollectionSaved {
   version: number
 }
 
-/** Le Pokédex public d'un compte (`/api/vitrine/<pseudo>`, `server/vitrine.ts`). */
+/** Le Pokédex public d'un compte (`/api/vitrine/<pseudo>`, `worker/vitrine.ts`). */
 export interface VitrineData {
   /** Le pseudo du compte, tel que tapé. */
   owner: string

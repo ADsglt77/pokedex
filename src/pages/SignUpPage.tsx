@@ -10,7 +10,7 @@ import { openSession } from '@/store/account'
 
 /**
  * `/inscription` : créer son compte, hors de la coquille : un pseudo (son Pokédex public sera à
- * `/pseudo` ; pas une adresse du site) et un mot de passe, sans e-mail (`server/auth.ts`). Puis,
+ * `/pseudo` ; pas une adresse du site) et un mot de passe, sans e-mail (`worker/auth.ts`). Puis,
  * connecté, l'accueil.
  */
 export function SignUpPage() {

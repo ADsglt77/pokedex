@@ -1,6 +1,6 @@
 /**
  * Le pseudo d'un compte : son nom sur le site (« Le Pokédex de … ») et l'adresse de son Pokédex
- * public (`/sacha`). La même règle pour le serveur (`server/auth.ts`), le routeur et les
+ * public (`/sacha`). La même règle pour le serveur (`worker/auth.ts`), le routeur et les
  * formulaires (`isPseudo`, `lib/account.ts`) : des lettres sans accent, des chiffres, `-` et `_`,
  * de quoi tenir dans une adresse. Unique sans tenir compte des majuscules : « Sacha » et « sacha »
  * sont le même.
@@ -14,7 +14,7 @@ export const PSEUDO = {
 
 /**
  * Les pseudos réservés au site : le premier segment de ses propres adresses (les pages de
- * `router.tsx`, les dossiers que sert nginx), qu'un Pokédex public à `/pseudo` cacherait. Une
+ * `router.tsx`, les dossiers des fichiers de l'app), qu'un Pokédex public à `/pseudo` cacherait. Une
  * nouvelle page de premier niveau s'y ajoute (aucun compte ne doit déjà porter son nom).
  */
 export const RESERVED_PSEUDOS = [
@@ -37,7 +37,7 @@ export const RESERVED_PSEUDOS = [
 /** Ce que dit un formulaire sous le champ du pseudo. */
 export const PSEUDO_HINT = `${PSEUDO.min} à ${PSEUDO.max} caractères\u00a0: lettres sans accent, chiffres, - ou _.`
 
-/** La longueur minimale d'un mot de passe, la même pour le serveur (`server/auth.ts`). */
+/** La longueur minimale d'un mot de passe, la même pour le serveur (`worker/auth.ts`). */
 export const PASSWORD_MIN = 8
 
 /** Le champ du pseudo (inscription, Réglages › Mon compte) : la règle de `PSEUDO`. */

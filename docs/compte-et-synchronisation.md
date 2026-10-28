@@ -2,13 +2,15 @@
 
 Les comptes, la collection de chaque compte (gardée par le serveur, la même sur tous ses appareils), le Pokédex public de chaque compte. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
-- Comptes (`server/auth.ts`, `config/account.ts`) : Better Auth, **un compte par personne**, que
+- Le serveur du site : le Worker (`worker/`, Hono, Drizzle et D1, sur Cloudflare Workers) ; ses
+  tests le traversent entier, dans le moteur de Cloudflare (`worker/tests`).
+- Comptes (`worker/auth.ts`, `config/account.ts`) : Better Auth, **un compte par personne**, que
   chacun crée (décision de l'utilisateur, octobre 2026 : l'app est ouverte à tous). Les règles du
-  serveur sont dans l'en-tête et les commentaires de `server/auth.ts` : le pseudo gardé deux fois
+  serveur sont dans l'en-tête et les commentaires de `worker/auth.ts` : le pseudo gardé deux fois
   (`guard`), pas d'e-mail (une adresse sans boîte, jamais montrée), les derniers pseudos quittés
-  réservés par la base (`PSEUDO_TRIGGERS`), une seule session par compte, des sessions de 60 jours,
-  les limites par visiteur, ce que note le journal. Testés sur le serveur entier
-  (`tests/collection.test.ts`) : l'adresse sans boîte, un pseudo pris ou quitté jamais repris par
+  réservés par la base (ses déclencheurs, `worker/migrations/0001_pseudos.sql`), une seule session par compte, des sessions de 60 jours,
+  les limites par visiteur, ce que note le journal. Testés sur le Worker entier
+  (`worker/tests/account.test.ts`, `worker/tests/collection.test.ts`) : l'adresse sans boîte, un pseudo pris ou quitté jamais repris par
   un autre compte (le sien peut le reprendre), les adresses du site refusées, la suppression du
   compte avec sa collection. `/inscription` (`SignUpPage`, hors de la coquille) : un pseudo
   (`PSEUDO` : 2 à 20 caractères, lettres sans accent, chiffres, `-` et `_`, de quoi tenir dans une
@@ -85,9 +87,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   et une ligne au journal par minute au plus) ; un ETag tiré du compte,
   de son contenu (`serveJson`) : un visiteur qui revient sur un Pokédex inchangé reçoit un 304.
   Réglages › Compte & partage › Pokédex public en donne l'adresse (`vitrinePath`). Un lien partagé (Discord,
-  WhatsApp…) a son aperçu : nginx envoie les robots d'aperçu (`map $vitrine_preview` sur
-  toute adresse d'un seul segment, `deploy/nginx.conf.template`) à `/api/vitrine/<pseudo>/apercu`, une page
-  faite par le serveur (l'aperçu du site pour une page du site ou un pseudo à personne)
+  WhatsApp…) a son aperçu : le Worker répond lui-même aux robots d'aperçu, sur toute adresse d'un seul
+  segment (`linkPreview`, `worker/vitrine.ts`), par une page faite pour eux (l'aperçu du site pour une page du site ou un pseudo à personne)
   avec le titre et la progression (`vitrineSummary`, testé : rien d'autre que le pseudo et le
   nombre de Pokémon débloqués). Une page seule, hors de la coquille, en lecture seule et pas
   indexée (`noindex` dans la page, et l'en-tête `X-Robots-Tag` de nginx) : la progression, les régions (la réglette n'y est qu'une image, `linked`
@@ -116,14 +117,14 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   (« Lien partagé lu ») une fois par visiteur, par Pokédex et par heure au plus (`journalOnce`, son
   réseau /64 en IPv6). L'image d'une carte n'y passe que par ses deux adresses (`small`, `large` : ce
   qu'un fichier importé y aurait glissé en plus ne devient pas public, testé). La route elle-même
-  est testée sur le serveur entier (`tests/collection.test.ts`) : le pseudo sans tenir compte des
+  est testée sur le Worker entier (`worker/tests/collection.test.ts`) : le pseudo sans tenir compte des
   majuscules, 404 pour un pseudo qui n'est à personne ou un compte supprimé, sans session jamais
   un prix payé, une commande ni un statut « commandée », les prix des seules cartes possédées, un
   Pokédex enregistré avant les favorites montré avec la première carte de chaque Pokémon, et les
   collections d'extensions montrées avec leurs cases.
-- La collection (`server/collection.ts`, `store/account.ts`) : la collection et les achats
-  forment un seul document par compte (une commande modifie les deux), gardé par le serveur seul,
-  dans `app.db` ; chaque compte ne lit et n'écrit que le sien (testé : un second compte ne voit ni
+- La collection (`worker/collection.ts`, `store/account.ts`) : la collection et les achats
+  forment un seul document par compte (une commande modifie les deux), gardé par le Worker seul,
+  dans sa base D1 (`collections`) ; chaque compte ne lit et n'écrit que le sien (testé : un second compte ne voit ni
   ne touche celui du premier). Rien n'est gardé dans le navigateur (seul le choix du thème) : pas
   d'usage hors ligne, pas de copie à synchroniser (décision de l'utilisateur, octobre 2026). Le
   navigateur lit le document à la connexion (ou au démarrage, avant le premier affichage : sans
@@ -132,17 +133,16 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   téléphone peut la geler, puis la fermer, avant la demi-seconde). Une modification faite pendant
   la préparation d'un envoi n'est pas comptée avec lui : elle part ensuite (testé). L'envoi part
   compressé (`CompressionStream('gzip')`, `Content-Encoding: gzip` : 2 Mo en font 400 Ko),
-  décompressé par le serveur en flux, 413 au-delà de 5 000 000 octets décompressés
-  (`MAX_DOCUMENT`, `types.ts`), sans jamais décompresser plus (une « bombe » gzip, testée : 1 Go
-  décompressé pour 1 Mo envoyé, suivi d'octets illisibles, qui feraient un 400 si elle était lue
-  jusqu'au bout) ; et seulement avec une session : sans elle, 401 sans rien décompresser (le `parse` d'Elysia passe
-  avant la macro `auth` ; la session y est lue sans être renouvelée, le cookie renouvelé repart
-  avec la réponse, testé). Le corps compressé (5 Mo au plus, comme un corps non compressé) y est
-  lu d'abord, tel quel : sous `Bun.serve`, le lire en flux après la lecture de la session levait
-  une erreur que personne n'attrapait (testé derrière un vrai `Bun.serve`, `server.handle` ne le
-  voit pas). Une panne en lisant la session (la base occupée) : 500, l'appareil réessaie (un 400
-  dirait « Envoi refusé », testé) ; un corps illisible, compressé ou non, reste le 400 d'Elysia,
-  sans rien au journal (n'importe qui peut l'envoyer, testé). Un envoi non compressé reste accepté : sans `CompressionStream` (Safari avant
+  décompressé par le Worker (`gunzipSync` de `node:zlib`, qui s'arrête au plafond :
+  `DecompressionStream` décompresse tout ce qu'il reçoit sans attendre qu'on le lise), 413 au-delà
+  de 5 000 000 octets décompressés (`MAX_DOCUMENT`, `types.ts`), sans jamais décompresser plus
+  (une « bombe » gzip, testée : 100 Mo décompressés pour 100 Ko envoyés, suivis d'octets
+  illisibles, qui feraient un 400 si elle était lue jusqu'au bout) ; 413 aussi au-delà de 5 Mo
+  tels qu'envoyés. Et seulement avec une session : elle est lue avant le corps (`signedIn`), sans
+  elle 401 sans rien lire ; le cookie renouvelé repart avec la réponse (testé). Une panne en
+  lisant la session (la base occupée) : 500, l'appareil réessaie (un 400 dirait « Envoi refusé »,
+  un 401 la session fermée, testé) ; un corps illisible, compressé ou non, 400, sans rien au
+  journal (n'importe qui peut l'envoyer, testé). Un envoi non compressé reste accepté : sans `CompressionStream` (Safari avant
   16.4, Firefox avant 113), le navigateur l'envoie tel quel (testé). Son délai grandit avec lui
   (15 s, plus 10 s par Mo envoyé). Le document est numéroté
   par le serveur : `PUT /api/collection` `{ account, baseVersion, collection, shopping }` est
@@ -150,10 +150,10 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   connexion à un autre compte, sur la même page, n'écrase jamais sa collection ; la connexion vide
   d'abord la mémoire et les envois en attente, `signIn`), et 409, corps `null`, si le navigateur
   part d'une autre version que celle du serveur (changée entre-temps par un autre onglet ou un
-  autre appareil). Une base remise d'une copie (un instantané du VPS…) ne le garantit pas d'elle-même : ses
+  autre appareil). Une base remise d'une copie (D1 Time Travel…) ne le garantit pas d'elle-même : ses
   numéros se répètent, un appareil resté sur la version 6 d'avant la lirait « inchangée » dans la
   copie, aussi à 6 mais d'un autre contenu, et son envoi, parti de la 6, serait accepté par-dessus
-  ce qui a été enregistré depuis. Toute remise d'`app.db` finit donc par relever chaque
+  ce qui a été enregistré depuis. Toute remise de la base finit donc par relever chaque
   numéro de l'heure en millisecondes (`UPDATE collections SET version = version + <Date.now()>`) : aucun appareil n'en détient un pareil, et chaque remise
   relève plus que la précédente, même celle d'une copie plus ancienne ; il relit la collection
   restaurée ou son envoi est refusé (409, puis relue). Sauf un envoi renvoyé tel quel après une
@@ -186,7 +186,7 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   quand une modification attend : une relecture qui échoue sans rien en attente ne change pas
   l'état) : elle repart au retour du réseau ou de la page, sinon de plus en plus tard (30 s, 60 s,
   120 s… 5 min au plus), et quitter la page le demande d'abord (`beforeunload`). Un refus pour de
-  bon (400 et 422 : un document qui ne passe pas les contrôles ; 413 : plus de 5 Mo ; 403 : une
+  bon (400 : un document qui ne passe pas les contrôles ; 413 : plus de 5 Mo ; 403 : une
   origine refusée) donne « Envoi refusé », avec sa raison (la règle en cause, relue par le
   navigateur avec le même code sur le document envoyé, `documentProblem`) et un toast ; le
   document refusé ne repart pas
@@ -213,26 +213,25 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   jamais prise, l'état passe à « Reconnectez-vous ». Une modification faite pendant cette
   relecture n'est pas écrasée : elle part, depuis la version d'avant (changée ailleurs entre-temps :
   refusée, 409, puis relue, comme plus haut), et le menu n'affiche pas « Enregistrée » tant qu'elle
-  attend (testé). Testé avec le store tel quel contre le serveur entier
-  (`tests/sync.test.ts`, sans DOM ; il attend chaque état attendu, et ne patiente un moment que
+  attend (testé). Testé avec le store tel quel contre le Worker entier
+  (`worker/tests/sync.test.ts`, sans DOM ; il attend chaque état attendu, et ne patiente un moment que
   pour vérifier que rien ne se passe) : le refus, la
   reconnexion, le retour sur la page, l'autre compte, la réponse perdue (et son renvoi refusé), le
-  429 de nginx,
+  429,
   une modification pendant la compression, l'envoi compressé ou tel quel, la page en
   arrière-plan et l'autre onglet. Le
   serveur ne garde que la dernière version (aucune version remplacée, aucune sauvegarde : octobre
   2026). Il note au journal ce qui change d'une version à l'autre (`documentChanges`,
-  `server/journal.ts`), la version d'avant relue comme un fichier (`readCollection` : un document
-  enregistré avant les collections d'extensions n'a pas de `series`, testé sur le serveur entier) :
+  `worker/journal.ts`), la version d'avant relue comme un fichier (`readCollection` : un document
+  enregistré avant les collections d'extensions n'a pas de `series`, testé sur le Worker entier) :
   une collection d'extension commencée (« Collection commencée ») ou supprimée (« Collection
   supprimée ») est **une ligne** (son nom, sa langue, son nombre de cartes), jamais une par case,
   que des centaines de cartes soient ajoutées ou retirées avec elle (« Collection effacée » ne dit
   que la perte de vraies cartes : supprimer la dernière collection d'un compte dont rien n'est
   possédé ni commandé est « Collection supprimée ») ; une case obtenue est « Carte possédée », sans
-  « Carte modifiée » (testé, `tests/journal.test.ts`). L'export et l'import, que le navigateur
+  « Carte modifiée » (testé, `worker/tests/journal.test.ts`). L'export et l'import, que le navigateur
   signale (`POST /api/journal`) : une ligne par compte, par évènement et par minute au plus
-  (`journalOnce` : un compte qui l'appellerait sans fin ferait tourner le journal de Docker, et
-  effacerait les connexions ; testé).
+  (`journalOnce` : un compte qui l'appellerait sans fin noierait le journal ; testé).
   « Annuler », l'import, « Effacer » sont des modifications comme les autres. Le compte
   (`AccountMenu`, en pied de la barre latérale, ou en icône dans la barre du haut sur petit écran ;
   seulement connecté) montre son pseudo et l'état : enregistrée, enregistrement, hors ligne
