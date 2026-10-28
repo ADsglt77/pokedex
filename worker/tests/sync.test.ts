@@ -115,8 +115,6 @@ beforeAll(async () => {
     BroadcastChannel: Channel,
   })
   fetchSpy.mockImplementation((async (input: string | URL | Request, init?: RequestInit) => {
-    // Ce que le Worker demande lui-même à l'API des données (les espèces) : absente.
-    if (input instanceof Request) return new Response(null, { status: 404 })
     const url = new URL(String(input), ORIGIN)
     const headers = new Headers(init?.headers)
     headers.set('Origin', ORIGIN)

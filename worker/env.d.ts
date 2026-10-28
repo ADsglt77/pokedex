@@ -9,9 +9,8 @@ declare namespace Cloudflare {
     ASSETS: Fetcher
     BETTER_AUTH_URL: string
     BETTER_AUTH_SECRET?: string
-    /** L'API des données et le token du site (`data.ts`). */
-    DATA_API_URL: string
-    DATA_API_TOKEN: string
+    /** Le Worker des données, par sa liaison de service (`data.ts`). */
+    DATA: Fetcher
   }
 }
 

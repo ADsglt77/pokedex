@@ -4,8 +4,8 @@
  * une sans boîte) ; une seule session par compte ; supprimé seulement avec son mot de passe ; un
  * pseudo quitté jamais repris par un autre compte (la base le refuse elle-même), seuls les 3
  * derniers réservés. D'un autre site, une modification est refusée partout (403, avant la lecture
- * de son corps), une lecture jamais. Les données de référence partent à l'API des données avec le
- * token du site, jamais avec le cookie de la session (`worker/data.ts`). Le Worker entier, dans le
+ * de son corps), une lecture jamais. Les données de référence partent au Worker des données, sous
+ * `/v1`, jamais avec le cookie de la session (`worker/data.ts`). Le Worker entier, dans le
  * moteur de Cloudflare, sur une base D1 neuve pour le fichier : chaque test crée ses comptes, sous
  * des pseudos à lui.
  */
@@ -171,10 +171,10 @@ describe('d’un autre site : une modification refusée partout, une lecture jam
   })
 })
 
-describe('les données de référence : à l’API des données, avec le token du site', () => {
-  test('sous `/v1`, avec le token, jamais avec le cookie de la session', async () => {
+describe('les données de référence : au Worker des données', () => {
+  test('sous `/v1`, jamais avec le cookie de la session', async () => {
     const seen: Request[] = []
-    const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const fetch = vi.spyOn(env.DATA, 'fetch').mockImplementation(async (input) => {
       seen.push(input as Request)
       return new Response('[]')
     })
@@ -183,12 +183,9 @@ describe('les données de référence : à l’API des données, avec le token d
     expect((await call('/images/cards/SV2A/166-md.webp', { headers })).status).toBe(200)
     fetch.mockRestore()
     expect(seen.map((request) => request.url)).toEqual([
-      'http://donnees.invalid/v1/species?langue=fr',
-      'http://donnees.invalid/v1/images/cards/SV2A/166-md.webp',
+      'https://pokedex-data/v1/species?langue=fr',
+      'https://pokedex-data/v1/images/cards/SV2A/166-md.webp',
     ])
-    for (const request of seen) {
-      expect(request.headers.get('authorization')).toBe('Bearer token-d-essai')
-      expect(request.headers.get('cookie')).toBeNull()
-    }
+    for (const request of seen) expect(request.headers.get('cookie')).toBeNull()
   })
 })

@@ -24,6 +24,9 @@
       "migrations_dir": "worker/migrations",
     },
   ],
+  // Le Worker des données (le dépôt `pokedex-data`), son entrée pour le site : sans token ni
+  // réseau entre les deux (`worker/data.ts`).
+  "services": [{ "binding": "DATA", "service": "pokedex-data", "entrypoint": "SiteEntrypoint" }],
   // L'adresse publique du site ; en développement, celle de Vite (`.env`, qui la remplace). La clé
   // des sessions (`BETTER_AUTH_SECRET`) est un secret du Worker, jamais dans ce fichier.
   "vars": { "BETTER_AUTH_URL": "https://pokecodex.fr" },

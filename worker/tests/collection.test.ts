@@ -33,9 +33,9 @@ import { authCall, call, createAccount, gzip, ORIGIN, PASSWORD, sleep } from './
 const log = vi.spyOn(console, 'log').mockImplementation(() => {})
 afterAll(() => log.mockRestore())
 
-/** L'API des données : sans guide des prix (404), sauf dans les tests des prix (`dataApi`). */
+/** Le Worker des données : sans guide des prix (404), sauf dans les tests des prix (`dataApi`). */
 const NO_PRICES = () => new Response(null, { status: 404 })
-const dataApi = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => NO_PRICES())
+const dataApi = vi.spyOn(env.DATA, 'fetch').mockImplementation(async () => NO_PRICES())
 afterAll(() => dataApi.mockRestore())
 
 const signUp = await createAccount('Sacha')
@@ -624,13 +624,13 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
     expect(JSON.stringify(shown)).not.toMatch(/ordered|paidPrice/)
   })
 
-  test('les prix du jour des seules cartes possédées, demandés à l’API des données avec le token', async () => {
-    // Une fausse API des données : elle note ce qu'on lui demande, et rend un prix par carte.
+  test('les prix du jour des seules cartes possédées, demandés au Worker des données', async () => {
+    // Un faux Worker des données : il note ce qu'on lui demande, et rend un prix par carte.
     const asked: string[] = []
     dataApi.mockImplementation(async (input) => {
       const request = input as Request
       const url = new URL(request.url)
-      asked.push(`${request.headers.get('authorization')} ${url.pathname}${url.search}`)
+      asked.push(`${url.pathname}${url.search}`)
       const ids = url.searchParams.get('ids')!.split(',')
       return Response.json({
         date: '2026-10-19',
@@ -642,7 +642,7 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
         date: '2026-10-19',
         cards: { '719445': [6.87, 5, 7.2] },
       })
-      expect(asked).toEqual(['Bearer token-d-essai /v1/prices?ids=719445'])
+      expect(asked).toEqual(['/v1/prices?ids=719445'])
       // L'API muette : le Pokédex, sans prix.
       dataApi.mockRejectedValue(new TypeError('API muette'))
       expect((await visit()).prices).toBeNull()

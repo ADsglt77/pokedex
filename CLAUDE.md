@@ -13,16 +13,16 @@ Pokédex public de chaque compte (`/pseudo`).
   Better Auth) : le Worker du site, qui garde comptes et collections et montre les Pokédex
   publics. Docker, nginx, Caddy et le VPS (`deploy/`, `docs/deploiement.md`) sont périmés, à
   retirer.
-- **API des données** (`../pokedex-data`, privée, token) : espèces, catalogue, images, prix
-  Cardmarket. Le Worker la joint avec le token (`worker/data.ts`) ; le navigateur ne voit que
-  `/api/…` et `/images/…` du site.
+- **API des données** (`../pokedex-data`, un Worker elle aussi, privée) : espèces, catalogue,
+  images, prix Cardmarket. Le Worker du site la joint par sa liaison de service (`DATA`,
+  `worker/data.ts`), sans token ; le navigateur ne voit que `/api/…` et `/images/…` du site.
 
 ## Commandes
 
 Bun pour les paquets (pas npm/pnpm/yarn) ; Vite, Wrangler et Vitest tournent sous Node (≥ 22,
 ARM64 sur ce poste : le plugin Cloudflare ne tourne pas sous Bun). `bun dev` (Vite et le Worker,
-sa base D1 locale migrée d'abord), et `bun run dev` dans `../pokedex-data` (même token :
-`DATA_API_TOKEN`, README). `bun run build` (pas `bun build`). Schéma du Worker changé
+sa base D1 locale migrée d'abord), et `bun run dev` dans `../pokedex-data` (son Worker, que ses
+propres tâches remplissent, `bun run ingest setup` la première fois : README). `bun run build` (pas `bun build`). Schéma du Worker changé
 (`worker/schema.ts`) : `bun run db:generate`. Après chaque changement : `bun lint` (ESLint +
 knip), `bun test`, `bun run test:worker`, `bun run format`.
 Quand un type partagé avec l'API change : `bun run contracts` (exige `../pokedex-data`).

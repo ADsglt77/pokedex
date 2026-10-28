@@ -74,36 +74,34 @@ bun run format   # Prettier
   n'apparaît qu'en cas de retard, d'échec ou d'indisponibilité.
 
 Les données (espèces, catalogue des cartes japonaises et françaises, images, prix Cardmarket et
-leur historique) viennent de **l'API des données**, un dépôt à part (`pokedex-data`) : privée, sans
-token aucune donnée. Le navigateur ne parle qu'au site (`/api/…`, `/images/…`) : le Worker du site
-renvoie les adresses des données à l'API, avec le token du site, que le navigateur
-ne voit jamais. Aucune adresse de la source n'apparaît dans le navigateur :
+leur historique) viennent de **l'API des données**, un dépôt à part (`pokedex-data`, un Worker
+Cloudflare lui aussi) : privée, sans token aucune donnée. Le navigateur ne parle qu'au site
+(`/api/…`, `/images/…`) : le Worker du site renvoie les adresses des données au Worker des
+données, par sa liaison de service (ni token ni réseau entre les deux). Aucune adresse de la source n'apparaît dans le navigateur :
 les images ont des chemins neutres (`/images/cards/SV2A/166-md.webp`). Le Worker du site
 (`worker/`, Hono, Drizzle et D1, sur Cloudflare Workers) garde les comptes et les collections, et
 montre les Pokédex publics. Seule une image à l'adresse
 collée se charge ailleurs ; pas celles de Cardmarket, qui ne s'affichent que sur son site.
 
-**Les données et les images se lisent sans connexion** (décision de conception) : nginx pose le
-token du site pour tout visiteur, connecté ou non. Les routes `/api/species`, `/api/catalog`,
+**Les données et les images se lisent sans connexion** (décision de conception) : le Worker du
+site les demande pour tout visiteur, connecté ou non. Les routes `/api/species`, `/api/catalog`,
 `/api/prices`, `/api/histories`, `/api/wants`, `/api/status`, `/api/health` et `/images/…` répondent
-donc à n'importe qui, limitées par visiteur (429 au-delà : `deploy/nginx.conf.template`) ; seule
+donc à n'importe qui (leurs limites par visiteur, celles de nginx, sont à refaire chez Cloudflare) ; seule
 l'interface demande d'être connecté. Ce que la connexion garde, ce sont les comptes et les
 collections (`/api/collection`, `/api/auth/…`), pas le catalogue, les prix ni les scans.
 
-En développement, deux terminaux : l'API des données (`bun run dev` dans `../pokedex-data`, sur
-le port 3001 ; sa base et ses tâches : son README) et `bun dev` : Vite, avec le Worker du site
-dans le moteur de Cloudflare (le plugin `@cloudflare/vite-plugin`), qui répond à `/api` et
-joint lui-même l'API des données. Sa base D1 locale vit dans `.wrangler/` ; `bun dev` lui applique
+En développement, deux terminaux : l'API des données (`bun run dev` dans `../pokedex-data`, son
+Worker sur le port 8787, que remplissent ses tâches ; sa base et ses tâches : son README) et
+`bun dev` : Vite, avec le Worker du site dans le moteur de Cloudflare (le plugin
+`@cloudflare/vite-plugin`), qui répond à `/api` et joint lui-même le Worker des données (Wrangler
+relie les deux). Sa base D1 locale vit dans `.wrangler/` ; `bun dev` lui applique
 d'abord les migrations qui manquent (`worker/migrations`). Il faut **Node 22 ou plus** (Wrangler),
 et sur un Windows ARM64 **Node ARM64** (Bun reste le gestionnaire de paquets : le plugin ne tourne
-pas sous Bun). Un fichier `.env` (ignoré par git), copié de `.env.example`, avec le token du
-site, le même que dans `API_TOKENS` de l'API des données :
+pas sous Bun). Un fichier `.env` (ignoré par git), copié de `.env.example` :
 
 ```sh
 BETTER_AUTH_URL=http://localhost:5173
 BETTER_AUTH_SECRET=…        # 32 caractères au moins, pour ce poste seulement
-DATA_API_URL=http://127.0.0.1:3001
-DATA_API_TOKEN=…            # le token « pokedex » de l'API des données
 ```
 
 Un visiteur arrive sur la connexion ; `/inscription` crée un compte (pseudo, mot de passe). Pseudo
