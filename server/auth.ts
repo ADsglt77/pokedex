@@ -153,11 +153,9 @@ export async function createAuth(db: Database) {
     user: {
       deleteUser: {
         enabled: true,
-        // Rien ne reste du compte sur le serveur (hors des sauvegardes, 90 jours au plus), que son
-        // pseudo, réservé (`PSEUDO_TRIGGERS`).
+        // Rien ne reste du compte sur le serveur, que son pseudo, réservé (`PSEUDO_TRIGGERS`).
         afterDelete: async (user) => {
           db.query('DELETE FROM collections WHERE user_id = ?').run(user.id)
-          db.query('DELETE FROM collection_versions WHERE user_id = ?').run(user.id)
         },
       },
     },

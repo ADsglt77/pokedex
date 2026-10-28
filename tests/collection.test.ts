@@ -12,7 +12,9 @@
  * (le cookie renouvelé d'une session repart toujours) ; une panne en lisant la session, 500 (pas
  * le 400 d'un document refusé) ; un envoi renvoyé tel quel après une réponse perdue est reconnu (200, la même
  * version), un autre parti de la même version reste refusé (409). Chaque compte ne touche qu'à sa
- * collection, et la sienne part avec lui. Et ce que montre le Pokédex public d'un compte (`/api/vitrine/<pseudo>`) : ce qu'il
+ * collection, et la sienne part avec lui. Le journal : ce qu'un compte peut répéter à volonté (un
+ * export signalé, un envoi refusé) n'y écrit qu'une ligne par minute, sans quoi il ferait tourner le
+ * journal de Docker et effacerait les connexions. Et ce que montre le Pokédex public d'un compte (`/api/vitrine/<pseudo>`) : ce qu'il
  * laisserait passer serait public. Le serveur entier (`createApp`), sur des bases neuves dans le
  * dossier temporaire de `setup.ts`, avec un compte créé comme à l'inscription et un premier envoi ;
  * chaque test part de la version du moment, dans n'importe quel ordre.
@@ -75,14 +77,6 @@ async function stored() {
   const response = await collection('GET')
   return { body: (await response.json()) as CollectionResponse }
 }
-
-/** Le nombre de versions remplacées gardées pour le compte de Sacha. */
-const keptVersions = () =>
-  (
-    app.query('SELECT COUNT(*) AS count FROM collection_versions WHERE user_id = ?').get(sacha) as {
-      count: number
-    }
-  ).count
 
 /**
  * Le document d'un appareil : une carte possédée, payée 30 €, reliée à Cardmarket ; une autre
@@ -153,12 +147,10 @@ describe('/api/collection : jamais une version écrasée', () => {
     })
     expect(stale.status).toBe(409)
     expect(await stored()).toEqual(after)
-    // La version remplacée est gardée (une par heure au plus), pour revenir en arrière à la main.
-    const kept = app
-      .query('SELECT MIN(version) AS version FROM collection_versions WHERE user_id = ?')
-      .get(signUp.user!.id) as { version: number | null }
-    expect(kept.version).not.toBeNull()
-    expect(kept.version!).toBeLessThan(after.body.version)
+    // Aucune version remplacée n'est gardée (plus de sauvegarde, octobre 2026) : seule la dernière.
+    expect(app.query("SELECT 1 FROM sqlite_master WHERE name = 'collection_versions'").get()).toBe(
+      null,
+    )
   })
 
   test('une version en avance sur le serveur (une base restaurée plus ancienne) : 409', async () => {
@@ -455,14 +447,12 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
     const sent = { account: sacha, baseVersion: before.body.version, ...next }
     expect((await collection('PUT', sent)).status).toBe(200)
     const after = await stored()
-    const kept = keptVersions()
     // La réponse s'est perdue (délai, réseau coupé) : l'appareil renvoie le même document.
     log.mockClear()
     const again = await collection('PUT', sent)
     expect(again.status).toBe(200)
     expect((await again.json()) as CollectionSaved).toEqual({ version: before.body.version + 1 })
     expect(await stored()).toEqual(after)
-    expect(keptVersions()).toBe(kept)
     // Rien au journal : ni un refus, ni une modification de plus.
     expect(log).not.toHaveBeenCalled()
     // Compressée aussi.
@@ -614,7 +604,6 @@ describe('les comptes : chacun le sien', () => {
     const left = (table: string) =>
       app.query(`SELECT COUNT(*) AS count FROM ${table} WHERE user_id = ?`).get(pierre.user!.id)
     expect(left('collections')).toEqual({ count: 0 })
-    expect(left('collection_versions')).toEqual({ count: 0 })
     expect((await server.handle(new Request(`${ORIGIN}/api/vitrine/pierre`))).status).toBe(404)
     expect((await collection('GET', undefined, asPierre)).status).toBe(401)
     // Son pseudo n'est pas repris par un autre : ses liens partagés ne mèneraient plus à lui.
@@ -671,6 +660,39 @@ describe('les comptes : chacun le sien', () => {
     const signedIn = await from('sign-in/username', { username: 'Sacha', password: PASSWORD })
     expect(signedIn.status).toBe(403)
     expect(signedIn.headers.getSetCookie()).toEqual([])
+  })
+})
+
+describe('le journal : aucun compte ne le fait tourner', () => {
+  test('un export signalé sans fin, un document refusé renvoyé sans fin : une ligne par minute', async () => {
+    // Un compte à part : les refus des autres tests, notés dans la minute, tairaient les siens.
+    const rocky = await createAccount('Rocky')
+    const asRocky = { Cookie: rocky.cookie }
+    const report = (event: 'export' | 'import') =>
+      server.handle(
+        new Request(`${ORIGIN}/api/journal`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Origin: ORIGIN, ...asRocky },
+          body: JSON.stringify({ event }),
+        }),
+      )
+    const lines = (message: string) =>
+      log.mock.calls.flat().filter((line) => String(line).includes(message)).length
+    log.mockClear()
+    for (let i = 0; i < 50; i++) expect((await report('export')).status).toBe(204)
+    expect((await report('import')).status).toBe(204)
+    expect(lines('Collection exportée')).toBe(1)
+    expect(lines('Fichier importé')).toBe(1)
+
+    const broken = {
+      ...first,
+      collection: { ...first.collection, customCards: { a: { ...card('a', [25]), id: 'z' } } },
+    }
+    for (let i = 0; i < 20; i++) {
+      const sent = { account: rocky.user!.id, baseVersion: 0, ...broken }
+      expect((await collection('PUT', sent, asRocky)).status).toBe(400)
+    }
+    expect(lines('Envoi refusé')).toBe(1)
   })
 })
 

@@ -5,11 +5,15 @@
  * Pokémon, sans jamais planter la lecture. Ses collections d'extensions : un export d'avant (sans
  * `series`) s'importe, un dresseur est une carte sans Pokémon, et une case pas encore obtenue qui
  * n'est dans aucune collection, un id inconnu, deux collections d'une même extension et langue,
- * une favorite sur une case sont refusés.
+ * une favorite sur une case sont refusés. Et sa relecture reste rapide même pour un document fait
+ * pour l'occuper (des dizaines de milliers de collections, une carte de millions de Pokémon) : le
+ * serveur la fait pour chaque envoi, et ne répond à personne pendant ce temps.
  */
 
 import { describe, expect, test } from 'bun:test'
+import { findCard } from '@/lib/collection'
 import { applyOrder, emptyShopping } from '@/lib/orders'
+import { cardsWithStatus, unlockEvents } from '@/lib/pokedex'
 import { buildExportFile, documentProblem, isDay, readImport, readSent } from '@/lib/transfer'
 import type { CollectionData, SeriesCollection, ShoppingData } from '@/types'
 import { card, collectionWith, line, NOW, order, ownership, withCards } from './fixtures'
@@ -164,6 +168,12 @@ describe('import', () => {
     expect(reimport(['collection', 'customCards', 'a', 'id'], 'b')).toBeNull()
   })
 
+  test('une carte de plus de Pokémon que n’en compte le Pokédex est refusée : les favorites la parcourraient sans fin', () => {
+    const all = Array.from({ length: 1025 }, (_, index) => index + 1)
+    expect(reimport(['collection', 'customCards', 'a', 'dexIds'], all)).not.toBeNull()
+    expect(reimport(['collection', 'customCards', 'a', 'dexIds'], [...all, 25])).toBeNull()
+  })
+
   test('la langue d’une carte : absente (japonaise) ou « fr » ; « ja » et le reste, refusés', () => {
     const language = ['collection', 'customCards', 'a', 'language']
     // Un export d'avant les cartes françaises, sans le champ : japonaises, importées telles quelles.
@@ -215,6 +225,18 @@ describe('import', () => {
     )
     // Une carte de plusieurs Pokémon : favorite de chacun, chacun pour soi.
     expect(reread(FAVORITES, { 25: 'b', 4: 'b' }, several).problem).toBeNull()
+  })
+
+  test('un statut ou une ligne de commande d’id `constructor` passe, sans carte : aucune page ne plante', () => {
+    // Le nom d'un objet n'est pas une carte : sans `Object.hasOwn`, `findCard` rendrait `Object`,
+    // sans `dexIds`, et l'accueil, la page Valeur et le détail de la commande planteraient.
+    const owned = ownership('owned', { acquiredAt: NOW })
+    const status = reimport(['collection', 'cards', 'constructor'], owned)!
+    expect(findCard('constructor', status.collection)).toBeNull()
+    expect(cardsWithStatus(status.collection).map(({ card }) => card.id)).toEqual(['a'])
+    expect(() => unlockEvents(status.collection)).not.toThrow()
+    const ordered = reimport([...ORDER, 'lines', 0, 'cardId'], 'constructor')!
+    expect(findCard(ordered.shopping.orders[0]!.lines[0]!.cardId, ordered.collection)).toBeNull()
   })
 
   test('une carte abîmée dans un document d’avant est refusée, sans planter la lecture', () => {
@@ -412,6 +434,25 @@ describe('document envoyé au serveur', () => {
       problem: 'la commande « CM-1 » est abîmée',
     })
     expect(documentProblem({ collection, shopping })).toBeNull()
+  })
+
+  test('relu en une passe : 90 000 collections vides (quelques Ko compressés) ne gèlent pas le serveur', () => {
+    // Bun n'a qu'un fil : chercher chaque collection dans toute la liste prenait 10 s ici, pendant
+    // lesquelles le serveur ne répondait à personne. En une passe : quelques dizaines de ms.
+    const series = Array.from({ length: 90_000 }, (_, index) => ({
+      set: index.toString(36),
+      name: '',
+      startedAt: NOW,
+      cards: [],
+    }))
+    const start = performance.now()
+    expect(received({ collection: { ...collection, series }, shopping })).not.toBeNull()
+    expect(performance.now() - start).toBeLessThan(1000)
+    // Toujours deux collections d'une même extension dites, même la dernière.
+    const twice = [...series, { ...series[0]!, name: 'Autre nom' }]
+    expect(readSent({ collection: { ...collection, series: twice }, shopping }).problem).toBe(
+      'deux collections de l’extension 0',
+    )
   })
 })
 

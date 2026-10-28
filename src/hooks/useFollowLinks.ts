@@ -13,8 +13,9 @@ export function returnedLink(root: HTMLElement, pathname: string) {
   if (followed?.from !== pathname) return null
   const link = root.querySelector<HTMLElement>(`a[href="${CSS.escape(followed.href)}"]`)
   followed = null
-  // Caché (une pochette filtrée) : pas de focus possible.
-  return link?.checkVisibility() ? link : null
+  // Caché (une pochette filtrée, `display: none`, elle ou un parent) : aucune boîte, pas de focus
+  // possible. Pas `checkVisibility`, absent de Safari avant 17.4 : l'erreur emportait toute l'app.
+  return link && link.getClientRects().length > 0 ? link : null
 }
 
 /**

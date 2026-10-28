@@ -16,3 +16,21 @@ www.pokecodex.fr {
 	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
 	redir https://pokecodex.fr{uri} permanent
 }
+
+# L'API des données (le dépôt `pokedex-data`) pour ses clients qui ont un token : relayée vers son
+# entrée d'Internet, publiée sur 127.0.0.1 seulement (son `compose.yaml`), qui exige le token et
+# limite chaque adresse, lue dans `X-Forwarded-For` comme pour le site (`src/limits.ts`). Lecture
+# seule : tout autre verbe, 405, sans la joindre. Ses en-têtes, ceux d'une API : le même HSTS que
+# le site ; rien à afficher dans une page ni dans le cadre d'un autre site, rien à indexer.
+api.pokecodex.fr {
+	@ecriture not method GET HEAD
+	respond @ecriture 405
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+		X-Robots-Tag "noindex, nofollow"
+	}
+	reverse_proxy 127.0.0.1:3002
+}

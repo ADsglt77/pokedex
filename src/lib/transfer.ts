@@ -7,10 +7,10 @@
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
-import { cardLanguage, completeFavorites } from '@/lib/collection'
+import { completeFavorites } from '@/lib/collection'
 import { formatDate, parseLink } from '@/lib/format'
 import { refundFits } from '@/lib/orders'
-import { findSeries } from '@/lib/series'
+import { seriesId } from '@/lib/series'
 import type {
   BudgetSettings,
   CollectionData,
@@ -125,13 +125,16 @@ const isOwnership = (ownership: Record<string, unknown>) =>
 /**
  * Une carte, rangée sous son id (l'app la retrouve par sa clé et l'enregistre sous son id : deux
  * différents la dédoubleraient), de Pokémon du Pokédex (aucun : un dresseur ou une énergie, une
- * carte d'extension), de langue française (`'fr'`) ou sans langue : le japonais n'a qu'une
- * écriture, l'absence (un « ja » ferait deux écritures d'une même langue), et `seriesOnly` (une case
- * pas encore obtenue) absent ou vrai : à l'obtention le champ disparaît, il ne devient pas faux.
+ * carte d'extension ; au plus autant que le Pokédex en compte : une vraie carte en porte un à trois,
+ * et sans borne, les favorites, `isFavorite`, parcourraient des millions de numéros), de langue
+ * française (`'fr'`) ou sans langue : le japonais n'a qu'une écriture, l'absence (un « ja » ferait
+ * deux écritures d'une même langue), et `seriesOnly` (une case pas encore obtenue) absent ou vrai :
+ * à l'obtention le champ disparaît, il ne devient pas faux.
  */
 const isCard = (card: Record<string, unknown>, key: string) =>
   card.id === key &&
   Array.isArray(card.dexIds) &&
+  card.dexIds.length <= TOTAL_SPECIES &&
   card.dexIds.every((id) => Number.isInteger(id) && id >= 1 && id <= TOTAL_SPECIES) &&
   isText(card.reference) &&
   (card.image === null ||
@@ -206,7 +209,7 @@ const isFavorite = (customCards: Record<string, PokemonCard>, key: string, id: u
   typeof id === 'string' &&
   Object.hasOwn(customCards, id) &&
   !customCards[id]!.seriesOnly &&
-  customCards[id]!.dexIds.map(String).includes(key)
+  customCards[id]!.dexIds.some((dexId) => String(dexId) === key)
 
 /** Une carte, pour l'utilisateur : sa référence, sinon son id. */
 const cardName = (card: unknown, key: string) =>
@@ -268,9 +271,16 @@ export function documentProblem({ collection, shopping }: CollectionDocument): s
   // Après les cartes : `isSeries` cherche les cases parmi elles.
   const series = firstBad(collection.series, (series) => isSeries(series, collection.customCards))
   if (series) return `la collection ${seriesName(series[1])} est abîmée`
-  const twice = collection.series.find(
-    (known) => findSeries(collection, known.set, cardLanguage(known)) !== known,
-  )
+  // Une collection se retrouve par son extension et sa langue (`seriesId`) : en une passe. Chercher
+  // chacune dans toute la liste coûtait le carré de leur nombre (90 000 collections vides, quelques
+  // Ko compressés : 10 s pendant lesquelles le serveur ne répondait plus à personne).
+  const seen = new Set<string>()
+  const twice = collection.series.find((series) => {
+    const id = seriesId(series)
+    if (seen.has(id)) return true
+    seen.add(id)
+    return false
+  })
   if (twice) return `deux collections de l’extension ${twice.set}`
   const lost = lostSlot(collection)
   if (lost) return lost

@@ -14,9 +14,8 @@ import { join } from 'node:path'
 
 const dir = mkdtempSync(join(tmpdir(), 'pokedex-tests-'))
 process.env.DATA_DIR = dir
-// Les sauvegardes aussi : jamais celles du `.env`. L'API des données : aucune (le Pokédex public
-// en demande les prix à une fausse, `collection.test.ts`).
-process.env.BACKUP_DIR = join(dir, 'backups')
+// L'API des données : aucune (le Pokédex public en demande les prix à une fausse,
+// `collection.test.ts`).
 process.env.DATA_API_URL = 'http://127.0.0.1:9'
 process.env.DATA_API_TOKEN = 'token-d-essai'
 process.env.BETTER_AUTH_URL = 'http://localhost:5173'

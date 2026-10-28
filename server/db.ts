@@ -90,6 +90,11 @@ export const APP_STEPS = [
   -- Quand chaque pseudo a été quitté : un compte ne garde que ses derniers (\`auth.ts\`).
   ALTER TABLE released_pseudos ADD COLUMN released_at TEXT NOT NULL DEFAULT '';
   `,
+  `
+  -- Plus aucune sauvegarde (octobre 2026, décision de l'utilisateur) : ni copie de la base, ni
+  -- versions remplacées des collections. Seule la dernière version de chacune reste.
+  DROP TABLE collection_versions;
+  `,
 ]
 
 const userVersion = (db: Database) =>
@@ -154,8 +159,8 @@ export function openApp() {
   const name = 'app.db'
   mkdirSync(DATA_DIR, { recursive: true })
   const db = new Database(join(DATA_DIR, name), { create: true, strict: true })
-  // Avant le passage en WAL : une copie de sauvegarde (`backups.ts`) ou un outil qui lit la base
-  // la verrouille un instant, et ce passage échouerait tout de suite.
+  // Avant le passage en WAL : un outil qui lit la base la verrouille un instant, et ce passage
+  // échouerait tout de suite.
   db.run('PRAGMA busy_timeout = 5000')
   db.run('PRAGMA journal_mode = WAL')
   db.run('PRAGMA synchronous = NORMAL')

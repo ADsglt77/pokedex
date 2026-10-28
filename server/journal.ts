@@ -17,12 +17,12 @@
  * - `vitrine` : une visite du Pokédex public d'un compte, un lien partagé lu par un robot
  *   d'aperçu (une ligne par visiteur, par Pokédex et par heure au plus, `vitrine.ts`) ;
  * - `serveur` : une erreur imprévue de l'API ou de Better Auth, l'API des données muette
- *   (`vitrine.ts`), les sauvegardes d'`app.db` (`backups.ts`).
+ *   (`vitrine.ts`).
  * Pas les requêtes une à une : seulement ce qui se passe.
  * Au démarrage, une Poké Ball en pixel art (`banner`). Jamais un mot de passe ; l'adresse du
  * visiteur quand Caddy la donne (`x-forwarded-for`). Ce qu'un visiteur peut provoquer à
  * volonté (une connexion refusée, une visite) : une ligne par visiteur et par minute au plus
- * (`journalOnce`). Sans couleurs avec `NO_COLOR` (la convention des terminaux).
+ * (`journalOnce`) ; un compte (un export ou un import signalé, un envoi refusé), de même par compte. Sans couleurs avec `NO_COLOR` (la convention des terminaux).
  */
 
 import { Elysia, t } from 'elysia'
@@ -31,6 +31,7 @@ import { cardLanguage } from '@/lib/collection'
 import { formatEuro, formatInteger } from '@/lib/format'
 import { cardCount, orderSpent, supplierLabel } from '@/lib/orders'
 import { seriesId } from '@/lib/series'
+import { MINUTE } from '@/lib/time'
 import type {
   CollectionData,
   CollectionDocument,
@@ -460,12 +461,16 @@ const EVENTS: Record<'export' | 'import', JournalEntry> = {
   },
 }
 
-/** `POST /api/journal` `{ event }` : ce que le navigateur fait seul (export, import). */
+/**
+ * `POST /api/journal` `{ event }` : ce que le navigateur fait seul (export, import). Une ligne par
+ * compte, par évènement et par minute au plus : n'importe quel compte peut l'appeler à volonté, et
+ * sans limite ferait tourner le journal de Docker en quelques secondes (les connexions avec).
+ */
 export const journalRoutes = (account: ReturnType<typeof accountRoutes>) =>
   new Elysia({ name: 'journal' }).use(account).post(
     '/journal',
-    ({ body, request, status }) => {
-      journal(EVENTS[body.event], request)
+    ({ body, request, status, user }) => {
+      journalOnce(`${user.id} ${body.event}`, EVENTS[body.event], request, MINUTE)
       return status(204, null)
     },
     {

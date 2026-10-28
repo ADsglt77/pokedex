@@ -20,11 +20,11 @@
 
 import type { Database } from 'bun:sqlite'
 import { Elysia, t } from 'elysia'
-import { DAY, HOUR } from '@/lib/time'
+import { MINUTE } from '@/lib/time'
 import { readCollection, readSent } from '@/lib/transfer'
 import { MAX_DOCUMENT, type CollectionSaved, type ShoppingData } from '@/types'
 import type { Accounts, accountRoutes } from './auth'
-import { documentChanges, journal } from './journal'
+import { documentChanges, journal, journalOnce } from './journal'
 
 interface Row {
   version: number
@@ -75,27 +75,6 @@ export function collectionRoutes(
 ) {
   const read = app.query('SELECT version, collection, shopping FROM collections WHERE user_id = ?')
 
-  /** Garde la version remplacée, si la dernière gardée a plus d'une heure ; oublie les vieilles. */
-  const keep = (userId: string, row: Row, now: Date) => {
-    const last = app
-      .query('SELECT MAX(saved_at) AS at FROM collection_versions WHERE user_id = ?')
-      .get(userId) as { at: string | null }
-    if (last.at && now.getTime() - Date.parse(last.at) < HOUR) return
-    app
-      .query(
-        'INSERT OR REPLACE INTO collection_versions (user_id, version, saved_at, body) VALUES (?, ?, ?, ?)',
-      )
-      .run(
-        userId,
-        row.version,
-        now.toISOString(),
-        Bun.gzipSync(`{"version":${row.version},${contents(row)}}`),
-      )
-    app
-      .query('DELETE FROM collection_versions WHERE user_id = ? AND saved_at < ?')
-      .run(userId, new Date(now.getTime() - 30 * DAY).toISOString())
-  }
-
   return new Elysia({ name: 'collection' })
     .use(account)
     .get(
@@ -116,14 +95,17 @@ export function collectionRoutes(
       '/collection',
       ({ user, body }) => {
         const compte = user.username ?? undefined
-        /** Refusé : au journal, et la réponse, sans corps utile. */
+        /**
+         * Refusé : au journal (une ligne par compte, par statut et par minute au plus : un compte
+         * peut renvoyer un document refusé à volonté), et la réponse, sans corps utile.
+         */
         const refused = (status: number, level: 'warn' | 'error', raison?: string) => {
-          journal({
-            topic: 'collection',
-            level,
-            message: 'Envoi refusé',
-            details: { compte, raison },
-          })
+          journalOnce(
+            `${user.id} refus ${status}`,
+            { topic: 'collection', level, message: 'Envoi refusé', details: { compte, raison } },
+            undefined,
+            MINUTE,
+          )
           return json('null', status)
         }
         if (body.account !== user.id) return refused(401, 'warn', 'parti d’un autre compte')
@@ -133,7 +115,7 @@ export function collectionRoutes(
         const collection = JSON.stringify(document.collection)
         const shopping = JSON.stringify(document.shopping)
 
-        const now = new Date()
+        const savedAt = new Date().toISOString()
         const saved = app.transaction(() => {
           const row = read.get(user.id) as Row | null
           // Renvoyé après une réponse perdue : déjà enregistré tel quel (et noté au journal), de la
@@ -152,7 +134,6 @@ export function collectionRoutes(
             collection: readCollection(JSON.parse(row.collection))!,
             shopping: JSON.parse(row.shopping) as ShoppingData,
           }
-          if (row) keep(user.id, row, now)
           const version = baseVersion + 1
           app
             .query(
@@ -162,7 +143,7 @@ export function collectionRoutes(
                  collection = excluded.collection, shopping = excluded.shopping,
                  updated_at = excluded.updated_at`,
             )
-            .run(user.id, version, collection, shopping, now.toISOString())
+            .run(user.id, version, collection, shopping, savedAt)
           return { version, previous }
         })
         // `immediate` : la version lue est encore celle du serveur au moment d'écrire.

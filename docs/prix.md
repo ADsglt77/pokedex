@@ -103,7 +103,6 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   peuvent ne pas être à jour », ce qui est touché, réessayer plus tard ; aucune consigne
   d'exploitation (relancer une tâche, vérifier un service : l'affaire de l'administrateur, par la
   surveillance et le journal de l'API). L'état reste calculé par l'API : le site n'a ni la liste
-  des tâches ni leurs règles ; il écarte seulement les sauvegardes de l'API (`backups`), qui ne
-  touchent rien de ce qu'il montre. `/api/health` (la surveillance) : celui de l'API des données.
+  des tâches ni leurs règles. `/api/health` (la surveillance) : celui de l'API des données.
   Dans le formulaire d'une carte, un id Cardmarket n'est pas mis en doute tant que les prix
   manquent tous.

@@ -15,9 +15,13 @@ export const newCardId = () => `manual:${crypto.randomUUID()}`
 export const cardLanguage = (card: Pick<PokemonCard, 'language'>): CardLanguage =>
   card.language ?? 'ja'
 
-/** Une carte ajoutée par l'utilisateur ; `null` si elle n'existe pas (ou plus). */
+/**
+ * Une carte ajoutée par l'utilisateur ; `null` si elle n'existe pas (ou plus). Seulement les siennes
+ * (`Object.hasOwn`) : un statut ou une ligne de commande d'id `constructor` (un document retouché,
+ * que ses règles laissent passer) rendrait sinon `Object` comme carte, et les pages planteraient.
+ */
 export const findCard = (id: string, collection: CollectionData): PokemonCard | null =>
-  collection.customCards[id] ?? null
+  Object.hasOwn(collection.customCards, id) ? collection.customCards[id]! : null
 
 export const emptyCollection = (): CollectionData => ({
   schemaVersion: 1,

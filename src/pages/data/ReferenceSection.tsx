@@ -12,14 +12,10 @@ const STATE_LABELS: Record<Extract<JobState, 'late' | 'failed' | 'frozen'>, stri
 
 type ProblemState = keyof typeof STATE_LABELS
 
-/**
- * Une tâche en retard, en échec ou figée, qui touche ce que montre le site : pas les sauvegardes
- * de l'API des données, qui ne regardent que son administrateur (sa surveillance, `/api/health`).
- */
+/** Une tâche en retard, en échec ou figée : ce que montre le site risque de ne pas être à jour. */
 const isProblem = <Job extends { job: string; state: JobState }>(
   job: Job,
-): job is Job & { state: ProblemState } =>
-  job.job !== 'backups' && Object.hasOwn(STATE_LABELS, job.state)
+): job is Job & { state: ProblemState } => Object.hasOwn(STATE_LABELS, job.state)
 
 /**
  * Silencieux quand tout va bien ; un panneau n'apparaît que si des données du site risquent de ne

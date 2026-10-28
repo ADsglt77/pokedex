@@ -128,7 +128,6 @@ aussitôt ; si le serveur ne répond pas, le menu du compte le dit et elle repar
 - [ ] Votre compte (`/inscription`), puis l'import de l'export d'avant (Réglages › Sauvegarde › Importer) :
       connecté, la collection part sur le serveur.
 - [ ] Les secrets GitHub du déploiement, `VPS_FINGERPRINT` compris (plus bas).
-- [ ] Les sauvegardes copiées hors du VPS chaque nuit (section Sauvegardes).
 - [ ] La surveillance : un service gratuit (UptimeRobot, Healthchecks…) qui demande
       `https://pokecodex.fr/api/health` toutes les 5 minutes et vous écrit s'il ne répond plus
       200 (voir plus bas).
@@ -136,8 +135,7 @@ aussitôt ; si le serveur ne répond pas, le menu du compte le dit et elle repar
       (il demande le réseau).
 
 **La surveillance** : `/api/health` est celui de l'API des données (nginx le lui renvoie) : 200
-quand chaque tâche à rythme a réussi récemment (les prix en 12 h, les sauvegardes en 2 jours, les
-espèces en 60 jours) et que le guide des prix n'est pas figé, 503 sinon, avec les tâches en
+quand chaque tâche à rythme a réussi récemment (les prix en 12 h, les espèces en 60 jours) et que le guide des prix n'est pas figé, 503 sinon, avec les tâches en
 retard ; une erreur de nginx (502) si l'API ne répond plus. Sans surveillance, un trou dans
 l'historique des prix passerait inaperçu : Cardmarket ne le garde pas, un jour manqué l'est pour
 toujours.
@@ -149,13 +147,13 @@ compte (pas les requêtes une à une : seulement ce qui se passe). Sans couleurs
 avec `NO_COLOR=1`. Il note les connexions
 (réussies ou refusées, avec l'adresse du visiteur), création du compte, pseudo et mot de passe
 changés, cartes ajoutées, possédées ou retirées, commandes enregistrées, reçues ou annulées, budget,
-exports et imports, visites du Pokédex public, sauvegardes, l'API des données muette, et les erreurs
+exports et imports, visites du Pokédex public, l'API des données muette, et les erreurs
 du serveur (avec leur cause). Pour le
 suivre : `docker compose logs -f server` (en développement, le terminal de
 `bun run dev:server`).
 
 Les services (`pokedex` : le site, nginx, sur `127.0.0.1:8080`, joignable seulement par Caddy ;
-`server` : les comptes, les collections et leurs sauvegardes) et leurs volumes :
+`server` : les comptes et les collections) et leurs volumes :
 `docs/deploiement.md`. Les tâches d'ingestion (de nouvelles cartes…) : le README de l'API des
 données. Le cache des images de nginx est de 12 Go, avec 30 Mo de clés (`deploy/nginx.conf.template`) :
 tous les scans, japonais et français, y tiennent ; l'API les a copiés d'avance, une image absente
@@ -164,10 +162,10 @@ françaises), la déployer avant le site, et attendre qu'elle ait ses cartes : �
 en place », plus bas.
 
 Ne jamais lancer `docker compose down -v`, qui effacerait les volumes (`db` : les comptes et les
-collections ; `backups`).
+collections, sans aucune sauvegarde).
 
-**Le dossier du clone fixe le nom des volumes** : Compose les nomme d'après lui (`<dossier>_db`,
-`<dossier>_backups` ; `pokedex-data_data`, `pokedex-data_images`… pour l'API des données). Ne
+**Le dossier du clone fixe le nom des volumes** : Compose les nomme d'après lui (`<dossier>_db` ;
+`pokedex-data_data`, `pokedex-data_images`… pour l'API des données). Ne
 jamais renommer un clone ni le refaire sous un autre nom : le nouveau dossier démarrerait, sans
 aucune erreur, sur des volumes neufs et vides (plus de comptes, plus d'historique des prix) ; les
 anciens resteraient là, sans emploi. `docker volume ls` montre ceux qu'utilise le clone.
@@ -193,9 +191,9 @@ anciens resteraient là, sans emploi. `docker volume ls` montre ceux qu'utilise 
    chmod 600 .env
    docker compose up -d --build
    ```
-3. Dans la zone DNS OVH, remplacer l'adresse de redirection par l'IPv4 du VPS : deux
-   enregistrements `A`, l'un pour `pokecodex.fr`, l'autre pour `www.pokecodex.fr` (Caddy le
-   redirige). Garder les enregistrements `MX` et SPF si la messagerie OVH est utilisée. Une fois
+3. Dans la zone DNS OVH, remplacer l'adresse de redirection par l'IPv4 du VPS : trois
+   enregistrements `A`, pour `pokecodex.fr`, `www.pokecodex.fr` (Caddy le redirige) et
+   `api.pokecodex.fr` (l'API des données pour ses autres clients, avec leur token : son README). Garder les enregistrements `MX` et SPF si la messagerie OVH est utilisée. Une fois
    le DNS propagé, installer le Caddyfile fourni et le recharger :
    ```sh
    sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
@@ -281,26 +279,10 @@ Puis, une fois `main` corrigé : `git checkout main` et un nouveau déploiement.
 d'après** (sa collection d'extension, une favorite…) : le document a un nouveau format. Le code
 d'avant refuse (400, « Envoi refusé » au journal) l'envoi d'un compte qui a, dans une collection
 d'extension, une case de dresseur ou d'énergie (il exige un Pokémon à chaque carte), et il jette
-sans rien dire les favorites et les collections d'extension au premier envoi qu'il accepte. Deux
-voies : corriger en avant (un correctif déployé : la plus sûre), ou remettre la copie d'`app.db`
-d'avant la livraison (« Une copie à la demande », section Sauvegardes) en perdant tout ce que les
-comptes ont enregistré depuis, comme l'API des données pour sa base. La remettre se fait avec le
-code d'avant déjà en place, jamais en démarrant le code d'après sur la copie : celle de « Restaurer
-une sauvegarde », sans passer par son `up -d` d'avant, et avec son relèvement des numéros de
-version (l'avant-dernière commande : sans lui, un appareil resté sur la version 6 lirait celle de
-la copie, aussi à 6 et d'avant, « inchangée » ; `fait` doit s'afficher avant le `up -d`).
+sans rien dire les favorites et les collections d'extension au premier envoi qu'il accepte. Sans
+copie de la base (aucune sauvegarde), une seule voie : corriger en avant (un correctif déployé).
 
-```sh
-git checkout <commit d'avant>
-docker compose build
-docker compose stop server
-mkdir -p sauvegardes && cp ~/avant-collections.db sauvegardes/
-docker compose run --rm --no-deps -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/app.db-wal /data/app.db-shm && cp /restore/avant-collections.db /data/app.db'
-docker compose run --rm --no-deps server bun -e 'new (require("bun:sqlite").Database)("/data/app.db").run("UPDATE collections SET version = version + ?", [Date.now()]); console.log("fait")'
-docker compose up -d
-```
-
-Dans les deux cas (le code seul, ou le code et la copie), **exportez, puis rechargez les onglets
+Après un retour du code, **exportez, puis rechargez les onglets
 ouverts** : un onglet resté sur le code d'après ne sait plus enregistrer contre le serveur d'avant.
 Sa lecture ne dit plus à quel compte est la collection (il affiche « Reconnectez-vous »), et son
 envoi compressé est refusé (400). Avant de recharger, « Exporter ma collection » (Réglages ›
@@ -311,13 +293,11 @@ Sauvegarde), dans un onglet qui a des modifications pas encore enregistrées.
 Elle porte trois livraisons, à passer dans cet ordre, chacune finie avant la suivante : l'API des
 données (le catalogue et les images français, étapes 16 et 17 de son schéma), le site (les
 collections d'extension, et le nouveau format de document) et la configuration du VPS (Caddyfile,
-sauvegardes). Une fois passée, cette section se retire.
+anciennes sauvegardes retirées). Aucune copie des bases n'est faite avant : ni les étapes du schéma
+de l'API (16 et 17), ni le nouveau format de document du site ne se défont. Une fois passée, cette
+section se retire.
 
-1. **Sauvegarder les données.** Dans le README de l'API des données, « Les cartes françaises, sur
-   un VPS déjà en place » : aucune tâche lancée à la main ne tourne, puis la copie de `data.db`
-   d'avant les étapes 16 et 17 (`~/data-avant-catalogue-francais.db.gz`). Ces étapes ne se défont
-   pas : cette copie est la seule marche arrière de la base de l'API des données.
-2. **Aucun compte ne doit s'appeler « collections »**, pseudo réservé à la page Collections : un
+1. **Aucun compte ne doit s'appeler « collections »**, pseudo réservé à la page Collections : un
    compte qui le porte déjà perdrait son Pokédex public (404). Lecture seule, sur le VPS, dans le
    clone du site :
    ```sh
@@ -327,11 +307,11 @@ sauvegardes). Une fois passée, cette section se retire.
    Compte & partage › Mon compte) avant la livraison du site. **Une sortie vide n'est pas `[]`** :
    `bun -e` avale les erreurs de SQLite (serveur arrêté, base introuvable) sans code d'échec ; il
    faut alors corriger (`docker compose ps`) et relancer la commande, jusqu'à lire `[]` ou une ligne.
-3. **Déployer l'API des données** (le workflow de son dépôt), puis lancer `cards` dans un conteneur
+2. **Déployer l'API des données** (le workflow de son dépôt), puis lancer `cards` dans un conteneur
    ponctuel, comme le dit son README. Entre les deux déploiements, l'ancien site continue de
    tourner : ses routes japonaises sont inchangées, seule la copie d'images à la demande a disparu
    (une image absente du volume répond 404).
-4. **Attendre la fin des étapes `catalog` et `images` de `cards`, avant le site.** Sans elles, le
+3. **Attendre la fin des étapes `catalog` et `images` de `cards`, avant le site.** Sans elles, le
    site montrerait « Catalogue indisponible » et des pochettes de substitution pour tout le
    français. Le journal le dit :
    ```sh
@@ -347,132 +327,34 @@ sauvegardes). Une fois passée, cette section se retire.
    ne répondent pas (ou si le catalogue ne note aucune image française). Pour passer outre, à la
    main sur le VPS (la clé restreinte du workflow ne reçoit aucune variable) :
    `SKIP_FRENCH_CHECK=1 sh deploy/deploy.sh`.
-5. **Copier `app.db`, juste avant le site** (« Une copie à la demande », section Sauvegardes), sous
-   le nom `avant-collections.db`, puis hors du conteneur, dans `~/` (en lisant ce que ces commandes
-   affichent : sans `copie faite`, elle n'existe pas). C'est ce qu'on remettrait pour
-   revenir en arrière, et plus elle date, plus un retour fait perdre d'enregistrements : d'où
-   maintenant, et non avec l'étape 2 (la copie quotidienne, qui date de 24 h au plus et que rien ne
-   rafraîchit, ne suffit pas).
-6. **Déployer le site** (le workflow de ce dépôt).
-7. **Remplacer les crontabs de sauvegarde**, si elles ont été installées d'après l'ancien README.
-   Leur ligne a `--user root` et `cp /backups/…-* /out/` : le conteneur, sans aucun droit
-   (`cap_drop: ALL`), n'écrit pas dans un dossier du VPS ; le `cp` échoue, le `&&` s'arrête avant
-   `rclone`, et plus rien ne sort du VPS, sans la moindre alerte. Un déploiement ne touche pas la
-   crontab. `crontab -l` pour les retrouver, `crontab -e` pour remplacer les deux (celle du site :
-   section Sauvegardes ; celle de l'API des données : « Sauvegardes » de son README), puis chacune
-   une fois à la main (la ligne, sans ses cinq champs d'horaire, collée dans un terminal), et
-   `rclone lsl distant:pokedex-sauvegardes` doit montrer les fichiers du jour. Un ping de
-   surveillance facultatif au bout de chaque ligne en fait une alerte (section Sauvegardes).
-8. **Réinstaller le Caddyfile** (les commandes de l'étape 3 de « Une fois, sur le VPS ») : le
+4. **Déployer le site** (le workflow de ce dépôt).
+5. **Retirer les anciennes sauvegardes**, si elles ont été installées : section « Sauvegardes :
+   aucune » (et celle du README de l'API des données).
+6. **Réinstaller le Caddyfile** (les commandes de l'étape 3 de « Une fois, sur le VPS ») : le
    déploiement ne le copie jamais, le VPS garde l'ancien (sans le HSTS de `www`) tant qu'on ne le
    fait pas. Lire d'abord ce qu'engage `includeSubDomains` (même étape).
-9. **Surveiller**, les jours qui suivent : `docker compose logs -f server` (aucune erreur
+7. **Surveiller**, les jours qui suivent : `docker compose logs -f server` (aucune erreur
    `Envoi refusé` en rafale), `https://pokecodex.fr/api/health` à 200, `/collections` ouverte
    sur un compte qui a une collection d'extension, la fin de `cards` (son code de sortie à `0`,
-   puis `docker rm pokedex-data-cards` : son README), les copies de la nuit sorties du VPS.
+   puis `docker rm pokedex-data-cards` : son README).
 
-## Sauvegardes
+## Sauvegardes : aucune
 
-Chaque jour, le serveur copie sa base dans le volume `backups` : `app-AAAA-MM-JJ.db` (les comptes
-et les collections, 30 jours gardés). Chaque copie est vérifiée (`PRAGMA quick_check`) et écrite
-sous un nom provisoire (`tmp-…`) avant de prendre sa place : une copie en cours n'est jamais prise
-pour une sauvegarde. Les données de référence et l'historique des prix ont les leurs, dans l'API
-des données (son README). Ce volume est sur le même disque que la base : copiez-le aussi
-ailleurs. Pour en sortir les fichiers, dans `./sauvegardes` (que git ignore ; vidé d'abord, il ne
-garde que ce qu'a le volume, sans une copie en cours d'écriture), avec `docker compose cp`, qui les
-écrit au nom de l'utilisateur qui le lance. Le conteneur ne le pourrait pas, même `--user root` :
-il n'a aucun droit (`cap_drop: ALL`), ni d'écrire dans un dossier du VPS qui ne lui appartient
-pas, ni de changer un propriétaire.
+Plus aucune sauvegarde côté serveur (octobre 2026, décision de l'utilisateur) : ni copie
+quotidienne d'`app.db`, ni copie hors du VPS, ni versions remplacées des collections (une étape
+du schéma retire leur table), ni procédure de restauration. Une panne du disque du VPS, une base
+abîmée ou un `docker compose down -v` perdent pour toujours les comptes et les collections. Seul
+l'export de chacun (Réglages › Sauvegarde › Exporter) en garde une copie, chez lui.
 
-```sh
-rm -rf sauvegardes && mkdir sauvegardes
-docker compose cp server:/backups/. sauvegardes/ && rm -f sauvegardes/tmp-*
-```
-
-Chaque nuit, hors du VPS, avec `rclone` (configuré une fois, `rclone config`, vers un stockage à
-vous : Backblaze B2, Google Drive, un autre serveur…) : dans la crontab de l'utilisateur du
-déploiement (`crontab -e`), ici à 4 h 30, le dossier du clone à adapter. Le stockage distant garde
-90 jours (`rclone delete --min-age 90d`) :
+Sur un VPS installé avec l'ancien système, une fois ce code déployé, ce qui en reste ne se retire
+qu'à la main : la ligne de la crontab qui copiait les sauvegardes (`crontab -e` : celle qui finit
+par `rclone … distant:pokedex-sauvegardes`), le dossier `sauvegardes` du clone, une copie faite à
+la main avant une livraison (`~/avant-collections.db`) et le volume des copies, que Compose ne
+supprime jamais seul (son nom vient du dossier du clone : `docker volume ls`). Les copies déjà
+envoyées sur le stockage distant y restent jusqu'à ce qu'on les supprime
+(`rclone purge distant:pokedex-sauvegardes`).
 
 ```sh
-30 4 * * * cd /home/moi/pokedex && rm -rf sauvegardes && mkdir sauvegardes && docker compose cp server:/backups/. sauvegardes/ && rm -f sauvegardes/tmp-* && rclone copy sauvegardes distant:pokedex-sauvegardes && rclone delete --min-age 90d distant:pokedex-sauvegardes
+rm -rf sauvegardes ~/avant-collections.db
+docker volume rm pokedex_backups
 ```
-
-Un échec de cette ligne passe sinon inaperçu : le `&&` s'arrête, personne n'est prévenu, et plus
-rien ne sort du VPS. Un ping de surveillance facultatif au bout de la ligne, vers un service qui
-écrit quand il ne le reçoit plus (Healthchecks, par exemple : son adresse de ping remplace
-`<identifiant>`), en fait une alerte ; il ne part que si tout ce qui précède a réussi. Même chose,
-avec son propre identifiant, pour la ligne de l'API des données, dont l'historique des prix est
-irremplaçable :
-
-```sh
-… && rclone delete --min-age 90d distant:pokedex-sauvegardes && curl -fsS -m 10 --retry 3 https://hc-ping.com/<identifiant>
-```
-
-**Une copie à la demande** d'`app.db`, avant une livraison risquée : une copie cohérente faite
-par SQLite pendant que le serveur tourne, dans le volume `backups`, puis sortie du conteneur. La
-sauvegarde du jour ne la remplace pas : un seul fichier par jour, jamais rafraîchi, de 24 heures
-au plus. Son nom ne doit pas commencer par `app-` : la purge des 30 copies quotidiennes ne
-supprime que les `app-….db`, celle-ci reste jusqu'à ce qu'on la retire.
-
-SQLite refuse d'écrire sur un fichier qui existe, et `bun -e` avale l'erreur : sans un mot, avec un
-code de sortie 0. Une ancienne copie du même nom serait alors sortie du conteneur comme si elle
-était fraîche. D'où le `rm -f` d'abord, et un affichage qui n'a lieu que si la copie est faite :
-
-```sh
-docker compose exec server rm -f /backups/avant-collections.db
-docker compose exec server bun -e 'new (require("bun:sqlite").Database)("/data/app.db").run("VACUUM INTO ?", ["/backups/avant-collections.db"]); console.log("copie faite")'
-docker compose cp server:/backups/avant-collections.db ~/
-ls -l ~/avant-collections.db
-docker compose exec server ls -l /data/app.db
-```
-
-Ce qu'il faut lire : `copie faite` (rien d'affiché : pas de copie, ne pas continuer), puis, pour
-`~/avant-collections.db`, une date et une heure d'à l'instant et une taille du même ordre que celle
-d'`app.db` (un peu moins, la copie est compacte). Une date d'avant, ou un fichier vide : recommencer.
-
-Quand elle ne sert plus (la livraison est passée, rien à remettre), on la retire du volume :
-
-```sh
-docker compose exec server rm /backups/avant-collections.db
-```
-
-**Restaurer une sauvegarde** : arrêter le serveur, remettre la copie à la place de la base, sans
-les fichiers `-wal` et `-shm` de l'ancienne, relever les numéros de version (voir plus bas), puis
-redémarrer. En tant que `bun`, l'utilisateur du conteneur, à qui appartiennent la base et son
-dossier (pas de `chown`) :
-
-```sh
-docker compose stop server
-docker compose run --rm --no-deps -v "$PWD/sauvegardes:/restore:ro" server sh -c 'rm -f /data/app.db-wal /data/app.db-shm && cp /restore/app-AAAA-MM-JJ.db /data/app.db'
-docker compose run --rm --no-deps server bun -e 'new (require("bun:sqlite").Database)("/data/app.db").run("UPDATE collections SET version = version + ?", [Date.now()]); console.log("fait")'
-docker compose up -d
-```
-
-Pour un retour du code (« Revenir à la version d'avant »), ne pas finir par ce `docker compose up -d`
-sur le code d'après : remettre d'abord le code d'avant, comme le fait « Revenir à la version
-d'avant » (plus haut), pour que le serveur démarre dessus, sur la copie.
-
-**Le relèvement des numéros de version termine toute restauration d'`app.db`** (celle-ci, celle
-d'un retour du code, ou une version de la collection remise à la main) : il doit dépasser tout
-numéro qu'un appareil a pu garder. La copie date d'avant des enregistrements, et le serveur y
-numérote les suivants comme il l'a déjà fait. Un appareil resté sur la version 6 d'avant lirait
-donc la 6 de la copie, qui est un autre contenu, comme « inchangée » (sa lecture
-`GET /api/collection?version=6`, de même quand un autre onglet annonce un envoi) et garderait son
-contenu d'avant ; son prochain envoi, parti de la 6, serait accepté par-dessus ce qui a été
-enregistré depuis la restauration. Relevée de l'heure en millisecondes (`Date.now()`, environ
-1 800 milliards), la collection n'a plus aucun numéro qu'un appareil détienne : il relit la
-collection restaurée, ou son prochain envoi est refusé (409), puis relue, et sa dernière
-modification est perdue (`docs/compte-et-synchronisation.md`). `bun -e` avale les erreurs de SQLite
-(base introuvable ou verrouillée) sans code d'échec : sans `fait` affiché, rien n'est relevé, et on
-ne lance pas le `up -d`. On ajoute l'heure, et non un nombre fixe, pour que chaque restauration
-relève plus que la précédente, même celle d'une copie plus ancienne : les enregistrements sont
-limités à quelques-uns par seconde, loin d'un par milliseconde.
-
-Le serveur garde aussi, dans `app.db`, une version remplacée de la collection par heure pendant
-30 jours (table `collection_versions`, compressée) : de quoi revenir en arrière après une erreur,
-à la main. Remise dans `collections` (ses `collection` et `shopping`), la ligne reçoit le même
-relèvement, celui de ce compte seulement : la commande `bun -e` ci-dessus, avec
-`.run("UPDATE collections SET version = version + ? WHERE user_id = ?", [Date.now(), "<id>"])`
-(`fait` à lire), et jamais le numéro de la version reprise : les appareils qui le détiennent la
-verraient « inchangée ».

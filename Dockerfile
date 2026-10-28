@@ -13,7 +13,7 @@ RUN bun test && bun run lint:docker && bun run build
 
 # 2. Le serveur de l'app (service `server`) : Bun lance le code tel quel ; `tsconfig.json` lui
 #    donne l'alias `@/` vers `src/`, dont il lit les règles. La base vit dans le volume `db`
-#    (`DATA_DIR`), ses sauvegardes dans `backups`. Son `package.json` vient de l'étape 1 : elle
+#    (`DATA_DIR`). Son `package.json` vient de l'étape 1 : elle
 #    passe donc d'abord, et un test en échec arrête aussi cette image.
 FROM oven/bun:1.3-alpine AS server
 WORKDIR /app
@@ -25,12 +25,12 @@ COPY src src
 # `production` : cookies de session sécurisés et limite de tentatives de connexion (Better Auth).
 # `HOST` : le serveur écoute toutes les adresses de son conteneur, pour nginx (hors Docker, la
 # machine seulement).
-ENV NODE_ENV=production HOST=0.0.0.0 DATA_DIR=/data BACKUP_DIR=/backups
+ENV NODE_ENV=production HOST=0.0.0.0 DATA_DIR=/data
 # Sans droits d'administrateur (l'utilisateur `bun` de l'image) : une faille du serveur ne donnerait
-# pas la main sur le conteneur. Les points de montage lui appartiennent, et un volume neuf en hérite
+# pas la main sur le conteneur. Le point de montage lui appartient, et un volume neuf en hérite
 # (un volume créé avant, par un conteneur administrateur : `docker compose run --rm --no-deps
-# --user root --cap-add CHOWN server chown -R bun:bun /data /backups`).
-RUN mkdir -p /data /backups && chown bun:bun /data /backups
+# --user root --cap-add CHOWN server chown -R bun:bun /data`).
+RUN mkdir -p /data && chown bun:bun /data
 USER bun
 CMD ["bun", "server/index.ts"]
 

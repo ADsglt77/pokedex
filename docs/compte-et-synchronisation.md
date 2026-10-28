@@ -28,7 +28,7 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   l'adresse du Pokédex public change avec lui, l'ancienne ne mène plus à rien), le mot de passe
   (`changePassword`, l'actuel exigé, les autres sessions fermées) et la suppression du compte
   (`deleteUser`, son mot de passe exigé ; après une confirmation qui propose l'export) : sa
-  collection reste 90 jours au plus dans les sauvegardes. Un mauvais mot de passe (400) le dit ;
+  collection part aussitôt, sans copie nulle part (aucune sauvegarde). Un mauvais mot de passe (400) le dit ;
   une session fermée (401 : une connexion sur un autre appareil) dit « Session expirée », jamais
   « mot de passe incorrect » (l'utilisateur croirait le sien perdu), et le menu du compte propose
   de se reconnecter (`markExpired`) ; un pseudo pris (`USERNAME_IS_ALREADY_TAKEN`) le dit. Les
@@ -150,13 +150,11 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   connexion à un autre compte, sur la même page, n'écrase jamais sa collection ; la connexion vide
   d'abord la mémoire et les envois en attente, `signIn`), et 409, corps `null`, si le navigateur
   part d'une autre version que celle du serveur (changée entre-temps par un autre onglet ou un
-  autre appareil). Une base restaurée d'une sauvegarde ne le garantit pas d'elle-même : ses
+  autre appareil). Une base remise d'une copie (un instantané du VPS…) ne le garantit pas d'elle-même : ses
   numéros se répètent, un appareil resté sur la version 6 d'avant la lirait « inchangée » dans la
   copie, aussi à 6 mais d'un autre contenu, et son envoi, parti de la 6, serait accepté par-dessus
-  ce qui a été enregistré depuis. Toute restauration d'`app.db` finit donc par relever chaque
-  numéro de l'heure en millisecondes (`version = version + Date.now()`, README : « Restaurer une
-  sauvegarde », le retour du code, ou une ligne de `collection_versions` remise à la main ; jamais
-  le numéro de la ligne reprise) : aucun appareil n'en détient un pareil, et chaque restauration
+  ce qui a été enregistré depuis. Toute remise d'`app.db` finit donc par relever chaque
+  numéro de l'heure en millisecondes (`UPDATE collections SET version = version + <Date.now()>`) : aucun appareil n'en détient un pareil, et chaque remise
   relève plus que la précédente, même celle d'une copie plus ancienne ; il relit la collection
   restaurée ou son envoi est refusé (409, puis relue). Sauf un envoi renvoyé tel quel après une
   réponse perdue (délai dépassé, réseau coupé : le serveur l'avait enregistré) : parti
@@ -164,7 +162,7 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   rien écrire ni noter ; le navigateur renvoie toujours d'abord, tel quel, un envoi resté sans
   réponse, puis ce qui a changé depuis (rien de perdu, rien de « Rechargée » ; ce renvoi refusé,
   ce qui a changé depuis part aussitôt). Testé sur le
-  serveur entier avec 401, 403, une mise à jour, la version remplacée gardée, un document refusé
+  serveur entier avec 401, 403, une mise à jour, aucune version remplacée gardée, un document refusé
   (400), un envoi compressé, la bombe, l'envoi renvoyé reconnu et un autre document de la même
   version toujours refusé (409), `tests/collection.test.ts`. Après un 409, le navigateur relit la
   version du serveur, à la place de la sienne : rien n'est écrasé, sa dernière modification est
@@ -174,7 +172,12 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   relecture échoue. Accepté, la réponse donne
   `{ version }`, et les autres onglets du navigateur l'apprennent (`BroadcastChannel('collection')`
   : `{ account, version }`) : un onglet sans rien en attente relit alors la collection. Le
-  document passe les contrôles d'un import (`readSent` : refusé, la règle en cause au journal).
+  document passe les contrôles d'un import (`readSent` : refusé, la règle en cause au journal,
+  une ligne par compte, par statut et par minute au plus, testé), relus en une passe : le serveur
+  n'a qu'un fil, et un document fait pour l'occuper (90 000 collections vides, quelques Ko
+  compressés) le gelait 10 s quand chaque collection était cherchée dans toute la liste (moins
+  d'une seconde, testé ; une carte porte au plus 1 025 Pokémon, sans quoi les favorites la
+  parcourraient sans fin).
   Une modification d'une autre origine est refusée (403, plus haut) ; au journal, elle dit un
   réglage à revoir (`BETTER_AUTH_URL`) ou une tentative depuis un autre site. Sans réponse, ou une
   panne passagère (502 pendant un redémarrage), ou trop d'envois d'affilée (429 : nginx limite
@@ -217,8 +220,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   429 de nginx,
   une modification pendant la compression, l'envoi compressé ou tel quel, la page en
   arrière-plan et l'autre onglet. Le
-  serveur garde une version remplacée par heure, 30 jours (`collection_versions`, à reprendre à la
-  main). Il note au journal ce qui change d'une version à l'autre (`documentChanges`,
+  serveur ne garde que la dernière version (aucune version remplacée, aucune sauvegarde : octobre
+  2026). Il note au journal ce qui change d'une version à l'autre (`documentChanges`,
   `server/journal.ts`), la version d'avant relue comme un fichier (`readCollection` : un document
   enregistré avant les collections d'extensions n'a pas de `series`, testé sur le serveur entier) :
   une collection d'extension commencée (« Collection commencée ») ou supprimée (« Collection
@@ -226,7 +229,10 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   que des centaines de cartes soient ajoutées ou retirées avec elle (« Collection effacée » ne dit
   que la perte de vraies cartes : supprimer la dernière collection d'un compte dont rien n'est
   possédé ni commandé est « Collection supprimée ») ; une case obtenue est « Carte possédée », sans
-  « Carte modifiée » (testé, `tests/journal.test.ts`).
+  « Carte modifiée » (testé, `tests/journal.test.ts`). L'export et l'import, que le navigateur
+  signale (`POST /api/journal`) : une ligne par compte, par évènement et par minute au plus
+  (`journalOnce` : un compte qui l'appellerait sans fin ferait tourner le journal de Docker, et
+  effacerait les connexions ; testé).
   « Annuler », l'import, « Effacer » sont des modifications comme les autres. Le compte
   (`AccountMenu`, en pied de la barre latérale, ou en icône dans la barre du haut sur petit écran ;
   seulement connecté) montre son pseudo et l'état : enregistrée, enregistrement, hors ligne

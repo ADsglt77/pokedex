@@ -43,6 +43,9 @@ Quand un type partagé avec l'API change : `bun run contracts` (exige `../pokede
   colle lui-même ; pas de CSV.
 - **UI** : `@camply/ui` d'abord (skill `camply-ui`) ; couleurs seulement dans `styles/theme.css`.
 - Pas d'image téléversée (on colle une adresse), pas de fusion à l'import.
+- **Aucune sauvegarde** côté serveur (décision de l'utilisateur, octobre 2026) : ni copie de la
+  base, ni versions remplacées des collections. Ne pas en réintroduire sans demande ; l'export
+  (Réglages › Sauvegarde) reste à l'utilisateur.
 - Textes en français, vouvoiement ; sans carte possédée, un Pokémon est « à débloquer ».
 
 ## Structure
@@ -55,7 +58,7 @@ par `server/`. `server/db.ts` : schéma par étapes à empreintes. `tests/setup.
 [collection, achats, budget](docs/collection-et-achats.md) ·
 [compte, serveur, Pokédex public](docs/compte-et-synchronisation.md) ·
 [interface, filtres, performance](docs/interface.md) ·
-[déploiement, sauvegardes](docs/deploiement.md) (**jamais `docker compose down -v`**).
+[déploiement](docs/deploiement.md) (**jamais `docker compose down -v`**).
 
 Windows : après une modification de `vite.config.ts`, relancer `bun dev` ; deux écritures
 rapprochées d'un fichier peuvent lui échapper (page blanche : réenregistrer).
