@@ -19,8 +19,14 @@ export default defineConfig(async () => ({
           BETTER_AUTH_SECRET: 'cle-d-essai-pour-les-tests-du-worker-seulement',
           MIGRATIONS: await readD1Migrations('worker/migrations'),
         },
-        // Le Worker des données : absent (404), sauf là où un test le remplace (`env.DATA`).
-        serviceBindings: { DATA: () => new Response(null, { status: 404 }) },
+        serviceBindings: {
+          // Le Worker des données : absent (404), sauf là où un test le remplace (`env.DATA`).
+          DATA: () => new Response(null, { status: 404 }),
+          // Les fichiers de l'app, sans eux : la page de l'app pour toute adresse, ce que rend
+          // `env.ASSETS` en ligne pour une adresse qui n'est pas un fichier.
+          ASSETS: () =>
+            new Response('<!doctype html>', { headers: { 'Content-Type': 'text/html' } }),
+        },
       },
     }),
   ],

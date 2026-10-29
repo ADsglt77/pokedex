@@ -1,6 +1,7 @@
 /**
  * Ce que le site ajoute à ses réponses (le travail de nginx et de Caddy sur l'ancien VPS) :
- * - `www.pokecodex.fr` mène au site (`canonicalHost`) ;
+ * - `http://` et `www.pokecodex.fr` mènent à `https://pokecodex.fr` (`canonicalHost`) : un mot de
+ *   passe ne passe jamais en clair, et le cookie de session (réservé à https) marche ;
  * - sur chaque réponse, les en-têtes de sécurité (`SECURITY`) : le site en https seulement pendant
  *   un an, même tapé en http, ses sous-domaines compris (un engagement d'un an pour tout
  *   sous-domaine de `pokecodex.fr`) ; pas de type deviné pour un fichier ; l'adresse d'origine
@@ -51,11 +52,16 @@ const CSP = [
 /** Les pages publiques, que les moteurs de recherche indexent. */
 const PUBLIC_PAGES = /^\/(connexion|inscription|mentions-legales)?$/
 
-/** `www.pokecodex.fr/x` : `pokecodex.fr/x`, pour de bon. */
+/** Le poste du développeur, en http : Vite et les tests. */
+const LOCAL = /^(localhost|127\.0\.0\.1)$/
+
+/** `http://pokecodex.fr/x` ou `www.pokecodex.fr/x` : `https://pokecodex.fr/x`, pour de bon. */
 export const canonicalHost: MiddlewareHandler = async (c, next) => {
   const url = new URL(c.req.url)
-  if (!url.hostname.startsWith('www.')) return next()
-  url.hostname = url.hostname.slice('www.'.length)
+  const www = url.hostname.startsWith('www.')
+  if (!www && (url.protocol === 'https:' || LOCAL.test(url.hostname))) return next()
+  url.protocol = 'https:'
+  if (www) url.hostname = url.hostname.slice('www.'.length)
   return c.redirect(url.href, 301)
 }
 

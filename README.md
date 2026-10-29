@@ -127,8 +127,8 @@ Logs, gardés 7 jours).
 
 ## Mise en ligne
 
-Le site est le Worker Cloudflare `pokedex`, à https://pokecodex.fr (`www.pokecodex.fr` y
-redirige) ; l'API des données, le Worker `pokedex-data`, à https://api.pokecodex.fr. Chacun a son
+Le site est le Worker Cloudflare `pokedex`, à https://pokecodex.fr (`http://` et
+`www.pokecodex.fr` y redirigent) ; l'API des données, le Worker `pokedex-data`, à https://api.pokecodex.fr. Chacun a son
 domaine personnalisé (`routes` de `wrangler.jsonc`), sans adresse `workers.dev`. **Workers
 Builds** (Cloudflare relié aux dépôts GitHub) déploie chacun à chaque push sur `main` de son dépôt.
 Pour le site, `bun run ci` construit (`bun test`, `bun run lint:ci`, `bun run test:worker`,
@@ -138,8 +138,10 @@ en ligne et publie le Worker.
 (`knip.ci.json`). Le guide complet : [docs/deploiement.md](docs/deploiement.md).
 
 Ce que faisaient nginx et Caddy, le Worker le fait lui-même : les en-têtes de sécurité, de cache
-et des moteurs de recherche, et la redirection de `www` (`worker/headers.ts`) ; les limites par
-visiteur, 429 au-delà (`worker/limits.ts`). Cloudflare compresse les réponses. Le site envoie
+et des moteurs de recherche, et la redirection de `http://` et de `www` vers
+`https://pokecodex.fr` (`worker/headers.ts`) ; les limites par visiteur, 429 au-delà
+(`worker/limits.ts`) ; un fichier absent, 404, et non la page de l'app que rend Cloudflare à toute
+adresse inconnue (`worker/index.ts`). Cloudflare compresse les réponses. Le site envoie
 `Strict-Transport-Security` avec `includeSubDomains` pour un an : tout navigateur qui l'a reçu
 n'ouvre plus, pendant un an, aucun sous-domaine de `pokecodex.fr` en http (un futur `staging.` ou
 un service du domaine sans https lui serait inaccessible).
