@@ -130,9 +130,12 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
    bun run ingest setup --remote
    ```
 
-   L'avancée se suit sur la page Données du site et dans le journal (`npx wrangler tail
-   pokedex-data`). Ensuite, le Cron tient les prix et les espèces à jour tout seul ; les nouvelles
-   cartes : `bun run ingest cards --remote`.
+   L'avancée se suit dans le tableau de bord (Workflows › `ingest` › le passage : chaque étape et
+   son état), au terminal (`npx wrangler workflows instances list ingest`, puis
+   `npx wrangler workflows instances describe ingest <id>`) et dans le journal
+   (`npx wrangler tail pokedex-data`). La page Réglages du site, elle, ne montre que les tâches en
+   retard ou en échec. Ensuite, le Cron tient les prix et les espèces à jour tout seul ; les
+   nouvelles cartes : `bun run ingest cards --remote`.
 8. **Vérifier** : `https://pokecodex.fr` (créer un compte, enregistrer une carte) et
    `https://api.pokecodex.fr/v1/health` (200 une fois les tâches à rythme passées).
 9. **(vous) L'ancien VPS** : une fois le site vérifié, l'arrêter et le résilier chez OVH. Rien n'est
