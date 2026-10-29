@@ -10,7 +10,7 @@ Pokédex public de chaque compte (`/pseudo`).
 - **Site** (ce dépôt) : React 19, Vite, TS, `@camply/ui`, zustand, react-router. **Rien dans le
   navigateur** sauf le thème, pas de hors-ligne. Cible : **Cloudflare Workers**, pas encore en
   ligne : la mise en ligne attend l'offre Workers Paid (aucun utilisateur d'ici là). `worker/`
-  (Hono, Drizzle, D1, Better Auth) : le Worker du site (`pokecodex`), qui garde comptes et
+  (Hono, Drizzle, D1, Better Auth) : le Worker du site (`pokedex`), qui garde comptes et
   collections, montre les
   Pokédex publics, pose les en-têtes (`worker/headers.ts`) et limite chaque visiteur
   (`worker/limits.ts`). Workers Builds le déploie à chaque push sur `main` (`docs/deploiement.md`).

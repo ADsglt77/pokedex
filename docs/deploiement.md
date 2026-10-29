@@ -15,7 +15,7 @@ chaque push sur `main`. Plus de Docker, de nginx, de Caddy ni de VPS.
 | Worker | Dépôt | Adresse | Ce qu'il a |
 |---|---|---|---|
 | `pokedex-data` | `pokedex-data` | `api.pokecodex.fr` | D1 `pokedex-data` (catalogue, prix, historique, état des tâches), R2 `pokedex-data` (images, grosses réponses), le Workflow `ingest` et son Cron horaire, ses limites par adresse |
-| `pokecodex` | `pokedex` | `pokecodex.fr` (et `www.`, qui y mène) | D1 `pokecodex` (comptes, collections : **dans l'Union européenne**), les fichiers de l'app (`ASSETS`), le Worker des données par sa liaison de service (`DATA`), ses limites par visiteur |
+| `pokedex` | `pokedex` | `pokecodex.fr` (et `www.`, qui y mène) | D1 `pokecodex` (comptes, collections : **dans l'Union européenne**), les fichiers de l'app (`ASSETS`), le Worker des données par sa liaison de service (`DATA`), ses limites par visiteur |
 
 Le site joint l'API par sa liaison de service, sans réseau ni token : **le Worker des données doit
 être en ligne avant celui du site**. Ni l'un ni l'autre n'a d'adresse `workers.dev` (les sessions
@@ -92,7 +92,7 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
 5. **(vous) Workers Builds**, pour chaque dépôt, **`pokedex-data` d'abord** : tableau de bord ›
    Workers & Pages › Create › Import a repository (Cloudflare installe alors son application
    GitHub sur le dépôt), puis :
-   - le nom du projet : celui du Worker (`pokedex-data`, puis `pokecodex`), comme dans son
+   - le nom du projet : celui du Worker et du dépôt (`pokedex-data`, puis `pokedex`), comme dans son
      `wrangler.jsonc` ;
    - la branche : `main` ;
    - la commande de construction : `bun run ci` ; celle de déploiement : `bun run deploy` ;
@@ -143,7 +143,7 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
 - **Le journal** : tableau de bord › le Worker › Logs (7 jours), ou en direct :
 
   ```bash
-  npx wrangler tail pokecodex
+  npx wrangler tail pokedex
   ```
 
 - **Revenir en arrière** : tableau de bord › le Worker › Deployments › Rollback (le code seulement :

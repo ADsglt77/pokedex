@@ -127,7 +127,7 @@ Logs, gardés 7 jours).
 
 ## Mise en ligne
 
-Le site est le Worker Cloudflare `pokecodex`, à https://pokecodex.fr (`www.pokecodex.fr` y
+Le site est le Worker Cloudflare `pokedex`, à https://pokecodex.fr (`www.pokecodex.fr` y
 redirige) ; l'API des données, le Worker `pokedex-data`, à https://api.pokecodex.fr. Chacun a son
 domaine personnalisé (`routes` de `wrangler.jsonc`), sans adresse `workers.dev`. **Workers
 Builds** (Cloudflare relié aux dépôts GitHub) déploie chacun à chaque push sur `main` de son dépôt.

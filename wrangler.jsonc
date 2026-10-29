@@ -2,7 +2,7 @@
 // `bun run build`) et les tests du Worker (`vitest.config.ts`).
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "pokecodex",
+  "name": "pokedex",
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-20",
   // Better Auth s'appuie sur des modules de Node (`AsyncLocalStorage`).
