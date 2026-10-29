@@ -8,11 +8,12 @@ possédée. S'y ajoutent des **collections d'extensions** entières, une case pa
 Pokédex public de chaque compte (`/pseudo`).
 
 - **Site** (ce dépôt) : React 19, Vite, TS, `@camply/ui`, zustand, react-router. **Rien dans le
-  navigateur** sauf le thème, pas de hors-ligne. Cible : **Cloudflare Workers**, mise en ligne
-  seulement à la fin du développement (aucun utilisateur d'ici là). `worker/` (Hono, Drizzle, D1,
-  Better Auth) : le Worker du site, qui garde comptes et collections et montre les Pokédex
-  publics. Docker, nginx, Caddy et le VPS (`deploy/`, `docs/deploiement.md`) sont périmés, à
-  retirer.
+  navigateur** sauf le thème, pas de hors-ligne. Cible : **Cloudflare Workers**, pas encore en
+  ligne : la mise en ligne attend l'offre Workers Paid (aucun utilisateur d'ici là). `worker/`
+  (Hono, Drizzle, D1, Better Auth) : le Worker du site (`pokecodex`), qui garde comptes et
+  collections, montre les
+  Pokédex publics, pose les en-têtes (`worker/headers.ts`) et limite chaque visiteur
+  (`worker/limits.ts`). Workers Builds le déploie à chaque push sur `main` (`docs/deploiement.md`).
 - **API des données** (`../pokedex-data`, un Worker elle aussi, privée) : espèces, catalogue,
   images, prix Cardmarket. Le Worker du site la joint par sa liaison de service (`DATA`,
   `worker/data.ts`), sans token ; le navigateur ne voit que `/api/…` et `/images/…` du site.
@@ -24,7 +25,8 @@ ARM64 sur ce poste : le plugin Cloudflare ne tourne pas sous Bun). `bun dev` (Vi
 sa base D1 locale migrée d'abord), et `bun run dev` dans `../pokedex-data` (son Worker, que ses
 propres tâches remplissent, `bun run ingest setup` la première fois : README). `bun run build` (pas `bun build`). Schéma du Worker changé
 (`worker/schema.ts`) : `bun run db:generate`. Après chaque changement : `bun lint` (ESLint +
-knip), `bun test`, `bun run test:worker`, `bun run format`.
+knip), `bun test`, `bun run test:worker`, `bun run format`. `bun run ci` : ce que lance la
+construction de Cloudflare avant de déployer (`lint:ci`, `knip.ci.json` : sans `../pokedex-data`).
 Quand un type partagé avec l'API change : `bun run contracts` (exige `../pokedex-data`).
 
 ## Règles
@@ -49,8 +51,9 @@ Quand un type partagé avec l'API change : `bun run contracts` (exige `../pokede
 - **UI** : `@camply/ui` d'abord (skill `camply-ui`) ; couleurs seulement dans `styles/theme.css`.
 - Pas d'image téléversée (on colle une adresse), pas de fusion à l'import.
 - **Aucune sauvegarde** côté serveur (décision de l'utilisateur, octobre 2026) : ni copie de la
-  base, ni versions remplacées des collections. Ne pas en réintroduire sans demande ; l'export
-  (Réglages › Sauvegarde) reste à l'utilisateur.
+  base, ni versions remplacées des collections ; seul l'historique de 30 jours que Cloudflare
+  garde de lui-même (D1 Time Travel). Ne pas en réintroduire sans demande ; l'export (Réglages ›
+  Sauvegarde) reste à l'utilisateur.
 - Textes en français, vouvoiement ; sans carte possédée, un Pokémon est « à débloquer ».
 
 ## Structure
@@ -65,7 +68,7 @@ moteur de Cloudflare.
 [collection, achats, budget](docs/collection-et-achats.md) ·
 [compte, serveur, Pokédex public](docs/compte-et-synchronisation.md) ·
 [interface, filtres, performance](docs/interface.md) ·
-[déploiement](docs/deploiement.md) (**jamais `docker compose down -v`**).
+[mise en ligne, Cloudflare](docs/deploiement.md).
 
 Windows : après une modification de `vite.config.ts` ou de `wrangler.jsonc`, relancer `bun dev` ;
 deux écritures rapprochées d'un fichier peuvent lui échapper (page blanche : réenregistrer).

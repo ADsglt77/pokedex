@@ -37,8 +37,7 @@ const catalogPath = (lang: CardLanguage) => (lang === 'fr' ? '/api/catalog/fr' :
 /**
  * Le délai d'une lecture du catalogue (ms) : sans réponse, elle compte comme une panne passagère
  * (`getJson`). « Enregistrer » une carte (son image, `findCardImage`) et « Commencer la
- * collection » l'attendent : ils ne restent jamais bloqués (sans lui, jusqu'à la minute de nginx,
- * et sans limite avec Vite).
+ * collection » l'attendent : ils ne restent jamais bloqués.
  */
 const CATALOG_TIMEOUT = 15_000
 

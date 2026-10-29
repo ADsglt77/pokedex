@@ -10,12 +10,14 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "wrangler d1 migrations apply DB --local",
     "lint": "eslint . && knip",
-    "lint:docker": "eslint . && knip --config knip.docker.json",
+    "lint:ci": "eslint . && knip --config knip.ci.json",
     "knip": "knip",
     "contracts": "tsc -p tsconfig.contracts.json",
     "test": "bun test",
     "test:worker": "vitest run",
-    "format": "prettier --write src/ worker/ tests/ scripts/"
+    "format": "prettier --write src/ worker/ tests/ scripts/",
+    "ci": "bun test && bun run lint:ci && bun run test:worker && bun run build",
+    "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy"
   },
   "dependencies": {
     "better-auth": "^1.7.11",

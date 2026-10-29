@@ -1,0 +1,9 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  // `bun run lint:ci` : la construction de Cloudflare (Workers Builds, `docs/deploiement.md`) n'a
+  // que ce dépôt, sans `../pokedex-data`, que lit le contrôle des types partagés.
+  "entry": ["scripts/check-data-contracts.ts!"],
+  "ignoreUnresolved": ["^\\.\\./\\.\\./pokedex-data/src/contract$"],
+  // Les modules du moteur de Cloudflare (`cloudflare:workers`, `cloudflare:test`) : pas des paquets.
+  "ignoreDependencies": ["cloudflare"]
+}

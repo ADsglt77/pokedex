@@ -163,7 +163,7 @@ const refresh = (account: string) =>
 let retry: ReturnType<typeof setTimeout> | undefined
 
 /**
- * Sans réponse, une panne passagère (502 pendant un redémarrage) ou trop d'envois d'affilée (429) :
+ * Sans réponse, une panne passagère (une erreur 5xx) ou trop d'envois d'affilée (429) :
  * « Hors ligne », et l'envoi repart de plus en plus tard (30 s, 60 s, 120 s… 5 min au plus) ; au
  * retour du réseau ou de la page, aussitôt.
  */
@@ -213,8 +213,8 @@ async function push(): Promise<void> {
   }
   const sent = unanswered
   const response = await call('PUT', '', sent)
-  // Sans réponse, une panne passagère, ou trop d'envois d'affilée (429 : la limite de nginx,
-  // `deploy/nginx.conf.template`) : il repartira.
+  // Sans réponse, une panne passagère, ou trop d'envois d'affilée (429 : la limite du Worker,
+  // `worker/limits.ts`) : il repartira.
   if (!response || response.status >= 500 || response.status === 429) return retryLater()
   // Refusé sans être lu (la session fermée), ou une réponse illisible (coupée) : l'envoi reste
   // sans réponse, et repartira tel quel.

@@ -23,14 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 
-# Les sauvegardes sorties du VPS (README) : le compte et la collection, jamais dans le dépôt.
-/sauvegardes
-
 # La base de l'ancien serveur en développement (avant le Worker : `.wrangler/` aujourd'hui)
 /.data
 
-# Secrets du VPS (BETTER_AUTH_SECRET…), lus par docker compose ; toutes leurs variantes
-# (`.env.production`…), sauf un exemple sans secret.
+# Les variables du développement (`BETTER_AUTH_SECRET`…) ; toutes leurs variantes, sauf un exemple
+# sans secret. En ligne, ce sont des secrets du Worker.
 .env*
 !.env.example
 

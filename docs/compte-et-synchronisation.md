@@ -18,10 +18,13 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   perdu, le compte l'est aussi (l'inscription et Mon compte le disent). Les mentions légales et la
   confidentialité (`/mentions-legales`, `LegalPage`, liées du pied de chaque page,
   `SiteDisclaimer`) disent ce que le site garde, pourquoi et sur quelle base légale (le service
-  demandé ; l'intérêt légitime pour le journal), combien de temps, qui le voit (le serveur est au
-  Canada, hors de l'Union européenne : la décision d'adéquation), ce qu'une image collée révèle
-  (l'adresse IP de qui la voit, à son site) et comment s'opposer ou limiter : à tenir à jour avec
-  le serveur ; le site, l'hébergeur, où est le serveur et le contact viennent de `config/legal.ts`.
+  demandé ; l'intérêt légitime pour le journal), combien de temps (un compte supprimé reste au
+  plus 30 jours dans l'historique de D1, Time Travel ; le journal du serveur, Workers Logs, 7
+  jours), qui le voit (l'hébergeur, Cloudflare, Inc., société américaine : le transfert encadré
+  par le Data Privacy Framework ; les comptes et les collections gardés dans l'Union européenne,
+  la base D1 créée avec `--jurisdiction eu`), ce qu'une image collée révèle (l'adresse IP de qui
+  la voit, à son site) et comment s'opposer ou limiter : à tenir à jour avec le serveur ; le site,
+  l'hébergeur, où sont gardés les comptes et le contact viennent de `config/legal.ts`.
   Se connecter : `/connexion`
   (`LoginPage`), le pseudo (n'importe quelles majuscules) et le mot de passe (`signIn.username`) ;
   elle ramène à la page d'où l'on venait (`?retour=`, filtres compris ; seulement une adresse du
@@ -30,7 +33,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   l'adresse du Pokédex public change avec lui, l'ancienne ne mène plus à rien), le mot de passe
   (`changePassword`, l'actuel exigé, les autres sessions fermées) et la suppression du compte
   (`deleteUser`, son mot de passe exigé ; après une confirmation qui propose l'export) : sa
-  collection part aussitôt, sans copie nulle part (aucune sauvegarde). Un mauvais mot de passe (400) le dit ;
+  collection part aussitôt de la base, sans autre copie que son historique, 30 jours au plus (D1
+  Time Travel ; aucune sauvegarde). Un mauvais mot de passe (400) le dit ;
   une session fermée (401 : une connexion sur un autre appareil) dit « Session expirée », jamais
   « mot de passe incorrect » (l'utilisateur croirait le sien perdu), et le menu du compte propose
   de se reconnecter (`markExpired`) ; un pseudo pris (`USERNAME_IS_ALREADY_TAKEN`) le dit. Les
@@ -43,8 +47,9 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   cache (`no-store`). Une modification (ni `GET` ni `HEAD`) venue d'une autre origine est refusée
   (403) avant la lecture de son corps, sur toute adresse du serveur, `/api/auth/*` compris
   (`onRequest` de `accountRoutes`) : un autre site ne connecte pas un visiteur à un compte qu'il ne
-  connaît pas (testé). Devant les limites de Better Auth, nginx limite tout le compte
-  (`/api/auth/`) à 2 requêtes par seconde et par visiteur, 20 d'un coup.
+  connaît pas (testé). Devant les limites de Better Auth, le Worker limite tout le compte
+  (`/api/auth/`), avec le Pokédex public (`/api/vitrine/`), à 40 requêtes par 10 s et par
+  visiteur (`worker/limits.ts`).
 - **L'app ne s'ouvre que connecté** (décision de l'utilisateur, octobre 2026) : le compte connecté
   du store (`account` : son id et son pseudo ; `null` : personne, `store/account.ts`), fixé au
   démarrage avant le routeur (`loadAccount` lit `GET /api/account?demarrage`, qui dit qui est
@@ -56,8 +61,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   public (`needSpecies`, le chargement de leur route, `router.tsx` ; sans elles, « Le Pokédex ne
   peut pas s'afficher », par `ErrorPage`) : la connexion, l'inscription et les mentions légales
   s'affichent sans l'API des données, et un visiteur ne les télécharge pas. Connecté, elles sont
-  demandées avec la collection (`signIn`), et nginx les fait précharger avec la page quand le
-  navigateur a une session (`Link`, d'après le cookie de Better Auth). Le
+  demandées avec la collection (`signIn`), et le Worker les fait précharger avec la page quand le
+  navigateur a une session (`Link`, d'après le cookie de Better Auth, `worker/headers.ts`). Le
   routeur, le menu du compte et le Pokédex public lisent le store (`account`), jamais `useSession`
   de Better Auth, qui redemande la session à chaque montage. Pas connecté, `/`
   mène à `/connexion` et toute autre page de la coquille à `/connexion?retour=…` (`appLoader`,
@@ -75,12 +80,12 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   Pokédex » une fois connecté ; son titre : « Le Pokédex de … » (`pokedexTitle`), le pseudo du
   compte (`GET /api/vitrine/<pseudo>`, sans tenir compte des majuscules :
   `{ owner, collection, prices }`, `VitrineData`). `prices` : les prix du jour de ses seules cartes
-  possédées, que le serveur demande à l'API des données (`dataPrices`, `/v1/prices` avec le token du
-  site, `DATA_API_URL` et `DATA_API_TOKEN`, 5 s au plus ; par paquets de 1 000 ids, `idBatches` :
+  possédées, que le serveur demande à l'API des données (`dataPrices`, `/v1/prices` par sa liaison
+  de service, `dataFetch`, sans token, 5 s au plus ; par paquets de 1 000 ids, `idBatches` :
   elle en refuse plus de 1 025 ; l'un après l'autre, réponses réunies, et 5 paquets au plus,
   `MAX_PRICE_BATCHES` : la page est publique, sans session, et une visite ne doit pas lancer des
-  dizaines de demandes ; testé avec une fausse API : seulement les ids de ces cartes, avec le
-  token, 1 001 cartes en deux demandes dans l'ordre, jamais deux à la fois, 5 000 en cinq, 5 001 en
+  dizaines de demandes ; testé avec une fausse API : seulement les ids de ces cartes,
+  1 001 cartes en deux demandes dans l'ordre, jamais deux à la fois, 5 000 en cinq, 5 001 en
   aucune), `null` sans carte possédée, au-delà de 5 000 cartes possédées avec un id Cardmarket
   (rien n'est demandé), sans guide des prix ou l'API muette, pour l'un des paquets aussi (les
   suivants ne sont pas demandés : une valeur partielle serait fausse ; la valeur est alors « — »,
@@ -91,7 +96,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   segment (`linkPreview`, `worker/vitrine.ts`), par une page faite pour eux (l'aperçu du site pour une page du site ou un pseudo à personne)
   avec le titre et la progression (`vitrineSummary`, testé : rien d'autre que le pseudo et le
   nombre de Pokémon débloqués). Une page seule, hors de la coquille, en lecture seule et pas
-  indexée (`noindex` dans la page, et l'en-tête `X-Robots-Tag` de nginx) : la progression, les régions (la réglette n'y est qu'une image, `linked`
+  indexée (`noindex` dans la page, et l'en-tête `X-Robots-Tag`, `worker/headers.ts`) : la
+  progression, les régions (la réglette n'y est qu'une image, `linked`
   faux, et pas un lien vers le Pokédex, qui demande d'être connecté ; sur téléphone, leur liste),
   la valeur au prix du jour, la courbe des Pokémon débloqués et le classeur (débloqués en couleur,
   cartes choisies grisées ; les pochettes ne mènent pas aux fiches, celles du visiteur), puis ses
@@ -180,9 +186,9 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   parcourraient sans fin).
   Une modification d'une autre origine est refusée (403, plus haut) ; au journal, elle dit un
   réglage à revoir (`BETTER_AUTH_URL`) ou une tentative depuis un autre site. Sans réponse, ou une
-  panne passagère (502 pendant un redémarrage), ou trop d'envois d'affilée (429 : nginx limite
-  `/api/collection` à 2 requêtes par seconde et par visiteur, 20 d'un coup,
-  `deploy/nginx.conf.template` ; testé), la modification attend (« Hors ligne », seulement
+  panne passagère (une erreur 5xx), ou trop d'envois d'affilée (429 : le Worker limite
+  `/api/collection` à 40 requêtes par 10 s et par visiteur, `worker/limits.ts` ; testé), la
+  modification attend (« Hors ligne », seulement
   quand une modification attend : une relecture qui échoue sans rien en attente ne change pas
   l'état) : elle repart au retour du réseau ou de la page, sinon de plus en plus tard (30 s, 60 s,
   120 s… 5 min au plus), et quitter la page le demande d'abord (`beforeunload`). Un refus pour de
@@ -221,7 +227,7 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   une modification pendant la compression, l'envoi compressé ou tel quel, la page en
   arrière-plan et l'autre onglet. Le
   serveur ne garde que la dernière version (aucune version remplacée, aucune sauvegarde : octobre
-  2026). Il note au journal ce qui change d'une version à l'autre (`documentChanges`,
+  2026 ; seul l'historique de D1, 30 jours, Time Travel). Il note au journal ce qui change d'une version à l'autre (`documentChanges`,
   `worker/journal.ts`), la version d'avant relue comme un fichier (`readCollection` : un document
   enregistré avant les collections d'extensions n'a pas de `series`, testé sur le Worker entier) :
   une collection d'extension commencée (« Collection commencée ») ou supprimée (« Collection

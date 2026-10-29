@@ -1,68 +1,158 @@
 # Déploiement
 
-Le VPS, Docker, nginx et les services. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
+La mise en ligne sur Cloudflare Workers. Une partie de la documentation du projet, à lire avant de
+toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
-> **Périmé** : le site passera sur Cloudflare Workers, relié à GitHub, à la fin du développement.
-> Cette page décrit l'ancien VPS, qui sera retiré ; il ne marche plus tel quel (l'ancien serveur,
-> `server/`, n'existe plus : le Worker, `worker/`, l'a remplacé).
+> **Pas encore en ligne** (29 octobre 2026) : tout est prêt dans les deux dépôts, mais rien n'est
+> mis en ligne tant que l'offre Workers Paid n'est pas prise (plus bas, « Pourquoi l'offre
+> payante »). L'ancien site du VPS d'OVH tourne encore à `pokecodex.fr` jusqu'à la bascule.
 
-VPS publié directement par Caddy, à côté de l'API des données (le dépôt `pokedex-data`, ses propres
-conteneurs, à installer d'abord : son README). Caddy écoute publiquement sur 80 et 443, gère le
-certificat de `pokecodex.fr`, puis relaie vers `127.0.0.1:8080`. Le port du site reste donc local au
-VPS. Les deux applications partagent un réseau Docker, `pokedex-net`, créé une fois à la main ;
-le nginx et le serveur du site y joignent l'API à `http://data-api:3001`, avec le token du site
-(`DATA_API_TOKEN`). Ses autres clients passent par `https://api.pokecodex.fr` : Caddy la relaie vers
-son entrée d'Internet, `127.0.0.1:3002`, seul port qu'elle publie, sur le VPS seulement (son
-README).
+## Ce qui tourne en ligne
+
+Deux Workers, un par dépôt, déployés par **Workers Builds** (Cloudflare relié aux dépôts GitHub) à
+chaque push sur `main`. Plus de Docker, de nginx, de Caddy ni de VPS.
+
+| Worker | Dépôt | Adresse | Ce qu'il a |
+|---|---|---|---|
+| `pokedex-data` | `pokedex-data` | `api.pokecodex.fr` | D1 `pokedex-data` (catalogue, prix, historique, état des tâches), R2 `pokedex-data` (images, grosses réponses), le Workflow `ingest` et son Cron horaire, ses limites par adresse |
+| `pokecodex` | `pokedex` | `pokecodex.fr` (et `www.`, qui y mène) | D1 `pokecodex` (comptes, collections : **dans l'Union européenne**), les fichiers de l'app (`ASSETS`), le Worker des données par sa liaison de service (`DATA`), ses limites par visiteur |
+
+Le site joint l'API par sa liaison de service, sans réseau ni token : **le Worker des données doit
+être en ligne avant celui du site**. Ni l'un ni l'autre n'a d'adresse `workers.dev` (les sessions
+n'y marcheraient pas : Better Auth n'accepte que `BETTER_AUTH_URL`).
 
 Qui fait quoi (le détail est dans l'en-tête de chaque fichier) :
 
 | Fichier | Rôle |
 |---|---|
-| `Dockerfile` | Trois images, Bun et nginx figés sur leur version mineure : `build` (tests, ESLint, knip, puis `dist/` : un échec arrête le déploiement, l'ancien conteneur reste en ligne), `server` (Bun lance `server/` tel quel, avec `src/` et `tsconfig.json` pour l'alias `@/`, sans droits d'administrateur), `web` (nginx sert `dist/`). Seules les dépendances du serveur sont en `dependencies`, celles de l'app en `devDependencies` |
-| `deploy/Caddyfile` | Le point d'entrée public : HTTPS automatique pour `pokecodex.fr`, redirection de `www` (avec le même HSTS que le site), puis relais vers le port local 8080, l'adresse du visiteur dans `x-forwarded-for` (la sienne seule : celle reçue du public est ignorée ; nginx la transmet telle quelle au serveur, dont les limites de Better Auth n'acceptent qu'une adresse : un relais de plus qui ajouterait la sienne exigerait `trustedProxies`, `server/auth.ts`). Et `api.pokecodex.fr` : l'API des données pour ses autres clients, avec leur token, relayée vers son entrée d'Internet (`127.0.0.1:3002`, limitée par adresse ; son README), lecture seule (405 sinon). Aucun journal des requêtes. Le déploiement ne le réinstalle jamais : à copier dans `/etc/caddy/` à la main après chaque changement (README) |
-| `deploy/nginx.conf.template` | nginx : les routes du client (`index.html`), les données et `/images/` à l'API des données (sous `/v1`, avec le token, sans les cookies ; les images gardées sur son disque, 12 Go et 30 Mo de clés, environ 8 000 par Mo pour environ 110 000 images : tous les scans, japonais et français, y tiennent ; l'API les a toutes copiées d'avance, une absente est un 404), le reste de `/api/` au serveur, les limites par visiteur (`x-forwarded-for`, posé par Caddy ; au-delà, 429 : les images, 20 par seconde et 1 100 d'un coup, de quoi charger tout le Pokédex ; le Pokédex public, 2 par seconde et 20 d'un coup ; le catalogue et les prix, 10 par seconde et 300 d'un coup ; les historiques et les lignes Cardmarket, 2 et 10 ; la collection du compte, `GET` et `PUT /api/collection` (corps de 5 Mo au plus), 2 et 20 ; le compte, 2 et 20), la compression et les caches. Aucun journal des requêtes (ses erreurs, dans la sortie du conteneur, n'ont pas l'adresse du visiteur). Les pages en UTF-8 (`charset`) ; un fichier de la racine qui n'existe pas (`/favicon.ico`, `/sitemap.xml`) : 404, pas l'app ; hors des pages publiques (l'accueil, `/connexion`, `/inscription`, `/mentions-legales`), `X-Robots-Tag: noindex` (`map $robots`), avec `public/robots.txt` qui écarte `/api/` ; les espèces préchargées avec la page quand le navigateur a une session (l'en-tête `Link`, `map $species_preload` sur le cookie de Better Auth). Un gabarit, rempli du token au démarrage, vérifié à la construction (`nginx -t`) |
-| `deploy/security-headers.conf` | Les en-têtes de sécurité de chaque réponse (HSTS un an, sous-domaines compris : tout sous-domaine de `pokecodex.fr` doit répondre en https, `Cross-Origin-Opener-Policy`, politique de sécurité du contenu…) ; `/images/` y ajoute `Cross-Origin-Resource-Policy: same-origin` (un autre site n'affiche pas ses images) |
-| `compose.yaml` | Les services : `pokedex` (le site, sur `127.0.0.1:${POKEDEX_PORT:-8080}`, derrière Caddy) et `server` (volume `db`, secrets du `.env` : les comptes, `docs/compte-et-synchronisation.md`), tous deux sur `pokedex-net` ; journaux limités, aucun privilège gagné. Le journal du serveur : `docker compose logs -f server` |
-| `.github/workflows/deploy.yml`, `deploy/deploy.sh` | Le déploiement (lancé à la main pour l'instant : son en-tête) : SSH sur le VPS (`VPS_FINGERPRINT` exigée), `git pull --ff-only`, puis le script. Avant de toucher au site : le catalogue français et le scan d'une carte de sa série la plus récente qui en a un (le catalogue doit noter au moins une image française) doivent répondre, demandés à l'ancien site (il n'y en a pas au premier déploiement), sinon échec en rouge et l'ancien site reste ; `SKIP_FRENCH_CHECK=1 sh deploy/deploy.sh`, à la main sur le VPS (la clé restreinte du workflow ne passe aucune variable), saute ce contrôle. Puis `docker compose build --pull` et `up -d` ; le site et l'API doivent répondre dans la minute, en local, puis par l'adresse publique à travers Caddy (`https://pokecodex.fr/api/account`, `curl --resolve` vers 127.0.0.1 : le nom est joint sur le VPS même, une vraie panne de Caddy seule échoue) ; les images d'avant et leur cache de construction restent une semaine (retour arrière : README, qui dit aussi pourquoi un retour du code seul n'est plus sûr une fois des documents enregistrés au nouveau format) |
-| `.github/workflows/test.yml` | À chaque push et pull request : `bun install --frozen-lockfile`, `bun test`, `bun run lint:docker` (le lint de la construction, sans le dépôt `../pokedex-data` que ni elle ni GitHub n'ont), `bun run build` (`tsc -b`, puis Vite). Sans secret ni accès au VPS : un échec se voit avant de lancer le déploiement |
+| `wrangler.jsonc` (chaque dépôt) | Le Worker : ses liaisons, ses domaines (`routes`), ses limites (`ratelimits`) |
+| `package.json` : `ci`, `deploy` (chaque dépôt) | Ce que lance Workers Builds : les contrôles et la construction, puis les migrations de la base et le déploiement |
+| `worker/headers.ts`, `worker/limits.ts` (site) | Ce que faisaient nginx et Caddy : en-têtes de sécurité, cache, moteurs de recherche, `www`, limites par visiteur |
+| `worker/index.ts` (données) | Son entrée d'Internet : lecture seule, en-têtes d'une API, limites, token |
+| `knip.ci.json`, `bun run lint:ci` (site) | Le lint sans `../pokedex-data`, que la construction de Cloudflare n'a pas |
 
-Le volume `db` (les comptes et les collections) est irremplaçable, et **sans aucune sauvegarde**
-(décision de l'utilisateur, octobre 2026 : ni copie de la base, ni versions remplacées des
-collections) : **jamais `docker compose down -v`** ; une panne du disque du VPS le perd pour de bon.
-L'API des données n'a pas de sauvegarde non plus. Marche à suivre complète et liste de mise en
-ligne : README.
+## Pourquoi l'offre payante
 
-Le nom des volumes vient du dossier du clone (`<dossier>_db` ; `compose.yaml`
-n'a pas de `name:`, choix délibéré : un `name:` changerait les noms des volumes déjà en place, et
-la prochaine mise à jour démarrerait sur des volumes vides). Un clone renommé ou refait sous un
-autre nom démarrerait donc, sans erreur, sur des volumes neufs : le dossier ne change jamais (README).
-Même règle pour le clone de l'API des données.
+L'offre gratuite de Workers ne suffit pas aux tâches d'ingestion :
 
-Sans connexion : les routes de données (`/api/species`, `catalog`, `prices`, `histories`, `wants`,
-`status`, `health`) et `/images/` se lisent sans session. nginx pose le token du site pour tout
-visiteur, connecté ou non, et ne les limite que par visiteur (429 au-delà). Décision de
-conception : seule l'interface demande d'être connecté ; la connexion garde les comptes et les
-collections (`/api/collection`, `/api/auth/`), pas le catalogue, les prix ni les scans.
+- **le calcul** : 10 ms par demande en gratuit ; une étape des tâches en prend des secondes (le guide
+  des prix lu en flux, ses 64 000 cartes) : `limits.cpu_ms` (5 min) n'existe qu'en payant ;
+- **D1** : 100 000 lignes écrites par jour en gratuit ; la tâche `prices` en écrit plus du double à
+  chaque nouveau guide (les prix du jour, mis de côté puis recopiés, et l'historique de chaque
+  carte).
 
-Les variables d'environnement :
+L'offre **Workers Paid** coûte 5 $ par mois, ce qui couvre largement l'usage prévu (R2 : les 10
+premiers Go gratuits ; les images en font environ 3). Les mentions légales en dépendent aussi : le
+journal gardé 7 jours (Workers Logs) et l'historique de D1 de 30 jours (Time Travel) sont ceux de
+l'offre payante (3 et 7 jours en gratuit).
 
-| Variable | Défaut | Lue par | Rôle |
-|---|---|---|---|
-| `BETTER_AUTH_URL` | (exigée) | `server` | L'adresse publique du site, en https en production (le serveur refuse de démarrer sinon) ; en développement, celle de Vite |
-| `BETTER_AUTH_SECRET` | (exigée en production) | `server` | La clé des sessions, 32 caractères au moins en production (`openssl rand -base64 32`) |
-| `DATA_API_TOKEN` | (exigée par `compose.yaml`) | `pokedex`, `server`, Vite | Le token du site pour l'API des données (le même que dans son `API_TOKENS`) |
-| `DATA_API_URL` | `http://127.0.0.1:3001` (`http://data-api:3001` dans Docker) | `server` | L'adresse de l'API des données |
-| `PORT` | `3000` | `server` | Le port du serveur (nginx et Vite visent 3000 : à ne changer qu'avec eux) |
-| `HOST` | `127.0.0.1` | `server` | L'adresse d'écoute ; `0.0.0.0` dans le conteneur (`Dockerfile`), que nginx joint |
-| `DATA_DIR` | `.data` (`/data` dans Docker) | `server` | La base SQLite |
-| `POKEDEX_PORT` | `8080` | `compose.yaml` | Le port local du site, que joint Caddy |
-| `SKIP_FRENCH_CHECK` | aucun | `deploy/deploy.sh` | `1` : le déploiement ne vérifie pas le catalogue ni les scans français avant de toucher au site (à la main sur le VPS : `SKIP_FRENCH_CHECK=1 sh deploy/deploy.sh`) |
-| `NO_COLOR` | aucun | `server` | Un journal sans couleurs |
+## Une fois : la mise en ligne
 
-Le serveur tourne sans droits d'administrateur (`USER bun`, `Dockerfile` : les points de montage
-lui appartiennent), et sans aucun droit (`cap_drop: ALL`, `compose.yaml`) : même `--user root`, un
-conteneur n'écrirait pas dans un dossier du VPS. nginx sert le manifeste de
-l'app avec son type (`location = /manifest.webmanifest`) et rend complète l'adresse de l'image
-d'aperçu (`sub_filter` sur `og:image`, d'après le nom demandé), sans perdre la date de la page
-(`sub_filter_last_modified` : un navigateur qui la revalide reçoit un 304).
+Les étapes marquées **(vous)** demandent votre compte, un achat ou un registraire : à faire par
+vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqué.
+
+1. **(vous) Le compte Cloudflare et l'offre Workers Paid** : tableau de bord › Workers & Pages ›
+   Plans.
+2. **(vous) Le domaine sur Cloudflare** : tableau de bord › Add a domain › `pokecodex.fr` (l'offre
+   gratuite du domaine suffit). Cloudflare recopie les enregistrements DNS actuels : vérifier
+   qu'il garde ceux de la messagerie de `contact@pokecodex.fr` (MX, SPF, DKIM : sans eux, plus
+   aucun e-mail n'arrive), et **supprimer** ceux de `pokecodex.fr`, `www` et `api` qui mènent au
+   VPS (`15.235.90.246`) : les domaines des Workers ne s'ajoutent pas par-dessus. Puis, chez OVH
+   (Domaines › `pokecodex.fr` › Serveurs DNS), remplacer ses serveurs par les deux que donne
+   Cloudflare, et attendre que Cloudflare dise le domaine actif (de quelques minutes à un jour).
+3. **(vous) Wrangler relié au compte**, une fois sur ce poste :
+
+   ```bash
+   npx wrangler login
+   ```
+
+4. **Les bases et le bucket**, une fois. Chaque commande `d1 create` affiche l'identifiant de la
+   base (`database_id`) : le recopier dans le `wrangler.jsonc` de son dépôt, à côté de son
+   `database_name`, puis commiter.
+
+   Dans `pokedex-data` :
+
+   ```bash
+   npx wrangler d1 create pokedex-data
+   ```
+
+   ```bash
+   npx wrangler r2 bucket create pokedex-data
+   ```
+
+   Dans `pokedex` (les comptes, gardés dans l'Union européenne, ce que disent les mentions
+   légales : `src/config/legal.ts`) :
+
+   ```bash
+   npx wrangler d1 create pokecodex --jurisdiction eu
+   ```
+
+5. **Les secrets**, une fois. Le site : la clé des sessions, tirée au hasard (`openssl rand -hex 32`,
+   jamais celle de `.env`), dans `pokedex` :
+
+   ```bash
+   npx wrangler secret put BETTER_AUTH_SECRET
+   ```
+
+   L'API, pour ses clients autres que le site (facultatif : sans lui, seul le site la lit), dans
+   `pokedex-data`, au format `nom:token,…` (son README) :
+
+   ```bash
+   npx wrangler secret put API_TOKENS
+   ```
+
+   Si le Worker n'existe pas encore, Wrangler propose de le créer pour y poser le secret : accepter.
+6. **(vous) Workers Builds**, pour chaque dépôt, **`pokedex-data` d'abord** : tableau de bord ›
+   Workers & Pages › Create › Import a repository (Cloudflare installe alors son application
+   GitHub sur le dépôt), puis :
+   - le nom du projet : celui du Worker (`pokedex-data`, puis `pokecodex`), comme dans son
+     `wrangler.jsonc` ;
+   - la branche : `main` ;
+   - la commande de construction : `bun run ci` ; celle de déploiement : `bun run deploy` ;
+   - les variables de construction : `NODE_VERSION` = `24` (Wrangler et Vitest veulent Node 22 ou
+     plus) et `BUN_VERSION` = `1.3.10`.
+
+   La première construction déploie le Worker. Si la migration de la base échoue faute de droits,
+   donner « D1 : Edit » au token de construction (Settings › Builds › API token).
+7. **Les données**, une fois les deux Workers en ligne : les tâches les relisent elles-mêmes (environ
+   deux jours, au rythme convenu avec Pokécardex), dans `pokedex-data` :
+
+   ```bash
+   bun run ingest setup --remote
+   ```
+
+   L'avancée se suit sur la page Données du site et dans le journal (`npx wrangler tail
+   pokedex-data`). Ensuite, le Cron tient les prix et les espèces à jour tout seul ; les nouvelles
+   cartes : `bun run ingest cards --remote`.
+8. **Vérifier** : `https://pokecodex.fr` (créer un compte, enregistrer une carte) et
+   `https://api.pokecodex.fr/v1/health` (200 une fois les tâches à rythme passées).
+9. **(vous) L'ancien VPS** : une fois le site vérifié, l'arrêter et le résilier chez OVH. Rien n'est
+   à en reprendre (aucun utilisateur ; les données se relisent).
+
+## Au quotidien
+
+- **Un push sur `main`** : Workers Builds lance `bun run ci` (tests, lint, types, construction),
+  puis, s'ils passent, `bun run deploy` : les migrations de la base d'abord, puis le nouveau code.
+  Un contrôle en échec : rien n'est déployé, la version d'avant continue. Le résultat s'affiche sur
+  le commit dans GitHub et dans le tableau de bord.
+- **Les deux dépôts se déploient chacun de leur côté** : un changement de l'API que le site attend
+  (le contrat : `bun run contracts`) se pousse d'abord dans `pokedex-data`.
+- **Le journal** : tableau de bord › le Worker › Logs (7 jours), ou en direct :
+
+  ```bash
+  npx wrangler tail pokecodex
+  ```
+
+- **Revenir en arrière** : tableau de bord › le Worker › Deployments › Rollback (le code seulement :
+  une migration de la base ne se défait pas ; d'où des migrations qui n'effacent rien d'utile).
+- **Réparer la base après une erreur** (pas une sauvegarde : aucune n'est gardée, décision de
+  l'utilisateur) : D1 garde son historique 30 jours (Time Travel), `npx wrangler d1 time-travel
+  restore`. Pour celle du site, relever ensuite les numéros des collections (`UPDATE collections
+  SET version = version + <Date.now()>`) : sans cela, un appareil qui garde un numéro plus récent
+  que la base remise écraserait ou perdrait des changements (`docs/compte-et-synchronisation.md`).
+
+## En développement
+
+Rien ne change : `bun run dev` dans `pokedex-data`, puis `bun dev` ici (`README.md`). Les deux
+Workers tournent en local dans le moteur de Cloudflare, chacun sa D1 et son R2 dans `.wrangler/`,
+reliés par Wrangler ; la CSP n'y est pas posée (Vite écrit ses propres scripts dans la page).

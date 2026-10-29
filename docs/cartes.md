@@ -41,7 +41,7 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   sa page `docs/donnees.md` ; côté site, `lib/card-catalog.ts`) : les cartes japonaises, Pokémon,
   dresseurs et énergies, environ 450 séries de 1996 à aujourd'hui, decks, promos et anciennes
   séries compris, sans les exclusivités d'autres pays d'Asie ; et les françaises, environ 250
-  séries et 25 600 cartes (octobre 2026). Trois réponses, que nginx renvoie à l'API :
+  séries et 25 600 cartes (octobre 2026). Trois réponses, que le Worker du site demande à l'API :
   `/api/catalog/species/<n°>`, les cartes Pokémon d'un Pokémon (la fenêtre d'ajout,
   `loadSpeciesCards` ; une réponse pour chacun des 1 025, même sans carte : la fenêtre le dit), des
   plus récentes aux plus anciennes : `[série, numéro (sans numéro imprimé : son rang), id
@@ -175,10 +175,10 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   inchangés ; `/images/types/<n>.webp` (`typeIcon`), `/images/rarities/<n>.webp`
   (`rarityIcon` ; les noires, `DARK_RARITY_ICONS`, inversées sur le thème sombre,
   `--dark-icon-filter` ; une rareté sans icône, « FUR », s'écrit en texte), les sprites et
-  illustrations des Pokémon (`spriteUrl`, `artworkUrl`). nginx les renvoie à l'API et les garde sur
-  son disque (`proxy_cache`) ; le navigateur, un an, sans redemande (`immutable`) ; seules les pages
-  du site les affichent (`Cross-Origin-Resource-Policy`), 20 par seconde et par visiteur, 1 100 d'un
-  coup (de quoi charger tout le Pokédex, `docs/deploiement.md`). Le catalogue
+  illustrations des Pokémon (`spriteUrl`, `artworkUrl`). Le Worker du site les demande à l'API, qui
+  les lit dans R2 ; le navigateur les garde un an, sans redemande (`immutable`) ; seules les pages
+  du site les affichent (`Cross-Origin-Resource-Policy`, `worker/headers.ts`), 1 300 par 10 s et
+  par visiteur (de quoi charger tout le Pokédex, `worker/limits.ts`). Le catalogue
   donne le rang de l'image de chaque carte ; pour une référence hors du catalogue, `cardImage` la
   déduit de la langue et du code de la référence (série en majuscules sans tiret, SV-P → SVP ;
   numéro sans zéro), sans certitude. La collection garde ces chemins (`isFoundImage` : une image retrouvée, qui suit
@@ -209,8 +209,8 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   rang d'avant : celles à ce rang ou après le point d'insertion montrent le scan de leur nouvelle
   occupante, jusqu'à ce que leur image soit choisie de nouveau (le journal de la tâche `catalog`
   de l'API compte ces cartes, `docs/donnees.md` de son dépôt, « Une série renumérotée ») ; un
-  navigateur garde l'ancien scan de ce chemin jusqu'à ce que son cache se vide (`immutable`), le
-  nginx du site jusqu'à son prochain déploiement ; une carte que le catalogue dit sans image n'en a
+  navigateur garde l'ancien scan de ce chemin jusqu'à ce que son cache se vide (`immutable`) ;
+  une carte que le catalogue dit sans image n'en a
   pas ; un catalogue sans réponse en 15 s (`CATALOG_TIMEOUT`, ses séries puis celle de la carte) la
   compte pour absente, pour ne pas bloquer l'enregistrement. Hors du catalogue, celle que la référence désigne (un
   chemin déduit, qui peut ne mener à rien), seulement si elle se charge (sans réponse en 10 s :

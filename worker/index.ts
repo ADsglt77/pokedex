@@ -8,7 +8,9 @@
  *   (`linkPreview`) ;
  * - le reste : les fichiers de l'app, construits par Vite (`env.ASSETS`), `index.html` pour une
  *   adresse qui n'est pas un fichier (le routeur de l'app s'en charge).
- * Une modification venue d'une autre origine : 403 avant tout le reste (`sameOrigin`). Une adresse
+ * Avant tout le reste : `www.pokecodex.fr` mène au site, et chaque réponse reçoit ses en-têtes
+ * (sécurité, cache, moteurs de recherche : `headers.ts`) ; une route qu'un visiteur répète trop :
+ * 429 (`limits.ts`) ; une modification venue d'une autre origine : 403 (`sameOrigin`). Une adresse
  * inconnue de l'API : 404 sans corps ; une erreur imprévue : dans le journal, et 500 sans corps
  * (rien de ses détails, une requête SQL par exemple, ne part vers le site).
  */
@@ -19,10 +21,15 @@ import { HTTPException } from 'hono/http-exception'
 import { accountRoutes, sameOrigin } from './auth'
 import { collectionRoutes } from './collection'
 import { dataRoutes } from './data'
+import { canonicalHost, siteHeaders } from './headers'
 import { journal } from './journal'
+import { limits } from './limits'
 import { linkPreview, vitrineRoutes } from './vitrine'
 
 export default new Hono()
+  .use(siteHeaders)
+  .use(canonicalHost)
+  .use(limits)
   .use(sameOrigin)
   .use(dataRoutes)
   .route('/api', accountRoutes)

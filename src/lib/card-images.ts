@@ -1,7 +1,8 @@
 /**
  * Les images des cartes japonaises et françaises, copiées par l'API des données et servies par le
- * site (`/images/…`, que son nginx garde en cache) : des chemins neutres, sans le nom d'une source,
- * ceux du français sous `fr/` (les codes des séries se répètent d'une langue à l'autre : SVP).
+ * site (`/images/…`, gardées un an par les navigateurs) : des chemins neutres, sans le nom d'une
+ * source, ceux du français sous `fr/` (les codes des séries se répètent d'une langue à l'autre :
+ * SVP).
  * Celle d'une carte du catalogue : sa langue, le code de sa série et son rang (`catalogImage`) ;
  * pour une référence hors du catalogue, elle se déduit de la référence : « Bulbizarre (sv2a 166) »,
  * le code de la série puis le numéro (`cardImage`). La collection garde ces chemins ; une adresse

@@ -3,10 +3,10 @@
  * celui d'une autre carte, et aucun s'il n'y en a pas (aucun prix n'est inventé). Et les
  * historiques de la collection, que la courbe de sa valeur additionne. Et les demandes par paquets
  * (l'API des données refuse plus de 1 025 ids ; des paquets de prix qui se décaleraient seraient
- * redemandés sans fin, et nginx en refuserait l'excès : plus aucun prix ; les historiques et les
- * lignes de Cardmarket demandés d'un coup dépasseraient sa limite, et une réponse partielle
- * fausserait la courbe ou la liste de souhaits). Et le
- * coût pour compléter le Pokédex : la favorite de chaque Pokémon à débloquer, une carte comptée
+ * redemandés sans fin, et le Worker du site en refuserait l'excès (`worker/limits.ts`) : plus aucun
+ * prix ; les historiques et les lignes de Cardmarket demandés d'un coup dépasseraient sa limite,
+ * et une réponse partielle fausserait la courbe ou la liste de souhaits). Et le coût pour
+ * compléter le Pokédex : la favorite de chaque Pokémon à débloquer, une carte comptée
  * une fois, rien pour un Pokémon déjà débloqué (par n'importe quelle de ses cartes) ou dont une
  * carte est commandée. Les prix et leur historique eux-mêmes : l'API des données (ses propres
  * tests).
@@ -131,7 +131,8 @@ describe('les demandes par paquets', () => {
   }
 
   test('les historiques, les lignes de Cardmarket : des paquets de 1 000, l’un après l’autre, réunis', async () => {
-    // nginx n'accepte que 2 de ces demandes par seconde, 10 d'un coup ; l'API, 1 025 ids chacune.
+    // Le Worker du site n'accepte que 30 de ces demandes par 10 s (`worker/limits.ts`) ; l'API,
+    // 1 025 ids chacune.
     const lines = slowLoad((batch) => Object.fromEntries(batch.map((id) => [id, `ligne ${id}`])))
     const found = await loadInBatches([...range(1, 2500), 7, 2500], lines.load)
     expect(sizes(lines.asked)).toEqual([1000, 1000, 500])

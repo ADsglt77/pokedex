@@ -1,8 +1,0 @@
-.git
-.claude
-node_modules
-dist
-sauvegardes
-*.local
-.data
-.env*

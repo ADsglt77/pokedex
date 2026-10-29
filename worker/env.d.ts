@@ -11,6 +11,12 @@ declare namespace Cloudflare {
     BETTER_AUTH_SECRET?: string
     /** Le Worker des données, par sa liaison de service (`data.ts`). */
     DATA: Fetcher
+    /** Les limites par visiteur (`limits.ts`). */
+    COLLECTION_LIMIT: RateLimit
+    ACCOUNT_LIMIT: RateLimit
+    HEAVY_LIMIT: RateLimit
+    DATA_LIMIT: RateLimit
+    IMAGES_LIMIT: RateLimit
   }
 }
 

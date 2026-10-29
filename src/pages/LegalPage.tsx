@@ -29,7 +29,7 @@ export function LegalPage() {
     >
       <title>{pageTitle('Mentions légales et confidentialité')}</title>
       <PageHeader title="Mentions légales et confidentialité">
-        Mise à jour le 21 octobre 2026.
+        Mise à jour le 29 octobre 2026.
       </PageHeader>
 
       <section className={styles.section} aria-labelledby="editeur">
@@ -41,7 +41,8 @@ export function LegalPage() {
         </p>
         <p>
           Hébergeur&nbsp;: {LEGAL.host.name}, {LEGAL.host.address} — téléphone&nbsp;:{' '}
-          {LEGAL.host.phone}. Le serveur est à {LEGAL.host.location}.
+          {LEGAL.host.phone}. Le site tourne sur son réseau, au plus près de chaque visiteur&#8239;;
+          les comptes et les collections sont gardés {LEGAL.host.storage}.
         </p>
         <p>
           Contact&nbsp;: <a href={`mailto:${LEGAL.contact}`}>{LEGAL.contact}</a>.
@@ -101,19 +102,20 @@ export function LegalPage() {
         </p>
         <h3>Qui y a accès</h3>
         <p>
-          L’éditeur du site et OVHcloud, qui héberge le serveur à {LEGAL.host.location}. OVHcloud a
-          accès aux informations techniques nécessaires à l’hébergement, notamment les adresses IP.
-          Vos données sont donc transférées hors de l’Union européenne, au Canada, que la Commission
-          européenne reconnaît comme assurant une protection adéquate (décision d’adéquation).
+          L’éditeur du site et Cloudflare, qui l’héberge. Cloudflare a accès aux informations
+          techniques nécessaires à l’hébergement, notamment les adresses IP. Société américaine, il
+          adhère au cadre de protection des données entre l’Union européenne et les États-Unis (Data
+          Privacy Framework), que la Commission européenne reconnaît comme assurant une protection
+          adéquate (décision d’adéquation du 10&nbsp;juillet 2023).
         </p>
         <h3>Combien de temps</h3>
         <p>
           Votre compte et ce que vous y enregistrez, tant que le compte existe&#8239;; supprimé, il
-          part aussitôt du serveur, sans copie de sauvegarde (seul votre pseudo reste réservé&nbsp;:
-          aucun autre compte ne le reprendra). Une session est fermée 60 jours après votre dernière
-          visite, ou dès que vous vous connectez sur un autre appareil. Le journal du serveur n’a
-          pas de durée fixe&nbsp;: limité à 30 Mo, il efface ses plus anciennes lignes au fil de
-          l’eau, et repart de zéro à chaque mise à jour du site.
+          part aussitôt de la base (seul votre pseudo reste réservé&nbsp;: aucun autre compte ne le
+          reprendra), dont l’historique, que l’hébergeur garde pour la réparer après une panne, le
+          conserve encore 30 jours au plus. Une session est fermée 60 jours après votre dernière
+          visite, ou dès que vous vous connectez sur un autre appareil. Le journal du serveur est
+          gardé 7 jours, puis effacé.
         </p>
         <h3>Vos droits</h3>
         <ul>

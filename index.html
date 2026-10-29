@@ -13,8 +13,8 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <!-- L'aperçu d'un lien partagé (Discord, WhatsApp…), celui du site : le même que fait le
-         serveur pour les robots d'aperçu (`SITE_SUMMARY`, `server/vitrine.ts`) ; nginx rend
-         l'adresse de l'image complète. -->
+         Worker pour les robots d'aperçu (`SITE_SUMMARY`, `worker/vitrine.ts`), adresses
+         complètes. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="PokéCodex" />
     <meta property="og:title" content="PokéCodex" />
@@ -23,7 +23,7 @@
       content="Un Pokédex de cartes Pokémon japonaises et françaises : une carte par Pokémon, à collectionner."
     />
     <meta property="og:url" content="https://pokecodex.fr/" />
-    <meta property="og:image" content="/icons/icon-512.png" />
+    <meta property="og:image" content="https://pokecodex.fr/icons/icon-512.png" />
     <meta name="twitter:card" content="summary" />
     <title>PokéCodex</title>
     <!-- Le thème, avant le premier affichage : un script bloquant, mais un fichier du site. -->
@@ -32,8 +32,8 @@
          `main.tsx`) : demandé dès maintenant, sans attendre le script. `crossorigin` : la même
          demande que son `fetch` (mode cors, cookies du site seulement), sinon le navigateur la
          referait. Les espèces, elles, ne servent qu'une fois connecté (et au Pokédex public) :
-         nginx les fait précharger quand le navigateur a une session (l'en-tête `Link`,
-         `deploy/nginx.conf.template`) ; un visiteur sur la connexion ne les télécharge pas. -->
+         le Worker les fait précharger quand le navigateur a une session (l'en-tête `Link`,
+         `worker/headers.ts`) ; un visiteur sur la connexion ne les télécharge pas. -->
     <link rel="preload" href="/api/account?demarrage" as="fetch" crossorigin />
     <!-- Les polices des premières pages, que le navigateur ne découvrirait qu'au premier affichage
          (le texte changerait alors de police sous les yeux) : le texte (Manrope 400), les champs

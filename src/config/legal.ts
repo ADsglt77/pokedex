@@ -1,25 +1,26 @@
 /**
  * Ce que nomment les mentions légales (`LegalPage`) : le site, son hébergeur et l'adresse de
- * contact. Le serveur est un VPS d'OVHcloud à Beauharnois, au Canada : hors de l'Union
- * européenne, ce que la page dit aussi.
+ * contact. Le site tourne sur le réseau de Cloudflare (société américaine) ; sa base, les comptes
+ * et les collections, est gardée dans l'Union européenne (la base D1 créée avec
+ * `--jurisdiction eu` : `docs/deploiement.md`), ce que la page dit aussi.
  */
 export const LEGAL: {
   /** Le nom du site et son adresse. */
   site: { name: string; domain: string }
   /**
-   * L'hébergeur du VPS : les coordonnées publiques exigées dans les mentions légales ; où est le
-   * serveur (`location`).
+   * L'hébergeur : les coordonnées publiques exigées dans les mentions légales ; où sont gardés les
+   * comptes et les collections (`storage`).
    */
-  host: { name: string; address: string; phone: string; location: string }
+  host: { name: string; address: string; phone: string; storage: string }
   /** L'adresse de contact, publique, pour toute question, et les demandes sur les données. */
   contact: string
 } = {
   site: { name: 'PokéCodex', domain: 'pokecodex.fr' },
   host: {
-    name: 'OVH SAS',
-    address: '2 rue Kellermann, 59100 Roubaix, France',
-    phone: '1007 (depuis la France) ou +33 9 72 10 10 07',
-    location: 'Beauharnois, au Québec (Canada)',
+    name: 'Cloudflare, Inc.',
+    address: '101 Townsend St., San Francisco, CA 94107, États-Unis',
+    phone: '+1 650 319 8930',
+    storage: 'dans l’Union européenne',
   },
   contact: 'contact@pokecodex.fr',
 }

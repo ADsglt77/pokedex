@@ -223,12 +223,12 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   (`vite:preloadError`, `main.tsx` ; une fois par minute au plus). Les moteurs de recherche
   n'indexent que les pages publiques : l'accueil, la connexion, l'inscription et les mentions
   légales ; les autres adresses de l'app, le Pokédex public de chaque compte compris, reçoivent
-  `X-Robots-Tag: noindex` de nginx (`docs/deploiement.md`), et `public/robots.txt` écarte `/api/`.
+  `X-Robots-Tag: noindex` du Worker (`worker/headers.ts`), et `public/robots.txt` écarte `/api/`.
 - Performance (mesurer en production, `bun run build` puis `bun run preview` : `bun dev` est 3 à 4
   fois plus lent ; mesuré en octobre 2026 sur une collection de 1 025 cartes, avant → après) : au
-  démarrage, rien n'attend le script (le compte préchargé par `index.html`, les espèces par nginx
-  quand le navigateur a une session : `bun run preview` n'a pas ce second préchargement ; une
-  fois le compte connu, elles partent avec la collection, `signIn`), et la connexion, l'inscription
+  démarrage, rien n'attend le script (le compte préchargé par `index.html`, les espèces par le
+  Worker quand le navigateur a une session, `worker/headers.ts` ; une fois le compte connu, elles
+  partent avec la collection, `signIn`), et la connexion, l'inscription
   et les mentions légales ne demandent pas les espèces (`docs/compte-et-synchronisation.md`). Les
   polices : seules les graisses que l'app emploie (`main.tsx` : Manrope 400 à 700, Space Grotesk 600
   et 700 ; une graisse absente prendrait la plus proche, sans le dire), et celles des premières

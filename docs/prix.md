@@ -6,16 +6,16 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   des données ; ses prix peuvent se montrer sans le citer (son accord). Ni scraping, ni API, ni
   panier.
 - Le chemin : le navigateur demande `/api/prices/…`, `/api/histories`, `/api/wants`, `/api/status`
-  au site ; nginx (Vite en développement) les renvoie à l'API des données, sous `/v1`, avec le
-  token du site (`deploy/nginx.conf.template`, `vite.config.ts`) : le code du site n'en sait rien.
+  au site ; le Worker du site (dans Vite en développement) les renvoie au Worker des données, sous
+  `/v1`, par sa liaison de service, sans token (`worker/data.ts`) : le code de l'app n'en sait rien.
   Les réponses portent leur ETag (304 tant que les prix n'ont pas changé) ; leur forme est celle de
   `src/types.ts`, copie du contrat de l'API (`contract.ts`).
 - Prix du jour : l'app demande ceux des seules cartes qu'elle affiche (`GET /api/prices?ids=…` :
   celles de la collection, d'une extension du catalogue, d'un Pokémon, un id saisi ; le jour, et
   une clé par carte demandée, `[prix, plus bas, prix d'il y a 30 jours]` ou `null` sans prix ce
-  jour ; 1 025 ids au plus ; 404 tant que le guide n'a jamais été lu ; avec le catalogue, 10 demandes
-  par seconde et par visiteur, 300 d'un coup, nginx). Le prix suivi est la règle de Pokécardex (la tendance pour une série de moins de
-  31 jours, la moyenne sur 30 jours ensuite) ; « Ce qui bouge » (Valeur) et la fiche comparent au
+  jour ; 1 025 ids au plus ; 404 tant que le guide n'a jamais été lu ; avec le catalogue, 400
+  demandes par 10 s et par visiteur, `worker/limits.ts`). Le prix suivi est la règle de
+  Pokécardex (la tendance pour une série de moins de 31 jours, la moyenne sur 30 jours ensuite) ; « Ce qui bouge » (Valeur) et la fiche comparent au
   prix d'il y a 30 jours (`priceChange`, `lib/prices.ts`). Côté navigateur (`store/prices.ts`), les
   réponses s'ajoutent : `usePrices()` rend les prix de la collection (toutes ses cartes, les cases
   de ses collections d'extensions comprises), `usePrices(ids)` ceux d'autres cartes, `null` tant
@@ -25,7 +25,8 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   coupés dans la liste triée de toutes les cartes demandées, pas seulement de celles encore
   inconnues : une réponse arrivée pour d'autres cartes (une autre liste) ne décale aucun paquet,
   chacun garde son adresse, et un paquet en cours ou en panne n'est pas redemandé avant l'heure
-  (sinon chaque réponse décalerait les suivants, redemandés en double, jusqu'au refus de nginx).
+  (sinon chaque réponse décalerait les suivants, redemandés en double, jusqu'au refus du Worker,
+  429).
   Les paquets d'une liste sont coupés une fois pour toutes, et une liste n'est revue que si l'état
   des prix a changé depuis, ou si l'une de ses cartes est en panne depuis une minute : des
   centaines de montants la demandent à chaque rendu, panne ou pas. Seul un paquet dont une carte
@@ -62,10 +63,9 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   de 1 000 (`idBatches`) demandés l'un après l'autre (`loadInBatches`, `lib/prices.ts`, testé ;
   une seule demande tant qu'ils y tiennent). Une clé par id demandé, son historique ou `null` ;
   1 025 ids au plus par demande (avec les ids de 6 et 7 chiffres, l'adresse d'un paquet fait de 7
-  à 8 Ko, sous les 16 Ko de la ligne de requête que nginx accepte, `large_client_header_buffers`) ;
-  2 demandes par seconde et par visiteur, 10 d'un coup au plus (nginx, la même limite que les
-  lignes de la liste de souhaits : l'une après l'autre, les demandes ne s'y heurtent qu'au-delà
-  d'une dizaine de paquets très rapides). L'app relit les historiques dans l'ordre de ses cartes
+  à 8 Ko) ; 30 demandes par 10 s et par visiteur au plus (`worker/limits.ts`, la même limite que
+  les lignes de la liste de souhaits : l'une après l'autre, les demandes ne s'y heurtent qu'au-delà
+  de 30 paquets en 10 s). L'app relit les historiques dans l'ordre de ses cartes
   (`historiesOf`, `lib/prices.ts`, testé) : la même carte Cardmarket possédée pour deux Pokémon
   compte deux fois, comme dans la valeur du jour (une TAG TEAM, une seule carte, une fois) ; une
   carte sans id ou sans historique ne pèse pas sur la courbe, calculée une fois par réponse (ni la
@@ -85,7 +85,7 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   d'une carte française est celui de toutes les langues : sa ligne est celle d'une japonaise (nom
   anglais, extension en anglais), et `null` tant que le nom anglais de sa série n'est pas confirmé
   (le cas de bien des séries françaises) : elle s'ajoute alors depuis sa page, déjà sur les offres
-  en français. 2 demandes par seconde et par visiteur au plus, 10 d'un coup (nginx). L'app la
+  en français. 30 demandes par 10 s et par visiteur au plus (`worker/limits.ts`). L'app la
   demande à chaque ouverture de la fenêtre (`loadWantsLines`, `store/prices.ts`, par `fetchFresh` :
   sans cache, 10 s au plus par demande), par paquets de 1 000 ids demandés l'un après l'autre
   (`loadInBatches`, testé : l'API en refuse plus de 1 025, et un plan fait de cases d'extensions à

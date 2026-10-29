@@ -34,10 +34,10 @@ export function idBatches(ids: readonly number[], size = 1000): number[][] {
 
 /**
  * Les réponses de l'API des données pour ces ids (`load` : la demande d'un paquet, une clé par
- * id), par paquets de 1 000 (`idBatches`) demandés l'un après l'autre (nginx n'accepte que 2 de ces
- * demandes par seconde, 10 d'un coup : les historiques, les lignes de la liste de souhaits),
- * réunies ; `null` dès qu'un paquet manque, sans demander les suivants (une réponse partielle
- * serait fausse). Aucun id : aucune demande.
+ * id), par paquets de 1 000 (`idBatches`) demandés l'un après l'autre (le Worker du site n'accepte
+ * que 30 de ces demandes par 10 s, `worker/limits.ts` : les historiques, les lignes de la liste de
+ * souhaits), réunies ; `null` dès qu'un paquet manque, sans demander les suivants (une réponse
+ * partielle serait fausse). Aucun id : aucune demande.
  */
 export async function loadInBatches<T>(
   ids: readonly number[],
