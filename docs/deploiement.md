@@ -57,9 +57,11 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
    gratuite du domaine suffit). Cloudflare recopie les enregistrements DNS actuels : vérifier
    qu'il garde ceux de la messagerie de `contact@pokecodex.fr` (MX, SPF, DKIM : sans eux, plus
    aucun e-mail n'arrive), et **supprimer** ceux de `pokecodex.fr`, `www` et `api` qui mènent au
-   VPS (`15.235.90.246`) : les domaines des Workers ne s'ajoutent pas par-dessus. Puis, chez OVH
-   (Domaines › `pokecodex.fr` › Serveurs DNS), remplacer ses serveurs par les deux que donne
-   Cloudflare, et attendre que Cloudflare dise le domaine actif (de quelques minutes à un jour).
+   VPS (`15.235.90.246`) : les domaines des Workers ne s'ajoutent pas par-dessus. Chez OVH, si
+   DNSSEC est actif sur le domaine, le désactiver d'abord (sinon le domaine ne répond plus du tout
+   pendant la bascule ; il se réactive ensuite avec Cloudflare). Puis (Noms de domaine ›
+   `pokecodex.fr` › Serveurs DNS) remplacer ses serveurs par les deux que donne Cloudflare, et
+   attendre que Cloudflare dise le domaine actif (de quelques minutes à un jour).
 3. **(vous) Wrangler relié au compte**, une fois sur ce poste :
 
    ```bash
@@ -87,8 +89,22 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
    npx wrangler d1 create pokecodex --jurisdiction eu
    ```
 
-5. **Les secrets**, une fois. Le site : la clé des sessions, tirée au hasard (`openssl rand -hex 32`,
-   jamais celle de `.env`), dans `pokedex` :
+5. **(vous) Workers Builds**, pour chaque dépôt, **`pokedex-data` d'abord** : tableau de bord ›
+   Workers & Pages › Create › Import a repository (Cloudflare installe alors son application
+   GitHub sur le dépôt), puis :
+   - le nom du projet : celui du Worker (`pokedex-data`, puis `pokecodex`), comme dans son
+     `wrangler.jsonc` ;
+   - la branche : `main` ;
+   - la commande de construction : `bun run ci` ; celle de déploiement : `bun run deploy` ;
+   - les variables de construction : `NODE_VERSION` = `24` (Wrangler et Vitest veulent Node 22 ou
+     plus) et `BUN_VERSION` = `1.3.10`.
+
+   La première construction crée et déploie le Worker. Si la migration de la base échoue faute de
+   droits, donner « D1 : Edit » au token de construction (Settings › Builds › API token).
+6. **Les secrets**, une fois les Workers créés (avant, Wrangler créerait un Worker du même nom, et
+   l'import du dépôt buterait sur lui). Le site : la clé des sessions, tirée au hasard
+   (`openssl rand -hex 32`, jamais celle de `.env`), dans `pokedex` ; d'ici là, aucune connexion
+   n'y marche :
 
    ```bash
    npx wrangler secret put BETTER_AUTH_SECRET
@@ -101,19 +117,6 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
    npx wrangler secret put API_TOKENS
    ```
 
-   Si le Worker n'existe pas encore, Wrangler propose de le créer pour y poser le secret : accepter.
-6. **(vous) Workers Builds**, pour chaque dépôt, **`pokedex-data` d'abord** : tableau de bord ›
-   Workers & Pages › Create › Import a repository (Cloudflare installe alors son application
-   GitHub sur le dépôt), puis :
-   - le nom du projet : celui du Worker (`pokedex-data`, puis `pokecodex`), comme dans son
-     `wrangler.jsonc` ;
-   - la branche : `main` ;
-   - la commande de construction : `bun run ci` ; celle de déploiement : `bun run deploy` ;
-   - les variables de construction : `NODE_VERSION` = `24` (Wrangler et Vitest veulent Node 22 ou
-     plus) et `BUN_VERSION` = `1.3.10`.
-
-   La première construction déploie le Worker. Si la migration de la base échoue faute de droits,
-   donner « D1 : Edit » au token de construction (Settings › Builds › API token).
 7. **Les données**, une fois les deux Workers en ligne : les tâches les relisent elles-mêmes (environ
    deux jours, au rythme convenu avec Pokécardex), dans `pokedex-data` :
 

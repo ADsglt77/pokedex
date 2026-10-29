@@ -17,10 +17,15 @@
     "run_worker_first": true,
   },
   // Les comptes (`worker/schema.ts`), leurs migrations écrites par Drizzle (`bun run db:generate`).
+  // En ligne, la base créée dans l'Union européenne (`--jurisdiction eu`, `docs/deploiement.md`).
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "pokecodex",
+      "database_id": "fd6f7213-f55d-43fa-baaf-b24cb62e2442",
+      // La base locale (`.wrangler/`) reste celle rangée sous le nom de la liaison : avec
+      // l'identifiant de la base en ligne, Wrangler en ouvrirait une neuve, vide.
+      "preview_database_id": "DB",
       "migrations_dir": "worker/migrations",
     },
   ],
