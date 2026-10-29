@@ -3,9 +3,8 @@
 La mise en ligne sur Cloudflare Workers. Une partie de la documentation du projet, à lire avant de
 toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
-> **Pas encore en ligne** (29 octobre 2026) : tout est prêt dans les deux dépôts, mais rien n'est
-> mis en ligne tant que l'offre Workers Paid n'est pas prise (plus bas, « Pourquoi l'offre
-> payante »). L'ancien site du VPS d'OVH tourne encore à `pokecodex.fr` jusqu'à la bascule.
+> **En ligne depuis le 29 octobre 2026**, sur l'offre Workers Paid (plus bas, « Pourquoi l'offre
+> payante »). Reste l'étape 9 : résilier l'ancien VPS d'OVH.
 
 ## Ce qui tourne en ligne
 
@@ -96,18 +95,22 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
      `wrangler.jsonc` ;
    - la branche : `main` ;
    - la commande de construction : `bun run ci` ; celle de déploiement : `bun run deploy` ;
-   - les variables de construction : `NODE_VERSION` = `24` (Wrangler et Vitest veulent Node 22 ou
-     plus) et `BUN_VERSION` = `1.3.10`.
+   - les variables de **construction** (Settings › Builds › Variables and secrets, pas celles
+     d'exécution du Worker) : `NODE_VERSION` = `24` (Wrangler et Vitest veulent Node 22 ou plus) et
+     `BUN_VERSION` = `1.3.10`.
 
-   La première construction crée et déploie le Worker. Si la migration de la base échoue faute de
-   droits, donner « D1 : Edit » au token de construction (Settings › Builds › API token).
-6. **Les secrets**, une fois les Workers créés (avant, Wrangler créerait un Worker du même nom, et
-   l'import du dépôt buterait sur lui). Le site : la clé des sessions, tirée au hasard
-   (`openssl rand -hex 32`, jamais celle de `.env`), dans `pokedex` ; d'ici là, aucune connexion
-   n'y marche :
+   L'import crée le Worker, vide, et lance la première construction, qui le déploie. Si la
+   migration de la base échoue faute de droits, donner « D1 : Edit » au token de construction
+   (Settings › Builds › API token). Le nom du Worker est celui du tableau de bord : un autre nom
+   dans `wrangler.jsonc` est remplacé en construction (Cloudflare propose alors de le corriger).
+6. **Les secrets**, une fois le Worker créé par l'import (avant, Wrangler en créerait un du même
+   nom, et l'import buterait sur lui). Le site : la clé des sessions, tirée au hasard, jamais celle
+   de `.env`, dans `pokedex`. Sa première construction échoue sans elle (le Worker la vérifie au
+   démarrage, `worker/auth.ts`) : la poser, puis relancer la construction (Deployments › le build
+   › Retry) :
 
    ```bash
-   npx wrangler secret put BETTER_AUTH_SECRET
+   openssl rand -hex 32 | npx wrangler secret put BETTER_AUTH_SECRET
    ```
 
    L'API, pour ses clients autres que le site (facultatif : sans lui, seul le site la lit), dans
@@ -117,8 +120,11 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
    npx wrangler secret put API_TOKENS
    ```
 
-7. **Les données**, une fois les deux Workers en ligne : les tâches les relisent elles-mêmes (environ
-   deux jours, au rythme convenu avec Pokécardex), dans `pokedex-data` :
+7. **Les données**, dès que le Worker des données est en ligne, le jour même : son Cron lance les
+   prix à l'heure suivante ; sans le catalogue, ce passage ne sait pas quelles séries sont
+   récentes (leur prix est la tendance : `../pokedex-data/docs/donnees.md`), et un passage des
+   prix du même jour, après le catalogue, corrige ce jour-là. Les tâches relisent tout elles-mêmes
+   (environ deux jours, au rythme convenu avec Pokécardex), dans `pokedex-data` :
 
    ```bash
    bun run ingest setup --remote
