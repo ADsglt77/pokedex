@@ -22,6 +22,21 @@ const EXPIRED =
   'Session expirée (connexion sur un autre appareil ?) : reconnectez-vous depuis le menu du compte.'
 
 /**
+ * Le message d'un refus d'une action du compte : `badRequest` pour un 400 (pseudo refusé, mot de
+ * passe incorrect) ; pour un 401, « session expirée », et non un mauvais mot de passe, qui ferait
+ * croire le mot de passe perdu (pas de « mot de passe oublié »), et le menu du compte propose de se
+ * reconnecter (`markExpired`).
+ */
+const failure = (
+  refused: { status: number; code?: string },
+  badRequest: string,
+  otherwise = 'Impossible pour le moment : réessayez plus tard.',
+) => {
+  if (refused.status === 401) markExpired()
+  return refusalMessage({ 400: badRequest, 401: EXPIRED }, refused, otherwise)
+}
+
+/**
  * Mon compte : le pseudo (« Le Pokédex de … » et l'adresse du Pokédex public), le mot de passe, et
  * la suppression du compte. Le site n'envoie pas d'e-mail : pas de mot de passe oublié, on le
  * change ici en donnant l'actuel.
@@ -54,14 +69,11 @@ function NameForm({ current }: { current: string }) {
     setBusy(true)
     const { error } = await authCall(() => authClient.updateUser({ name, username: name }))
     setBusy(false)
-    if (error?.status === 401) markExpired()
     if (error) {
-      const message = refusalMessage(
-        { 400: `Pseudo refusé : ${PSEUDO_HINT}`, 401: EXPIRED },
-        error,
-        'Pseudo inchangé : réessayez plus tard.',
+      return notify(
+        failure(error, `Pseudo refusé : ${PSEUDO_HINT}`, 'Pseudo inchangé : réessayez plus tard.'),
+        { tone: 'danger' },
       )
-      return notify(message, { tone: 'danger' })
     }
     renameAccount(name)
     notify(
@@ -92,17 +104,6 @@ function NameForm({ current }: { current: string }) {
   )
 }
 
-/**
- * Le message d'un refus, d'après la réponse du serveur : un mauvais mot de passe (400), et non une
- * session expirée (401), qui ferait croire le mot de passe perdu (pas de « mot de passe oublié »).
- */
-const failure = (refused: { status: number }, wrongPassword: string) =>
-  refusalMessage(
-    { 400: wrongPassword, 401: EXPIRED },
-    refused,
-    'Impossible pour le moment : réessayez plus tard.',
-  )
-
 function PasswordForm() {
   const notify = useNotify()
   const [current, setCurrent] = useState('')
@@ -124,7 +125,6 @@ function PasswordForm() {
       }),
     )
     setBusy(false)
-    if (refused?.status === 401) markExpired()
     // Le refus s'affiche sous le mot de passe actuel, qui reçoit le focus : il est lu avec lui.
     if (refused) {
       return focusAfter(
@@ -184,7 +184,6 @@ function DeleteForm() {
     const { error: refused } = await authCall(() => authClient.deleteUser({ password }))
     if (refused) {
       setBusy(false)
-      if (refused.status === 401) markExpired()
       return focusAfter(() => setError(failure(refused, 'Mot de passe incorrect.')), field)
     }
     await accountDeleted()

@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { AuthCard } from '@/components/AuthCard'
 import { NEW_PASSWORD_FIELD, PASSWORD_MIN, PSEUDO_FIELD, PSEUDO_HINT } from '@/config/account'
-import { PSEUDO_RESERVED, refusalMessage, reservedPseudo } from '@/lib/account'
+import { PSEUDO_RESERVED, reservedPseudo } from '@/lib/account'
 import { authCall, authClient } from '@/lib/auth'
+import { vitrinePath } from '@/lib/filters'
 import { openSession } from '@/store/account'
 
 /**
@@ -25,14 +26,10 @@ export function SignUpPage() {
       await authCall(() =>
         authClient.signUp.email({ name: pseudo, username: pseudo, email: '', password }),
       ),
-      (refused) =>
-        refusalMessage(
-          {
-            400: `Vérifiez le pseudo (${PSEUDO_HINT}) et le mot de passe (${PASSWORD_MIN} caractères au moins).`,
-          },
-          refused,
-          'Création impossible pour le moment\u00a0: réessayez plus tard.',
-        ),
+      {
+        400: `Vérifiez le pseudo (${PSEUDO_HINT}) et le mot de passe (${PASSWORD_MIN} caractères au moins).`,
+      },
+      'Création impossible pour le moment\u00a0: réessayez plus tard.',
     )
     if (!problem) navigate('/', { replace: true })
     return problem
@@ -48,7 +45,7 @@ export function SignUpPage() {
     >
       <Input
         {...PSEUDO_FIELD}
-        hint={`${PSEUDO_HINT} Votre Pokédex public sera à l’adresse ${location.host}/${pseudo.toLowerCase() || 'pseudo'}.`}
+        hint={`${PSEUDO_HINT} Votre Pokédex public sera à l’adresse ${location.host}${vitrinePath(pseudo || 'pseudo')}.`}
         value={pseudo}
         onChange={(event) => setPseudo(event.target.value.trim())}
       />

@@ -96,10 +96,11 @@ export const formatPercent = (value: number) => spaced(percentChangeFormat.forma
 
 /**
  * Un montant saisi (« 12,50 », « 12.5 € », « 1 234,50 ») ; `null` s'il est illisible. Une espace
- * seulement entre les milliers : « 12 50 » (une virgule oubliée) serait sinon lu 1 250 €.
+ * seulement entre les milliers : « 12 50 » (une virgule oubliée) serait sinon lu 1 250 €. Le
+ * symbole au début ou à la fin seulement : « 12€50 » serait sinon lu 1 250 € aussi.
  */
 export function parseEuros(text: string): number | null {
-  const input = text.replace(/€/g, '').trim().replace(/\s+/g, ' ').replace(',', '.')
+  const input = text.trim().replace(/^€|€$/g, '').trim().replace(/\s+/g, ' ').replace(',', '.')
   return /^(\d{1,3}( \d{3})+|\d+)(\.\d{1,2})?$/.test(input)
     ? Number(input.replaceAll(' ', ''))
     : null
@@ -162,6 +163,9 @@ const STATUS_LABELS: Record<CardStatus | 'none', string> = {
  * plus un statut : retiré à la demande de l'utilisateur).
  */
 export const statusLabel = (status: CardStatus | null) => STATUS_LABELS[status ?? 'none']
+
+/** « possédée », « commandée », « non possédée » : `statusLabel` dans une phrase. */
+export const statusText = (status: CardStatus | null) => statusLabel(status).toLowerCase()
 
 /**
  * Le statut d'une carte pour un visiteur du Pokédex public, qui ne dit rien des achats (et ne

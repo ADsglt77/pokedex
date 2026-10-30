@@ -3,7 +3,6 @@ import { LogIn } from '@camply/ui/icons'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { AuthCard } from '@/components/AuthCard'
-import { refusalMessage } from '@/lib/account'
 import { authCall, authClient } from '@/lib/auth'
 import { openSession } from '@/store/account'
 
@@ -28,12 +27,8 @@ export function LoginPage() {
   const submit = async () => {
     const problem = await openSession(
       await authCall(() => authClient.signIn.username({ username: pseudo.trim(), password })),
-      (refused) =>
-        refusalMessage(
-          { 401: 'Pseudo ou mot de passe incorrect.' },
-          refused,
-          'Connexion impossible pour le moment\u00a0: réessayez plus tard.',
-        ),
+      { 401: 'Pseudo ou mot de passe incorrect.' },
+      'Connexion impossible pour le moment\u00a0: réessayez plus tard.',
     )
     if (!problem) navigate(returnPath(params.get('retour')), { replace: true })
     return problem

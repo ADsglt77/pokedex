@@ -13,7 +13,6 @@
 import { env } from 'cloudflare:workers'
 import { describe, expect, test, vi } from 'vitest'
 import type { AccountState } from '@/types'
-import worker from '../index'
 import { authCall, call, cookieOf, createAccount, ORIGIN, PASSWORD, sleep } from './helpers'
 
 const FOREIGN = 'https://autre.exemple'
@@ -120,13 +119,11 @@ describe('d’un autre site : une modification refusée partout, une lecture jam
       },
       { highWaterMark: 0 },
     )
-    const response = await worker.request(
-      new Request(`${ORIGIN}/api/auth/sign-up/email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Origin: FOREIGN },
-        body,
-      }),
-    )
+    const response = await call('/api/auth/sign-up/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: FOREIGN },
+      body,
+    })
     expect(response.status).toBe(403)
     expect(response.headers.get('cache-control')).toBe('no-store')
     expect(await response.text()).toBe('')

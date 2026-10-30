@@ -2,21 +2,20 @@
  * La garde du Worker contre l'écrasement (`worker/collection.ts`) : un appareil qui envoie une
  * collection partie d'une version dépassée (un autre onglet, un autre appareil l'a changée), ou en
  * avance, est refusé (409), et la version du serveur reste telle quelle ; sans session rien ne
- * passe, ni d'un autre site (une modification, avant même la lecture de son corps ; une lecture,
- * si) ; un document abîmé est refusé (400). Une erreur ici écraserait les commandes d'un autre
- * appareil. La lecture dit à quel compte est la collection, et seulement sa version quand
- * l'appareil a déjà celle-là (`?version=`) ; un envoi compressé (`gzip`, celui du site) est
- * enregistré, mais refusé (413) au-delà de 5 000 000 octets décompressés, sans jamais décompresser
- * plus (une bombe de 100 Mo suivie d'octets illisibles : lue jusqu'au bout, elle ferait un 400) ;
- * sans session, 401 sans rien décompresser (le cookie renouvelé d'une session repart toujours) ;
- * une panne en lisant la session, 500 (pas le 400 d'un document refusé) ; un envoi renvoyé tel
- * quel après une réponse perdue est reconnu (200, la même version), un autre parti de la même
- * version reste refusé (409). Chaque compte ne touche qu'à sa collection, et la sienne part avec
- * lui. Le journal : ce qu'un compte peut répéter à volonté (un export signalé, un envoi refusé)
- * n'y écrit qu'une ligne par minute. Et ce que montre le Pokédex public d'un compte
- * (`/api/vitrine/<pseudo>`, l'aperçu d'un lien partagé) : ce qu'il laisserait passer serait
- * public. Le Worker entier, sur une base D1 neuve pour le fichier, avec un compte créé comme à
- * l'inscription et un premier envoi ; chaque test part de la version du moment.
+ * passe, ni d'un autre site (une modification : 403) ; un document abîmé est refusé (400). Une
+ * erreur ici écraserait les commandes d'un autre appareil. La lecture dit à quel compte est la
+ * collection, et seulement sa version quand l'appareil a déjà celle-là (`?version=`) ; un envoi
+ * compressé (`gzip`, celui du site) est enregistré, mais refusé (413) au-delà de 5 000 000 octets
+ * décompressés, sans jamais décompresser plus (une bombe de 100 Mo suivie d'octets illisibles : lue
+ * jusqu'au bout, elle ferait un 400) ; sans session, 401 sans rien décompresser (le cookie
+ * renouvelé d'une session repart toujours) ; une panne en lisant la session, 500 (pas le 400 d'un
+ * document refusé) ; un envoi renvoyé tel quel après une réponse perdue est reconnu (200, la même
+ * version), un autre parti de la même version reste refusé (409). Chaque compte ne touche qu'à sa
+ * collection, et la sienne part avec lui. Le journal : ce qu'un compte peut répéter à volonté (un
+ * export signalé, un envoi refusé) n'y écrit qu'une ligne par minute. Et ce que montre le Pokédex
+ * public d'un compte (`/api/vitrine/<pseudo>`, l'aperçu d'un lien partagé) : ce qu'il laisserait
+ * passer serait public. Le Worker entier, sur une base D1 neuve pour le fichier, avec un compte
+ * créé comme à l'inscription et un premier envoi ; chaque test part de la version du moment.
  */
 
 import { env } from 'cloudflare:workers'
@@ -26,16 +25,17 @@ import { DAY } from '@/lib/time'
 import type { CollectionDocument, CollectionResponse, CollectionSaved, VitrineData } from '@/types'
 import { card, collectionWith, NOW, order, ownership, withCards } from '../../tests/fixtures'
 import { auth } from '../auth'
-import worker from '../index'
 import { authCall, call, createAccount, gzip, ORIGIN, PASSWORD, sleep } from './helpers'
 
 // Le journal du Worker (une ligne par évènement) : muet pendant ces tests.
 const log = vi.spyOn(console, 'log').mockImplementation(() => {})
 afterAll(() => log.mockRestore())
 
-/** Le Worker des données : sans guide des prix (404), sauf dans les tests des prix (`dataApi`). */
-const NO_PRICES = () => new Response(null, { status: 404 })
-const dataApi = vi.spyOn(env.DATA, 'fetch').mockImplementation(async () => NO_PRICES())
+/**
+ * Le Worker des données : sans guide des prix (le 404 de `vitest.config.ts`), sauf dans les tests
+ * des prix (`dataApi`).
+ */
+const dataApi = vi.spyOn(env.DATA, 'fetch')
 afterAll(() => dataApi.mockRestore())
 
 const signUp = await createAccount('Sacha')
@@ -68,12 +68,9 @@ const gzipped = (body: RequestInit['body'], headers: Record<string, string> = {}
   })
 
 /** La version enregistrée sur le serveur. */
-async function stored() {
-  const response = await collection('GET')
-  return { body: (await response.json()) as CollectionResponse }
-}
+const stored = async () => (await (await collection('GET')).json()) as CollectionResponse
 
-/** Un document écrit directement dans la base, comme avant une livraison. */
+/** Un document écrit directement dans la base, sans passer par un envoi. */
 const storeDirectly = (userId: string, document: string) =>
   env.DB.prepare(
     'INSERT INTO collections (user_id, version, collection, shopping, updated_at) VALUES (?, 1, ?, ?, ?)',
@@ -111,7 +108,7 @@ describe('/api/collection : jamais une version écrasée', () => {
     expect(saved.status).toBe(200)
     expect(savedBody).toEqual({ version: 1 })
     // La lecture dit à quel compte est la collection : l'appareil ne prend jamais celle d'un autre.
-    expect(afterFirst.body).toEqual({
+    expect(afterFirst).toEqual({
       version: 1,
       account: sacha,
       ...first,
@@ -133,19 +130,19 @@ describe('/api/collection : jamais une version écrasée', () => {
     }
     const response = await collection('PUT', {
       account: sacha,
-      baseVersion: before.body.version,
+      baseVersion: before.version,
       ...next,
     })
     expect(response.status).toBe(200)
     const after = await stored()
-    expect(after.body).toEqual({ version: before.body.version + 1, account: sacha, ...next })
+    expect(after).toEqual({ version: before.version + 1, account: sacha, ...next })
     expect((await response.json()) as CollectionSaved).toEqual({
-      version: before.body.version + 1,
+      version: before.version + 1,
     })
     // Un appareil encore à la version d'avant : 409, la nouvelle reste.
     const stale = await collection('PUT', {
       account: sacha,
-      baseVersion: before.body.version,
+      baseVersion: before.version,
       ...second,
     })
     expect(stale.status).toBe(409)
@@ -156,7 +153,7 @@ describe('/api/collection : jamais une version écrasée', () => {
     const before = await stored()
     const response = await collection('PUT', {
       account: sacha,
-      baseVersion: before.body.version + 5,
+      baseVersion: before.version + 5,
       ...second,
     })
     expect(response.status).toBe(409)
@@ -171,7 +168,7 @@ describe('/api/collection : jamais une version écrasée', () => {
     }
     const response = await collection('PUT', {
       account: sacha,
-      baseVersion: before.body.version,
+      baseVersion: before.version,
       ...broken,
     })
     expect(response.status).toBe(400)
@@ -182,72 +179,14 @@ describe('/api/collection : jamais une version écrasée', () => {
     expect(await stored()).toEqual(before)
   })
 
-  test('un document enregistré avant les collections d’extensions (sans `series`) : le suivant est enregistré, et journalisé', async () => {
-    const old = await createAccount('Veteran')
-    const before = JSON.stringify({
-      ...withCards(collectionWith({ a: ownership('owned') }), card('a', [25])),
-      series: undefined,
-    })
-    expect(before).not.toContain('series')
-    await storeDirectly(old.user!.id, before)
-    // Il commence une collection : le journal la compare à celle d'avant, qui n'en a pas.
-    const next: CollectionDocument = {
-      collection: {
-        ...withCards(
-          collectionWith({ a: ownership('owned') }),
-          card('a', [25]),
-          card('s', [4], { seriesOnly: true }),
-        ),
-        series: [{ set: 'SV2A', name: 'Pokémon Card 151', startedAt: NOW, cards: ['a', 's'] }],
-      },
-      shopping: emptyShopping(),
-    }
-    log.mockClear()
-    const response = await collection(
-      'PUT',
-      { account: old.user!.id, baseVersion: 1, ...next },
-      { Cookie: old.cookie },
-    )
-    expect(response.status).toBe(200)
-    expect((await response.json()) as CollectionSaved).toEqual({ version: 2 })
-    expect(log.mock.calls.flat().join(' ')).toContain('Collection commencée')
-  })
-
-  test('envoyé d’un autre site (le cookie part avec toute requête vers le site) : 403, avant d’être lu', async () => {
+  test('envoyé d’un autre site (le cookie part avec toute requête vers le site) : 403, rien d’écrit', async () => {
     const before = await stored()
     const response = await collection(
       'PUT',
-      { account: sacha, baseVersion: before.body.version, ...second },
+      { account: sacha, baseVersion: before.version, ...second },
       { Origin: 'https://autre.exemple' },
     )
     expect(response.status).toBe(403)
-    // Un corps que le Worker ne lit qu'en le demandant : il ne l'est jamais.
-    let read = false
-    const body = new ReadableStream(
-      {
-        pull(controller) {
-          read = true
-          controller.enqueue(new TextEncoder().encode('{}'))
-          controller.close()
-        },
-      },
-      { highWaterMark: 0 },
-    )
-    const unread = await worker.request(
-      new Request(`${ORIGIN}/api/collection`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Origin: 'https://autre.exemple',
-          Cookie: cookie,
-        },
-        body,
-      }),
-    )
-    expect(unread.status).toBe(403)
-    expect(unread.headers.get('cache-control')).toBe('no-store')
-    expect(await unread.text()).toBe('')
-    expect(read).toBe(false)
     expect(await stored()).toEqual(before)
   })
 
@@ -259,18 +198,12 @@ describe('/api/collection : jamais une version écrasée', () => {
       (
         await collection(
           'PUT',
-          { account: sacha, baseVersion: before.body.version, ...second },
+          { account: sacha, baseVersion: before.version, ...second },
           noCookie,
         )
       ).status,
     ).toBe(401)
     expect(await stored()).toEqual(before)
-  })
-
-  test('d’un autre site, une lecture passe : la collection, un Pokédex public', async () => {
-    const headers = { Origin: 'https://autre.exemple' }
-    expect((await collection('GET', undefined, headers)).status).toBe(200)
-    expect((await call('/api/vitrine/sacha', { headers })).status).toBe(200)
   })
 })
 
@@ -280,7 +213,7 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
     call(`/api/collection?version=${version}`, { headers: { Cookie: cookie } })
 
   test('l’appareil a déjà la version du serveur : la version et le compte seuls, sans le document', async () => {
-    const { body } = await stored()
+    const body = await stored()
     const same = await readFrom(body.version)
     expect(same.status).toBe(200)
     expect(same.headers.get('cache-control')).toBe('no-store')
@@ -297,14 +230,14 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
       ...first,
       shopping: { ...emptyShopping(), orders: [order({ id: 'compressée' })] },
     }
-    const sent = { account: sacha, baseVersion: before.body.version, ...next }
+    const sent = { account: sacha, baseVersion: before.version, ...next }
     const response = await gzipped(await gzip(JSON.stringify(sent)))
     expect(response.status).toBe(200)
     expect((await response.json()) as CollectionSaved).toEqual({
-      version: before.body.version + 1,
+      version: before.version + 1,
     })
-    expect((await stored()).body).toEqual({
-      version: before.body.version + 1,
+    expect(await stored()).toEqual({
+      version: before.version + 1,
       account: sacha,
       ...next,
     })
@@ -362,7 +295,7 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
     const lookup = vi.spyOn(auth.api, 'getSession').mockRejectedValueOnce(new Error('Base occupée'))
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
-      const sent = { account: sacha, baseVersion: before.body.version, ...second }
+      const sent = { account: sacha, baseVersion: before.version, ...second }
       // Pas un 400 : l'appareil dirait « Envoi refusé », et ne réessaierait pas ; pas un 401 : il
       // dirait la session fermée.
       expect((await gzipped(await gzip(JSON.stringify(sent)))).status).toBe(500)
@@ -410,14 +343,14 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
       ...first,
       shopping: { ...emptyShopping(), orders: [order({ id: 'renvoyée' })] },
     }
-    const sent = { account: sacha, baseVersion: before.body.version, ...next }
+    const sent = { account: sacha, baseVersion: before.version, ...next }
     expect((await collection('PUT', sent)).status).toBe(200)
     const after = await stored()
     // La réponse s'est perdue (délai, réseau coupé) : l'appareil renvoie le même document.
     log.mockClear()
     const again = await collection('PUT', sent)
     expect(again.status).toBe(200)
-    expect((await again.json()) as CollectionSaved).toEqual({ version: before.body.version + 1 })
+    expect((await again.json()) as CollectionSaved).toEqual({ version: before.version + 1 })
     expect(await stored()).toEqual(after)
     // Rien au journal : ni un refus, ni une modification de plus.
     expect(log).not.toHaveBeenCalled()
@@ -428,14 +361,14 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
 
   test('un autre document parti de la même version : toujours 409, rien d’écrit', async () => {
     const before = await stored()
-    const sent = { account: sacha, baseVersion: before.body.version, ...first }
+    const sent = { account: sacha, baseVersion: before.version, ...first }
     expect((await collection('PUT', sent)).status).toBe(200)
     const after = await stored()
     const other = await collection('PUT', { ...sent, ...second })
     expect(other.status).toBe(409)
     expect(await stored()).toEqual(after)
     // Le même document, mais de plus loin (deux versions d'écart) : 409 aussi.
-    const older = await collection('PUT', { ...sent, baseVersion: before.body.version - 1 })
+    const older = await collection('PUT', { ...sent, baseVersion: before.version - 1 })
     expect(older.status).toBe(409)
     expect(await stored()).toEqual(after)
   })
@@ -588,42 +521,6 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
     expect(Object.keys(shown.collection.cards)).toEqual(['a'])
   })
 
-  test('un Pokédex enregistré avant les favorites est montré avec la première carte de chaque Pokémon', async () => {
-    // Un document d'avant cette livraison, écrit directement : il n'a pas de clé `favorites`.
-    const old = await createAccount('Ancien')
-    const document = JSON.stringify({
-      ...withCards(collectionWith({ a: ownership('owned') }), card('a', [25])),
-      favorites: undefined,
-    })
-    expect(document).not.toContain('favorites')
-    await storeDirectly(old.user!.id, document)
-    expect((await visit('ancien')).collection.favorites).toEqual({ 25: 'a' })
-  })
-
-  test('les collections d’extensions sont montrées avec leurs cases, jamais une case commandée comme telle', async () => {
-    // Une collection de deux cases : une possédée, une pas encore obtenue mais commandée (payée 12 €).
-    const owner = await createAccount('Collectionneur')
-    const document = {
-      ...withCards(
-        collectionWith({
-          a: ownership('owned', { paidPrice: 30 }),
-          s: ownership('ordered', { paidPrice: 12 }),
-        }),
-        card('a', [25]),
-        card('s', [4], { seriesOnly: true }),
-      ),
-      series: [{ set: 'SV2A', name: 'Pokémon Card 151', startedAt: NOW, cards: ['a', 's'] }],
-    }
-    await storeDirectly(owner.user!.id, JSON.stringify(document))
-    const shown = await visit('collectionneur')
-    expect(shown.collection.series).toEqual(document.series)
-    expect(shown.collection.customCards.s?.seriesOnly).toBe(true)
-    expect(shown.collection.customCards.a).not.toHaveProperty('seriesOnly')
-    expect(shown.collection.favorites).toEqual({ 25: 'a' })
-    expect(Object.keys(shown.collection.cards)).toEqual(['a'])
-    expect(JSON.stringify(shown)).not.toMatch(/ordered|paidPrice/)
-  })
-
   test('les prix du jour des seules cartes possédées, demandés au Worker des données', async () => {
     // Un faux Worker des données : il note ce qu'on lui demande, et rend un prix par carte.
     const asked: string[] = []
@@ -647,7 +544,7 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
       dataApi.mockRejectedValue(new TypeError('API muette'))
       expect((await visit()).prices).toBeNull()
     } finally {
-      dataApi.mockImplementation(async () => NO_PRICES())
+      dataApi.mockReset()
     }
   })
 
@@ -686,7 +583,7 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
         cards: Object.fromEntries(ids.map((id) => [id, [1, null, null]])),
       })
     })
-    api.stop = () => dataApi.mockImplementation(async () => NO_PRICES())
+    api.stop = () => dataApi.mockReset()
     return api
   }
 

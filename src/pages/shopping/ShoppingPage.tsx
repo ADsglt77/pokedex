@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import {
+  filterUpdate,
   parseShopping,
   serializeShopping,
   type ShoppingView,
@@ -29,24 +30,16 @@ import styles from './ShoppingPage.module.css'
 export function ShoppingPage() {
   const [params, setParams] = useSearchParams()
   const { view, filters } = useMemo(() => parseShopping(params), [params])
-  // Change l'onglet ou des filtres, et garde le reste : changer d'onglet garde les filtres.
+  // Change l'onglet ou des filtres, et garde le reste : changer d'onglet garde les filtres. Le
+  // champ de recherche suit la frappe aussitôt (`filterUpdate`) ; la liste, elle, en différé
+  // (WishlistPanel).
   const update = (change: { view?: ShoppingView; filters?: Partial<WishlistFilters> }) =>
     setParams(
       (current) => {
         const now = parseShopping(current)
         return serializeShopping(change.view ?? now.view, { ...now.filters, ...change.filters })
       },
-      {
-        // Pas une entrée d'historique par onglet, par filtre ou par frappe.
-        replace: true,
-        preventScrollReset: true,
-        // Le routeur passe ses mises à jour dans une transition : le champ de recherche, qui lit
-        // l'adresse, suivrait la frappe en retard. La liste, elle, reste différée (WishlistPanel).
-        flushSync: change.filters !== undefined && 'search' in change.filters,
-        // Sans relancer le chargement de la route : sinon le curseur du champ part au bout du texte
-        // (voir usePokedexFilters).
-        defaultShouldRevalidate: false,
-      },
+      filterUpdate(change.filters !== undefined && 'search' in change.filters),
     )
   const openView = (next: ShoppingView) => update({ view: next })
   const rows = useWishlist()

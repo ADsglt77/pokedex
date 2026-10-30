@@ -11,11 +11,11 @@ const STATE_LABELS: Record<Extract<JobState, 'late' | 'failed' | 'frozen'>, stri
 }
 
 type ProblemState = keyof typeof STATE_LABELS
+type Job = ServerStatus['jobs'][number]
 
 /** Une tâche en retard, en échec ou figée : ce que montre le site risque de ne pas être à jour. */
-const isProblem = <Job extends { job: string; state: JobState }>(
-  job: Job,
-): job is Job & { state: ProblemState } => Object.hasOwn(STATE_LABELS, job.state)
+const isProblem = (job: Job): job is Job & { state: ProblemState } =>
+  Object.hasOwn(STATE_LABELS, job.state)
 
 /**
  * Silencieux quand tout va bien ; un panneau n'apparaît que si des données du site risquent de ne
@@ -33,32 +33,30 @@ export function ReferenceSection() {
 }
 
 function ServerAlert({ status }: { status: Promise<ServerStatus | null> }) {
-  const current = use(status)
-  if (!current) {
-    return (
-      <DataSection id="reference" title="Données du site">
-        <Alert tone="warn" title="Certaines données peuvent ne pas être à jour">
-          Leur état ne peut pas être lu pour le moment&nbsp;: réessayez plus tard.
-        </Alert>
-      </DataSection>
-    )
-  }
+  // `undefined` : l'état n'a pas pu être lu (l'alerte le dit) ; vide : tout va bien, rien à dire.
+  const problems = use(status)?.jobs.filter(isProblem)
+  if (problems?.length === 0) return null
 
-  const problems = current.jobs.filter(isProblem)
-  if (problems.length === 0) return null
-
-  const failed = problems.some((job) => job.state === 'failed')
   return (
     <DataSection id="reference" title="Données du site">
-      <Alert tone={failed ? 'danger' : 'warn'} title="Certaines données peuvent ne pas être à jour">
-        <ul>
-          {problems.map((job) => (
-            <li key={job.job}>
-              {job.label}&nbsp;: {STATE_LABELS[job.state]}.
-            </li>
-          ))}
-        </ul>
-        <p>Elles seront mises à jour dès que possible&#8239;; réessayez plus tard.</p>
+      <Alert
+        tone={problems?.some((job) => job.state === 'failed') ? 'danger' : 'warn'}
+        title="Certaines données peuvent ne pas être à jour"
+      >
+        {problems ? (
+          <>
+            <ul>
+              {problems.map((job) => (
+                <li key={job.job}>
+                  {job.label}&nbsp;: {STATE_LABELS[job.state]}.
+                </li>
+              ))}
+            </ul>
+            <p>Elles seront mises à jour dès que possible&#8239;; réessayez plus tard.</p>
+          </>
+        ) : (
+          <>Leur état ne peut pas être lu pour le moment&nbsp;: réessayez plus tard.</>
+        )}
       </Alert>
     </DataSection>
   )

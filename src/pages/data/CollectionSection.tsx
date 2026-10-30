@@ -31,7 +31,7 @@ export function CollectionSection() {
           align="start"
           icon={<Inbox size={22} />}
           title="Votre collection est vide"
-          description="Ouvrez le Pokédex, choisissez un Pokémon, ajoutez la carte que vous voulez, puis marquez-la comme commandée ou possédée. Une collection exportée depuis un autre navigateur s’importe plus bas sur cette page."
+          description="Ouvrez le Pokédex, choisissez un Pokémon, ajoutez la carte que vous voulez, puis marquez-la comme commandée ou possédée. Une collection exportée, de ce compte ou d’un autre, s’importe plus bas sur cette page."
           actions={
             <>
               <Button asChild>

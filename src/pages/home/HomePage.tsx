@@ -9,7 +9,7 @@ import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
 import { Indicators } from './Indicators'
 import { ProgressPanel } from './ProgressPanel'
-import { Chosen, RecentPanel, SHOWN_CARDS } from './RecentPanel'
+import { Chosen, RecentPanel } from './RecentPanel'
 import { StartPanel } from './StartPanel'
 import { TodoPanel } from './TodoPanel'
 import styles from './HomePage.module.css'
@@ -50,11 +50,7 @@ export function HomePage() {
         <ProgressPanel />
         {started ? <TodoPanel /> : <StartPanel />}
         {started && <Indicators />}
-        {obtained.length > 0 ? (
-          <RecentPanel cards={obtained.slice(0, SHOWN_CARDS)} />
-        ) : (
-          started && <Chosen />
-        )}
+        {obtained.length > 0 ? <RecentPanel cards={obtained} /> : started && <Chosen />}
       </div>
     </div>
   )

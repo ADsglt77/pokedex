@@ -7,12 +7,11 @@
  *   Pokémon (`favorites`), ses collections d'extensions (`series` : l'extension, son nom, ses
  *   cases, dont celles pas encore obtenues, `seriesOnly`) et, pour les cartes possédées, la date
  *   d'obtention (pas le prix payé). Rien des achats : ni commandes, ni budget, ni statut
- *   « commandée ». Une collection vide tant qu'aucun appareil n'a rien envoyé ; un document
- *   enregistré avant les favorites est relu comme un fichier (`readCollection`) : chaque Pokémon y
- *   a sa première carte. Avec elle, les prix du jour de ses seules cartes possédées, demandés à
- *   l'API des données (`dataPrices`), dans la forme de `/api/prices` (`null` sans guide des prix,
- *   l'API muette, ou plus de 5 000 cartes possédées : la page s'affiche sans valeur) : la page n'en
- *   montre que la valeur, sans charger ceux de toutes les cartes.
+ *   « commandée ». Une collection vide tant qu'aucun appareil n'a rien envoyé. Avec elle, les prix
+ *   du jour de ses seules cartes possédées, demandés à l'API des données (`dataPrices`), dans la
+ *   forme de `/api/prices` (`null` sans guide des prix, l'API muette, ou plus de 5 000 cartes
+ *   possédées : la page s'affiche sans valeur) : la page n'en montre que la valeur, sans charger
+ *   ceux de toutes les cartes.
  * - L'aperçu d'un lien partagé (`linkPreview`) : un robot d'aperçu (Discord, WhatsApp…) qui lit une
  *   adresse d'un seul segment reçoit une page à lui, « Le Pokédex de … » et sa progression (il ne
  *   lance pas le JavaScript de l'app) ; une page du site (`/connexion`), ou un pseudo à personne, a
@@ -29,8 +28,7 @@ import { emptyCollection } from '@/lib/collection'
 import { formatShare, pokedexTitle, unlockedOf } from '@/lib/format'
 import { progressPercent, unlockEvents } from '@/lib/pokedex'
 import { idBatches } from '@/lib/prices'
-import { HOUR, MINUTE } from '@/lib/time'
-import { readCollection } from '@/lib/transfer'
+import { HOUR } from '@/lib/time'
 import type { CardOwnership, CollectionData, PokemonCard, PriceFile, VitrineData } from '@/types'
 import { ORIGIN } from './auth'
 import { dataFetch } from './data'
@@ -67,7 +65,7 @@ export function shownCollection(collection: CollectionData): CollectionData {
   }
   // Des ids de cartes, rangés par Pokémon (le serveur refuse le reste) : chaque entrée est recopiée.
   return {
-    ...emptyCollection(),
+    schemaVersion: 1,
     updatedAt: collection.updatedAt,
     cards,
     customCards,
@@ -158,21 +156,16 @@ async function dataPricesOf(ids: number[]): Promise<PriceFile | null> {
       signal: AbortSignal.timeout(5000),
     })
     if (response.ok) return await response.json<PriceFile>()
-    // Sans guide des prix (404) : rien à dire. Un token refusé ou une panne : à voir.
+    // Sans guide des prix (404) : rien à dire. Une panne : à voir.
     if (response.status === 404) return null
     throw new Error(`HTTP ${response.status}`)
   } catch (error) {
-    journalOnce(
-      'api-données',
-      {
-        topic: 'serveur',
-        level: 'warn',
-        message: 'API des données muette',
-        details: { raison: reasonOf(error) },
-      },
-      undefined,
-      MINUTE,
-    )
+    journalOnce('api-données', {
+      topic: 'serveur',
+      level: 'warn',
+      message: 'API des données muette',
+      details: { raison: reasonOf(error) },
+    })
     return null
   }
 }
@@ -208,8 +201,8 @@ const ownerOf = async (pseudo: string) =>
     : null
 
 /**
- * Ce que montre le Pokédex d'un compte : sa collection relue comme celle d'un fichier (un document
- * enregistré avant les favorites n'en a pas, et chaque Pokémon y reçoit sa première carte).
+ * Ce que montre le Pokédex d'un compte : sa collection enregistrée (vide tant qu'aucun appareil n'a
+ * rien envoyé).
  */
 async function shownOf(userId: string) {
   const row = await db
@@ -217,7 +210,7 @@ async function shownOf(userId: string) {
     .from(collections)
     .where(eq(collections.userId, userId))
     .get()
-  return row ? shownCollection(readCollection(JSON.parse(row.collection))!) : emptyCollection()
+  return row ? shownCollection(JSON.parse(row.collection) as CollectionData) : emptyCollection()
 }
 
 export const vitrineRoutes = new Hono().get('/vitrine/:pseudo', async (c) => {

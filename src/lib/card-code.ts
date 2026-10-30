@@ -49,13 +49,13 @@ const codeKey = ({ set, number }: CardCode) => `${setKey(set)} ${numberKey(numbe
 export function isCardOf(
   card: PokemonCard,
   language: CardLanguage,
-  code: CardCode | null,
+  code: CardCode,
   cardmarket: number | undefined,
 ) {
   if (cardLanguage(card) !== language) return false
   const own = referenceCode(card.reference)
   return (
-    (own !== null && code !== null && codeKey(own) === codeKey(code)) ||
+    (own !== null && codeKey(own) === codeKey(code)) ||
     (cardmarket !== undefined && card.cardmarket === cardmarket)
   )
 }

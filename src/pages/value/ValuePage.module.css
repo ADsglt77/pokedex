@@ -116,7 +116,7 @@
   }
 }
 
-/* Téléphone : chaque génération en fiche : son nom et le coût, puis ses Pokémon à acheter, sans
+/* Téléphone : chaque génération en fiche : son nom et le coût, puis ses Pokémon à débloquer, sans
    carte et sans prix. */
 @container table (max-width: 36rem) {
   .completion tbody tr {

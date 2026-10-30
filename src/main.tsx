@@ -17,6 +17,7 @@ import './styles/theme.css'
 import './styles/global.css'
 import { PokedexUnavailable } from './components/PokedexUnavailable'
 import { loadAccount } from './lib/account'
+import { MINUTE } from './lib/time'
 import { createRouter } from './router'
 import { signIn } from './store/account'
 
@@ -26,7 +27,7 @@ import { signIn } from './store/account'
 const RELOADED_KEY = 'pokedex-collection.reloaded'
 addEventListener('vite:preloadError', (event) => {
   try {
-    if (Date.now() - Number(sessionStorage.getItem(RELOADED_KEY)) < 60_000) return
+    if (Date.now() - Number(sessionStorage.getItem(RELOADED_KEY)) < MINUTE) return
     sessionStorage.setItem(RELOADED_KEY, String(Date.now()))
   } catch {
     return

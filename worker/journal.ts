@@ -7,8 +7,8 @@
  *   16/10 14:03:12  ✔  compte      Connexion                  pseudo=sacha ip=1.2.3.4
  *
  * - `compte` : connexion (réussie, refusée, bloquée), création d'un compte (ou son refus),
- *   déconnexion, mot de passe et pseudo changés, compte supprimé, ancienne session fermée
- *   (`auth.ts`) ;
+ *   déconnexion, mot de passe et pseudo changés, compte supprimé, ancienne session fermée, une
+ *   modification venue d'une autre origine (`auth.ts`, `sameOrigin`) ;
  * - `collection` et `achats` : ce qui change dans le document synchronisé d'un compte (`compte=`),
  *   comparé à la version d'avant (`documentChanges`, `collection.ts`) : cartes ajoutées, possédées,
  *   commandes, budget… ; une collection d'extension commencée ou supprimée, une ligne chacune, pas
@@ -18,11 +18,12 @@
  * - `vitrine` : une visite du Pokédex public d'un compte, un lien partagé lu par un robot
  *   d'aperçu (une ligne par visiteur, par Pokédex et par heure au plus, `vitrine.ts`) ;
  * - `serveur` : une erreur imprévue de l'API ou de Better Auth, l'API des données muette
- *   (`vitrine.ts`).
+ *   (`vitrine.ts`), un débit dépassé (`limits.ts`).
  * Pas les requêtes une à une : seulement ce qui se passe. Jamais un mot de passe ; l'adresse du
  * visiteur que donne Cloudflare (`cf-connecting-ip`). Ce qu'un visiteur peut provoquer à volonté
- * (une connexion refusée, une visite) : une ligne par visiteur et par minute au plus
- * (`journalOnce`) ; un compte (un export ou un import signalé, un envoi refusé), de même par compte.
+ * (une connexion refusée, une modification refusée, un débit dépassé) : une ligne par visiteur et
+ * par minute au plus (`journalOnce`) ; une visite, par heure ; un compte (un export ou un import
+ * signalé, un envoi refusé), par compte et par minute.
  * En couleurs en développement seulement : les journaux de Cloudflare les montreraient en codes.
  */
 
@@ -31,6 +32,7 @@ import { cardLanguage } from '@/lib/collection'
 import { formatEuro } from '@/lib/format'
 import { cardCount, orderSpent, supplierLabel } from '@/lib/orders'
 import { seriesId } from '@/lib/series'
+import { MINUTE } from '@/lib/time'
 import type {
   CollectionData,
   CollectionDocument,
@@ -180,16 +182,17 @@ const noted = new Map<string, { at: number; silenced: number }>()
 const MAX_NOTED = 10_000
 
 /**
- * Écrit une ligne au plus par `key` (un visiteur et ce qu'il fait) et par `windowMs` : un afflux de
- * requêtes (des connexions refusées, des visites) ne noie pas le journal. Les lignes tues sont comptées, et
- * dites par la suivante (`tues=…`). Chaque exemplaire du Worker compte de son côté : c'est une
- * ligne par exemplaire au plus, assez pour ne pas être noyé.
+ * Écrit une ligne au plus par `key` (un visiteur et ce qu'il fait) et par `windowMs` (une minute
+ * par défaut) : un afflux de requêtes (des connexions refusées, des visites) ne noie pas le
+ * journal. Les lignes tues sont comptées, et dites par la suivante (`tues=…`). Chaque exemplaire
+ * du Worker compte de son côté : c'est une ligne par exemplaire au plus, assez pour ne pas être
+ * noyé.
  */
 export function journalOnce(
   key: string,
   entry: JournalEntry,
-  request: Request | undefined,
-  windowMs: number,
+  request?: Request,
+  windowMs = MINUTE,
 ) {
   const now = Date.now()
   const known = noted.get(key)

@@ -325,8 +325,8 @@ export type JobState = 'ok' | 'late' | 'failed' | 'never' | 'frozen'
 export interface ServerStatus {
   /**
    * Chaque tâche, dans l'ordre de `INGEST_JOBS`. La cause d'un échec n'est pas rendue : elle est
-   * dans la sortie de l'ingestion (le journal du service `ingest`, ou le terminal d'une tâche à la
-   * demande) et dans `runs.message`.
+   * dans le journal du Worker des données (`npx wrangler tail pokedex-data`, ou ses journaux chez
+   * Cloudflare) et dans `runs.message`.
    */
   jobs: { job: string; label: string; state: JobState }[]
 }
@@ -394,7 +394,8 @@ export interface CollectionResponse {
 
 /**
  * Le plus gros document que garde le serveur (`PUT /api/collection`), en octets, décompressé : 413
- * au-delà (`worker/collection.ts`) ; l'app avertit à 80 % (`store/account.ts`).
+ * au-delà (`worker/collection.ts`) ; l'app avertit à 80 % (`components/AccountMenu.tsx`, d'après
+ * le poids que mesure `store/account.ts`).
  */
 export const MAX_DOCUMENT = 5_000_000
 

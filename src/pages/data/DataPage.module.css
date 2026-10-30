@@ -22,10 +22,6 @@
   gap: var(--camply-space-1);
 }
 
-.groupHead h2 {
-  font-size: var(--text-xl);
-}
-
 .groupHead p {
   max-width: 62ch;
   color: var(--camply-text-muted);

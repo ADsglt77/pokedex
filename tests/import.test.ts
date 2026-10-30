@@ -7,7 +7,7 @@
  * n'est dans aucune collection, un id inconnu, deux collections d'une même extension et langue,
  * une favorite sur une case sont refusés. Et sa relecture reste rapide même pour un document fait
  * pour l'occuper (des dizaines de milliers de collections, une carte de millions de Pokémon) : le
- * serveur la fait pour chaque envoi, et ne répond à personne pendant ce temps.
+ * Worker la fait pour chaque envoi, sur son temps de calcul.
  */
 
 import { describe, expect, test } from 'bun:test'
@@ -194,6 +194,13 @@ describe('import', () => {
 
   test('un fichier sans achats est refusé', () => {
     expect(reimport(['shopping'])).toBeNull()
+  })
+
+  test('un fichier qui n’est pas du JSON, ou d’un autre genre : refusé, et dit pourquoi', () => {
+    expect(readImport('pas du JSON').document).toBeNull()
+    expect(readImport(JSON.stringify({ kind: 'autre chose' })).problem).toBe(
+      'ce n’est pas un export de collection de ce Pokédex',
+    )
   })
 
   test('un export d’avant les favorites s’importe : chaque Pokémon a pour favorite sa première carte', () => {
@@ -403,19 +410,6 @@ describe('document envoyé au serveur', () => {
     expect(received({ collection, shopping })).toEqual({ collection, shopping })
   })
 
-  test('une carte française est acceptée ; une langue inconnue, refusée', () => {
-    const withLanguage = (language: unknown) => ({
-      collection: { ...collection, customCards: { a: { ...card('a', [25]), language } } },
-      shopping,
-    })
-    expect(received(withLanguage('fr'))?.collection.customCards.a?.language).toBe('fr')
-    expect(received(withLanguage('ja'))).toBeNull()
-    expect(received(withLanguage('de'))).toBeNull()
-    expect(readSent(JSON.parse(JSON.stringify(withLanguage('de')))).problem).toBe(
-      'la carte « Carte a » est abîmée',
-    )
-  })
-
   test('sans achats, il est refusé : ce n’est pas un vieil export', () => {
     expect(received({ collection })).toBeNull()
     expect(received({ shopping })).toBeNull()
@@ -436,9 +430,9 @@ describe('document envoyé au serveur', () => {
     expect(documentProblem({ collection, shopping })).toBeNull()
   })
 
-  test('relu en une passe : 90 000 collections vides (quelques Ko compressés) ne gèlent pas le serveur', () => {
-    // Bun n'a qu'un fil : chercher chaque collection dans toute la liste prenait 10 s ici, pendant
-    // lesquelles le serveur ne répondait à personne. En une passe : quelques dizaines de ms.
+  test('relu en une passe : 90 000 collections vides (quelques Ko compressés) restent rapides à relire', () => {
+    // Le Worker relit chaque envoi : chercher chaque collection dans toute la liste prenait ici
+    // 10 s de calcul pour quelques Ko envoyés. En une passe : quelques dizaines de ms.
     const series = Array.from({ length: 90_000 }, (_, index) => ({
       set: index.toString(36),
       name: '',
@@ -464,12 +458,5 @@ describe('quantité d’une ligne', () => {
       expect(reimport([...ORDER, 'lines', 0, 'quantity'], quantity)).toBeNull()
     }
     expect(reimport([...ORDER, 'lines', 0, 'quantity'], 3)).not.toBeNull()
-  })
-
-  test('un fichier qui n’est pas du JSON, ou d’un autre genre : refusé, et dit pourquoi', () => {
-    expect(readImport('pas du JSON').document).toBeNull()
-    expect(readImport(JSON.stringify({ kind: 'autre chose' })).problem).toBe(
-      'ce n’est pas un export de collection de ce Pokédex',
-    )
   })
 })

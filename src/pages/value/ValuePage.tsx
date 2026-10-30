@@ -34,6 +34,7 @@ import {
   type PricePoint,
 } from '@/lib/chart'
 import {
+  cardmarketIds,
   collectionHistory,
   completionByGeneration,
   completionCost,
@@ -206,7 +207,7 @@ function CollectionChart({ cards, period }: { cards: PokemonCard[]; period: Char
   // Les cartes sans id Cardmarket n'ont pas d'historique : elles ne pèsent pas sur la courbe (sans
   // aucune, rien à demander). La même carte Cardmarket possédée pour deux Pokémon compte deux fois,
   // comme dans la valeur du jour ; son historique n'est demandé qu'une fois.
-  const ids = cards.flatMap((card) => card.cardmarket ?? []).sort((a, b) => a - b)
+  const ids = cardmarketIds(cards).sort((a, b) => a - b)
   const histories = ids.length > 0 ? use(loadPriceHistories(ids)) : NO_HISTORIES
   // Calculée une fois par réponse (la même liste rend le même tableau) : ni la période ni les prix
   // du jour ne la changent, et des milliers d'historiques prennent plus de 100 ms.

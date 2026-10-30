@@ -38,7 +38,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   `no-cardmarket`, `no-paid` : possédée sans prix payé), `order=desc` ; un lien filtré se
   construit avec `pokedexUrl`. La recherche passe par `flushSync` (le routeur met l'adresse à jour
   dans une transition, le champ suivrait la frappe en retard), sans relancer le chargement de la
-  route (`defaultShouldRevalidate: false` : sinon le curseur partirait au bout du texte) ; la
+  route (`defaultShouldRevalidate: false` : sinon le curseur partirait au bout du texte ; ces
+  options : `filterUpdate`, `lib/filters.ts`, pour le Pokédex comme pour les Achats) ; la
   grille, mémoïsée, suit par
   `useDeferredValue`. De même pour la liste d'achats (Achats) : `q`, `generation`, `tri` (`price`
   par défaut, `price-desc`, `drop`, `dex`), à côté de l'onglet (`vue`), qui les garde
@@ -176,7 +177,7 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   montrée (`aria-pressed` dans la liste) : celle choisie dans la liste, sinon la favorite ; une
   carte qui apparaît (ajoutée, ou rétablie par « Annuler ») devient la carte montrée, une carte
   montrée qui disparaît laisse la place à la favorite ; rien ne passe d'une fiche à l'autre
-  (`SpeciesPage` a pour clé le numéro du Pokémon). Puis la carte montrée, collée à l'écran (sa
+  (`AppShell` remonte la page à chaque adresse). Puis la carte montrée, collée à l'écran (sa
   largeur suit la page : `cqi`), et ses panneaux (statut et prix payé, favorite, prix Cardmarket,
   « Dans le Pokédex ») : sur deux colonnes dès que la fiche a la place (la carte et ses statuts à
   gauche, son prix à droite) ; le titre de la carte dit « ★ Favorite » quand c'est la favorite du

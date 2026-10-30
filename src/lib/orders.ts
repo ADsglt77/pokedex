@@ -7,7 +7,7 @@
 
 import { DEFAULT_BUDGET, SUPPLIER_LABELS } from '@/config/shopping'
 import { obtain } from '@/lib/collection'
-import { formatDate } from '@/lib/format'
+import { formatDate, formatEuro } from '@/lib/format'
 import { daysBetween } from '@/lib/time'
 import type {
   CardOwnership,
@@ -106,6 +106,13 @@ export function unitCosts(
   // `+ 0` : pas de −0, comme `cents`.
   return costs.map((cost) => cost / 100 + 0)
 }
+
+/**
+ * Ce que revient une carte d'une ligne (`unitCosts`) : « revient à 6,20 € », « … l’une » pour
+ * plusieurs.
+ */
+export const costLabel = (cost: number, quantity: number) =>
+  `revient à ${formatEuro(cost)}${quantity > 1 ? ' l’une' : ''}`
 
 /** Le prix de revient de la carte dans une commande qui la contient. */
 const costIn = (order: Order, cardId: string) =>
@@ -224,13 +231,13 @@ export function applyOrder(
     const paidPrice = costs[index]
     let next: CardOwnership | null = null
     if (active.state === 'received') {
-      // Possédée avant la réception de cette commande : elle garde sa date. Sinon, la date de
-      // réception, même corrigée après coup.
-      const acquiredAt =
-        current?.status === 'owned' && before?.state !== 'received'
-          ? current.acquiredAt
-          : noonOf(active.receivedAt ?? active.date)
-      next = { status: 'owned', updatedAt: now, acquiredAt, paidPrice }
+      // La date de réception, même corrigée après coup.
+      next = {
+        status: 'owned',
+        updatedAt: now,
+        acquiredAt: noonOf(active.receivedAt ?? active.date),
+        paidPrice,
+      }
     } else if (current?.status !== 'owned') {
       next = { status: 'ordered', updatedAt: now, acquiredAt: null, paidPrice }
     }

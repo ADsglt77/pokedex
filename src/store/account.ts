@@ -18,8 +18,10 @@
  */
 
 import { create } from 'zustand'
+import { refusalMessage } from '@/lib/account'
 import { forget } from '@/lib/api'
 import { emptyCollection } from '@/lib/collection'
+import { vitrineUrl } from '@/lib/filters'
 import { emptyShopping } from '@/lib/orders'
 import { loadSpecies } from '@/lib/species'
 import { documentProblem, readCollection, readShopping } from '@/lib/transfer'
@@ -267,7 +269,7 @@ export const save = () => void inTurn(push)
  * connexion, à la déconnexion et au changement de pseudo, pour qu'il montre ensuite ce que le
  * compte a changé entre-temps.
  */
-const forgetVitrine = (name: string) => forget(`/api/vitrine/${name.toLowerCase()}`)
+const forgetVitrine = (name: string) => forget(vitrineUrl(name))
 
 /**
  * Connecté (démarrage, connexion, création du compte) : ce qu'un autre compte (une session
@@ -294,16 +296,18 @@ export async function signIn(account: AccountUser) {
 
 /**
  * La réponse de Better Auth (connexion, création du compte) : le compte connecté et sa collection
- * lue (`null`) ; sinon le message à dire (`failure` : celui d'un refus).
+ * lue (`null`) ; sinon le message à dire (`refusalMessage` : `messages` par statut, `otherwise`
+ * pour les autres).
  */
 export async function openSession(
   {
     data,
     error,
   }: { data: { user: AccountUser } | null; error: { status: number; code?: string } | null },
-  failure: (refused: { status: number; code?: string }) => string,
+  messages: Partial<Record<number, string>>,
+  otherwise: string,
 ) {
-  if (error || !data) return failure(error ?? { status: 0 })
+  if (error || !data) return refusalMessage(messages, error ?? { status: 0 }, otherwise)
   return (await signIn({ id: data.user.id, name: data.user.name }))
     ? null
     : 'Connecté, mais votre collection n’a pas pu être lue\u00a0: réessayez dans un instant.'

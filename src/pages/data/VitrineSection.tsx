@@ -2,7 +2,6 @@ import { Button, Stack } from '@camply/ui'
 import { Copy, ExternalLink as ExternalIcon } from '@camply/ui/icons'
 import { Link } from 'react-router'
 import { useNotify } from '@/hooks/useNotify'
-import { copyText } from '@/lib/clipboard'
 import { vitrinePath } from '@/lib/filters'
 import { useAccountStore } from '@/store/account'
 import { DataSection } from './DataSection'
@@ -18,12 +17,9 @@ export function VitrineSection() {
   const address = `${location.origin}${path}`
 
   const copy = () =>
-    copyText(address).then(
+    navigator.clipboard.writeText(address).then(
       () => notify('Adresse copiée.'),
-      () =>
-        notify('Copie impossible : le navigateur refuse, ou le site n’est pas ouvert en https.', {
-          tone: 'danger',
-        }),
+      () => notify('Copie impossible : le navigateur la refuse.', { tone: 'danger' }),
     )
 
   return (

@@ -76,7 +76,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const notify = useNotify()
   const [confirmingSignOut, setConfirmingSignOut] = useState(false)
   const [confirmingLogin, setConfirmingLogin] = useState(false)
-  // La déconnexion attend le serveur (15 s au plus) : le bouton du compte le dit pendant ce temps.
+  // La déconnexion attend la réponse du serveur : le bouton du compte le dit pendant ce temps.
   const [leaving, setLeaving] = useState(false)
 
   // « Rechargée » et « Envoi refusé » : au passage seulement, pas à l'affichage du menu. Les 80 % :

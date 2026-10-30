@@ -1,4 +1,8 @@
-/** Le budget : chaque commande compte une fois, au mois de son achat. */
+/**
+ * Le budget : chaque commande compte une fois, au mois de son achat ; le coût moyen par Pokémon,
+ * sans les commandes annulées (`costPerSpecies`) ; l'alerte au-delà du budget, puis du plafond
+ * (`budgetLevel`).
+ */
 
 import { describe, expect, test } from 'bun:test'
 import { budgetLevel, costPerSpecies, spendingByMonth, spentIn } from '@/lib/budget'

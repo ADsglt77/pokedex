@@ -1,9 +1,9 @@
 /**
- * Ce que le Worker ajoute à ses réponses depuis le départ de nginx (`worker/headers.ts`,
- * `worker/limits.ts`) : les en-têtes de sécurité sur chaque réponse, même une erreur ;
- * `http://` et `www.pokecodex.fr` qui mènent à `https://pokecodex.fr` ; les images réservées aux
- * pages du site ; un fichier absent, 404 et non la page de l'app (`worker/index.ts`) ; et une
- * route répétée à l'excès par un même visiteur, 429, sans compter les autres visiteurs.
+ * Ce que le Worker ajoute à ses réponses (`worker/headers.ts`, `worker/limits.ts`) : les en-têtes
+ * de sécurité sur chaque réponse, même une erreur ; `http://` et `www.pokecodex.fr` qui mènent à
+ * `https://pokecodex.fr` ; les images réservées aux pages du site ; un fichier absent, 404 et non
+ * la page de l'app (`worker/index.ts`) ; et une route répétée à l'excès par un même visiteur, 429,
+ * sans compter les autres visiteurs.
  */
 
 import { describe, expect, test } from 'vitest'

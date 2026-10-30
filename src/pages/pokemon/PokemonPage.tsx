@@ -20,12 +20,7 @@ import styles from './PokemonPage.module.css'
 export function PokemonPage() {
   const { id = '' } = useParams()
   const entry = usePokedex().entryById.get(Number(id))
-  // Une clé par Pokémon : la carte choisie dans la liste ne passe pas d'une fiche à l'autre.
-  return /^\d+$/.test(id) && entry ? (
-    <SpeciesPage key={entry.species.id} entry={entry} />
-  ) : (
-    <NotFoundPage />
-  )
+  return /^\d+$/.test(id) && entry ? <SpeciesPage entry={entry} /> : <NotFoundPage />
 }
 
 function SpeciesPage({ entry }: { entry: PokedexEntry }) {

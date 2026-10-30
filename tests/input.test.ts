@@ -16,6 +16,7 @@ describe('parseEuros', () => {
   test('virgule ou point, symbole et espaces des milliers, insécables compris', () => {
     expect(parseEuros('12,50')).toBe(12.5)
     expect(parseEuros('12.5 €')).toBe(12.5)
+    expect(parseEuros('€ 12')).toBe(12)
     expect(parseEuros('0,5')).toBe(0.5)
     expect(parseEuros(' 7 ')).toBe(7)
     expect(parseEuros('1 234,50')).toBe(1234.5)
@@ -30,6 +31,8 @@ describe('parseEuros', () => {
     expect(parseEuros('-5')).toBeNull()
     expect(parseEuros('5.')).toBeNull()
     expect(parseEuros('1e3')).toBeNull()
+    // Le symbole au milieu, au lieu de la virgule : refusé plutôt que lu 1 250 €.
+    expect(parseEuros('12€50')).toBeNull()
     expect(parseEuros('abc')).toBeNull()
     expect(parseEuros('')).toBeNull()
   })

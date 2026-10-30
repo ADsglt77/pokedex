@@ -47,6 +47,7 @@ export function CardFilters({
     typeCounts.set(card.type, (typeCounts.get(card.type) ?? 0) + 1)
   }
   const rarities = [...rarityCounts.values()].sort((a, b) => a.rarity.rank - b.rarity.rank)
+  const showRarities = rarities.length > 1 || value.rarities.length > 0
   const types = [...CARD_TYPES.keys()].filter((type) => typeCounts.has(type))
   const filtered = value.rarities.length > 0 || value.types.length > 0
   if (rarities.length < 2 && types.length < 2 && !filtered) return null
@@ -54,7 +55,7 @@ export function CardFilters({
   const label = (name: string, count: number) => `${name} : ${plural(count, 'carte', 'cartes')}`
   return (
     <div className={styles.filters}>
-      {(rarities.length > 1 || value.rarities.length > 0) && (
+      {showRarities && (
         <fieldset className={styles.group}>
           <legend className={styles.legend}>Rareté</legend>
           {rarities.map(({ rarity, count }, index) => (
@@ -82,7 +83,7 @@ export function CardFilters({
           {types.map((type, index) => (
             <Toggle
               key={type}
-              ref={index === 0 && rarities.length < 2 ? first : undefined}
+              ref={index === 0 && !showRarities ? first : undefined}
               size="sm"
               className={styles.chip}
               pressed={value.types.includes(type)}

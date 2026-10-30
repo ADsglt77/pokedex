@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { cx } from '@/lib/cx'
 import { speciesPath } from '@/lib/filters'
 import { formatDexNumber } from '@/lib/format'
 import type { PokedexEntry } from '@/lib/pokedex'
@@ -52,11 +53,11 @@ export const PokedexTile = memo(function PokedexTile({
   )
 
   return linked ? (
-    <a href={speciesPath(species.id)} className={styles.tile} aria-label={label}>
+    <a href={speciesPath(species.id)} className={cx(styles.tile, styles.pocket)} aria-label={label}>
       {content}
     </a>
   ) : (
-    <div className={styles.tile} role="img" aria-label={label}>
+    <div className={cx(styles.tile, styles.pocket)} role="img" aria-label={label}>
       {content}
     </div>
   )

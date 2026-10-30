@@ -4,18 +4,13 @@ import { Suspense, use, useId, useRef, useState, useTransition } from 'react'
 import { CardmarketLink } from '@/components/CardmarketLink'
 import { Unavailable } from '@/components/Unavailable'
 import { useNotify } from '@/hooks/useNotify'
-import { copyText } from '@/lib/clipboard'
 import { cardLanguage } from '@/lib/collection'
 import { plural } from '@/lib/format'
-import { seriesOf } from '@/lib/series'
-import { useCollectionStore } from '@/store/collection'
+import type { WishRow } from '@/lib/wishlist'
 import { loadWantsLines } from '@/store/prices'
-import type { CardLanguage, PokemonCard, WantsLines } from '@/types'
+import type { CardLanguage, WantsLines } from '@/types'
 import { CardLine } from './CardLine'
 import page from './ShoppingPage.module.css'
-
-/** Une carte reliée à Cardmarket : son id, d'où sa ligne. */
-type Linked = PokemonCard & { cardmarket: number }
 
 /**
  * « Copier pour Cardmarket » : les cartes de la prochaine commande en lignes pour « Ajouter une
@@ -26,14 +21,14 @@ type Linked = PokemonCard & { cardmarket: number }
  * extension incertaine) s'ajoute depuis sa page.
  */
 export function WantsDialog({
-  cards,
+  rows,
   onClose,
 }: {
   /** Les cartes du plan : chacune a un prix, donc un id Cardmarket (`priceOf`). */
-  cards: readonly Linked[]
+  rows: readonly WishRow[]
   onClose: () => void
 }) {
-  const ids = cards.map((card) => card.cardmarket)
+  const ids = rows.map((row) => row.card.cardmarket!)
   // Créée ici, hors de la partie qui attend : elle ne serait sinon jamais la même promesse.
   const [lines, setLines] = useState(() => loadWantsLines(ids))
   const [retried, setRetried] = useState(false)
@@ -50,7 +45,7 @@ export function WantsDialog({
     >
       <Suspense fallback={<p className="muted">Préparation des lignes…</p>}>
         <WantsContent
-          cards={cards}
+          rows={rows}
           request={lines}
           retrying={retrying}
           retried={retried}
@@ -94,13 +89,13 @@ const LANGUAGES: readonly {
 ]
 
 function WantsContent({
-  cards,
+  rows,
   request,
   retrying,
   retried,
   onRetry,
 }: {
-  cards: readonly Linked[]
+  rows: readonly WishRow[]
   request: Promise<WantsLines | null>
   retrying: boolean
   /**
@@ -112,7 +107,6 @@ function WantsContent({
 }) {
   const lines = use(request)
   const othersTitle = useId()
-  const collection = useCollectionStore((state) => state.collection)
 
   if (!lines) {
     return (
@@ -120,15 +114,15 @@ function WantsContent({
     )
   }
 
-  const lineOf = (card: Linked) => lines[card.cardmarket] ?? null
+  const lineOf = (row: WishRow) => lines[row.card.cardmarket!] ?? null
   // Un bloc par langue qui a des lignes ; une carte sans ligne (de toute langue) va à part.
   const blocks = LANGUAGES.map((block) => ({
     ...block,
-    lines: cards.flatMap((card) =>
-      cardLanguage(card) === block.language ? (lineOf(card) ?? []) : [],
+    lines: rows.flatMap((row) =>
+      cardLanguage(row.card) === block.language ? (lineOf(row) ?? []) : [],
     ),
   })).filter((block) => block.lines.length > 0)
-  const others = cards.filter((card) => lineOf(card) === null)
+  const others = rows.filter((row) => lineOf(row) === null)
 
   return (
     <Stack gap={5}>
@@ -158,10 +152,10 @@ function WantsContent({
             Near Mint.
           </p>
           <ul className={page.lines}>
-            {others.map((card) => (
-              <li key={card.id}>
-                <CardLine card={card} series={seriesOf(collection, card.id)}>
-                  <CardmarketLink card={card} />
+            {others.map((row) => (
+              <li key={row.card.id}>
+                <CardLine card={row.card} series={row.series}>
+                  <CardmarketLink card={row.card} />
                 </CardLine>
               </li>
             ))}
@@ -205,7 +199,9 @@ function LinesBlock({
     )
   }
   const copy = () =>
-    copyText(text).then(() => notify(`${plural(lines.length, ...copied)}.`), failed)
+    navigator.clipboard
+      .writeText(text)
+      .then(() => notify(`${plural(lines.length, ...copied)}.`), failed)
 
   return (
     <Stack as="section" gap={4} aria-labelledby={titleId}>

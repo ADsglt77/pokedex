@@ -14,8 +14,10 @@ export const PSEUDO = {
 
 /**
  * Les pseudos réservés au site : le premier segment de ses propres adresses (les pages de
- * `router.tsx`, les dossiers des fichiers de l'app), qu'un Pokédex public à `/pseudo` cacherait. Une
- * nouvelle page de premier niveau s'y ajoute (aucun compte ne doit déjà porter son nom).
+ * `router.tsx`, les routes du Worker `/api` et `/images` (`worker/index.ts`, `worker/data.ts`), et
+ * les dossiers des fichiers de l'app, `/assets` et `/icons`), qu'un Pokédex public à `/pseudo`
+ * cacherait. Une nouvelle page de premier niveau s'y ajoute (aucun compte ne doit déjà porter son
+ * nom).
  */
 export const RESERVED_PSEUDOS = [
   'connexion',

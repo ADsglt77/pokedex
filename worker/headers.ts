@@ -1,5 +1,5 @@
 /**
- * Ce que le site ajoute à ses réponses (le travail de nginx et de Caddy sur l'ancien VPS) :
+ * Ce que le site ajoute à ses réponses :
  * - `http://` et `www.pokecodex.fr` mènent à `https://pokecodex.fr` (`canonicalHost`) : un mot de
  *   passe ne passe jamais en clair, et le cookie de session (réservé à https) marche ;
  * - sur chaque réponse, les en-têtes de sécurité (`SECURITY`) : le site en https seulement pendant

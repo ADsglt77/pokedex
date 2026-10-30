@@ -70,6 +70,10 @@ interface Priced {
   cardmarket?: number
 }
 
+/** Les ids Cardmarket de ces cartes (sans celles qui n'en ont pas) : les prix à demander. */
+export const cardmarketIds = (cards: readonly Priced[]) =>
+  cards.flatMap((card) => card.cardmarket ?? [])
+
 /**
  * Le prix du jour d'une carte chez Cardmarket, par son id ; `null` sans id, sans prix pour cet id
  * ce jour, ou sans fichier.
@@ -121,7 +125,7 @@ export const trackedCards = (collection: CollectionData, prices: PriceFile | nul
     value: marketPrice(prices, card),
   }))
 
-export interface Tally {
+interface Tally {
   count: number
   /** Somme des prix connus. */
   value: number

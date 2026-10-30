@@ -142,8 +142,8 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   2026), **sans rien remplacer** : les cartes qu'ils ont déjà restent, leur favorite aussi ; un
   Pokémon qui n'en a pas la reçoit pour favorite (`addCard`). Pas de confirmation, et aucune
   commande ne la retient. Une carte française s'ajoute avec `language: 'fr'`, comme son
-  `PricePanel` la reçoit (`languageField`, `lib/card-catalog.ts` : une seule source pour la
-  langue d'une carte du catalogue). La fiche dit où elle en est (`useCollectionPlace` : `mine`,
+  `PricePanel` la reçoit (`languageField`, `lib/collection.ts` : une seule source pour le champ
+  de la langue d'une carte). La fiche dit où elle en est (`useCollectionPlace` : `mine`,
   la carte de la collection qui est celle-ci, parmi toutes celles de ses Pokémon ; `holders`,
   ceux qui ont déjà des cartes) : « Pikachu a déjà des cartes : celle-ci s'y ajoute, à acheter,
   sans changer sa favorite. » (« a déjà une carte » s'il n'en a qu'une ; « ont déjà des cartes »,
@@ -179,9 +179,8 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   les lit dans R2 ; le navigateur les garde un an, sans redemande (`immutable`) ; seules les pages
   du site les affichent (`Cross-Origin-Resource-Policy`, `worker/headers.ts`), 1 300 par 10 s et
   par visiteur (de quoi charger tout le Pokédex, `worker/limits.ts`). Le catalogue
-  donne le rang de l'image de chaque carte ; pour une référence hors du catalogue, `cardImage` la
-  déduit de la langue et du code de la référence (série en majuscules sans tiret, SV-P → SVP ;
-  numéro sans zéro), sans certitude. La collection garde ces chemins (`isFoundImage` : une image retrouvée, qui suit
+  donne le rang de l'image de chaque carte ; une référence hors du catalogue n'a pas d'image
+  retrouvée. La collection garde ces chemins (`isFoundImage` : une image retrouvée, qui suit
   la référence) ; aucun ne nomme la source. L'API ne copie aucune image à la demande, la tâche
   `images` les copie toutes d'avance : une image absente répond 404 (la carte de substitution). Une adresse collée de chez la
   source (son site ou ses serveurs d'images) est refusée à la saisie, et jamais affichée (`isSourceImage` : son accord,
@@ -212,15 +211,16 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   navigateur garde l'ancien scan de ce chemin jusqu'à ce que son cache se vide (`immutable`) ;
   une carte que le catalogue dit sans image n'en a
   pas ; un catalogue sans réponse en 15 s (`CATALOG_TIMEOUT`, ses séries puis celle de la carte) la
-  compte pour absente, pour ne pas bloquer l'enregistrement. Hors du catalogue, celle que la référence désigne (un
-  chemin déduit, qui peut ne mener à rien), seulement si elle se charge (sans réponse en 10 s :
-  absente, de même) ; la saisie le dit, sans nommer de source (aucun crédit dans l'app, à la demande de l'utilisateur, octobre
-  2026 : CLAUDE.md). Un échec est redemandé à l'enregistrement (panne passagère), et une image
-  déjà enregistrée reste si elle ne répond pas. Une adresse collée s'affiche telle quelle : la seule image que le
-  navigateur va chercher ailleurs. Sans adresse collée, l'image suit la référence (cherchée en
-  quittant le champ). Le code d'une carte (`lib/card-code.ts`) :
-  `codeKey` en fait une clé (« SV2A 166 », « S8AG 1 » : série en majuscules sans tiret, numéro sans
-  zéro), pour retrouver la carte du catalogue d'une référence.
+  compte pour absente, pour ne pas bloquer l'enregistrement. Hors du catalogue, aucune image ; la
+  saisie le dit, sans nommer de source (aucun crédit dans l'app, à la demande de l'utilisateur,
+  octobre 2026 : CLAUDE.md). Un échec est redemandé à l'enregistrement (panne passagère), et une
+  image déjà enregistrée reste si elle n'est pas retrouvée. Une adresse collée s'affiche telle
+  quelle : la seule image que le navigateur va chercher ailleurs. Sans adresse collée, l'image suit
+  la référence (cherchée en quittant le champ). Le code d'une carte (`lib/card-code.ts`) : `codeKey`
+  en fait une clé (« SV2A 166 », « S8AG 1 » : série en majuscules sans tiret, numéro sans
+  zéro) : ce qui fait la même carte de la collection qu'une carte du catalogue (`isCatalogCard`) ou
+  qu'une case (`cardCodeKey`, `startSeries`) ; ses deux moitiés, `setKey` puis `numberKey`,
+  retrouvent la carte du catalogue d'une référence (`findCardImage`).
 - Retirés à la demande de l'utilisateur, à ne pas réintroduire sans demande : TCGdex et TCGplayer
   (Pokécardex est la seule source) ; le favori « Ajouter au Pokédex » (`/ajouter`, un lien
   `javascript:` qui reprenait une page produit de Cardmarket : une carte hors du catalogue se saisit

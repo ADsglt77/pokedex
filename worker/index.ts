@@ -19,7 +19,6 @@
 
 import { env } from 'cloudflare:workers'
 import { Hono } from 'hono'
-import { HTTPException } from 'hono/http-exception'
 import { accountRoutes, sameOrigin } from './auth'
 import { collectionRoutes } from './collection'
 import { dataRoutes } from './data'
@@ -56,7 +55,6 @@ export default new Hono()
     return response
   })
   .onError((error, c) => {
-    if (error instanceof HTTPException) return error.getResponse()
     journal({
       topic: 'serveur',
       level: 'error',

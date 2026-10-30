@@ -21,7 +21,7 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest'
 import type { CollectionData, CollectionResponse } from '@/types'
 import { card } from '../../tests/fixtures'
 import worker from '../index'
-import { createAccount, ORIGIN, sleep } from './helpers'
+import { call, createAccount, ORIGIN, sleep } from './helpers'
 
 // Le journal du Worker : muet pendant ces tests.
 const log = vi.spyOn(console, 'log').mockImplementation(() => {})
@@ -128,7 +128,7 @@ beforeAll(async () => {
       browser.failNextPut = 0
       return new Response('null', { status })
     }
-    const response = await worker.request(new Request(url.href, { ...init, headers }))
+    const response = await worker.request(url.href, { ...init, headers })
     if (init?.method === 'PUT' && browser.loseNextAnswer) {
       browser.loseNextAnswer = false
       throw new TypeError('Réponse perdue')
@@ -200,12 +200,15 @@ async function signedIn(pseudo: string) {
   return { account, cookie }
 }
 
+/** La collection du serveur pour la session `cookie`, telle que la lit un appareil. */
+async function read(cookie: string) {
+  const response = await call('/api/collection', { headers: { Cookie: cookie } })
+  return (await response.json()) as CollectionResponse
+}
+
 /** La collection enregistrée sur le serveur pour la session `cookie`. */
 async function onServer(cookie: string) {
-  const response = await worker.request(
-    new Request(`${ORIGIN}/api/collection`, { headers: { Cookie: cookie } }),
-  )
-  const body = (await response.json()) as CollectionResponse
+  const body = await read(cookie)
   return { version: body.version, cards: Object.keys(body.collection?.customCards ?? {}).sort() }
 }
 /** Les cartes enregistrées sur le serveur sont `ids`. */
@@ -214,10 +217,7 @@ const serverHas = (cookie: string, ids: string[]) => async () =>
 
 /** Un autre appareil (ou un autre onglet) du compte enregistre une carte de plus. */
 async function elsewhere(cookie: string, id: string) {
-  const response = await worker.request(
-    new Request(`${ORIGIN}/api/collection`, { headers: { Cookie: cookie } }),
-  )
-  const body = (await response.json()) as CollectionResponse
+  const body = await read(cookie)
   const collection = body.collection!
   const sent = {
     account: body.account,
@@ -229,13 +229,11 @@ async function elsewhere(cookie: string, id: string) {
     } satisfies CollectionData,
     shopping: body.shopping,
   }
-  const saved = await worker.request(
-    new Request(`${ORIGIN}/api/collection`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie },
-      body: JSON.stringify(sent),
-    }),
-  )
+  const saved = await call('/api/collection', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie },
+    body: JSON.stringify(sent),
+  })
   expect(saved.status).toBe(200)
   return body.version + 1
 }

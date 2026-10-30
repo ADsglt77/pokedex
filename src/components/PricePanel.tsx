@@ -20,18 +20,18 @@ type PricedCard = Pick<PokemonCard, 'cardmarket' | 'page' | 'reference' | 'langu
 /**
  * La carte chez Cardmarket : son id et sa page, son prix du jour, son évolution et, si le prix
  * payé (`paid`) est noté, l'écart (la fiche d'un Pokémon, une carte du catalogue). `withoutId` :
- * ce qu'il dit d'une carte sans id Cardmarket. Le prix d'une carte française est celui de toutes
- * les langues (son produit est partagé) : il le dit.
+ * ce qu'il dit d'une carte sans id Cardmarket (par défaut, qu'il n'est pas connu). Le prix d'une
+ * carte française est celui de toutes les langues (son produit est partagé) : il le dit.
  */
 export function PricePanel({
   card,
   paid = null,
-  withoutId,
+  withoutId = 'Pas de prix : son id Cardmarket n’est pas connu.',
   headingLevel,
 }: {
   card: PricedCard
   paid?: number | null
-  withoutId: string
+  withoutId?: string
   headingLevel?: 2 | 3
 }) {
   // L'historique est demandé tout de suite, avec les prix du jour (plus d'un Mo) et pas après eux :

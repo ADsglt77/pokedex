@@ -5,6 +5,7 @@
  * produit par son id (`cardmarketPage`) ; aucun autre n'est deviné.
  */
 
+import { cardLanguage } from '@/lib/collection'
 import { parseLink } from '@/lib/format'
 import type { CardLanguage, PokemonCard } from '@/types'
 
@@ -30,7 +31,7 @@ export function cardmarketPage(card: Pick<PokemonCard, 'page' | 'cardmarket' | '
       : `https://www.cardmarket.com/fr/Pokemon/Products?idProduct=${card.cardmarket}`)
   if (!page) return null
   const url = new URL(page)
-  const filters = { language: OFFER_LANGUAGE[card.language ?? 'ja'], minCondition: '2' }
+  const filters = { language: OFFER_LANGUAGE[cardLanguage(card)], minCondition: '2' }
   for (const [name, value] of Object.entries(filters)) {
     if (!url.searchParams.has(name)) url.searchParams.set(name, value)
   }

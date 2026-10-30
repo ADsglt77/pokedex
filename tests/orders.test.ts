@@ -1,4 +1,7 @@
-/** Le registre des commandes : ce qu'elles coûtent, et leur report sur la collection. */
+/**
+ * Le registre des commandes : ce qu'elles coûtent, leur report sur la collection, les cartes
+ * signalées en double (`duplicateReason`) et les commandes en retard (`latePendingOrders`).
+ */
 
 import { describe, expect, test } from 'bun:test'
 import {
@@ -118,13 +121,18 @@ describe('report sur la collection', () => {
     expect(collection.cards.a?.acquiredAt).toBe(new Date('2026-10-10T12:00:00').toISOString())
   })
 
-  test('possédée avant la réception (marquée à la main) : elle garde sa date', () => {
+  test('possédée avant la réception (marquée à la main) : ni sa date ni son prix ne changent', () => {
     const pending = order({ lines: [line('a', 20)] })
     const ordered = applyOrder(collectionWith(), null, pending, [], NOW)
     const acquiredAt = '2026-10-08T09:00:00.000Z'
     const marked = collectionWith({ a: { ...ordered.cards.a!, status: 'owned', acquiredAt } })
-    const received = { ...pending, state: 'received' as const, receivedAt: '2026-10-12' }
-    expect(applyOrder(marked, pending, received, [], NOW).cards.a?.acquiredAt).toBe(acquiredAt)
+    const received = {
+      ...pending,
+      state: 'received' as const,
+      receivedAt: '2026-10-12',
+      lines: [line('a', 20, { previous: previousOf('a', pending, marked) })],
+    }
+    expect(applyOrder(marked, pending, received, [], NOW).cards.a).toBe(marked.cards.a)
   })
 
   test('une ligne retirée d’une commande en cours retrouve son état d’avant : aucun statut', () => {

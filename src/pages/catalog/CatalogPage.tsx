@@ -20,7 +20,6 @@ import {
   NO_FILTER,
   passesFilter,
   type CardFilter,
-  type CatalogCard,
   type CatalogSets,
   type SetCard,
   type SetSummary,
@@ -28,7 +27,7 @@ import {
 import { catalogLanguage, catalogParams, searchForm, seriesPath } from '@/lib/filters'
 import { focusAfter, focusTileAfter } from '@/lib/focus'
 import { details, formatDate, formatInteger, formatList, pageTitle, plural } from '@/lib/format'
-import { priceText } from '@/lib/prices'
+import { cardmarketIds, priceText } from '@/lib/prices'
 import { findSeries } from '@/lib/series'
 import { useCollectionStore } from '@/store/collection'
 import { usePrices, usePricesMissing } from '@/store/prices'
@@ -209,10 +208,6 @@ function composition(cards: SetCard[]) {
     secrets > 0 && plural(secrets, 'secrète', 'secrètes'),
   )
 }
-
-/** Les ids Cardmarket de ces cartes : les prix à demander. */
-const cardmarketIds = (cards: readonly CatalogCard[]) =>
-  cards.flatMap((card) => card.cardmarket ?? [])
 
 function CardBrowser({ cards }: { cards: SetCard[] }) {
   const ids = useMemo(() => cardmarketIds(cards), [cards])

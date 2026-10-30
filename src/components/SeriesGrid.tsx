@@ -5,11 +5,13 @@ import { PossessionMark } from '@/components/PossessionMark'
 import { SeriesCard } from '@/components/SeriesCard'
 import { useGrowingList } from '@/hooks/useGrowingList'
 import { referenceCode, referenceName } from '@/lib/card-code'
+import { cx } from '@/lib/cx'
 import { seriesCard } from '@/lib/filters'
 import { focusTileAfter } from '@/lib/focus'
 import { publicStatusLabel, statusLabel } from '@/lib/format'
 import { describeCard } from '@/lib/pokedex'
 import type { CardStatus, CollectionData, PokemonCard, SeriesCollection } from '@/types'
+import tile from './PokedexTile.module.css'
 import styles from './SeriesGrid.module.css'
 
 /** Les cartes dessinées d'un coup : plus qu'un grand écran n'en montre. */
@@ -38,7 +40,7 @@ export function SeriesGrid({
   const [open, setOpen] = useState(() => (linked ? seriesCard(params, series) : null))
   // Ouverte d'emblée (souvent une case loin dans l'extension) : les tuiles jusqu'à la sienne sont
   // dessinées, pour lui rendre le focus à la fermeture.
-  const { limit, sentinel, more } = useGrowingList(
+  const { limit, end } = useGrowingList(
     series.cards.length,
     TILES_STEP,
     open === null ? 0 : series.cards.indexOf(open) + 1,
@@ -72,7 +74,7 @@ export function SeriesGrid({
           </li>
         ))}
       </ul>
-      {more && <span ref={sentinel} className="growing-sentinel" aria-hidden="true" />}
+      {end}
       {open && (
         <SeriesCard
           view={describeCard(collection.customCards[open]!, collection)}
@@ -109,25 +111,25 @@ const SeriesTile = memo(function SeriesTile({
         speciesId={card.dexIds[0]}
         alt=""
         locked={status !== 'owned'}
-        className={styles.art}
+        className={tile.art}
       >
         <PossessionMark status={status} />
       </CardArt>
-      <span className={styles.number}>{number}</span>
-      <span className={styles.name}>{name}</span>
+      <span className={tile.number}>{number}</span>
+      <span className={tile.name}>{name}</span>
     </>
   )
   return onOpen ? (
     <button
       type="button"
-      className={styles.tile}
+      className={cx(tile.tile, styles.tile)}
       aria-label={label}
       onClick={() => onOpen(card.id)}
     >
       {content}
     </button>
   ) : (
-    <div className={styles.tile} role="img" aria-label={label}>
+    <div className={cx(tile.tile, styles.tile)} role="img" aria-label={label}>
       {content}
     </div>
   )

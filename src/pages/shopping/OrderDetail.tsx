@@ -4,7 +4,13 @@ import { useRef } from 'react'
 import { ExternalLink } from '@/components/ExternalLink'
 import { ORDER_STATE_LABELS } from '@/config/shopping'
 import { details, formatDate, formatEuro, formatInteger, today } from '@/lib/format'
-import { LATE_AFTER_DAYS, latePendingOrders, supplierLabel, unitCosts } from '@/lib/orders'
+import {
+  costLabel,
+  LATE_AFTER_DAYS,
+  latePendingOrders,
+  supplierLabel,
+  unitCosts,
+} from '@/lib/orders'
 import { findCard } from '@/lib/collection'
 import { seriesOf } from '@/lib/series'
 import { useCollectionStore } from '@/store/collection'
@@ -103,8 +109,7 @@ export function OrderDetail({
             const detail = details(
               `${formatInteger(line.quantity)} × ${formatEuro(line.unitPrice)}`,
               // Une commande annulée n'a rien coûté.
-              order.state !== 'cancelled' &&
-                `revient à ${formatEuro(costs[index]!)}${line.quantity > 1 ? ' l’une' : ''}`,
+              order.state !== 'cancelled' && costLabel(costs[index]!, line.quantity),
             )
             return (
               <li key={line.cardId}>

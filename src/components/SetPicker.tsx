@@ -214,7 +214,7 @@ function SetResults({
   const found = search ? ordered.filter((set) => searchable.get(set.id)!.includes(search)) : ordered
   // Plus de 400 extensions : dessinées au fur et à mesure du défilement, la fenêtre s'ouvre et se
   // ferme vite.
-  const { limit, sentinel, more } = useGrowingList(found.length, SETS_STEP)
+  const { limit, end } = useGrowingList(found.length, SETS_STEP)
 
   if (!catalog) {
     return (
@@ -277,7 +277,7 @@ function SetResults({
               </ul>
             </section>
           ))}
-          {more && <span ref={sentinel} className="growing-sentinel" aria-hidden="true" />}
+          {end}
         </div>
       )}
     </>

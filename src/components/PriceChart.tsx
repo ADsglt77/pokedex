@@ -48,7 +48,7 @@ export function PriceChart({
   // Les bornes de l'axe, étiquetées : zéro pour un total.
   const min = fromZero ? Math.min(low, 0) : low
   const start = Date.parse(from)
-  const span = Date.parse(to) - start || 1
+  const span = Date.parse(to) - start
   const x = (date: string) => ((Date.parse(date) - start) / span) * WIDTH
   // Une série plate passe au milieu : en bas, elle se lirait comme zéro.
   const y = (value: number) =>

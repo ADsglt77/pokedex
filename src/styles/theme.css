@@ -130,7 +130,6 @@
 
 /* Clair : blanc pastel (un blanc chaud), le rouge de la Poké Ball. */
 :root[data-camply-theme='light'] {
-  color-scheme: light;
   /* Sur le blanc, le sprite grisé s'effacerait : moins transparent. */
   --empty-sprite-opacity: 0.7;
   --empty-sprite-opacity-large: 0.8;
@@ -217,7 +216,6 @@
   --camply-shadow-md: 0 6px 18px rgba(60, 35, 28, 0.1);
   --camply-shadow-lg: 0 18px 45px rgba(60, 35, 28, 0.14);
   --camply-shadow-pop: 0 12px 32px rgba(60, 35, 28, 0.14);
-  --camply-field-bg: #ffffff;
   --camply-neutral-solid: #3a312e;
   --camply-knob: #ffffff;
   --camply-tooltip-bg: #2a2321;
@@ -227,8 +225,8 @@
   --camply-checker-bg: #f4eeea;
 }
 
-/* Thème clair : le choix d'un `SegmentedControl` (ordre, « Ajouter comme », liste d'achats) est un
-   bouton blanc en relief sur un rail gris, pas un pavé rouge qui ressemblerait à une alerte
+/* Thème clair : le choix d'un `SegmentedControl` (ordre, « Ajouter comme », période des courbes)
+   est un bouton blanc en relief sur un rail gris, pas un pavé rouge qui ressemblerait à une alerte
    (variables de composant de camply). */
 :root[data-camply-theme='light'] {
   --camply-segmented-rail: var(--camply-surface-2);

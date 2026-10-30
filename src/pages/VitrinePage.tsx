@@ -18,6 +18,7 @@ import { isPseudo } from '@/lib/account'
 import { getJson, requestFailed } from '@/lib/api'
 import type { ChartPeriod } from '@/lib/chart'
 import { cx } from '@/lib/cx'
+import { vitrineUrl } from '@/lib/filters'
 import {
   formatDate,
   formatEuro,
@@ -127,7 +128,7 @@ function Missing() {
 }
 
 function VitrineContent({ pseudo }: { pseudo: string }) {
-  const url = `/api/vitrine/${pseudo}`
+  const url = vitrineUrl(pseudo)
   const shown = use(getJson<VitrineData>(url))
   if (shown) return <Vitrine {...shown} />
   if (!requestFailed(url)) return <Missing />
@@ -230,7 +231,7 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
 
       <Panel title="Par région">
         {narrow ? (
-          <RegionList generations={generations} linked={false} />
+          <RegionList generations={generations} />
         ) : (
           <ProgressRuler generations={generations} linked={false} />
         )}

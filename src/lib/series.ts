@@ -10,7 +10,7 @@
  */
 
 import { cardCodeKey, cardmarketKey } from '@/lib/card-code'
-import { cardLanguage, isToBuy, obtain } from '@/lib/collection'
+import { cardLanguage, isToBuy, languageField, obtain } from '@/lib/collection'
 import { isInAnOrder } from '@/lib/orders'
 import { marketPrice } from '@/lib/prices'
 import type {
@@ -95,7 +95,7 @@ export function startSeries(
   })
   const series: SeriesCollection = {
     set,
-    ...(language === 'fr' && { language }),
+    ...languageField(language),
     name,
     startedAt: now,
     cards,

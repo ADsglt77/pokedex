@@ -114,7 +114,7 @@ export function isDay(value: unknown) {
 }
 
 /** Un instant (ISO), lisible comme une date : la date d'obtention, triée et affichée. */
-const isTime = (value: unknown) => isText(value) && !Number.isNaN(Date.parse(value as string))
+const isTime = (value: unknown) => isText(value) && !Number.isNaN(Date.parse(value))
 
 const isOwnership = (ownership: Record<string, unknown>) =>
   ['owned', 'ordered'].includes(ownership.status as string) &&
@@ -141,7 +141,7 @@ const isCard = (card: Record<string, unknown>, key: string) =>
     (isRecord(card.image) && isText(card.image.small) && isText(card.image.large))) &&
   // Comme à la saisie : un id 0, négatif ou trop long ferait un lien et une requête de prix vains.
   isOptional(card.cardmarket, (id) => readCardmarketId(String(id)) === id) &&
-  isOptional(card.page, (page) => isText(page) && parseCardmarketLink(page as string) !== null) &&
+  isOptional(card.page, (page) => isText(page) && parseCardmarketLink(page) !== null) &&
   isOptional(card.language, (language) => language === 'fr') &&
   isOptional(card.seriesOnly, (seriesOnly) => seriesOnly === true)
 
@@ -181,7 +181,7 @@ const isOrder = (order: Record<string, unknown>) =>
   isAmount(order.shipping) &&
   isAmount(order.fees) &&
   isAmount(order.refunded) &&
-  isOptional(order.link, (link) => isText(link) && parseLink(link as string) !== null) &&
+  isOptional(order.link, (link) => isText(link) && parseLink(link) !== null) &&
   Array.isArray(order.lines) &&
   !firstBad(order.lines, isLine) &&
   // Une carte par ligne : deux lignes d'une même carte, la seconde effacerait le report de la
@@ -217,14 +217,12 @@ const cardName = (card: unknown, key: string) =>
 
 /** Une collection, pour l'utilisateur : son nom entre guillemets, sinon « sans nom ». */
 const seriesName = (series: unknown) =>
-  isRecord(series) && isText(series.name) && series.name !== ''
-    ? `« ${series.name as string} »`
-    : 'sans nom'
+  isRecord(series) && isText(series.name) && series.name !== '' ? `« ${series.name} »` : 'sans nom'
 
 /** Une commande, pour l'utilisateur : sa référence, sinon son jour. */
 function orderName(order: unknown) {
   if (!isRecord(order)) return 'sans date'
-  if (isText(order.reference) && order.reference !== '') return `« ${order.reference as string} »`
+  if (isText(order.reference) && order.reference !== '') return `« ${order.reference} »`
   return isDay(order.date) ? `du ${formatDate(order.date as string)}` : 'sans date'
 }
 

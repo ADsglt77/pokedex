@@ -9,11 +9,45 @@ import { ReferenceSection } from './ReferenceSection'
 import { VitrineSection } from './VitrineSection'
 import styles from './DataPage.module.css'
 
-/** Les trois groupes stables de la page, dans l'ordre, pour son sommaire. */
+/**
+ * Les trois groupes de la page, dans l'ordre : leur titre (et le lien du sommaire), leur phrase et
+ * leurs panneaux.
+ */
 const GROUPS = [
-  { id: 'compte-partage', label: 'Compte & partage' },
-  { id: 'sauvegarde', label: 'Sauvegarde' },
-  { id: 'avance', label: 'Avancé' },
+  {
+    id: 'compte-partage',
+    label: 'Compte & partage',
+    description: 'Votre identité et la vitrine publique de votre collection.',
+    sections: (
+      <>
+        <AccountSection />
+        <VitrineSection />
+      </>
+    ),
+  },
+  {
+    id: 'sauvegarde',
+    label: 'Sauvegarde',
+    description: 'Le contenu enregistré, son export et son import.',
+    sections: (
+      <>
+        <CollectionSection />
+        <ExportSection />
+        <ImportSection />
+      </>
+    ),
+  },
+  {
+    id: 'avance',
+    label: 'Avancé',
+    description: 'Les alertes techniques et les actions irréversibles.',
+    sections: (
+      <>
+        <ReferenceSection />
+        <EraseSection />
+      </>
+    ),
+  },
 ]
 
 /**
@@ -37,43 +71,15 @@ export function DataPage() {
           </ul>
         </nav>
         <div className={styles.groups}>
-          <section
-            id="compte-partage"
-            className={styles.group}
-            aria-labelledby="compte-partage-title"
-          >
-            <header className={styles.groupHead}>
-              <h2 id="compte-partage-title">Compte & partage</h2>
-              <p>Votre identité et la vitrine publique de votre collection.</p>
-            </header>
-            <div className={styles.groupGrid}>
-              <AccountSection />
-              <VitrineSection />
-            </div>
-          </section>
-
-          <section id="sauvegarde" className={styles.group} aria-labelledby="sauvegarde-title">
-            <header className={styles.groupHead}>
-              <h2 id="sauvegarde-title">Sauvegarde</h2>
-              <p>Le contenu enregistré, son export et son import.</p>
-            </header>
-            <div className={styles.groupGrid}>
-              <CollectionSection />
-              <ExportSection />
-              <ImportSection />
-            </div>
-          </section>
-
-          <section id="avance" className={styles.group} aria-labelledby="avance-title">
-            <header className={styles.groupHead}>
-              <h2 id="avance-title">Avancé</h2>
-              <p>Les alertes techniques et les actions irréversibles.</p>
-            </header>
-            <div className={styles.groupGrid}>
-              <ReferenceSection />
-              <EraseSection />
-            </div>
-          </section>
+          {GROUPS.map(({ id, label, description, sections }) => (
+            <section key={id} id={id} className={styles.group} aria-labelledby={`${id}-title`}>
+              <header className={styles.groupHead}>
+                <h2 id={`${id}-title`}>{label}</h2>
+                <p>{description}</p>
+              </header>
+              <div className={styles.groupGrid}>{sections}</div>
+            </section>
+          ))}
         </div>
       </div>
     </div>

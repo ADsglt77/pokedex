@@ -1,4 +1,4 @@
-/* Sur téléphone, les voisins passent sous les liens plutôt que d'élargir la page. */
+/* Sur téléphone, les voisins passent sous le fil d'Ariane plutôt que d'élargir la page. */
 .nav {
   display: flex;
   flex-wrap: wrap;
@@ -10,15 +10,7 @@
 /* Le fil d'Ariane : des liens discrets (`.quiet-link`, de la couleur que camply donne aux étapes),
    la page en cours en clair. */
 .crumbs {
-  margin-right: 0.5rem;
   font-size: var(--text-md);
-}
-
-.links {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
 }
 
 .neighbours {

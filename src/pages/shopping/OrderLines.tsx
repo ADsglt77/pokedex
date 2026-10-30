@@ -3,8 +3,8 @@ import { X } from '@camply/ui/icons'
 import { useMemo, useRef } from 'react'
 import { EuroField } from '@/components/EuroInput'
 import { keepFocusInList } from '@/lib/focus'
-import { euroInput, formatEuro } from '@/lib/format'
-import { duplicateReason, unitCosts } from '@/lib/orders'
+import { euroInput } from '@/lib/format'
+import { costLabel, duplicateReason, unitCosts } from '@/lib/orders'
 import { marketPrice } from '@/lib/prices'
 import { findCard } from '@/lib/collection'
 import { seriesOf } from '@/lib/series'
@@ -100,7 +100,7 @@ export function OrderLines({
                     (duplicate ? (
                       <span className={styles.warn}>{duplicate}</span>
                     ) : (
-                      !unreadable && `revient à ${formatEuro(costs[index]!)}`
+                      !unreadable && costLabel(costs[index]!, order.lines[index]!.quantity)
                     ))
                   }
                 >

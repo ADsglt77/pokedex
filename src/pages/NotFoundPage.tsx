@@ -3,7 +3,11 @@ import { Link, useLocation } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { pageTitle } from '@/lib/format'
 
-/** Adresse inconnue, ou numéro de Pokémon qui n'existe pas. */
+/**
+ * Dans la coquille : adresse inconnue de plus d'un segment (d'un seul, c'est un Pokédex public :
+ * `router.tsx`), numéro de Pokémon qui n'existe pas (`PokemonPage`), collection d'extension pas
+ * commencée (`SeriesPage`).
+ */
 export function NotFoundPage() {
   const { pathname } = useLocation()
   return (

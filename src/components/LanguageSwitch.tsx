@@ -77,9 +77,9 @@ const segment = (value: CardLanguage, label: string) => ({
 const OPTIONS = [segment('ja', 'Cartes japonaises'), segment('fr', 'Cartes françaises')]
 
 /**
- * L'interrupteur de la langue des cartes, 🇯🇵 / 🇫🇷 (le Catalogue). Un `SegmentedControl` (un groupe
- * de boutons radio : les flèches changent de segment, un seul est dans l'ordre de tabulation) dont
- * chaque segment est un drapeau, nommé « Cartes japonaises » / « Cartes françaises ». camply appelle
+ * L'interrupteur de la langue des cartes, 🇯🇵 / 🇫🇷. Un `SegmentedControl` (un groupe de boutons
+ * radio : les flèches changent de segment, un seul est dans l'ordre de tabulation) dont chaque
+ * segment est un drapeau, nommé « Cartes japonaises » / « Cartes françaises ». camply appelle
  * `onChange` à chaque clic, même sur le segment déjà choisi : `onChange` n'est appelé ici que
  * pour une autre langue (re-choisir la langue montrée ne doit rien changer à la page).
  */

@@ -10,11 +10,5 @@
   gap: 0.5rem;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--camply-border-soft);
-  color: inherit;
   font-size: var(--text-md);
-  text-decoration: none;
-}
-
-a.region:hover {
-  color: var(--camply-accent);
 }

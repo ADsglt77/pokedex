@@ -52,7 +52,7 @@ export function WishlistPanel({
   const shownFilters = useDeferredValue(filters)
   const shown = useMemo(() => filterWishlist(rows, shownFilters), [rows, shownFilters])
   // Jusqu'à un millier de cartes : dessinées au fur et à mesure du défilement.
-  const { limit, sentinel, more } = useGrowingList(shown.length, CARDS_STEP)
+  const { limit, end } = useGrowingList(shown.length, CARDS_STEP)
   // Sur téléphone, les listes passent dans un panneau « Filtres » : la liste commence plus haut.
   const compact = useMediaQuery('(max-width: 40rem)')
   const searchField = useRef<HTMLInputElement>(null)
@@ -142,7 +142,7 @@ export function WishlistPanel({
               </li>
             ))}
           </ul>
-          {more && <span ref={sentinel} className="growing-sentinel" aria-hidden="true" />}
+          {end}
         </div>
       )}
     </Stack>

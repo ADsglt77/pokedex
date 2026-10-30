@@ -17,10 +17,11 @@
 import { CARD_TYPES } from '@/config/catalog'
 import { derived } from '@/lib/api'
 import { isCardOf, numberKey, referenceCode, setKey } from '@/lib/card-code'
-import { cardImage, catalogImage } from '@/lib/card-images'
-import { newCardId } from '@/lib/collection'
+import { catalogImage } from '@/lib/card-images'
+import { languageField, newCardId } from '@/lib/collection'
+import type { PokedexEntry } from '@/lib/pokedex'
 import { settled } from '@/lib/settled'
-import { getSpecies } from '@/lib/species'
+import { speciesTitle } from '@/lib/species'
 import type {
   CardImage,
   CardLanguage,
@@ -99,8 +100,7 @@ const readRarities = (rarities: CatalogFile['rarities']) =>
   )
 
 /** Le nom d'une carte ; sans nom connu, ses Pokémon : « Pikachu & Zekrom ». */
-const cardName = (name: string, dexIds: number[]) =>
-  name || dexIds.map((dexId) => getSpecies(dexId)!.names.fr).join(' & ')
+const cardName = (name: string, dexIds: number[]) => name || speciesTitle(dexIds)
 
 /** Une carte, d'après ce qu'en disent les deux réponses du catalogue. */
 function toCard<S extends CatalogSet>(
@@ -146,8 +146,9 @@ function readSpeciesCards(file: CatalogFile, speciesId: number, lang: CardLangua
 
 /**
  * Les cartes d'un Pokémon dans cette langue, des plus récentes aux plus anciennes ; `null` si le
- * catalogue n'est pas disponible (serveur arrêté, base encore vide : redemandé une minute après au
- * plus tôt, `getJson`). Toujours la même promesse pour un Pokémon et une langue, lue par `use()`.
+ * catalogue n'est pas disponible : serveur arrêté ou sans réponse en 15 s (redemandé une minute
+ * après au plus tôt, `getJson`), ou base encore vide (404, gardé jusqu'au rechargement de la page).
+ * Toujours la même promesse pour un Pokémon et une langue, lue par `use()`.
  */
 export const loadSpeciesCards = (speciesId: number, lang: CardLanguage) =>
   derived<CatalogFile, CatalogCard[] | null>(
@@ -289,11 +290,13 @@ export const unobtainedSlot = (data: CollectionData, listed: CatalogCard) =>
   null
 
 /**
- * La langue d'une carte du catalogue, telle que la porte une carte de la collection
- * (`PokemonCard.language`) : `'fr'` pour une carte française, rien pour une japonaise.
+ * La carte de la collection qui est celle-ci du catalogue (`isCatalogCard`), parmi les cartes de
+ * ses Pokémon (`usePokedex`) ; `null` sans.
  */
-export const languageField = (card: CatalogCard): Pick<PokemonCard, 'language'> =>
-  card.set.language === 'fr' ? { language: 'fr' } : {}
+export const collectionCard = (entryById: ReadonlyMap<number, PokedexEntry>, listed: CatalogCard) =>
+  listed.dexIds
+    .flatMap((id) => entryById.get(id)!.cards)
+    .find((view) => isCatalogCard(view.card, listed)) ?? null
 
 /**
  * Une nouvelle carte de la collection, celle-ci du catalogue : ses Pokémon, sa référence, son
@@ -305,7 +308,7 @@ export const cardFromCatalog = (card: CatalogCard): PokemonCard => ({
   reference: card.reference,
   image: card.image,
   ...(card.cardmarket !== undefined && { cardmarket: card.cardmarket }),
-  ...languageField(card),
+  ...languageField(card.set.language),
 })
 
 /**
@@ -331,26 +334,8 @@ export const passesFilter = (card: CatalogCard, { rarities, types }: CardFilter)
   (!types.length || (card.type !== null && types.includes(card.type)))
 
 const found = new Map<string, Promise<CardImage | null>>()
+/** Les références restées sans image : `retry` les cherche de nouveau. */
 const missing = new Set<string>()
-
-/** `true` si l'image se charge ; `false` sans réponse en 10 s, ou si elle n'existe pas. */
-const loads = (image: CardImage) =>
-  new Promise<boolean>((resolve) => {
-    const probe = new Image()
-    const timer = setTimeout(() => {
-      probe.onload = probe.onerror = null
-      resolve(false)
-    }, 10_000)
-    probe.onload = () => {
-      clearTimeout(timer)
-      resolve(true)
-    }
-    probe.onerror = () => {
-      clearTimeout(timer)
-      resolve(false)
-    }
-    probe.src = image.small
-  })
 
 /**
  * L'image de la carte dans cette langue : celle que le catalogue donne à cette référence, telle
@@ -358,12 +343,13 @@ const loads = (image: CardImage) =>
  * d'image ; pas encore copiée par l'API des données, elle s'affiche dès qu'elle l'est). Une série
  * renumérotée par la source en change : la carte enregistrée garde son chemin, le rang d'avant, et
  * montre le scan de sa nouvelle occupante jusqu'à ce que son image soit choisie de nouveau
- * (`docs/cartes.md`). Hors du catalogue, celle que la référence désigne (`cardImage`), si elle se
- * charge (un chemin déduit peut ne mener à rien) ; `null` sans image. La même promesse pour la même
- * langue et la même référence (ce qu'attend `use`). `retry`, au moment d'enregistrer, redemande une
- * image qui a échoué : une panne passagère ne doit pas compter pour une image absente. Sans réponse
- * du catalogue en 15 s (`CATALOG_TIMEOUT`, ses séries puis celle de la carte), ou de l'image en
- * 10 s, elle compte pour absente : l'enregistrement, qui l'attend, ne reste pas bloqué.
+ * (`docs/cartes.md`). Hors du catalogue, ou sans image au catalogue : `null`, aucune image
+ * retrouvée. La même promesse pour la même langue et la même référence (ce qu'attend `use`). Sans
+ * réponse du catalogue en 15 s (`CATALOG_TIMEOUT`, ses séries puis celle de la carte), elle compte
+ * pour absente : l'enregistrement, qui l'attend, ne reste pas bloqué. `retry`, au moment
+ * d'enregistrer, redemande une référence restée sans image : une panne passagère du catalogue ne
+ * doit pas compter pour une image absente (la redemande ne coûte rien : `getJson` garde ses
+ * réponses, et ne redemande une panne qu'une minute après).
  */
 export function findCardImage(
   reference: string,
@@ -373,16 +359,11 @@ export function findCardImage(
   let promise = found.get(key)
   if (!promise || (retry && missing.has(key))) {
     promise = settled(
-      catalogCard(reference, lang).then(async (listed) => {
-        // Une carte du catalogue : son image, sans la charger (aucune : rien à chercher).
-        if (listed) return listed.image
-        const image = cardImage(reference, lang)
-        if (image && (await loads(image))) {
-          missing.delete(key)
-          return image
-        }
-        if (image) missing.add(key)
-        return null
+      catalogCard(reference, lang).then((listed) => {
+        const image = listed?.image ?? null
+        if (image) missing.delete(key)
+        else missing.add(key)
+        return image
       }),
     )
     found.set(key, promise)

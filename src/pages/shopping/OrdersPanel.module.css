@@ -1,7 +1,7 @@
 /* Le registre des commandes : sa phrase et son bouton, son tableau */
 
-/* La phrase à gauche, à une longueur lisible ; les boutons à droite, ou dessous s’ils manquent
-   de place. */
+/* La phrase à gauche, à une longueur lisible ; le bouton à droite, ou dessous s’il manque de
+   place. */
 .listHead {
   display: flex;
   flex-wrap: wrap;

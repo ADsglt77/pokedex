@@ -177,9 +177,9 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     état Near Mint, pour ces cartes ; vérifier le numéro de chaque carte (« Salamèche (sv2a 168) »).
     Une fois toutes les cartes dans la liste, lancer le « Shopping Wizard », qui choisit les
     vendeurs les moins chers. Les lignes de chaque bloc sont dans un champ en lecture seule ; son
-    « Copier » (`copyText`, `lib/clipboard.ts`, comme l'adresse du Pokédex public) dit « N cartes
-    japonaises copiées » (ou françaises), ou, si le navigateur refuse (hors https aussi),
-    sélectionne les lignes et dit de les copier avec Ctrl+C.
+    « Copier » (comme l'adresse du Pokédex public) dit « N cartes japonaises copiées » (ou
+    françaises), ou, si le navigateur refuse, sélectionne les lignes et dit de les copier avec
+    Ctrl+C.
     Chaque carte du plan a un prix, donc un id Cardmarket. Une carte sans ligne sûre (version ou
     extension incertaine, de toute langue : l'API n'a pas de ligne pour une carte française dont
     l'extension n'a pas de nom anglais confirmé) est listée à part, avec son lien « Voir sur
@@ -230,8 +230,9 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     de 1 ou plus, texte qui n'en est pas un, lien…) est refusé (`lib/transfer.ts`), comme par le
     serveur à l'enregistrement, et la règle en cause est dite (« La commande du 5 octobre 2026
     est abîmée. », `documentProblem`, `readImport`). Les montants saisis (`parseEuros`) acceptent
-    une virgule ou un point, le symbole et une espace entre les milliers seulement (« 1 234,50 ») :
-    « 12 50 », une virgule oubliée, est refusé plutôt que lu 1 250 € ; une quantité (`parseQuantity`)
+    une virgule ou un point, le symbole au début ou à la fin, et une espace entre les milliers
+    seulement (« 1 234,50 ») : « 12 50 » (une virgule oubliée) ou « 12€50 » est refusé plutôt que
+    lu 1 250 € ; une quantité (`parseQuantity`)
     s'écrit en chiffres seulement (« 1e1 » ne vaut pas 10). La saisie d'une commande, des textes,
     est lue à l'enregistrement par `readDraft` (`pages/shopping/orderDraft.ts`, testé) : un
     montant facultatif vide vaut 0, un montant ou une quantité illisible est une erreur du champ,

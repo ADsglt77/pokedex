@@ -3,6 +3,7 @@ import { createBrowserRouter, data, redirect, type LoaderFunctionArgs } from 're
 import { AppShell } from '@/components/AppShell'
 import { isPseudo, loginPath } from '@/lib/account'
 import { getJson } from '@/lib/api'
+import { vitrineUrl } from '@/lib/filters'
 import { loadSpecies } from '@/lib/species'
 import { ErrorPage } from '@/pages/ErrorPage'
 import { HomePage } from '@/pages/home/HomePage'
@@ -77,7 +78,7 @@ export const createRouter = () =>
           loader: async ({ params }) => {
             const pseudo = params.pseudo!
             if (!isPseudo(pseudo)) return null
-            void getJson(`/api/vitrine/${pseudo}`)
+            void getJson(vitrineUrl(pseudo))
             await needSpecies()
             return null
           },

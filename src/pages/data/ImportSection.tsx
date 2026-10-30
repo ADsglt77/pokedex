@@ -63,7 +63,7 @@ export function ImportSection() {
       id="importer"
       title="Importer"
       titleRef={title}
-      description="Reprenez une collection exportée depuis ce Pokédex, ici ou dans un autre navigateur. Elle remplace votre collection et vos achats actuels."
+      description="Reprenez une collection exportée depuis ce Pokédex, de ce compte ou d’un autre. Elle remplace votre collection et vos achats actuels."
     >
       <FileUpload
         label="Fichier d’export"

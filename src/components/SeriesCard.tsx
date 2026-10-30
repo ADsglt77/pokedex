@@ -60,12 +60,7 @@ export function SeriesCard({
         <Stack gap={5} className={styles.info}>
           <DescriptionList items={facts} />
           <CardStatusControls view={view} />
-          <PricePanel
-            card={card}
-            paid={view.paidPrice}
-            headingLevel={3}
-            withoutId="Pas de prix : son id Cardmarket n’est pas connu."
-          />
+          <PricePanel card={card} paid={view.paidPrice} headingLevel={3} />
         </Stack>
       </div>
     </Modal>

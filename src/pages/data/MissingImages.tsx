@@ -4,7 +4,7 @@ import { useState, type RefObject } from 'react'
 import { useCollectionAction, useNotify } from '@/hooks/useNotify'
 import { findCardImage } from '@/lib/card-catalog'
 import { referenceCode } from '@/lib/card-code'
-import { isSourceImage } from '@/lib/card-images'
+import { showsImage } from '@/lib/card-images'
 import { cardLanguage } from '@/lib/collection'
 import { focusAfter } from '@/lib/focus'
 import { plural } from '@/lib/format'
@@ -13,9 +13,9 @@ import type { CardImage, PokemonCard } from '@/types'
 
 /**
  * Une carte sans image à montrer : aucune, ou une adresse de chez la source (d'une version d'avant
- * les images copiées chez nous), jamais affichée (`isSourceImage`).
+ * les images copiées chez nous), jamais affichée (`showsImage`).
  */
-const lacksImage = (card: PokemonCard) => !card.image || isSourceImage(card.image.small)
+const lacksImage = (card: PokemonCard) => !showsImage(card.image)
 
 /**
  * Les cartes sans image à montrer dont la référence donne un code d'extension et un numéro :
@@ -35,7 +35,7 @@ export function MissingImages({ title }: { title: RefObject<HTMLElement | null> 
 
   const search = async () => {
     setSearching(true)
-    // Quatre à la fois : chaque recherche charge une image.
+    // Quatre à la fois : chaque recherche peut lire une série du catalogue.
     const images: (CardImage | null)[] = []
     try {
       for (let start = 0; start < candidates.length; start += 4) {

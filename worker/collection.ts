@@ -24,9 +24,8 @@ import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { gunzipSync } from 'node:zlib'
-import { MINUTE } from '@/lib/time'
-import { readCollection, readSent } from '@/lib/transfer'
-import { MAX_DOCUMENT, type CollectionSaved, type ShoppingData } from '@/types'
+import { readSent } from '@/lib/transfer'
+import { MAX_DOCUMENT, type CollectionData, type CollectionSaved, type ShoppingData } from '@/types'
 import { signedIn, type SignedIn } from './auth'
 import { db } from './db'
 import { documentChanges, journal, journalOnce, type JournalEntry } from './journal'
@@ -122,12 +121,12 @@ export const collectionRoutes = new Hono<SignedIn>()
        * peut renvoyer un document refusé à volonté), et la réponse, sans corps utile.
        */
       const refused = (status: 400 | 401 | 409, level: 'warn' | 'error', raison?: string) => {
-        journalOnce(
-          `${user.id} refus ${status}`,
-          { topic: 'collection', level, message: 'Envoi refusé', details: { compte, raison } },
-          undefined,
-          MINUTE,
-        )
+        journalOnce(`${user.id} refus ${status}`, {
+          topic: 'collection',
+          level,
+          message: 'Envoi refusé',
+          details: { compte, raison },
+        })
         return c.json(null, status)
       }
       const body = await readBody(c.req.raw)
@@ -167,13 +166,13 @@ export const collectionRoutes = new Hono<SignedIn>()
         })
         .run()
       if (meta.changes === 0) return refused(409, 'warn', 'conflit, changée ailleurs entre-temps')
-      // Relu comme un fichier : un document d'avant les collections d'extensions n'a pas de
-      // `series`, que le journal compare.
-      const previous = row && {
-        collection: readCollection(JSON.parse(row.collection))!,
-        shopping: JSON.parse(row.shopping) as ShoppingData,
-      }
-      for (const change of documentChanges(previous ?? null, document)) {
+      const previous = row
+        ? {
+            collection: JSON.parse(row.collection) as CollectionData,
+            shopping: JSON.parse(row.shopping) as ShoppingData,
+          }
+        : null
+      for (const change of documentChanges(previous, document)) {
         journal({ ...change, details: { compte, ...change.details } })
       }
       return c.json<CollectionSaved>({ version })
@@ -182,6 +181,6 @@ export const collectionRoutes = new Hono<SignedIn>()
   .post('/journal', signedIn, async (c) => {
     const { event } = ((await c.req.json().catch(() => null)) ?? {}) as { event?: unknown }
     if (event !== 'export' && event !== 'import') return c.json(null, 400)
-    journalOnce(`${c.var.user.id} ${event}`, EVENTS[event], c.req.raw, MINUTE)
+    journalOnce(`${c.var.user.id} ${event}`, EVENTS[event], c.req.raw)
     return c.body(null, 204)
   })

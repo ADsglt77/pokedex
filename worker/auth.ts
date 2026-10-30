@@ -37,15 +37,11 @@ import { Hono, type Context, type MiddlewareHandler } from 'hono'
 import { createMiddleware } from 'hono/factory'
 import { PASSWORD_MIN, PSEUDO } from '@/config/account'
 import { isPseudo } from '@/lib/account'
-import { MINUTE } from '@/lib/time'
 import type { AccountState } from '@/types'
 import { db } from './db'
 import { journal, journalOnce, reasonOf, safeText, visitorOf, type JournalLevel } from './journal'
 import * as schema from './schema'
 
-if (!env.BETTER_AUTH_URL) {
-  throw new Error('BETTER_AUTH_URL manque : l’adresse publique du site (voir worker/auth.ts)')
-}
 if (process.env.NODE_ENV === 'production') {
   // En http, les cookies ne seraient plus réservés au https, et l'origine attendue ne serait pas
   // celle du site : chaque modification serait refusée (403). Sauf sur ce poste : `bun run
@@ -71,12 +67,12 @@ const DAY_IN_SECONDS = 24 * 60 * 60
  * pour un même début. Sa cause (l'erreur, sa pile) suit.
  */
 function logError(message: string, ...causes: unknown[]) {
-  journalOnce(
-    `better-auth ${message.slice(0, 60)}`,
-    { topic: 'serveur', level: 'error', message: 'Better Auth', details: { cause: message } },
-    undefined,
-    MINUTE,
-  )
+  journalOnce(`better-auth ${message.slice(0, 60)}`, {
+    topic: 'serveur',
+    level: 'error',
+    message: 'Better Auth',
+    details: { cause: message },
+  })
   if (causes.length > 0) {
     console.error(...causes.map((cause) => (typeof cause === 'string' ? safeText(cause) : cause)))
   }
@@ -94,18 +90,18 @@ const heldBy = async (pseudo: string) =>
 
 /**
  * Avant Better Auth, sur le chemin qu'il a reconnu (`ctx.path`, quelle que soit l'écriture de
- * l'adresse). À la création et au changement de pseudo : un pseudo exigé (sans lui, ni connexion ni
- * Pokédex public), et `name` qui le reprend tel que tapé : une requête ne peut pas mettre autre
- * chose dans le titre de son Pokédex public ; un pseudo qu'un autre compte a quitté (`heldBy` : son
- * compte), refusé comme un pseudo pris (la base le refuse aussi, par ses déclencheurs : ce
- * contrôle-ci donne seulement la bonne raison). À la création, l'adresse sans boîte du compte. La
- * suppression du compte exige son mot de passe (Better Auth s'en passerait pour une session ouverte
- * depuis moins d'un jour).
+ * l'adresse). À la création et au changement de pseudo (le seul usage de `/update-user`) : un
+ * pseudo exigé (sans lui, ni connexion ni Pokédex public), et `name` qui le reprend tel que tapé :
+ * une requête ne peut pas mettre autre chose dans le titre de son Pokédex public ; un pseudo qu'un
+ * autre compte a quitté (`heldBy` : son compte), refusé comme un pseudo pris (la base le refuse
+ * aussi, par ses déclencheurs : ce contrôle-ci donne seulement la bonne raison). À la création,
+ * l'adresse sans boîte du compte. La suppression du compte exige son mot de passe (Better Auth s'en
+ * passerait pour une session ouverte depuis moins d'un jour).
  */
 const guard = createAuthMiddleware(async (ctx) => {
   const body = (ctx.body ?? {}) as Record<string, unknown>
   const signUp = ctx.path === '/sign-up/email'
-  if (signUp || (ctx.path === '/update-user' && ('name' in body || 'username' in body))) {
+  if (signUp || ctx.path === '/update-user') {
     if (typeof body.username !== 'string') {
       throw new APIError('BAD_REQUEST', { message: 'Pseudo manquant' })
     }
@@ -145,7 +141,7 @@ export const auth = betterAuth({
   // déjà (« Invalid password » en plus serait du bruit).
   logger: {
     level: 'error',
-    log: (_level, message, ...args) => logError(String(message), ...args),
+    log: (_level, message, ...args) => logError(message, ...args),
   },
   // Ses refus (pseudo pris, mot de passe faux…) aussi : `journalAuth` les note déjà. Une erreur
   // imprévue, si.
@@ -231,7 +227,6 @@ function journalAuth(
         details: { raison: response.status === 429 ? 'trop d’essais' : undefined },
       },
       request,
-      MINUTE,
     )
   if (path.endsWith('/sign-in/username')) {
     if (ok) log('Connexion', 'ok', { pseudo: typed })
@@ -274,7 +269,6 @@ export const sameOrigin: MiddlewareHandler = async (c, next) => {
       },
     },
     c.req.raw,
-    MINUTE,
   )
   return c.body(null, 403, { 'Cache-Control': 'no-store' })
 }

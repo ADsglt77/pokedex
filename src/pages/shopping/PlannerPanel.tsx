@@ -301,15 +301,7 @@ export function PlannerPanel({
         </Accordion>
       </Stack>
 
-      {wantsOpen && (
-        <WantsDialog
-          // Une carte prise a un prix, donc un id Cardmarket.
-          cards={plan.picked.flatMap(({ card }) =>
-            card.cardmarket ? [{ ...card, cardmarket: card.cardmarket }] : [],
-          )}
-          onClose={() => setWantsOpen(false)}
-        />
-      )}
+      {wantsOpen && <WantsDialog rows={plan.picked} onClose={() => setWantsOpen(false)} />}
       {draft && (
         <OrderForm
           order={draft}

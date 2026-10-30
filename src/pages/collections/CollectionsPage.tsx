@@ -13,7 +13,7 @@ import { usePokedex } from '@/hooks/usePokedex'
 import { useStartCollection } from '@/hooks/useStartCollection'
 import { artworkUrl } from '@/config/pokedex'
 import type { SetSummary } from '@/lib/card-catalog'
-import { isSourceImage } from '@/lib/card-images'
+import { showsImage } from '@/lib/card-images'
 import { cardLanguage } from '@/lib/collection'
 import { cx } from '@/lib/cx'
 import { catalogLanguage, catalogParams, seriesPath } from '@/lib/filters'
@@ -120,9 +120,6 @@ function Tile({
 /** Les Pokémon de départ de Kanto (Bulbizarre, Salamèche, Carapuce) : le dessin d'un Pokédex vide. */
 const STARTERS = [1, 4, 7]
 
-/** Une carte dont l'image se montre (pas une adresse de chez la source, jamais affichée). */
-const showsImage = (card: PokemonCard) => card.image !== null && !isSourceImage(card.image.small)
-
 /**
  * Le dessin du Pokédex : trois de ses cartes favorites en éventail, celles des Pokémon débloqués
  * d'abord, dans l'ordre du Pokédex (une carte TAG TEAM une fois) ; sans carte à montrer, les trois
@@ -135,7 +132,9 @@ function PokedexArt() {
     for (const unlocked of [true, false]) {
       for (const entry of entries) {
         const card = entry.card?.card
-        if (entry.unlocked === unlocked && card && showsImage(card)) favorites.set(card.id, card)
+        if (entry.unlocked === unlocked && card && showsImage(card.image)) {
+          favorites.set(card.id, card)
+        }
         if (favorites.size === 3) return [...favorites.values()]
       }
     }

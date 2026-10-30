@@ -8,6 +8,7 @@
  */
 
 import { settled } from '@/lib/settled'
+import { MINUTE } from '@/lib/time'
 import type { ServerStatus } from '@/types'
 
 /**
@@ -35,7 +36,7 @@ const requests = new Map<string, Request>()
  * ni jamais : la règle de `getJson`, des prix et des historiques (`store/prices.ts`).
  */
 export const retryDue = (failedAt: number | undefined) =>
-  failedAt !== undefined && Date.now() - failedAt > 60_000
+  failedAt !== undefined && Date.now() - failedAt > MINUTE
 
 /**
  * Une réponse de l'API, toujours la même promesse pour une adresse (lue par `use()`), tant qu'elle

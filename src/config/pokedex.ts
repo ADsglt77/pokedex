@@ -6,23 +6,22 @@ export interface Generation {
   id: GenerationId
   numeral: string
   region: string
-  first: number
-  last: number
 }
 
 export const GENERATIONS: readonly Generation[] = [
-  { id: 1, numeral: 'I', region: 'Kanto', first: 1, last: 151 },
-  { id: 2, numeral: 'II', region: 'Johto', first: 152, last: 251 },
-  { id: 3, numeral: 'III', region: 'Hoenn', first: 252, last: 386 },
-  { id: 4, numeral: 'IV', region: 'Sinnoh', first: 387, last: 493 },
-  { id: 5, numeral: 'V', region: 'Unys', first: 494, last: 649 },
-  { id: 6, numeral: 'VI', region: 'Kalos', first: 650, last: 721 },
-  { id: 7, numeral: 'VII', region: 'Alola', first: 722, last: 809 },
-  { id: 8, numeral: 'VIII', region: 'Galar', first: 810, last: 905 },
-  { id: 9, numeral: 'IX', region: 'Paldea', first: 906, last: 1025 },
+  { id: 1, numeral: 'I', region: 'Kanto' },
+  { id: 2, numeral: 'II', region: 'Johto' },
+  { id: 3, numeral: 'III', region: 'Hoenn' },
+  { id: 4, numeral: 'IV', region: 'Sinnoh' },
+  { id: 5, numeral: 'V', region: 'Unys' },
+  { id: 6, numeral: 'VI', region: 'Kalos' },
+  { id: 7, numeral: 'VII', region: 'Alola' },
+  { id: 8, numeral: 'VIII', region: 'Galar' },
+  { id: 9, numeral: 'IX', region: 'Paldea' },
 ]
 
-export const TOTAL_SPECIES = GENERATIONS.at(-1)!.last
+/** Le nombre d'espèces du Pokédex national (les neuf générations). */
+export const TOTAL_SPECIES = 1025
 
 export function generationById(id: number): Generation | undefined {
   return GENERATIONS.find((generation) => generation.id === id)
@@ -68,5 +67,8 @@ export const POKEMON_TYPES: Record<PokemonTypeId, string> = {
 /** Sprite 96×96, sur la carte de substitution d'une carte sans image ou d'un Pokémon sans carte. */
 export const spriteUrl = (speciesId: number) => `/images/species/${speciesId}.png`
 
-/** Illustration officielle 475×475, sur la fiche d'un Pokémon sans carte. */
+/**
+ * Illustration officielle 475×475 : sur la fiche d'un Pokémon sans carte, et sur la tuile d'un
+ * Pokédex sans carte à montrer (page Collections).
+ */
 export const artworkUrl = (speciesId: number) => `/images/species/artwork/${speciesId}.png`

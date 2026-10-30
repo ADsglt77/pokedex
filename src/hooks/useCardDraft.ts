@@ -3,7 +3,7 @@ import { findCardImage, type CatalogCard } from '@/lib/card-catalog'
 import { isFoundImage, isSourceImage } from '@/lib/card-images'
 import { referenceCode } from '@/lib/card-code'
 import { isCardmarketImage, parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
-import { cardLanguage, newCardId } from '@/lib/collection'
+import { cardLanguage, languageField, newCardId } from '@/lib/collection'
 import { focusFirstError } from '@/lib/focus'
 import { parseLink } from '@/lib/format'
 import { loadPriceHistory } from '@/store/prices'
@@ -64,8 +64,8 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
   // La référence dont on cherche l'image : aucune si une adresse est collée, ou sans code de série
   // et numéro.
   const lookup = image.trim() || !referenceCode(searched) ? null : searched
-  // L'image déjà retrouvée reste, pour la même référence et la même langue : si elle ne répond pas
-  // cette fois, ou si la référence n'a pas de code où la chercher.
+  // L'image déjà retrouvée reste, pour la même référence et la même langue : si elle n'est pas
+  // retrouvée cette fois, ou si la référence n'a pas de code où la chercher.
   const kept =
     card &&
     reference.trim() === card.reference &&
@@ -107,7 +107,7 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
       dexIds,
       reference: (!stale && typed) || known?.name || fallback,
       image: picture,
-      ...(language === 'fr' && { language }),
+      ...languageField(language),
       ...(cardmarket !== null && { cardmarket }),
       ...(pageUrl && !stalePage && { page: pageUrl }),
     }

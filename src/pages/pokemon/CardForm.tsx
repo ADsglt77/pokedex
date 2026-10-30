@@ -14,7 +14,7 @@ import { Suspense, useCallback, useRef, useState } from 'react'
 import { useCardDraft } from '@/hooks/useCardDraft'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { useSeriesSlot } from '@/hooks/useSeriesSlot'
-import { isCatalogCard, NO_FILTER, type CatalogCard } from '@/lib/card-catalog'
+import { collectionCard, isCatalogCard, NO_FILTER, type CatalogCard } from '@/lib/card-catalog'
 import { addCard, useCollectionStore } from '@/store/collection'
 import type { AddAs, PokemonCard, PokemonSpecies } from '@/types'
 import { CardFields } from './CardFields'
@@ -57,7 +57,7 @@ export function CardForm({
   const holds = (id: number, listed: CatalogCard) =>
     entryById.get(id)!.cards.some((view) => isCatalogCard(view.card, listed))
   // La carte choisie, tant que la référence reste la sienne ; sinon, c'est une saisie.
-  const listed = picked && draft.reference.trim() === picked.reference ? picked : null
+  const listed = draft.reference.trim() === picked?.reference ? picked : null
   // La carte choisie est déjà l'une des siennes : l'ajouter ferait un doublon. Sa référence
   // corrigée, c'est une saisie : plus un doublon.
   const duplicate = listed !== null && holds(species.id, listed)
@@ -70,12 +70,7 @@ export function CardForm({
   // Déjà dans la collection, celle d'un autre de ses Pokémon (une TAG TEAM ajoutée avant à certains
   // seulement) : une carte n'existe qu'une fois, les Pokémon qui la reçoivent s'ajoutent à elle (même
   // id : son statut, son prix payé et ses commandes la suivent).
-  const existing =
-    listed && !duplicate
-      ? listed.dexIds
-          .flatMap((id) => entryById.get(id)!.cards)
-          .find((view) => isCatalogCard(view.card, listed))?.card
-      : undefined
+  const existing = listed && !duplicate ? collectionCard(entryById, listed)?.card : undefined
   // Pas encore une carte de ses Pokémon : une case pas encore obtenue d'une collection d'extension,
   // reprise telle quelle, pour tous ses Pokémon (une carte n'existe qu'une fois).
   const slot = useSeriesSlot(listed && !duplicate && !existing ? listed : null)

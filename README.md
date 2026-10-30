@@ -13,7 +13,7 @@ bun dev          # Vite et le Worker du site, sur sa base D1 locale (migrée au 
 bun run build    # type-check + build
 bun lint         # ESLint, puis knip (code mort : exports, fichiers, dépendances)
 bun run contracts # vérifie les types partagés avec ../pokedex-data (Cloudflare construit sans)
-bun test         # tests de ce qui coûterait de l'argent (chaque fichier de tests/ le dit en tête)
+bun test         # tests des règles où une erreur coûte : argent, collection (l'en-tête le dit)
 bun run test:worker # tests du Worker, dans le moteur de Cloudflare (worker/tests)
 bun run db:generate # après une modification de worker/schema.ts : sa migration
 bun run format   # Prettier
@@ -87,9 +87,9 @@ collée se charge ailleurs ; pas celles de Cardmarket, qui ne s'affichent que su
 site les demande pour tout visiteur, connecté ou non. Les routes `/api/species`, `/api/catalog`,
 `/api/prices`, `/api/histories`, `/api/wants`, `/api/status`, `/api/health` et `/images/…` répondent
 donc à n'importe qui (sous les limites par visiteur du Worker, `worker/limits.ts`, sauf les
-espèces et l'état des tâches) ; seule l'interface demande d'être connecté. Ce que la connexion
-garde, ce sont les comptes et les collections (`/api/collection`, `/api/auth/…`), pas le
-catalogue, les prix ni les scans.
+espèces, l'état des tâches et `/api/health`) ; seule l'interface demande d'être connecté. Ce que
+la connexion garde, ce sont les comptes et les collections (`/api/collection`, `/api/auth/…`), pas
+le catalogue, les prix ni les scans.
 
 En développement, deux terminaux : l'API des données (`bun run dev` dans `../pokedex-data`, son
 Worker sur le port 8787, que remplissent ses tâches ; sa base et ses tâches : son README) et
@@ -104,10 +104,6 @@ pas sous Bun). Un fichier `.env` (ignoré par git), copié de `.env.example` :
 BETTER_AUTH_URL=http://localhost:5173
 BETTER_AUTH_SECRET=…        # 32 caractères au moins, pour ce poste seulement
 ```
-
-Un visiteur arrive sur la connexion ; `/inscription` crée un compte (pseudo, mot de passe). Pseudo
-et mot de passe se changent ensuite dans Réglages › Compte & partage › Mon compte, où le compte
-se supprime aussi.
 
 Votre collection : le site ne s'ouvre que connecté ; elle n'est gardée que sur le serveur (rien
 dans le navigateur, pas d'usage hors ligne) et vous suit d'un appareil à l'autre : un seul
@@ -137,14 +133,13 @@ en ligne et publie le Worker.
 `lint:ci` est le lint sans `../pokedex-data`, que la construction de Cloudflare n'a pas
 (`knip.ci.json`). Le guide complet : [docs/deploiement.md](docs/deploiement.md).
 
-Ce que faisaient nginx et Caddy, le Worker le fait lui-même : les en-têtes de sécurité, de cache
-et des moteurs de recherche, et la redirection de `http://` et de `www` vers
-`https://pokecodex.fr` (`worker/headers.ts`) ; les limites par visiteur, 429 au-delà
-(`worker/limits.ts`) ; un fichier absent, 404, et non la page de l'app que rend Cloudflare à toute
-adresse inconnue (`worker/index.ts`). Cloudflare compresse les réponses. Le site envoie
-`Strict-Transport-Security` avec `includeSubDomains` pour un an : tout navigateur qui l'a reçu
-n'ouvre plus, pendant un an, aucun sous-domaine de `pokecodex.fr` en http (un futur `staging.` ou
-un service du domaine sans https lui serait inaccessible).
+Le Worker pose lui-même les en-têtes de sécurité, de cache et des moteurs de recherche, et mène
+`http://` et `www` à `https://pokecodex.fr` (`worker/headers.ts`) ; il limite chaque visiteur, 429
+au-delà (`worker/limits.ts`) ; un fichier absent y rend 404, et non la page de l'app que rend
+Cloudflare à toute adresse inconnue (`worker/index.ts`). Cloudflare compresse les réponses. Le site
+envoie `Strict-Transport-Security` avec `includeSubDomains` pour un an : tout navigateur qui l'a
+reçu n'ouvre plus, pendant un an, aucun sous-domaine de `pokecodex.fr` en http (un futur `staging.`
+ou un service du domaine sans https lui serait inaccessible).
 
 **La surveillance** : `/api/health` est celui de l'API des données (le Worker du site le lui
 demande) : 200 quand chaque tâche à rythme a réussi récemment (les prix en 12 h, les espèces en 60

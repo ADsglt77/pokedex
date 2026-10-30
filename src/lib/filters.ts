@@ -2,12 +2,14 @@
  * Les filtres de la page Pokédex : leur place dans l'adresse, leur application aux Pokémon, la
  * recherche par nom ou numéro. Et les adresses de l'app : le Pokédex filtré (`pokedexUrl`), la
  * fiche d'un Pokémon (`speciesPath`), les onglets des Achats et les filtres de leur liste
- * d'achats (`parseShopping`, `shoppingUrl`), le Pokédex public d'un compte (`vitrinePath`), la
- * langue et l'extension du Catalogue (`catalogLanguage`, `catalogParams`), la page d'une collection
- * d'extension et la carte dont elle ouvre la fenêtre (`seriesPath`, `seriesCard`), où mène le lien
- * d'une carte (`cardPath`).
+ * d'achats (`parseShopping`, `shoppingUrl`), le Pokédex public d'un compte et son API
+ * (`vitrinePath`, `vitrineUrl`), la langue et l'extension du Catalogue (`catalogLanguage`,
+ * `catalogParams`), la page d'une collection d'extension et la carte dont elle ouvre la fenêtre
+ * (`seriesPath`, `seriesCard`), où mène le lien d'une carte (`cardPath`) ; et la façon d'y changer
+ * les filtres (`filterUpdate`).
  */
 
+import type { NavigateOptions } from 'react-router'
 import { generationById, POKEMON_TYPES, type Generation } from '@/config/pokedex'
 import { cardLanguage } from '@/lib/collection'
 import { SPECIES } from '@/lib/species'
@@ -29,8 +31,8 @@ export const POSSESSIONS = ['all', 'owned', 'ordered', 'missing'] as const
 export type PossessionFilter = (typeof POSSESSIONS)[number]
 
 /**
- * Une carte à compléter : sans image, sans id Cardmarket (pas de prix ni de lien Cardmarket),
- * possédée sans prix payé (la valeur ne dit pas le gain).
+ * Une carte à compléter : sans image, sans id Cardmarket (pas de prix ; un lien seulement si sa
+ * page est notée), possédée sans prix payé (la valeur ne dit pas le gain).
  */
 const CARD_NEEDS = ['no-image', 'no-cardmarket', 'no-paid'] as const
 export type CardNeed = (typeof CARD_NEEDS)[number]
@@ -63,11 +65,20 @@ export const DEFAULT_FILTERS: PokedexFilters = {
 const oneOf = <T extends string>(values: readonly T[], value: string | null) =>
   values.find((known) => known === value)
 
+const generationParam = (params: URLSearchParams) =>
+  generationById(Number(params.get('generation')))?.id ?? null
+
+/** Un chemin et ses paramètres, sans `?` s'il n'y en a pas. */
+const withParams = (path: string, params: URLSearchParams) => {
+  const search = params.toString()
+  return search ? `${path}?${search}` : path
+}
+
 /** L'adresse → les filtres. Une valeur inconnue (adresse tapée à la main) vaut le défaut. */
 export function parseFilters(params: URLSearchParams): PokedexFilters {
   return {
     search: params.get('q') ?? '',
-    generation: generationById(Number(params.get('generation')))?.id ?? null,
+    generation: generationParam(params),
     possession: oneOf(POSSESSIONS, params.get('possession')) ?? 'all',
     card: oneOf(CARD_FILTERS, params.get('card')) ?? null,
     type: oneOf(Object.keys(POKEMON_TYPES) as PokemonTypeId[], params.get('type')) ?? null,
@@ -89,8 +100,7 @@ export function serializeFilters(filters: PokedexFilters): URLSearchParams {
 
 /** L'adresse du Pokédex filtré : `pokedexUrl({ generation: 5 })` → `/pokedex?generation=5`. */
 export function pokedexUrl(filters: Partial<PokedexFilters>): string {
-  const search = serializeFilters({ ...DEFAULT_FILTERS, ...filters }).toString()
-  return search ? `/pokedex?${search}` : '/pokedex'
+  return withParams('/pokedex', serializeFilters({ ...DEFAULT_FILTERS, ...filters }))
 }
 
 /** La fiche d'un Pokémon : `/pokemon/25`. */
@@ -98,6 +108,12 @@ export const speciesPath = (id: number) => `/pokemon/${id}`
 
 /** Le Pokédex public d'un compte : `/sacha`, son pseudo en minuscules. */
 export const vitrinePath = (pseudo: string) => `/${pseudo.toLowerCase()}`
+
+/**
+ * Le Pokédex public d'un compte à l'API (`worker/vitrine.ts`) : `/api/vitrine/sacha`, le pseudo en
+ * minuscules lui aussi, pour une seule réponse gardée par `getJson` quelle que soit la casse tapée.
+ */
+export const vitrineUrl = (pseudo: string) => `/api/vitrine${vitrinePath(pseudo)}`
 
 /** Les onglets des Achats, dans l'adresse (`?vue=`) ; la liste d'achats est celui par défaut. */
 const SHOPPING_VIEWS = ['liste', 'prochaine-commande', 'commandes', 'budget'] as const
@@ -133,7 +149,7 @@ export function parseShopping(params: URLSearchParams): {
     view: oneOf(SHOPPING_VIEWS, params.get('vue')) ?? 'liste',
     filters: {
       search: params.get('q') ?? '',
-      generation: generationById(Number(params.get('generation')))?.id ?? null,
+      generation: generationParam(params),
       sort: oneOf(WISHLIST_SORTS, params.get('tri')) ?? 'price',
     },
   }
@@ -151,9 +167,23 @@ export function serializeShopping(view: ShoppingView, filters: WishlistFilters):
 
 /** L'adresse des Achats : `shoppingUrl({ view: 'commandes' })` → `/achats?vue=commandes`. */
 export function shoppingUrl({ view = 'liste' }: { view?: ShoppingView } = {}) {
-  const search = serializeShopping(view, DEFAULT_WISHLIST_FILTERS).toString()
-  return search ? `/achats?${search}` : '/achats'
+  return withParams('/achats', serializeShopping(view, DEFAULT_WISHLIST_FILTERS))
 }
+
+/**
+ * Comment changer les filtres gardés dans l'adresse (Pokédex, Achats) : pas une entrée
+ * d'historique par onglet, par filtre ou par frappe ; la recherche changée (`search`), hors de la
+ * transition où le routeur passe ses mises à jour (le champ, qui lit l'adresse, suivrait la frappe
+ * en retard) ; sans relancer le chargement de la route, le compte (une navigation qui charge est
+ * asynchrone : le champ, remis un instant à l'ancienne valeur, enverrait le curseur au bout du
+ * texte).
+ */
+export const filterUpdate = (search: boolean): NavigateOptions => ({
+  replace: true,
+  preventScrollReset: true,
+  flushSync: search,
+  defaultShouldRevalidate: false,
+})
 
 /**
  * L'adresse du Catalogue (ou des Collections) → sa langue (`?langue=fr`) ; sans elle, ou inconnue :
@@ -181,8 +211,7 @@ export function catalogParams(lang: CardLanguage, set?: string): URLSearchParams
 export function seriesPath(set: string, language: CardLanguage, card?: string): string {
   const params = catalogParams(language)
   if (card) params.set('carte', card)
-  const search = params.toString()
-  return `/collections/${encodeURIComponent(set)}${search ? `?${search}` : ''}`
+  return withParams(`/collections/${encodeURIComponent(set)}`, params)
 }
 
 /**

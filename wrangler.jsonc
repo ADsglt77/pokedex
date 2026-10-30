@@ -5,7 +5,8 @@
   "name": "pokedex",
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-20",
-  // Better Auth s'appuie sur des modules de Node (`AsyncLocalStorage`).
+  // Better Auth s'appuie sur des modules de Node (`AsyncLocalStorage`), la collection reçue
+  // compressée aussi (`gunzipSync` de `node:zlib`, `worker/collection.ts`).
   "compatibility_flags": ["nodejs_compat"],
   // Les fichiers de l'app, construits par Vite. Toute requête passe d'abord par le Worker, qui les
   // demande à `ASSETS` (`worker/index.ts`) : seul lui peut donner son aperçu à un robot qui lit

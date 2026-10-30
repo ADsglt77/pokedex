@@ -2,6 +2,7 @@
  * Ce que montre le Pokédex public (`worker/vitrine.ts`) : ce qu'il laisserait passer serait public.
  * Jamais un prix payé, une page Cardmarket notée, ni ce qui dit un achat (« commandée ») ; la
  * favorite de chaque Pokémon, elle, est montrée, comme les collections d'extensions et leurs cases.
+ * Et l'aperçu d'un lien partagé (`vitrineSummary`) : le pseudo et la progression, rien d'autre.
  */
 
 import { describe, expect, test } from 'vitest'
@@ -49,7 +50,6 @@ describe('shownCollection', () => {
     expect(a).toStrictEqual(card('a', [25], { language: 'fr' }))
     // Une japonaise ne gagne pas de champ : l'absence reste son seul écrit.
     expect(b).toStrictEqual(card('b', [1]))
-    expect(b).not.toHaveProperty('language')
   })
 
   test('les favorites restent : le Pokédex public montre la favorite de chaque Pokémon', () => {
@@ -106,7 +106,6 @@ describe('shownCollection', () => {
     expect(shown.customCards.s).toStrictEqual(card('s', [4], { seriesOnly: true }))
     expect(shown.customCards.t).toStrictEqual(card('t', []))
     expect(shown.customCards.a).toStrictEqual(card('a', [25]))
-    expect(shown.customCards.a).not.toHaveProperty('seriesOnly')
     // Rien de ce que dit un achat : la case commandée n'a pas de statut, ni de prix payé.
     expect(Object.keys(shown.cards)).toEqual(['a'])
     expect(JSON.stringify(shown)).not.toMatch(/ordered|paidPrice|payée/)

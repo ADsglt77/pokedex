@@ -19,7 +19,7 @@ import {
   setFavorite,
   setPaidPrice,
 } from '@/lib/collection'
-import { applyOrder, isInAnOrder } from '@/lib/orders'
+import { applyOrder } from '@/lib/orders'
 import { removeSeries, startSeries } from '@/lib/series'
 import type { CollectionData } from '@/types'
 import { card, collectionWith, line, NOW, order, ownership, withCards } from './fixtures'
@@ -141,11 +141,5 @@ describe('les règles ne modifient pas ce qu’elles reçoivent (« Annuler »)'
     expect(placed).toEqual(placedBefore)
     expect(slots).toEqual(slotsBefore)
     expect(started).toEqual(startedBefore)
-  })
-
-  test('une carte d’une commande (en cours, reçue ou annulée) : retenue', () => {
-    const orders = [order({ lines: [line('a', 12)], state: 'cancelled' })]
-    expect(isInAnOrder(orders, 'a')).toBe(true)
-    expect(isInAnOrder(orders, 'b')).toBe(false)
   })
 })

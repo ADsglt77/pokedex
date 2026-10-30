@@ -38,9 +38,7 @@
   --duration-fast: 0.15s;
 }
 
-/* Sombre par défaut ; le thème clair le change (`theme.css`). */
 html {
-  color-scheme: dark;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -277,7 +275,8 @@ img {
 }
 
 /* Mouvement réduit : tout arrive d'un coup, sans délai non plus (les cartes récentes de l'accueil
-   n'apparaissent plus l'une après l'autre). */
+   n'apparaissent plus l'une après l'autre), sauf l'attente de la barre de chargement
+   (`AppShell.module.css`). */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

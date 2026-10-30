@@ -51,14 +51,16 @@ export const noLongerUnlocked = (ids: readonly number[]) =>
 export const otherSpeciesNames = (dexIds: readonly number[], speciesId: number) =>
   speciesNames(dexIds.filter((id) => id !== speciesId))
 
+/** « Pikachu & Zekrom » : les noms des Pokémon d'une carte ; vide sans Pokémon. */
+export const speciesTitle = (dexIds: readonly number[]) =>
+  dexIds.map((id) => getSpecies(id)!.names.fr).join(' & ')
+
 /**
  * « Pikachu & Zekrom » ; pour une carte sans Pokémon (un dresseur, une énergie), son nom, sa
  * référence sans le code qui la finit (« Ordonnance du Professeur ») : la référence suit le titre.
  */
 export const cardTitle = (card: PokemonCard) =>
-  speciesOf(card)
-    .map((species) => species.names.fr)
-    .join(' & ') || referenceName(card.reference)
+  speciesTitle(card.dexIds) || referenceName(card.reference)
 
 /**
  * Description, taille, poids… (`/api/species/details`), chargés à la première fiche ouverte ; vide

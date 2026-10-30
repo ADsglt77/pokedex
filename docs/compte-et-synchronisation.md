@@ -41,15 +41,16 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   réponses du client Better Auth passent par `authCall` (`lib/auth.ts` : sans réponse du serveur,
   un refus de statut 0) et leurs messages par `refusalMessage` (`lib/account.ts`). Un appareil
   dont la session a été fermée par une connexion ailleurs affiche « Reconnectez-vous ». Le
-  cookie renouvelé de la session repart aussi avec les réponses des routes
-  de la macro `auth` (`sessionOf`) : sans quoi la relecture de la collection au retour de la page
-  consommerait le renouvellement du jour. Les réponses de ces routes ne sont jamais gardées en
-  cache (`no-store`). Une modification (ni `GET` ni `HEAD`) venue d'une autre origine est refusée
-  (403) avant la lecture de son corps, sur toute adresse du serveur, `/api/auth/*` compris
-  (`onRequest` de `accountRoutes`) : un autre site ne connecte pas un visiteur à un compte qu'il ne
-  connaît pas (testé). Devant les limites de Better Auth, le Worker limite tout le compte
-  (`/api/auth/`), avec le Pokédex public (`/api/vitrine/`), à 40 requêtes par 10 s et par
-  visiteur (`worker/limits.ts`).
+  cookie renouvelé de la session repart aussi avec les réponses de `GET /api/account` et des routes
+  réservées au compte (`sessionOf`, `signedIn`, `worker/auth.ts`) : sans quoi la relecture de la
+  collection au retour de la page consommerait le renouvellement du jour. Les réponses de ces
+  routes ne sont jamais gardées en cache (`no-store`). Une modification (ni `GET` ni `HEAD`) venue
+  d'une autre origine est refusée (403) avant la lecture de son corps, sur toute adresse du
+  serveur, `/api/auth/*` compris (`sameOrigin`, `worker/auth.ts`) : un autre site ne connecte pas
+  un visiteur à un compte qu'il ne connaît pas (testé). Devant les limites de Better Auth, le
+  Worker limite tout le compte (`/api/auth/`), avec le Pokédex public (`/api/vitrine/`) et
+  l'aperçu d'un lien partagé (`/pseudo` : toute adresse d'un seul segment), à 40 requêtes par
+  10 s et par visiteur (son réseau /64 en IPv6, `worker/limits.ts`).
 - **L'app ne s'ouvre que connecté** (décision de l'utilisateur, octobre 2026) : le compte connecté
   du store (`account` : son id et son pseudo ; `null` : personne, `store/account.ts`), fixé au
   démarrage avant le routeur (`loadAccount` lit `GET /api/account?demarrage`, qui dit qui est
@@ -114,20 +115,17 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   pas encore obtenues sont des cartes marquées `seriesOnly`, sans quoi la page les compterait au
   Pokédex) et les possessions avec leur date (`shownCollection`, testé) : jamais un prix payé, une
   commande, le budget, la liste d'achats ni le statut « commandée » (une case commandée n'a pas de
-  statut) ; une collection vide tant qu'aucun appareil n'a rien envoyé. Il montre
-  la version que le serveur a reçue, relue comme un fichier (`readCollection`) : un document
-  enregistré avant les favorites n'en a pas, et chaque Pokémon y reçoit sa première carte, celle
-  qu'il montrait jusque-là, sans rien faire (testé sur la route). La page la lit une fois
-  (`getJson`, gardée pour la vie de la page) ; celle du compte est relue après une connexion, une
-  déconnexion ou un changement de pseudo (`forget`, `store/account.ts`). Au journal, une visite (« Pokédex public consulté ») ou un aperçu
+  statut) ; une collection vide tant qu'aucun appareil n'a rien envoyé. Il montre la version que
+  le serveur a reçue. La page la lit une fois (`getJson`, gardée pour la vie de la page, à son
+  adresse en minuscules quelle que soit la casse tapée : `vitrineUrl`) ; celle
+  du compte est relue après une connexion, une déconnexion ou un changement de pseudo (`forget`,
+  `store/account.ts`). Au journal, une visite (« Pokédex public consulté ») ou un aperçu
   (« Lien partagé lu ») une fois par visiteur, par Pokédex et par heure au plus (`journalOnce`, son
   réseau /64 en IPv6). L'image d'une carte n'y passe que par ses deux adresses (`small`, `large` : ce
   qu'un fichier importé y aurait glissé en plus ne devient pas public, testé). La route elle-même
   est testée sur le Worker entier (`worker/tests/collection.test.ts`) : le pseudo sans tenir compte des
   majuscules, 404 pour un pseudo qui n'est à personne ou un compte supprimé, sans session jamais
-  un prix payé, une commande ni un statut « commandée », les prix des seules cartes possédées, un
-  Pokédex enregistré avant les favorites montré avec la première carte de chaque Pokémon, et les
-  collections d'extensions montrées avec leurs cases.
+  un prix payé, une commande ni un statut « commandée », et les prix des seules cartes possédées.
 - La collection (`worker/collection.ts`, `store/account.ts`) : la collection et les achats
   forment un seul document par compte (une commande modifie les deux), gardé par le Worker seul,
   dans sa base D1 (`collections`) ; chaque compte ne lit et n'écrit que le sien (testé : un second compte ne voit ni
@@ -168,10 +166,10 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   rien écrire ni noter ; le navigateur renvoie toujours d'abord, tel quel, un envoi resté sans
   réponse, puis ce qui a changé depuis (rien de perdu, rien de « Rechargée » ; ce renvoi refusé,
   ce qui a changé depuis part aussitôt). Testé sur le
-  serveur entier avec 401, 403, une mise à jour, aucune version remplacée gardée, un document refusé
-  (400), un envoi compressé, la bombe, l'envoi renvoyé reconnu et un autre document de la même
-  version toujours refusé (409), `tests/collection.test.ts`. Après un 409, le navigateur relit la
-  version du serveur, à la place de la sienne : rien n'est écrasé, sa dernière modification est
+  serveur entier avec 401, 403, une mise à jour, un document refusé (400), un envoi compressé, la
+  bombe, l'envoi renvoyé reconnu et un autre document de la même version toujours refusé (409),
+  `worker/tests/collection.test.ts`. Après un 409, le navigateur relit la version du serveur, à la
+  place de la sienne : rien n'est écrasé, sa dernière modification est
   perdue, et le menu du compte le dit (« Rechargée », et un toast : « Vos dernières modifications
   ont été remplacées par celles d'un autre appareil. ») ; sans réponse à cette relecture, « Hors
   ligne », et l'envoi repart plus tard (refusé, puis relu), de plus en plus tard tant que la
@@ -179,11 +177,10 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   `{ version }`, et les autres onglets du navigateur l'apprennent (`BroadcastChannel('collection')`
   : `{ account, version }`) : un onglet sans rien en attente relit alors la collection. Le
   document passe les contrôles d'un import (`readSent` : refusé, la règle en cause au journal,
-  une ligne par compte, par statut et par minute au plus, testé), relus en une passe : le serveur
-  n'a qu'un fil, et un document fait pour l'occuper (90 000 collections vides, quelques Ko
-  compressés) le gelait 10 s quand chaque collection était cherchée dans toute la liste (moins
-  d'une seconde, testé ; une carte porte au plus 1 025 Pokémon, sans quoi les favorites la
-  parcourraient sans fin).
+  une ligne par compte, par statut et par minute au plus, testé), relus en une passe : un document
+  fait pour l'occuper (90 000 collections vides, quelques Ko compressés) coûtait 10 s de calcul au
+  Worker quand chaque collection était cherchée dans toute la liste (moins d'une seconde, testé ;
+  une carte porte au plus 1 025 Pokémon, sans quoi les favorites la parcourraient sans fin).
   Une modification d'une autre origine est refusée (403, plus haut) ; au journal, elle dit un
   réglage à revoir (`BETTER_AUTH_URL`) ou une tentative depuis un autre site. Sans réponse, ou une
   panne passagère (une erreur 5xx), ou trop d'envois d'affilée (429 : le Worker limite
@@ -228,8 +225,7 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   arrière-plan et l'autre onglet. Le
   serveur ne garde que la dernière version (aucune version remplacée, aucune sauvegarde : octobre
   2026 ; seul l'historique de D1, 30 jours, Time Travel). Il note au journal ce qui change d'une version à l'autre (`documentChanges`,
-  `worker/journal.ts`), la version d'avant relue comme un fichier (`readCollection` : un document
-  enregistré avant les collections d'extensions n'a pas de `series`, testé sur le Worker entier) :
+  `worker/journal.ts`) :
   une collection d'extension commencée (« Collection commencée ») ou supprimée (« Collection
   supprimée ») est **une ligne** (son nom, sa langue, son nombre de cartes), jamais une par case,
   que des centaines de cartes soient ajoutées ou retirées avec elle (« Collection effacée » ne dit

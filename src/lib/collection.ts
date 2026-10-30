@@ -16,6 +16,13 @@ export const cardLanguage = (card: Pick<PokemonCard, 'language'>): CardLanguage 
   card.language ?? 'ja'
 
 /**
+ * Le champ `language` d'une carte (ou d'une collection d'extension) de cette langue : `'fr'`, rien
+ * pour le japonais (`cardLanguage`).
+ */
+export const languageField = (language: CardLanguage): Pick<PokemonCard, 'language'> =>
+  language === 'fr' ? { language } : {}
+
+/**
  * Une carte ajoutée par l'utilisateur ; `null` si elle n'existe pas (ou plus). Seulement les siennes
  * (`Object.hasOwn`) : un statut ou une ligne de commande d'id `constructor` (un document retouché,
  * que ses règles laissent passer) rendrait sinon `Object` comme carte, et les pages planteraient.
@@ -174,5 +181,4 @@ export function removeCard(
 }
 
 /** Une carte encore à acheter : ni possédée ni commandée. */
-export const isToBuy = ({ status }: { status: CardStatus | null }) =>
-  status !== 'owned' && status !== 'ordered'
+export const isToBuy = ({ status }: { status: CardStatus | null }) => status === null

@@ -6,7 +6,7 @@ description: How to use the @camply/ui React component library in this app (setu
 # @camply/ui
 
 The user's own React component library (dark theme by default, French built-in labels, ESM,
-tree-shakable). Version installed: see `package.json` (0.3.x). The source lives in `../Camply-UI`
+tree-shakable). Version installed: see `package.json`. The source lives in `../Camply-UI`
 (next to this repo) when it is checked out (the user co-maintains it): its `AI-CONTEXT.md` gives the
 library's own rules (setup, tokens, `variant` for the shape and `tone` for the meaning, links styled
 as buttons with `asChild`, headings, dialogs). A missing feature is fixed **there** when

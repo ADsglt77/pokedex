@@ -1,7 +1,7 @@
 /**
  * Pour les tests qui traversent le Worker entier (`worker.request`, comme le navigateur) :
  * l'adresse du site, une action du compte, un compte créé comme à l'inscription, la session
- * qu'une réponse pose ; et ce que Bun donnait (attendre, compresser).
+ * qu'une réponse pose ; attendre (`sleep`), et compresser comme le site (`gzip`).
  */
 
 import { env } from 'cloudflare:workers'

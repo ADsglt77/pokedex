@@ -9,7 +9,7 @@ toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 ## Ce qui tourne en ligne
 
 Deux Workers, un par dépôt, déployés par **Workers Builds** (Cloudflare relié aux dépôts GitHub) à
-chaque push sur `main`. Plus de Docker, de nginx, de Caddy ni de VPS.
+chaque push sur `main`.
 
 | Worker | Dépôt | Adresse | Ce qu'il a |
 |---|---|---|---|
@@ -26,7 +26,7 @@ Qui fait quoi (le détail est dans l'en-tête de chaque fichier) :
 |---|---|
 | `wrangler.jsonc` (chaque dépôt) | Le Worker : ses liaisons, ses domaines (`routes`), ses limites (`ratelimits`) |
 | `package.json` : `ci`, `deploy` (chaque dépôt) | Ce que lance Workers Builds : les contrôles et la construction, puis les migrations de la base et le déploiement |
-| `worker/headers.ts`, `worker/limits.ts` (site) | Ce que faisaient nginx et Caddy : en-têtes de sécurité, cache, moteurs de recherche, `http://` et `www` vers `https://pokecodex.fr`, limites par visiteur |
+| `worker/headers.ts`, `worker/limits.ts` (site) | En-têtes de sécurité, cache, moteurs de recherche, `http://` et `www` vers `https://pokecodex.fr`, limites par visiteur |
 | `worker/index.ts` (données) | Son entrée d'Internet : lecture seule, en-têtes d'une API, limites, token |
 | `knip.ci.json`, `bun run lint:ci` (site) | Le lint sans `../pokedex-data`, que la construction de Cloudflare n'a pas |
 
@@ -165,6 +165,6 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
 
 ## En développement
 
-Rien ne change : `bun run dev` dans `pokedex-data`, puis `bun dev` ici (`README.md`). Les deux
-Workers tournent en local dans le moteur de Cloudflare, chacun sa D1 et son R2 dans `.wrangler/`,
-reliés par Wrangler ; la CSP n'y est pas posée (Vite écrit ses propres scripts dans la page).
+`bun run dev` dans `pokedex-data`, puis `bun dev` ici (`README.md`). Les deux Workers tournent en
+local dans le moteur de Cloudflare, chacun sa D1 et son R2 dans `.wrangler/`, reliés par Wrangler ;
+la CSP n'y est pas posée (Vite écrit ses propres scripts dans la page).

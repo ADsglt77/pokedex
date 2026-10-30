@@ -7,7 +7,7 @@ import { useCollectionAction } from '@/hooks/useNotify'
 import { usePokedex } from '@/hooks/usePokedex'
 import { isToBuy } from '@/lib/collection'
 import { cx } from '@/lib/cx'
-import { formatEuro, LEAVING_OWNED, statusLabel } from '@/lib/format'
+import { formatEuro, LEAVING_OWNED, statusText } from '@/lib/format'
 import { unlockedWithout, type CardView } from '@/lib/pokedex'
 import { noLongerUnlocked } from '@/lib/species'
 import { useCollectionStore } from '@/store/collection'
@@ -40,7 +40,7 @@ export function CardStatusControls({ view }: { view: CardView }) {
     act(
       () => useCollectionStore.getState().setCardStatus(card, next),
       next
-        ? `Carte ${card.reference} marquée comme ${statusLabel(next).toLowerCase()}.`
+        ? `Carte ${card.reference} marquée comme ${statusText(next)}.`
         : `Statut retiré de la carte ${card.reference}.`,
       next ? 'success' : 'info',
     )
@@ -100,7 +100,7 @@ export function CardStatusControls({ view }: { view: CardView }) {
         title="Ne plus marquer cette carte comme possédée ?"
         confirmLabel={
           leaving && leaving !== 'none'
-            ? `Marquer comme ${statusLabel(leaving).toLowerCase()}`
+            ? `Marquer comme ${statusText(leaving)}`
             : 'Retirer le statut'
         }
         onClose={() => setLeaving(null)}

@@ -13,7 +13,7 @@ import {
 } from '@/lib/card-catalog'
 import { catalogParams } from '@/lib/filters'
 import { plural } from '@/lib/format'
-import { priceOf, priceText } from '@/lib/prices'
+import { cardmarketIds, priceOf, priceText } from '@/lib/prices'
 import { otherSpeciesNames } from '@/lib/species'
 import { usePrices, usePricesMissing } from '@/store/prices'
 import type { CardLanguage, PokemonSpecies } from '@/types'
@@ -57,7 +57,7 @@ export function CatalogPicker({
 }) {
   const { language, order, set, pricedOnly, filter } = view
   const listed = use(loadSpeciesCards(species.id, language))
-  const ids = useMemo(() => (listed ?? []).flatMap((card) => card.cardmarket ?? []), [listed])
+  const ids = useMemo(() => cardmarketIds(listed ?? []), [listed])
   const prices = usePrices(ids)
   const missing = usePricesMissing(ids)
   const change = (next: Partial<PickerView>) => onView({ ...view, ...next })

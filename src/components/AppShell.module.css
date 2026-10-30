@@ -363,3 +363,11 @@
     opacity: 1;
   }
 }
+
+/* Mouvement réduit : `global.css` ôte les délais, pas celui-ci. Ce n'est pas un mouvement : il
+   évite qu'une navigation rapide fasse clignoter la barre. */
+@media (prefers-reduced-motion: reduce) {
+  .navigating {
+    animation-delay: 0.3s !important;
+  }
+}

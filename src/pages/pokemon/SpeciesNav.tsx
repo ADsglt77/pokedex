@@ -38,29 +38,28 @@ export function SpeciesNav({ species, previous, next }: SpeciesNavProps) {
 
   return (
     <div className={styles.nav}>
-      <div className={styles.links}>
-        {/* Des liens du routeur dans les libellés : camply ferait des liens qui rechargent la page. */}
-        <Breadcrumbs
-          className={styles.crumbs}
-          items={[
-            {
-              label: (
-                <Link to={pokedexHref()} className="quiet-link">
-                  Pokédex
-                </Link>
-              ),
-            },
-            {
-              label: (
-                <Link to={pokedexUrl({ generation: species.generation })} className="quiet-link">
-                  {generationById(species.generation)!.region}
-                </Link>
-              ),
-            },
-            { label: species.names.fr },
-          ]}
-        />
-      </div>
+      {/* Des liens du routeur dans les libellés : camply ferait des liens qui rechargent la
+          page. */}
+      <Breadcrumbs
+        className={styles.crumbs}
+        items={[
+          {
+            label: (
+              <Link to={pokedexHref()} className="quiet-link">
+                Pokédex
+              </Link>
+            ),
+          },
+          {
+            label: (
+              <Link to={pokedexUrl({ generation: species.generation })} className="quiet-link">
+                {generationById(species.generation)!.region}
+              </Link>
+            ),
+          },
+          { label: species.names.fr },
+        ]}
+      />
       <nav aria-label="Pokémon voisins" className={styles.neighbours}>
         <Neighbour species={previous} rel="prev" edge="Début du Pokédex" />
         <Neighbour species={next} rel="next" edge="Fin du Pokédex" />

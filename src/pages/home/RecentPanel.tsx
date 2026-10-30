@@ -15,16 +15,18 @@ import page from './HomePage.module.css'
 import styles from './RecentPanel.module.css'
 
 /** Les cartes de la rangée de l'accueil : le panneau en montre autant que sa largeur en tient. */
-export const SHOWN_CARDS = 10
+const SHOWN_CARDS = 10
 
 /**
- * Les dernières cartes obtenues ; celles qui arrivent pendant qu'on regarde (obtenues, ou venues
- * d'un autre appareil) sont « distribuées » une à une, pas celles du premier affichage : l'accueil
- * se remonte à chaque visite, la donne se rejouerait chaque fois.
+ * Les dernières cartes obtenues (`cards` : toutes, les plus récentes d'abord ; le panneau en montre
+ * `SHOWN_CARDS`) ; celles qui arrivent pendant qu'on regarde (obtenues, ou venues d'un autre
+ * appareil) sont « distribuées » une à une, pas celles du premier affichage : l'accueil se remonte
+ * à chaque visite, la donne se rejouerait chaque fois.
  */
 export function RecentPanel({ cards }: { cards: RecentCard[] }) {
+  const shown = cards.slice(0, SHOWN_CARDS)
   const collection = useCollectionStore((state) => state.collection)
-  const [first] = useState(() => new Set(cards.map((recent) => recent.card.id)))
+  const [first] = useState(() => new Set(shown.map((recent) => recent.card.id)))
   let dealt = 0
   return (
     <Panel
@@ -37,7 +39,7 @@ export function RecentPanel({ cards }: { cards: RecentCard[] }) {
       }
     >
       <ul className={styles.cards}>
-        {cards.map((recent) => {
+        {shown.map((recent) => {
           const [speciesId] = recent.card.dexIds
           const date = formatDate(recent.acquiredAt)
           const deal = !first.has(recent.card.id)

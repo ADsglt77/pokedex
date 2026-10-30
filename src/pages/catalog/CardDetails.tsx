@@ -16,15 +16,12 @@ import { CARD_TYPES } from '@/config/catalog'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { usePokedex } from '@/hooks/usePokedex'
 import { useSeriesSlot } from '@/hooks/useSeriesSlot'
-import { cardFromCatalog, isCatalogCard, languageField, type SetCard } from '@/lib/card-catalog'
-import { details, formatDate, formatDexNumber, formatList, statusLabel } from '@/lib/format'
+import { cardFromCatalog, collectionCard, type SetCard } from '@/lib/card-catalog'
+import { languageField } from '@/lib/collection'
+import { details, formatDate, formatDexNumber, formatList, statusText } from '@/lib/format'
 import { getSpecies, speciesNames } from '@/lib/species'
 import { addCard } from '@/store/collection'
-import type { CardStatus } from '@/types'
 import styles from './CardDetails.module.css'
-
-/** « possédée », « commandée », « non possédée » (`statusLabel`). */
-const statusText = (status: CardStatus | null) => statusLabel(status).toLowerCase()
 
 /**
  * Où en est la carte dans la collection : la carte de la collection qui est celle-ci (`mine`),
@@ -35,8 +32,7 @@ const statusText = (status: CardStatus | null) => statusLabel(status).toLowerCas
 function useCollectionPlace(card: SetCard) {
   const { entryById } = usePokedex()
   const entries = card.dexIds.map((id) => entryById.get(id)!)
-  const mine =
-    entries.flatMap(({ cards }) => cards).find((view) => isCatalogCard(view.card, card)) ?? null
+  const mine = collectionCard(entryById, card)
   const slot = useSeriesSlot(mine ? null : card)
   const holders = entries.filter(({ cards }) => cards.length > 0)
   return { mine, slot, holders }
@@ -133,10 +129,9 @@ export function CardDetails({
             card={{
               cardmarket: card.cardmarket,
               reference: card.reference,
-              ...languageField(card),
+              ...languageField(card.set.language),
             }}
             headingLevel={3}
-            withoutId="Pas de prix : son id Cardmarket n’est pas connu."
           />
         </div>
       </div>

@@ -1,6 +1,8 @@
 {
-  // Les options communes à l'app (`tsconfig.app.json`) et à ce que lance Bun (`tsconfig.bun.json`) ;
-  // chacun ajoute ses `lib`, `types` et `include`.
+  // Les options communes à l'app (`tsconfig.app.json`), à ce que lance Bun (`tsconfig.bun.json`),
+  // au Worker (`tsconfig.worker.json`) et au contrôle des types partagés
+  // (`tsconfig.contracts.json`) ;
+  // chacun y ajoute les siens (`lib`, `types`, `include`).
   "compilerOptions": {
     // Le défaut de TypeScript 6, écrit pour qui lit ce fichier.
     "strict": true,
@@ -8,7 +10,6 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "skipLibCheck": true,
-    "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,

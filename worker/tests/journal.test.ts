@@ -1,11 +1,12 @@
 /**
  * Le visiteur d'une requête (`visitorOf`, `worker/journal.ts`), derrière Cloudflare : la clé qui
  * limite le journal par visiteur (`journalOnce` : les connexions refusées, les visites d'un Pokédex
- * public). Fausse, tous les visiteurs n'en feraient qu'un (les lignes de l'un tairaient celles des
- * autres), ou un seul en ferait des milliers (une adresse IPv6 par requête : un afflux noierait le
- * journal, et les connexions avec). Et ce que dit le journal d'un changement de collection
- * (`documentChanges`) : commencer une collection d'extension, ce sont des centaines de cartes
- * ajoutées, une ligne seulement ; une erreur ici noierait le journal.
+ * public), et ses requêtes (`worker/limits.ts`). Fausse, tous les visiteurs n'en feraient qu'un
+ * (les lignes de l'un tairaient celles des autres), ou un seul en ferait des milliers (une adresse
+ * IPv6 par requête : un afflux noierait le journal et passerait les limites). Et ce que dit le
+ * journal d'un changement de collection (`documentChanges`) : commencer une collection
+ * d'extension, ce sont des centaines de cartes ajoutées, une ligne seulement ; une erreur ici
+ * noierait le journal.
  */
 
 import { describe, expect, test } from 'vitest'

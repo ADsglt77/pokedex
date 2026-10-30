@@ -11,7 +11,7 @@
 
 import { create } from 'zustand'
 import { fetchFresh, forget, getJson, markFailed, retryDue } from '@/lib/api'
-import { historiesOf, loadInBatches, priceBatches } from '@/lib/prices'
+import { cardmarketIds, historiesOf, loadInBatches, priceBatches } from '@/lib/prices'
 import { settled } from '@/lib/settled'
 import { HOUR } from '@/lib/time'
 import { useCollectionStore } from '@/store/collection'
@@ -186,7 +186,7 @@ const idsOfCollection = new WeakMap<CollectionData, number[]>()
 function collectionIds(collection: CollectionData) {
   let ids = idsOfCollection.get(collection)
   if (!ids) {
-    ids = Object.values(collection.customCards).flatMap((card) => card.cardmarket ?? [])
+    ids = cardmarketIds(Object.values(collection.customCards))
     idsOfCollection.set(collection, ids)
   }
   return ids

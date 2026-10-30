@@ -20,10 +20,8 @@ const money = (value: number | null) => (value === null ? '—' : formatEuro(val
 const STATUS_ORDER: Record<CardStatus, number> = { owned: 0, ordered: 1 }
 
 interface CardRow {
-  id: string
   card: PokemonCard
   name: string
-  reference: string
   status: CardStatus
   paid: number | null
   value: number | null
@@ -68,10 +66,8 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
     () =>
       sortCards(
         cards.map(({ card, status, paid, value }) => ({
-          id: card.id,
           card,
           name: cardTitle(card),
-          reference: card.reference,
           status,
           paid,
           value,
@@ -81,7 +77,7 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
       ),
     [cards, sort],
   )
-  const { limit, sentinel, more } = useGrowingList(rows.length, ROWS_STEP)
+  const { limit, end } = useGrowingList(rows.length, ROWS_STEP)
 
   return (
     <div className="growing">
@@ -89,7 +85,7 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
         bordered={false}
         className={cx('stack-table', styles.cardsTable)}
         data={rows.slice(0, limit)}
-        rowKey={(row) => row.id}
+        rowKey={(row) => row.card.id}
         sort={sort}
         onSortChange={setSort}
         emptyState="Aucune carte suivie : marquez une carte comme possédée ou commandée."
@@ -100,10 +96,10 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
             sortValue: SORT_VALUES.name,
             cell: (row) => (
               <span className={styles.card}>
-                <CardPageLink card={row.card} series={seriesOf(collection, row.id)}>
+                <CardPageLink card={row.card} series={seriesOf(collection, row.card.id)}>
                   {row.name}
                 </CardPageLink>
-                <span className="muted">{row.reference}</span>
+                <span className="muted">{row.card.reference}</span>
               </span>
             ),
           },
@@ -153,7 +149,7 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
           },
         ]}
       />
-      {more && <span ref={sentinel} className="growing-sentinel" aria-hidden="true" />}
+      {end}
     </div>
   )
 }
