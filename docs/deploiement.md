@@ -36,6 +36,9 @@ L'offre gratuite de Workers ne suffit pas aux tâches d'ingestion :
 
 - **le calcul** : 10 ms par demande en gratuit ; une étape des tâches en prend des secondes (le guide
   des prix lu en flux, ses 64 000 cartes) : `limits.cpu_ms` (5 min) n'existe qu'en payant ;
+- **les requêtes** : 50 par exécution en gratuit ; en payant, 10 000 par défaut et jusqu'à
+  10 millions (`limits.subrequests`). Un Workflow enchaîne ses étapes dans une même exécution : la
+  copie des images en fait des centaines de milliers (arrêtée à la 153e étape avant ce réglage) ;
 - **D1** : 100 000 lignes écrites par jour en gratuit ; la tâche `prices` en écrit plus du double à
   chaque nouveau guide (les prix du jour, mis de côté puis recopiés, et l'historique de chaque
   carte).
