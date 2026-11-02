@@ -189,36 +189,32 @@ async function serveJson(request: Request, body: unknown) {
 }
 
 /**
- * Le compte d'un pseudo : seulement un pseudo possible, jamais une adresse du site
- * (`RESERVED_PSEUDOS`), même portée par un compte créé avant qu'elle ne le devienne.
+ * Le compte d'un pseudo et ce que montre son Pokédex, en une requête : seulement un pseudo
+ * possible, jamais une adresse du site (`RESERVED_PSEUDOS`), même portée par un compte créé avant
+ * qu'elle ne le devienne ; sa collection enregistrée (vide tant qu'aucun appareil n'a rien envoyé).
  */
-const ownerOf = async (pseudo: string) =>
-  isPseudo(pseudo)
-    ? ((await db
-        .select({ id: user.id, name: user.name })
-        .from(user)
-        .where(eq(user.username, pseudo.toLowerCase()))
-        .get()) ?? null)
-    : null
-
-/**
- * Ce que montre le Pokédex d'un compte : sa collection enregistrée (vide tant qu'aucun appareil n'a
- * rien envoyé).
- */
-async function shownOf(userId: string) {
+async function ownerWithCollection(pseudo: string) {
+  if (!isPseudo(pseudo)) return null
   const row = await db
-    .select({ collection: collections.collection })
-    .from(collections)
-    .where(eq(collections.userId, userId))
+    .select({ name: user.name, collection: collections.collection })
+    .from(user)
+    .leftJoin(collections, eq(collections.userId, user.id))
+    .where(eq(user.username, pseudo.toLowerCase()))
     .get()
-  return row ? shownCollection(JSON.parse(row.collection) as CollectionData) : emptyCollection()
+  if (!row) return null
+  return {
+    name: row.name,
+    collection: row.collection
+      ? shownCollection(JSON.parse(row.collection) as CollectionData)
+      : emptyCollection(),
+  }
 }
 
 export const vitrineRoutes = new Hono().get('/vitrine/:pseudo', async (c) => {
   const pseudo = c.req.param('pseudo')
-  const owner = await ownerOf(pseudo)
+  const owner = await ownerWithCollection(pseudo)
   if (!owner) return c.body(null, 404, { 'Cache-Control': 'no-cache' })
-  const collection = await shownOf(owner.id)
+  const { collection } = owner
   journalVisit(
     {
       topic: 'vitrine',
@@ -242,7 +238,7 @@ export const linkPreview: MiddlewareHandler = async (c) => {
   const robot = c.req.header('user-agent')?.match(PREVIEW_BOTS)?.[0]
   if (!robot) return env.ASSETS.fetch(c.req.raw)
   const pseudo = c.req.path.slice(1)
-  const owner = await ownerOf(pseudo)
+  const owner = await ownerWithCollection(pseudo)
   if (owner) {
     journalVisit(
       {
@@ -253,9 +249,7 @@ export const linkPreview: MiddlewareHandler = async (c) => {
       c.req.raw,
     )
   }
-  const { title, description } = owner
-    ? vitrineSummary(owner.name, await shownOf(owner.id))
-    : SITE_SUMMARY
+  const { title, description } = owner ? vitrineSummary(owner.name, owner.collection) : SITE_SUMMARY
   const url = owner ? `${ORIGIN}/${pseudo.toLowerCase()}` : ORIGIN
   const meta = (property: string, content: string) =>
     `<meta property="${property}" content="${escape(content)}">`

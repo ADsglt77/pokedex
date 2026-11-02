@@ -3,7 +3,8 @@
  * (`src/store/account.ts`). Un seul document, numéroté (`version`) :
  * - `GET` : `{ version, account, collection, shopping }` (`CollectionResponse`, `account` : l'id
  *   du compte ; `version` 0 et rien d'autre tant que rien n'a été enregistré) ; demandé depuis la
- *   version que l'appareil a déjà (`?version=N`) et inchangé, `{ version, account }` seuls ;
+ *   version que l'appareil a déjà (`?version=N`) et inchangé, `{ version, account }` seuls, sans
+ *   que le document soit lu en base (`storedSince`) ;
  * - `PUT` `{ account, baseVersion, collection, shopping }` : enregistré seulement si `account` est
  *   le compte de la session (sinon 401 : un envoi parti juste après une connexion à un autre compte
  *   n'écrase jamais sa collection) et `baseVersion` la version du serveur, et rend `{ version }`
@@ -20,7 +21,7 @@
  * Sans session : 401, avant de rien lire ni décompresser ; jamais gardé en cache (`signedIn`).
  */
 
-import { eq } from 'drizzle-orm'
+import { eq, sql, type AnyColumn } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { gunzipSync } from 'node:zlib'
@@ -42,6 +43,25 @@ const stored = (userId: string) =>
     .from(collections)
     .where(eq(collections.userId, userId))
     .get()
+
+/**
+ * Comme `stored`, sans le document (`collection` et `shopping` à `null`) s'il en est encore à la
+ * version `known` : relu à chaque retour sur la page, presque toujours inchangé, il n'est pas lu
+ * pour rien.
+ */
+const storedSince = (userId: string, known: number) => {
+  const unless = (column: AnyColumn) =>
+    sql<string | null>`case when ${collections.version} = ${known} then null else ${column} end`
+  return db
+    .select({
+      version: collections.version,
+      collection: unless(collections.collection),
+      shopping: unless(collections.shopping),
+    })
+    .from(collections)
+    .where(eq(collections.userId, userId))
+    .get()
+}
 
 /** Une réponse JSON écrite à la main (le document enregistré n'est jamais relu pour être renvoyé). */
 const JSON_HEADERS = { 'Content-Type': 'application/json' }
@@ -101,7 +121,7 @@ export const collectionRoutes = new Hono<SignedIn>()
     const { user } = c.var
     const known = c.req.query('version')
     if (known !== undefined && !/^\d+$/.test(known)) return c.json(null, 400)
-    const row = await stored(user.id)
+    const row = await (known === undefined ? stored(user.id) : storedSince(user.id, Number(known)))
     const version = row?.version ?? 0
     const head = `"version":${version},"account":${JSON.stringify(user.id)}`
     if (Number(known) === version) return c.body(`{${head}}`, 200, JSON_HEADERS)

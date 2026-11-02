@@ -210,7 +210,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   « Se reconnecter » prévient d'abord qu'un autre compte la perdrait, avec le bouton d'export. Au
   retour sur la page, le document est relu (changé sur un autre appareil), si rien n'attend d'être
   envoyé, et seulement s'il a changé : `GET /api/collection?version=N` ne rend que
-  `{ version, account }` quand le serveur a encore cette version, et rien n'est remplacé
+  `{ version, account }` quand le serveur a encore cette version (sans lire le document en base,
+  `storedSince`), et rien n'est remplacé
   (« Annuler » garde ses références, rien ne se redessine). La lecture dit à quel compte est la
   collection (`account`) : celle d'un autre compte (connecté entre-temps dans un autre onglet) n'est
   jamais prise, l'état passe à « Reconnectez-vous ». Une modification faite pendant cette
