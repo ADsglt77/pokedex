@@ -94,13 +94,18 @@ export const rateLimit = sqliteTable('rateLimit', {
 /**
  * Les pseudos qu'un compte a quittés (changé, ou compte supprimé) : jamais repris par un autre
  * compte, sans quoi un lien partagé vers `/pseudo` mènerait au Pokédex d'un autre. Un compte n'en
- * garde que ses derniers (`released_at`). Tenus par les déclencheurs de leur migration.
+ * garde que ses derniers (`released_at`). Tenus par les déclencheurs de leur migration, qui les
+ * cherchent par compte, du plus récent au plus ancien (l'index).
  */
-export const releasedPseudos = sqliteTable('released_pseudos', {
-  username: text().primaryKey(),
-  userId: text('user_id').notNull(),
-  releasedAt: text('released_at').notNull(),
-})
+export const releasedPseudos = sqliteTable(
+  'released_pseudos',
+  {
+    username: text().primaryKey(),
+    userId: text('user_id').notNull(),
+    releasedAt: text('released_at').notNull(),
+  },
+  (table) => [index('released_pseudos_by_user').on(table.userId, table.releasedAt)],
+)
 
 /**
  * La collection et les achats de chaque compte, tels que les enregistre le navigateur (JSON), partis
