@@ -19,16 +19,20 @@
  *   d'aperçu (une ligne par visiteur, par Pokédex et par heure au plus, `vitrine.ts`) ;
  * - `serveur` : une erreur imprévue de l'API ou de Better Auth, l'API des données muette
  *   (`vitrine.ts`), un débit dépassé (`limits.ts`).
- * Pas les requêtes une à une : seulement ce qui se passe. Jamais un mot de passe ; l'adresse du
- * visiteur que donne Cloudflare (`cf-connecting-ip`). Ce qu'un visiteur peut provoquer à volonté
- * (une connexion refusée, une modification refusée, un débit dépassé) : une ligne par visiteur et
- * par minute au plus (`journalOnce`) ; une visite, par heure ; un compte (un export ou un import
- * signalé, un envoi refusé), par compte et par minute.
+ * Pas les requêtes une à une : seulement ce qui se passe. Jamais un mot de passe, ni les valeurs
+ * d'une requête SQL en erreur (`loggable`, `reasonOf`), sauf dans la ligne `# SERVER_ERROR:` que
+ * better-call écrit lui-même avec l'erreur entière (une requête en échec hors des try/catch de
+ * Better Auth, à l'inscription par exemple : `onAPIError.throw` l'éviterait, à décider) ;
+ * l'adresse du visiteur que donne Cloudflare (`cf-connecting-ip`). Ce qu'un visiteur peut
+ * provoquer à volonté (une connexion refusée, une modification refusée, un débit dépassé) : une
+ * ligne par visiteur et par minute au plus (`journalOnce`) ; une visite, par heure ; un compte (un
+ * export ou un import signalé, un envoi refusé), par compte et par minute.
  * En couleurs en développement seulement : les journaux de Cloudflare les montreraient en codes.
  * Le cœur (la ligne, `detail`, `journalOnce`) : même règle que `../pokedex-data/worker/journal.ts`
  * (une copie, chaque dépôt se construit seul) : une correction se reporte de l'autre côté.
  */
 
+import { DrizzleQueryError } from 'drizzle-orm'
 import { ORDER_STATE_LABELS } from '@/config/shopping'
 import { cardLanguage } from '@/lib/collection'
 import { formatEuro } from '@/lib/format'
@@ -114,8 +118,25 @@ const escapeControls = (text: string) =>
  */
 export const safeText = (text: string) => escapeControls(cut(text))
 
-/** La raison d'un échec, pour les détails d'une ligne (`raison=`) : le message d'une erreur. */
-export const reasonOf = (error: unknown) => (error instanceof Error ? error.message : String(error))
+/**
+ * Une erreur telle qu'écrite au journal (`console.error(...loggable(error))`) : celle d'une
+ * requête de Drizzle sans ses valeurs, que son message recopie (une collection, l'empreinte d'un
+ * mot de passe) : la requête, puis sa cause (l'erreur de D1, sa pile).
+ */
+export const loggable = (error: unknown) =>
+  error instanceof DrizzleQueryError ? [`Failed query: ${error.query}`, error.cause] : [error]
+
+/**
+ * La raison d'un échec, pour les détails d'une ligne (`raison=`, `cause=` de `logError`) : le
+ * message d'une erreur ; pour une requête de Drizzle, la requête seule (sans ses valeurs,
+ * `loggable`).
+ */
+export const reasonOf = (error: unknown) =>
+  error instanceof DrizzleQueryError
+    ? error.query
+    : error instanceof Error
+      ? error.message
+      : String(error)
 
 /** L'adresse du visiteur, que Cloudflare écrit lui-même (celle reçue du visiteur est remplacée). */
 const requestIp = (request?: Request) => request?.headers.get('cf-connecting-ip') || undefined

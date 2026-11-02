@@ -13,8 +13,8 @@
  * reçoit ses en-têtes
  * (sécurité, cache, moteurs de recherche : `headers.ts`) ; une route qu'un visiteur répète trop :
  * 429 (`limits.ts`) ; une modification venue d'une autre origine : 403 (`sameOrigin`). Une adresse
- * inconnue de l'API : 404 sans corps ; une erreur imprévue : dans le journal, et 500 sans corps
- * (rien de ses détails, une requête SQL par exemple, ne part vers le site).
+ * inconnue de l'API : 404 sans corps ; une erreur imprévue : dans le journal (une requête SQL sans
+ * ses valeurs, `loggable`), et 500 sans corps (rien de ses détails ne part vers le site).
  */
 
 import { env } from 'cloudflare:workers'
@@ -23,7 +23,7 @@ import { accountRoutes, sameOrigin } from './auth'
 import { collectionRoutes } from './collection'
 import { dataRoutes } from './data'
 import { canonicalHost, siteHeaders } from './headers'
-import { journal } from './journal'
+import { journal, loggable } from './journal'
 import { limits } from './limits'
 import { linkPreview, vitrineRoutes } from './vitrine'
 
@@ -61,6 +61,6 @@ export default new Hono()
       message: 'Erreur de l’API',
       details: { route: `${c.req.method} ${c.req.path}` },
     })
-    console.error(error)
+    console.error(...loggable(error))
     return c.body(null, 500, { 'Cache-Control': 'no-store' })
   })

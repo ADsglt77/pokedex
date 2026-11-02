@@ -41,7 +41,15 @@ import { PASSWORD_MIN, PSEUDO } from '@/config/account'
 import { isPseudo } from '@/lib/account'
 import type { AccountState } from '@/types'
 import { db } from './db'
-import { journal, journalOnce, reasonOf, safeText, visitorOf, type JournalLevel } from './journal'
+import {
+  journal,
+  journalOnce,
+  loggable,
+  reasonOf,
+  safeText,
+  visitorOf,
+  type JournalLevel,
+} from './journal'
 import * as schema from './schema'
 
 if (process.env.NODE_ENV === 'production') {
@@ -66,7 +74,8 @@ const DAY_IN_SECONDS = 24 * 60 * 60
 /**
  * Une erreur de Better Auth dans le journal du site. Son message peut recopier ce qu'envoie un
  * visiteur (« Invalid callbackURL: … ») : écrit en détail, échappé, une fois par minute au plus
- * pour un même début. Sa cause (l'erreur, sa pile) suit.
+ * pour un même début. Sa cause (l'erreur, sa pile ; une requête SQL sans ses valeurs, `loggable`)
+ * suit.
  */
 function logError(message: string, ...causes: unknown[]) {
   journalOnce(`better-auth ${message.slice(0, 60)}`, {
@@ -76,7 +85,11 @@ function logError(message: string, ...causes: unknown[]) {
     details: { cause: message },
   })
   if (causes.length > 0) {
-    console.error(...causes.map((cause) => (typeof cause === 'string' ? safeText(cause) : cause)))
+    console.error(
+      ...causes.flatMap((cause) =>
+        typeof cause === 'string' ? [safeText(cause)] : loggable(cause),
+      ),
+    )
   }
 }
 
