@@ -7,6 +7,7 @@
  * et les mentions légales sans rien d'elle.
  */
 
+import { memo } from '@/lib/memo'
 import { settled } from '@/lib/settled'
 import { MINUTE } from '@/lib/time'
 import type { ServerStatus } from '@/types'
@@ -130,10 +131,5 @@ export function derived<T, R>(
   timeout?: number,
 ): Promise<R> {
   const response = getJson<T>(url, timeout)
-  let value = derivations.get(response)
-  if (!value) {
-    value = settled(response.then(compute))
-    derivations.set(response, value)
-  }
-  return value as Promise<R>
+  return memo(derivations, response, () => settled(response.then(compute))) as Promise<R>
 }

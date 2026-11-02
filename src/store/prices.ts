@@ -11,6 +11,7 @@
 
 import { create } from 'zustand'
 import { fetchFresh, forget, getJson, markFailed, retryDue } from '@/lib/api'
+import { memo } from '@/lib/memo'
 import { cardmarketIds, historiesOf, loadInBatches, priceBatches } from '@/lib/prices'
 import { settled } from '@/lib/settled'
 import { HOUR } from '@/lib/time'
@@ -95,8 +96,7 @@ function requestPrices(ids: readonly number[]) {
   const last = requested.get(ids)
   if (last?.state === state && !(check(state, ids).missing && retryDue(last.at))) return
   requested.set(ids, { state, at: Date.now() })
-  let batches = batchesOf.get(ids)
-  if (!batches) batchesOf.set(ids, (batches = priceBatches(ids)))
+  const batches = memo(batchesOf, ids, () => priceBatches(ids))
   requestBatches(batches.filter((batch) => batch.some((id) => !state.known.has(id))))
 }
 
@@ -183,14 +183,8 @@ document.addEventListener('visibilitychange', () => {
 const idsOfCollection = new WeakMap<CollectionData, number[]>()
 
 /** Les ids Cardmarket des cartes de la collection, calculés une fois par collection. */
-function collectionIds(collection: CollectionData) {
-  let ids = idsOfCollection.get(collection)
-  if (!ids) {
-    ids = cardmarketIds(Object.values(collection.customCards))
-    idsOfCollection.set(collection, ids)
-  }
-  return ids
-}
+const collectionIds = (collection: CollectionData) =>
+  memo(idsOfCollection, collection, () => cardmarketIds(Object.values(collection.customCards)))
 
 /** Ces cartes ont-elles leur réponse, et l'une d'elles a-t-elle échoué : une fois par état et par liste. */
 const checked = new WeakMap<
@@ -199,20 +193,16 @@ const checked = new WeakMap<
 >()
 
 function check(state: PriceState, wanted: readonly number[]) {
-  let byList = checked.get(state)
-  if (!byList) checked.set(state, (byList = new WeakMap()))
-  let result = byList.get(wanted)
-  if (!result) {
+  const byList = memo(checked, state, () => new WeakMap())
+  return memo(byList, wanted, () => {
     // Une carte déjà reçue (avant un rafraîchissement, `refreshPrices`) est prête : son prix
     // reste affiché en attendant le nouveau.
     const cards = state.prices?.cards ?? {}
-    result = {
+    return {
       ready: wanted.every((id) => state.known.has(id) || id in cards),
       missing: wanted.some((id) => state.failed.has(id)),
     }
-    byList.set(wanted, result)
-  }
-  return result
+  })
 }
 
 /**

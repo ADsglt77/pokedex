@@ -69,6 +69,13 @@ let saved = 0
 let refused = 0
 /** La collection relue du serveur : ce n'est pas une modification à envoyer. */
 let loading = false
+/** Remplace la collection en mémoire par celle du serveur (ou par une vide, sans compte). */
+function replaceFromServer(document: CollectionDocument) {
+  loading = true
+  replaceDocument(document)
+  loading = false
+}
+
 /**
  * Un envoi : le numéro de la modification et le document qu'il porte, son corps (compressé ou
  * non, `gzip`).
@@ -142,13 +149,11 @@ async function load(account: string) {
   version = body.version
   saved = edits
   useAccountStore.setState({ weight: new Blob([text]).size })
-  loading = true
   // Lue comme un fichier importé : seuls ses champs connus.
-  replaceDocument({
+  replaceFromServer({
     collection: readCollection(body.collection) ?? emptyCollection(),
     shopping: readShopping(body.shopping) ?? emptyShopping(),
   })
-  loading = false
   return true
 }
 
@@ -189,6 +194,31 @@ async function pack(text: string) {
 
 /** Un autre onglet de ce navigateur vient d'enregistrer : `{ account, version }`. */
 const channel = new BroadcastChannel('collection')
+
+/**
+ * Changée ailleurs (409) : la version du serveur, relue à la place de celle d'ici ; une
+ * modification faite pendant la lecture part encore (`load`). Sans réponse, l'envoi repartira
+ * (refusé, puis relu), de plus en plus tard : les essais ne repartent de zéro qu'une fois la
+ * collection relue.
+ */
+async function reloadAfterConflict(account: string) {
+  if (await load(account)) {
+    failures = 0
+    if (!hasUnsavedChanges()) setStatus('reloaded')
+  } else if (useAccountStore.getState().status !== 'expired') retryLater()
+}
+
+/**
+ * Pourquoi le serveur refuse pour de bon la collection envoyée (`document`) : une origine refusée
+ * (403 : l'adresse du site n'est pas celle que connaît le serveur), trop grosse (413), ou la règle
+ * en cause, relue ici avec le même code.
+ */
+const refusalReason = (status: number, document: CollectionDocument) =>
+  status === 403
+    ? 'il refuse les envois depuis cette adresse, que son réglage BETTER_AUTH_URL ne nomme pas'
+    : status === 413
+      ? 'elle dépasse 5 Mo'
+      : (documentProblem(document) ?? 'elle ne passe pas ses contrôles')
 
 /**
  * Envoie la collection, si une modification attend : ni la session fermée (il faut se
@@ -233,31 +263,16 @@ async function push(): Promise<void> {
     else if (resent) return push()
     return
   }
-  if (response.status === 409) {
-    // La version du serveur, relue à la place de celle d'ici ; une modification faite pendant la
-    // lecture part encore (`load`). Sans réponse, l'envoi repartira (refusé, puis relu), de plus en
-    // plus tard : les essais ne repartent de zéro qu'une fois la collection relue.
-    if (await load(account.id)) {
-      failures = 0
-      if (!hasUnsavedChanges()) setStatus('reloaded')
-    } else if (useAccountStore.getState().status !== 'expired') retryLater()
-    return
-  }
-  // Refusée pour de bon : la règle en cause (relue ici avec le même code, sur le document envoyé),
-  // trop grosse, ou une origine refusée (l'adresse du site n'est pas celle que connaît le serveur).
-  // Elle reste à enregistrer (la déconnexion propose l'export), mais ne repart pas telle quelle. Un
-  // renvoi refusé alors que d'autres modifications attendent : elles partent à leur tour.
+  if (response.status === 409) return reloadAfterConflict(account.id)
+  // Refusée pour de bon (`refusalReason`) : elle reste à enregistrer (la déconnexion propose
+  // l'export), mais ne repart pas telle quelle. Un renvoi refusé alors que d'autres modifications
+  // attendent : elles partent à leur tour.
   failures = 0
   refused = sent.sending
   if (resent && edits !== refused) return push()
   useAccountStore.setState({
     status: 'refused',
-    refusal:
-      response.status === 403
-        ? 'il refuse les envois depuis cette adresse, que son réglage BETTER_AUTH_URL ne nomme pas'
-        : response.status === 413
-          ? 'elle dépasse 5 Mo'
-          : (documentProblem(sent.document) ?? 'elle ne passe pas ses contrôles'),
+    refusal: refusalReason(response.status, sent.document),
   })
 }
 
@@ -329,21 +344,21 @@ export function renameAccount(name: string) {
 
 /**
  * Plus de compte en mémoire : ni sa collection (elle reste sur le serveur), ni ses envois en
- * attente.
+ * attente. L'échange en cours s'achève d'abord, puis tout est remis à zéro : il ne laisse derrière
+ * lui ni nouvel essai, ni état.
  */
 async function leave() {
   const { account } = useAccountStore.getState()
-  useAccountStore.setState({ account: null, status: 'saved', refusal: null, weight: 0 })
+  useAccountStore.setState({ account: null })
+  await queue
   clearTimeout(timer)
   clearTimeout(retry)
-  await queue
+  useAccountStore.setState({ status: 'saved', refusal: null, weight: 0 })
   version = 0
   saved = edits
   unanswered = null
   failures = 0
-  loading = true
-  replaceDocument({ collection: emptyCollection(), shopping: emptyShopping() })
-  loading = false
+  replaceFromServer({ collection: emptyCollection(), shopping: emptyShopping() })
   if (account) forgetVitrine(account.name)
 }
 
