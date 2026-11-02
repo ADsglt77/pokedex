@@ -26,6 +26,7 @@ Qui fait quoi (le détail est dans l'en-tête de chaque fichier) :
 |---|---|
 | `wrangler.jsonc` (chaque dépôt) | Le Worker : ses liaisons, ses domaines (`routes`), ses limites (`ratelimits`) |
 | `package.json` : `ci`, `deploy` (chaque dépôt) | Ce que lance Workers Builds : les contrôles et la construction, puis les migrations de la base et le déploiement |
+| `package.json` : `overrides` (site) | Une seule copie de zod et de Wrangler, undici sans ses avis. `@cloudflare/vite-plugin` 1.65.0 épingle Wrangler 4.152.0 et une miniflare qui tire undici 7.29.1 : retirer `wrangler` et `undici` quand vite-plugin, `@cloudflare/vitest-plugin` et `wrangler` épingleront les mêmes versions (vite-plugin 1.66.0 : voir aussi « En développement ») |
 | `worker/headers.ts`, `worker/limits.ts` (site) | En-têtes de sécurité, cache, moteurs de recherche, `http://` et `www` vers `https://pokecodex.fr`, limites par visiteur |
 | `worker/index.ts` (données) | Son entrée d'Internet : lecture seule, en-têtes d'une API, limites, token |
 | `knip.ci.json`, `bun run lint:ci` (site) | Le lint sans `../pokedex-data`, que la construction de Cloudflare n'a pas |
@@ -180,4 +181,7 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
 
 `bun run dev` dans `pokedex-data`, puis `bun dev` ici (`README.md`). Les deux Workers tournent en
 local dans le moteur de Cloudflare, chacun sa D1 et son R2 dans `.wrangler/`, reliés par Wrangler ;
-la CSP n'y est pas posée (Vite écrit ses propres scripts dans la page).
+la CSP n'y est pas posée (Vite écrit ses propres scripts dans la page). Ils se trouvent par le
+registre de développement de Wrangler, un dossier de ce poste : miniflare 5.20261023.1-beta, que
+tire vite-plugin 1.66.0, range le site dans un autre. Ne pas la forcer ; à cette mise à jour,
+donner le même `CLOUDFLARE_DEV_REGISTRY_PATH` au `dev` des deux dépôts.
