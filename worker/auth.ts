@@ -173,8 +173,12 @@ export const auth = betterAuth({
       },
     },
   },
-  // L'adresse du visiteur, pour les limites (`rateLimit`) : celle que Cloudflare écrit lui-même.
-  advanced: { ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] } },
+  // La session et son compte lus d'une seule requête (les relations de `schema.ts`). L'adresse du
+  // visiteur, pour les limites (`rateLimit`) : celle que Cloudflare écrit lui-même.
+  advanced: {
+    database: { joins: true },
+    ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] },
+  },
   // En production, par visiteur : 10 tentatives de création de compte et 10 changements de pseudo
   // par heure ; 5 tentatives de connexion, de changement du mot de passe ou de suppression du
   // compte par minute ; 100 requêtes pour le reste. Comptées dans la base (`rateLimit` de

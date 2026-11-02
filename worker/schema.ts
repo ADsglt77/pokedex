@@ -1,14 +1,14 @@
 /**
  * Le schéma de la base du site (D1, `DB`) : les comptes, tels que les attend Better Auth (`user`,
- * `session`, `account`, `verification`, et ses compteurs de tentatives `rateLimit`), les pseudos
- * quittés (`releasedPseudos`, `auth.ts`) et la collection de chaque compte (`collections`). Les
- * colonnes de Better Auth portent le nom de leur clé, celles de l'app sont en minuscules
- * (`user_id`). Après une modification : `bun run db:generate` en écrit la migration
+ * `session`, `account`, `verification`, et ses compteurs de tentatives `rateLimit`) avec leurs
+ * relations, les pseudos quittés (`releasedPseudos`, `auth.ts`) et la collection de chaque compte
+ * (`collections`). Les colonnes de Better Auth portent le nom de leur clé, celles de l'app sont en
+ * minuscules (`user_id`). Après une modification : `bun run db:generate` en écrit la migration
  * (`migrations/`), que `bun dev` applique à la base locale. Les déclencheurs des pseudos, que
  * Drizzle n'écrit pas, ont leur migration écrite à la main.
  */
 
-import { sql } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 /** Une date, en millisecondes (ce qu'écrit Better Auth). */
@@ -66,6 +66,24 @@ export const account = sqliteTable(
   },
   (table) => [index('account_userId_idx').on(table.userId)],
 )
+
+/**
+ * Les relations du compte, de ses sessions et de ses mots de passe (`account`), pour Drizzle seul
+ * (rien dans la base) : Better Auth lit une session avec son compte en une seule requête
+ * (`advanced.database.joins`, `auth.ts`), qui échouerait sans elles.
+ */
+export const userRelations = relations(user, ({ many }) => ({
+  sessions: many(session),
+  accounts: many(account),
+}))
+
+export const sessionRelations = relations(session, ({ one }) => ({
+  user: one(user, { fields: [session.userId], references: [user.id] }),
+}))
+
+export const accountRelations = relations(account, ({ one }) => ({
+  user: one(user, { fields: [account.userId], references: [user.id] }),
+}))
 
 export const verification = sqliteTable(
   'verification',

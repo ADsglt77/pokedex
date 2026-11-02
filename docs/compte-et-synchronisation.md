@@ -9,7 +9,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   serveur sont dans l'en-tête et les commentaires de `worker/auth.ts` : le pseudo gardé deux fois
   (`guard`), pas d'e-mail (une adresse sans boîte, jamais montrée), les derniers pseudos quittés
   réservés par la base (ses déclencheurs, `worker/migrations/0001_pseudos.sql`), une seule session par compte, des sessions de 60 jours,
-  les limites par visiteur, ce que note le journal. Testés sur le Worker entier
+  lues avec leur compte en une seule requête D1 (les relations de `worker/schema.ts`), les limites
+  par visiteur, ce que note le journal. Testés sur le Worker entier
   (`worker/tests/account.test.ts`, `worker/tests/collection.test.ts`) : l'adresse sans boîte, un pseudo pris ou quitté jamais repris par
   un autre compte (le sien peut le reprendre), les adresses du site refusées, la suppression du
   compte avec sa collection. `/inscription` (`SignUpPage`, hors de la coquille) : un pseudo
