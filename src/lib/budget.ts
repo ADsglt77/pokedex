@@ -1,7 +1,8 @@
 /**
  * Le budget, calculé depuis le registre des commandes : chaque commande compte une fois, dans le
  * mois de sa date d'achat, pour ce qu'elle a coûté (port et frais compris, remboursé déduit ;
- * rien si elle est annulée).
+ * rien si elle est annulée). Et ses deux règles de saisie : la question du plafond avant
+ * d'enregistrer une commande, le budget par défaut de la prochaine commande.
  */
 
 import { today } from '@/lib/format'
@@ -37,6 +38,25 @@ export const spentThisMonth = (orders: readonly Order[]) => spentIn(orders, mont
 /** Un mois au-delà de son plafond, au-delà du budget habituel, ou dans le budget (`null`). */
 export const budgetLevel = (spent: number, budget: BudgetSettings) =>
   spent > budget.ceiling ? 'ceiling' : spent > budget.monthly ? 'monthly' : null
+
+/**
+ * Le mois d'une commande en cours de saisie, avec elle à la place de sa version enregistrée
+ * (`total`), et s'il faut demander avant de l'enregistrer (`ask`) : au-delà du plafond, seulement
+ * si l'enregistrement fait monter le mois (la baisser dans un mois déjà dépassé ne demande rien).
+ */
+export function askBeforeSaving(orders: readonly Order[], order: Order, budget: BudgetSettings) {
+  const month = monthOf(order.date)
+  const others = orders.filter((known) => known.id !== order.id)
+  const total = cents(spentIn(others, month).spent + orderSpent(order))
+  return { month, total, ask: total > budget.ceiling && total > spentIn(orders, month).spent }
+}
+
+/**
+ * Le budget par défaut de la prochaine commande : le reste du budget du mois (0 s'il est dépassé),
+ * pas plus que le plafond, au pas du curseur (`step`, vers le bas : on reste dans le budget).
+ */
+export const defaultPlanBudget = (budget: BudgetSettings, spent: number, step: number) =>
+  Math.floor(Math.min(Math.max(budget.monthly - spent, 0), budget.ceiling) / step) * step
 
 /** Un total par mois, ou par fournisseur… (`key`), sans les commandes annulées. */
 function spendingBy(orders: readonly Order[], keyOf: (order: Order) => string) {

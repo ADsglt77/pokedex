@@ -163,7 +163,8 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     ses Pokémon : elle est libre de cette règle, ni écartée par une carte du même Pokémon prise
     avant elle, ni écartant celles prises après (deux cases du même Pokémon sont prises ; testé).
     On peut en retirer ou en ajouter à la main. Après « Enregistrer comme commande », l'assistant
-    repart de ses réglages par défaut (le budget : le reste du mois, cette commande comprise) ;
+    repart de ses réglages par défaut (le budget : le reste du mois, cette commande comprise, pas
+    plus que le plafond, au pas de 5 € vers le bas ; `defaultPlanBudget`, testé) ;
   - « Copier pour Cardmarket » (`shopping/WantsDialog`, à côté d'« Enregistrer comme commande… »,
     sous la jauge du total, affiché comme lui dès que la prochaine commande a une carte) en fait
     des lignes pour la liste de
@@ -208,8 +209,9 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     plus de 28 jours est signalée, aux Achats et à l'accueil (`latePendingOrders`) ; chaque
     commande s'ouvre en détail (coût réel de chaque carte) ;
   - budget calculé depuis les commandes : une commande compte une fois, au mois de sa date d'achat,
-    remboursé déduit (jamais plus que la commande), rien si annulée. Au-delà du plafond :
-    confirmation, jamais de blocage ; le formulaire montre le mois avec la commande en cours de
+    remboursé déduit (jamais plus que la commande), rien si annulée. Au-delà du plafond, si
+    l'enregistrement fait monter le mois (`askBeforeSaving`, testé) : confirmation, jamais de
+    blocage ; le formulaire montre le mois avec la commande en cours de
     saisie ; fermer une saisie commencée (Échap, « Annuler »), ou quitter la page avec elle (le
     titre d'une carte, le retour du navigateur, la recherche Ctrl K : `useBlocker`), demande
     confirmation (« Abandonner la saisie ? ») ; enregistrer ou abandonner ne demande rien de plus.

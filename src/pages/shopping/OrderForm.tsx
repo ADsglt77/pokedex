@@ -5,11 +5,11 @@ import { EuroField } from '@/components/EuroInput'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { useCollectionAction } from '@/hooks/useNotify'
-import { monthOf, spentIn } from '@/lib/budget'
+import { askBeforeSaving } from '@/lib/budget'
 import { cx } from '@/lib/cx'
 import { focusFirstError } from '@/lib/focus'
 import { formatEuro, formatMonth, plural, toOptions } from '@/lib/format'
-import { canBePending, cardCount, cents, orderSpent } from '@/lib/orders'
+import { canBePending, cardCount } from '@/lib/orders'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
 import type { Order } from '@/types'
@@ -105,9 +105,8 @@ export function OrderForm({
   const read = readDraft(draft, base, stored, collection)
   const { order } = read
   const errors = submitted ? read.errors : {}
-  // Le mois de la commande avec elle, suivi pendant la saisie.
-  const month = monthOf(order.date)
-  const monthTotal = cents(spentIn(others, month).spent + orderSpent(order))
+  // Le mois de la commande avec elle, suivi pendant la saisie, et la question du plafond.
+  const { month, total: monthTotal, ask } = askBeforeSaving(orders, order, budget)
 
   const save = () => {
     closing.current = true
@@ -130,9 +129,8 @@ export function OrderForm({
       return
     }
     // Le plafond est dépassé par cet enregistrement : on demande, sans interdire.
-    if (monthTotal > budget.ceiling && monthTotal > spentIn(orders, month).spent) {
-      setOverCeiling(true)
-    } else save()
+    if (ask) setOverCeiling(true)
+    else save()
   }
 
   return (

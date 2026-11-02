@@ -12,7 +12,7 @@ import {
 } from '@camply/ui'
 import { Copy, Receipt, Sparkles } from '@camply/ui/icons'
 import { useDeferredValue, useId, useMemo, useRef, useState, type RefObject } from 'react'
-import { spentThisMonth } from '@/lib/budget'
+import { budgetLevel, defaultPlanBudget, spentThisMonth } from '@/lib/budget'
 import { cx } from '@/lib/cx'
 import { keepFocusInList } from '@/lib/focus'
 import { formatEuro, plural, today } from '@/lib/format'
@@ -73,10 +73,8 @@ export function PlannerPanel({
   const { orders, budget } = useShoppingStore((state) => state.shopping)
   const spent = spentThisMonth(orders)
   const {
-    // Le reste du budget du mois, au pas du curseur (vers le bas : on reste dans le budget).
-    amount = Math.floor(
-      Math.min(Math.max(budget.monthly - spent, 0), budget.ceiling) / BUDGET_STEP,
-    ) * BUDGET_STEP,
+    // Le reste du budget du mois, au pas du curseur.
+    amount = defaultPlanBudget(budget, spent, BUDGET_STEP),
     forced = NONE,
     skipped = NONE,
   } = settings
@@ -206,7 +204,7 @@ export function PlannerPanel({
             Le plan coûte {formatEuro(plan.total)} pour un budget de {formatEuro(planned)}.
           </Alert>
         )}
-        {plan.total > 0 && monthTotal > budget.ceiling && (
+        {plan.total > 0 && budgetLevel(monthTotal, budget) === 'ceiling' && (
           <Alert tone="warn" title="Ce plan dépasse votre plafond du mois.">
             Avec lui, vos achats de ce mois atteindraient {formatEuro(monthTotal)}, pour un plafond
             de {formatEuro(budget.ceiling)}.
