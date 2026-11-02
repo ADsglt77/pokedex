@@ -11,6 +11,26 @@ export default defineConfig({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
+  environments: {
+    client: {
+      build: {
+        rolldownOptions: {
+          output: {
+            codeSplitting: {
+              // React et react-router à part : leur fichier ne change pas avec le code de l'app
+              // (seulement si elle emploie d'autres fonctions de react-router).
+              groups: [
+                {
+                  name: 'react',
+                  test: /node_modules[\\/](react|react-dom|scheduler|react-router)[\\/]/,
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+  },
   server: {
     // L'état local du Worker (sa base) ne fait pas partie de l'app : le surveiller ralentirait Vite.
     watch: { ignored: ['**/.wrangler/**'] },

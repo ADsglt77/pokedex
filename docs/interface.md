@@ -278,7 +278,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   ouverture (`lazy`, `router.tsx` : une
   route parente sans chemin porte une seule fois la page d'erreur et l'attente, vide, d'une page
   ouverte directement) ; sur un réseau lent, une barre fine en haut le dit (`NavigationProgress`,
-  `AppShell` : le `Progress` indéterminé de camply, sans fond, montré après 0,3 s). La fenêtre
+  `AppShell` : le `Progress` indéterminé de camply, sans fond, montré après 0,3 s). React et
+  react-router ont leur propre fichier (`react-*.js`, `vite.config.ts`), qu'un déploiement de l'app
+  ne change pas tant qu'elle emploie les mêmes fonctions de react-router (hors mise à jour de React
+  ou de react-router) : un visiteur qui revient le garde (`/assets/`, un an, `worker/headers.ts`) et
+  ne retélécharge que le code de l'app (`index-*.js` : 37 Ko compressés au lieu de 101). La fenêtre
   d'une carte est préparée dès que le pointeur ou le focus arrive sur « Modifier la carte » ou
   « Ajouter une carte » (`AddCardButton`, avec les cartes japonaises du Pokémon ; sur une fiche
   sans carte, aussi quand le navigateur est libre ; une fiche quittée avant ne prépare rien :
