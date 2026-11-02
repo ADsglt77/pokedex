@@ -67,7 +67,7 @@ const shortDateYearFormat = new Intl.DateTimeFormat('fr-FR', {
 })
 
 /** « 11 oct. » ; `withYear` : « 11 oct. 2026 ». */
-export const formatShortDate = (iso: string | null | undefined, withYear = false) =>
+export const formatShortDate = (iso: string | null | undefined, withYear: boolean) =>
   dateWith(withYear ? shortDateYearFormat : shortDateFormat)(iso)
 
 export const formatDateTime = dateWith(dateTimeFormat)

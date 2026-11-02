@@ -19,7 +19,7 @@ import {
   setCardsUrl,
   NO_FILTER,
   passesFilter,
-  type CardFilter,
+  type CatalogFilter,
   type CatalogSets,
   type SetCard,
   type SetSummary,
@@ -214,7 +214,7 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
   const prices = usePrices(ids)
   const missing = usePricesMissing(ids)
   const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<CardFilter>(NO_FILTER)
+  const [filter, setFilter] = useState<CatalogFilter>(NO_FILTER)
   // La carte dont la fiche est ouverte (sa clé) ; `null` : aucune.
   const [open, setOpen] = useState<string | null>(null)
   // Une fonction stable : les tuiles, mémoïsées, ne se redessinent pas à l'ouverture d'une fiche.

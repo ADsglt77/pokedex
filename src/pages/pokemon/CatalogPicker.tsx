@@ -8,8 +8,8 @@ import {
   loadSpeciesCards,
   NO_FILTER,
   passesFilter,
-  type CardFilter,
   type CatalogCard,
+  type CatalogFilter,
 } from '@/lib/card-catalog'
 import { catalogParams } from '@/lib/filters'
 import { plural } from '@/lib/format'
@@ -32,7 +32,7 @@ export interface PickerView {
   set: string
   pricedOnly: boolean
   /** Les raretés et les types choisis : retirés quand l'extension change. */
-  filter: CardFilter
+  filter: CatalogFilter
 }
 
 /**

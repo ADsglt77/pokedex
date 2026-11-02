@@ -165,7 +165,7 @@ export function journal(
  * Le visiteur d'une requête, pour compter ses actions : son adresse, ramenée à son réseau /64 pour
  * une IPv6 (un fournisseur en donne des milliards à chacun) ; `''` sans adresse.
  */
-export function visitorOf(request?: Request) {
+export function visitorOf(request: Request) {
   const ip = requestIp(request) ?? ''
   if (!ip.includes(':')) return ip
   const [head = '', tail = ''] = ip.split('::')

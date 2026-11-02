@@ -106,7 +106,7 @@ const inTurn = (task: () => Promise<unknown>) =>
  * Un appel à l'API ; `null` sans réponse (hors ligne, serveur arrêté). Le délai d'un envoi grandit
  * avec lui : 15 s, plus 10 s par Mo envoyé (un réseau lent).
  */
-const call = (method: 'GET' | 'PUT', query = '', sent?: Sending) =>
+const call = (method: 'GET' | 'PUT', query: string, sent?: Sending) =>
   fetch(`/api/collection${query}`, {
     method,
     body: sent?.body,

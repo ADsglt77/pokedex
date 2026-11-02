@@ -4,8 +4,8 @@ import { CARD_TYPES } from '@/config/catalog'
 import {
   NO_FILTER,
   passesFilter,
-  type CardFilter,
   type CatalogCard,
+  type CatalogFilter,
   type Rarity,
 } from '@/lib/card-catalog'
 import { focusAfter } from '@/lib/focus'
@@ -30,8 +30,8 @@ export function CardFilters({
   onChange,
 }: {
   cards: CatalogCard[]
-  value: CardFilter
-  onChange: (value: CardFilter) => void
+  value: CatalogFilter
+  onChange: (value: CatalogFilter) => void
 }) {
   // Le premier choix, où va le focus quand « Retirer les filtres » disparaît avec eux.
   const first = useRef<HTMLButtonElement>(null)

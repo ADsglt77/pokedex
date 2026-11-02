@@ -321,15 +321,15 @@ export const seriesSlot = (card: CatalogCard): PokemonCard => ({
 })
 
 /** Les raretés et les types choisis pour une grille de cartes ; aucun : tous. */
-export interface CardFilter {
+export interface CatalogFilter {
   rarities: number[]
   types: number[]
 }
 
-export const NO_FILTER: CardFilter = { rarities: [], types: [] }
+export const NO_FILTER: CatalogFilter = { rarities: [], types: [] }
 
 /** La carte est d'une des raretés choisies et d'un des types choisis (aucun choisi : tous). */
-export const passesFilter = (card: CatalogCard, { rarities, types }: CardFilter) =>
+export const passesFilter = (card: CatalogCard, { rarities, types }: CatalogFilter) =>
   (!rarities.length || (card.rarity !== null && rarities.includes(card.rarity.id))) &&
   (!types.length || (card.type !== null && types.includes(card.type)))
 

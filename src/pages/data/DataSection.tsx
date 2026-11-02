@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react'
+import type { ReactNode, Ref } from 'react'
 import { Panel } from '@/components/Panel'
 import { cx } from '@/lib/cx'
 import styles from './DataPage.module.css'
@@ -10,12 +10,15 @@ import styles from './DataPage.module.css'
 export function DataSection({
   danger,
   ...panel
-}: ComponentProps<typeof Panel> & { id: string; danger?: boolean }) {
+}: {
+  id: string
+  title: string
+  description?: string
+  titleRef?: Ref<HTMLHeadingElement>
+  danger?: boolean
+  children: ReactNode
+}) {
   return (
-    <Panel
-      {...panel}
-      headingLevel={panel.headingLevel ?? 3}
-      className={cx(styles.section, danger && styles.danger)}
-    />
+    <Panel {...panel} headingLevel={3} className={cx(styles.section, danger && styles.danger)} />
   )
 }
