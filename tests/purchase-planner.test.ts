@@ -10,7 +10,7 @@ import { describe, expect, test } from 'bun:test'
 import { planPurchase, type PlanOptions } from '@/lib/purchase-planner'
 import { wishlistRows } from '@/lib/wishlist'
 import type { CardStatus, PokemonCard, SeriesCollection } from '@/types'
-import { card, collectionWith, NOW, ownership, wish, withCards } from './fixtures'
+import { card, collectionWith, ids, NOW, ownership, wish, withCards } from './fixtures'
 
 const options = (extra: Partial<PlanOptions> = {}): PlanOptions => ({
   budget: 100,
@@ -19,8 +19,6 @@ const options = (extra: Partial<PlanOptions> = {}): PlanOptions => ({
   skipped: new Set(),
   ...extra,
 })
-
-const ids = (rows: { card: { id: string } }[]) => rows.map((row) => row.card.id)
 
 describe('prochaine commande', () => {
   test('ne dépasse jamais le budget, port réservé', () => {

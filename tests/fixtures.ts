@@ -1,7 +1,7 @@
 /**
- * Des données d'essai : une carte, une collection, des commandes, des cartes de liste d'achats, et
- * les espèces d’un Pokédex. Sans rien de propre à un lanceur de tests : `bun test` (`tests/`) et
- * les tests du Worker (`worker/tests`) s’en servent.
+ * Des données d'essai : une carte, une collection, des commandes, des cartes de liste d'achats,
+ * les espèces d’un Pokédex, et les ids d'une liste de cartes. Sans rien de propre à un lanceur de
+ * tests : `bun test` (`tests/`) et les tests du Worker (`worker/tests`) s’en servent.
  */
 
 import { completeFavorites, emptyCollection } from '@/lib/collection'
@@ -102,3 +102,6 @@ export const wish = (
   card: { id, dexIds, ...extra },
   price,
 })
+
+/** Les ids des cartes d'une liste, dans l'ordre : celles d'un Pokémon, d'une commande prévue… */
+export const ids = (rows: { card: { id: string } }[]) => rows.map((row) => row.card.id)

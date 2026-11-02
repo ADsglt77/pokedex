@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from 'vitest'
 import worker from '../index'
-import { call } from './helpers'
+import { call, sleep } from './helpers'
 
 describe('les en-têtes du site', () => {
   test('les en-têtes de sécurité, sur une réponse de l’API comme sur une adresse inconnue', async () => {
@@ -61,6 +61,10 @@ describe('les limites par visiteur', () => {
   test('la 31e demande coûteuse en 10 s : 429, et un autre visiteur passe toujours', async () => {
     const from = (ip: string) =>
       call('/api/histories?ids=1', { headers: { 'CF-Connecting-IP': ip } })
+    // Les fenêtres de 10 s du limiteur suivent l'horloge : finie en pleine série, une fenêtre
+    // remettrait le compte à zéro et la 31e passerait. La série part à 2 s au moins de sa fin.
+    const left = 10_000 - (Date.now() % 10_000)
+    if (left < 2_000) await sleep(left + 50)
     for (let count = 1; count <= 30; count++) {
       expect((await from('203.0.113.7')).status).not.toBe(429)
     }

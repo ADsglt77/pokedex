@@ -13,14 +13,13 @@
 import { beforeAll, describe, expect, test } from 'bun:test'
 import { setCardStatus, setFavorite } from '@/lib/collection'
 import { localDayOf } from '@/lib/format'
-import { buildPokedex, type CardView, isEmptySummary, summarize, unlockEvents } from '@/lib/pokedex'
+import { buildPokedex, isEmptySummary, summarize, unlockEvents } from '@/lib/pokedex'
 import type { CollectionData } from '@/types'
-import { card, collectionWith, loadTestSpecies, NOW, ownership, withCards } from './fixtures'
+import { card, collectionWith, ids, loadTestSpecies, NOW, ownership, withCards } from './fixtures'
 
 beforeAll(loadTestSpecies)
 
 const entryOf = (data: CollectionData, id: number) => buildPokedex(data).entryById.get(id)!
-const ids = (views: CardView[]) => views.map((view) => view.card.id)
 
 describe('le Pokédex de plusieurs cartes', () => {
   test('la favorite est la carte montrée ; toutes ses cartes sont là, dans l’ordre d’ajout', () => {

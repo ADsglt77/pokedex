@@ -23,10 +23,6 @@ import { card } from '../../tests/fixtures'
 import worker from '../index'
 import { call, createAccount, ORIGIN, sleep } from './helpers'
 
-// Le journal du Worker : muet pendant ces tests.
-const log = vi.spyOn(console, 'log').mockImplementation(() => {})
-afterAll(() => log.mockRestore())
-
 /**
  * Les onglets d'un même navigateur (`BroadcastChannel`, que le moteur de Cloudflare n'a pas) : un
  * message posté sur un canal arrive, aussitôt après, aux autres canaux du même nom.

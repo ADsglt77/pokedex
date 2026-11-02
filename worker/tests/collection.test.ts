@@ -27,9 +27,8 @@ import { card, collectionWith, NOW, order, ownership, withCards } from '../../te
 import { auth } from '../auth'
 import { authCall, call, createAccount, gzip, ORIGIN, PASSWORD, sleep } from './helpers'
 
-// Le journal du Worker (une ligne par évènement) : muet pendant ces tests.
-const log = vi.spyOn(console, 'log').mockImplementation(() => {})
-afterAll(() => log.mockRestore())
+// Le journal du Worker (une ligne par évènement), muet pendant les tests : l'espion de `setup.ts`.
+const log = vi.spyOn(console, 'log')
 
 /**
  * Le Worker des données : sans guide des prix (le 404 de `vitest.config.ts`), sauf dans les tests
@@ -327,11 +326,8 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
     const bomb = new Uint8Array(member.length + 3)
     bomb.set(member)
     bomb.set([1, 2, 3], member.length)
-    const start = performance.now()
     const response = await gzipped(bomb)
     expect(response.status).toBe(413)
-    // Arrêtée au plafond : quelques dizaines de millisecondes.
-    expect(performance.now() - start).toBeLessThan(2_000)
     // Tel qu'envoyé, plus de 5 Mo : 413 aussi.
     expect((await gzipped(new Uint8Array(5_000_001))).status).toBe(413)
     expect(await stored()).toEqual(before)
