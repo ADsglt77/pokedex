@@ -1,9 +1,10 @@
 import { useCallback, useRef, useState, type RefObject } from 'react'
 import { findCardImage, type CatalogCard } from '@/lib/card-catalog'
-import { isFoundImage, isSourceImage } from '@/lib/card-images'
+import { draftCard, draftErrors } from '@/lib/card-draft'
+import { isFoundImage } from '@/lib/card-images'
 import { referenceCode } from '@/lib/card-code'
-import { isCardmarketImage, parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
-import { cardLanguage, languageField, newCardId } from '@/lib/collection'
+import { parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
+import { cardLanguage, newCardId } from '@/lib/collection'
 import { focusFirstError } from '@/lib/focus'
 import { parseLink } from '@/lib/format'
 import { loadPriceHistory } from '@/store/prices'
@@ -16,7 +17,7 @@ const hasFoundImage = (card: PokemonCard) => card.image !== null && isFoundImage
  * La saisie d'une carte : sa langue, l'adresse de son image (vide : celle retrouvée d'après la
  * référence), son id Cardmarket, sa référence, sa page chez Cardmarket. `card` : la carte à
  * corriger ; `fields` : le bloc de ses champs, où le premier en erreur reçoit le focus à
- * l'enregistrement.
+ * l'enregistrement. Ses règles, sans React : `lib/card-draft.ts`.
  */
 export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLElement | null>) {
   // Tiré une fois : deux clics sur « Enregistrer » écrivent la même carte, pas deux.
@@ -45,20 +46,7 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
   const imageUrl = parseLink(image.trim())
   const cardmarket = readCardmarketId(cardmarketText)
   const pageUrl = parseCardmarketLink(page.trim())
-  const errors = {
-    image: !image.trim()
-      ? undefined
-      : !imageUrl
-        ? 'Une adresse web : https://…'
-        : isCardmarketImage(imageUrl)
-          ? 'Cardmarket n’affiche ses images que sur son site : prenez-en une ailleurs.'
-          : isSourceImage(imageUrl.href)
-            ? 'Cette image ne s’affiche pas ici : laissez le champ vide, elle sera retrouvée.'
-            : undefined,
-    cardmarket:
-      cardmarket === undefined ? 'Un nombre : l’id du produit chez Cardmarket.' : undefined,
-    page: page.trim() && !pageUrl ? 'Collez une adresse de www.cardmarket.com.' : undefined,
-  }
+  const errors = draftErrors({ image, imageUrl, cardmarket, page, pageUrl })
   const pasted: CardImage | null =
     imageUrl && !errors.image ? { small: imageUrl.href, large: imageUrl.href } : null
   // La référence dont on cherche l'image : aucune si une adresse est collée, ou sans code de série
@@ -75,12 +63,8 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
       : null
 
   /**
-   * La carte saisie, pour les Pokémon `dexIds` (`language: 'fr'` si elle est française, rien si elle
-   * est japonaise) ; `null` tant qu'un champ est illisible (ses erreurs s'affichent alors, et le
-   * premier reçoit le focus). Sans référence notée, le nom de la carte chez Cardmarket, sinon
-   * `fallback` ; une référence qui n'était que le nom de l'ancien id suit l'id corrigé, et une page
-   * qui n'était que celle de l'ancien id est oubliée (le lien suit alors l'id). Sans adresse
-   * collée, l'image retrouvée d'après la référence, s'il y en a une.
+   * La carte saisie (`draftCard`), une fois lus les noms chez Cardmarket et l'image ; `null` tant
+   * qu'un champ est illisible (ses erreurs s'affichent alors, et le premier reçoit le focus).
    */
   async function read(dexIds: number[], fallback: string): Promise<PokemonCard | null> {
     if (cardmarket === undefined || errors.image || errors.page) {
@@ -95,22 +79,24 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
       card?.cardmarket === undefined || !changedId ? null : loadPriceHistory(card.cardmarket),
     ])
     const typed = reference.trim()
-    const stale = changedId && typed === previous?.name
-    const stalePage = changedId && page.trim() === initial.page
     const search = !image.trim() && referenceCode(typed) !== null
     const found = search ? await findCardImage(typed, { lang: language, retry: true }) : null
-    // L'image gardée (`kept`), pas si la référence n'était que le nom de l'ancien id : elle devient
-    // celle d'une autre carte.
-    const picture = pasted ?? found ?? (stale ? null : kept)
-    return {
+    return draftCard({
       id,
       dexIds,
-      reference: (!stale && typed) || known?.name || fallback,
-      image: picture,
-      ...languageField(language),
-      ...(cardmarket !== null && { cardmarket }),
-      ...(pageUrl && !stalePage && { page: pageUrl }),
-    }
+      fallback,
+      language,
+      reference: typed,
+      cardmarket,
+      initial,
+      page,
+      pageUrl,
+      pasted,
+      found,
+      kept,
+      name: known?.name ?? null,
+      previousName: previous?.name ?? null,
+    })
   }
 
   /**

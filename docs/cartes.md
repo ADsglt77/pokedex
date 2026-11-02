@@ -111,7 +111,10 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   commandes et de l'assistant (`CardLine`).
   L'enregistrement (`useCardDraft.save`) attend le prix et l'image : une seule fois à la fois, la
   fenêtre ne se ferme pas pendant ce temps. Une page Cardmarket qui n'était que celle de l'id de
-  départ est oubliée quand l'id change (le lien suit alors le nouvel id).
+  départ est oubliée quand l'id change (le lien suit alors le nouvel id) ; une référence qui
+  n'était que le nom de l'ancien id chez Cardmarket suit le nouveau, sans l'image d'avant. Ces
+  règles, sans React : `draftCard` (la carte lue, testée) et `draftErrors` (les erreurs des
+  champs), dans `lib/card-draft.ts`.
   La page Catalogue (`/catalogue?langue=fr&set=…`, dans le menu, `pages/catalog/`), un grand
   catalogue sans lien avec le Pokédex (à la demande de l'utilisateur, octobre 2026), des cartes
   japonaises ou françaises : l'interrupteur de la langue (`LanguageSwitch`, dans l'en-tête de la

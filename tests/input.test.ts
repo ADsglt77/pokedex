@@ -1,12 +1,16 @@
 /**
  * Ce que l'utilisateur saisit et qui compte en argent : les montants (lignes de commande, port,
  * frais, remboursé, budget, prix payé), la saisie d'une commande qui les lit (`readDraft`) et l'id
- * Cardmarket d'une carte (d'où son prix). Un montant mal lu fausserait le budget sans rien dire. Et
- * le lien vers Cardmarket : ses offres dans la langue de la carte (japonais, ou français pour une
- * carte française), Near Mint au moins (une autre langue, ce serait une autre carte achetée).
+ * Cardmarket d'une carte (d'où son prix). Un montant mal lu fausserait le budget sans rien dire.
+ * L'id corrigé, la carte saisie le suit (`draftCard`) : une référence ou une page qui n'étaient que
+ * celles de l'ancien id donneraient le nom ou les offres d'une autre carte ; une image collée ou
+ * retrouvée remplace celle d'avant. Et le lien vers Cardmarket : ses offres dans la langue de la
+ * carte (japonais, ou français pour une carte française), Near Mint au moins (une autre langue, ce
+ * serait une autre carte achetée).
  */
 
 import { describe, expect, test } from 'bun:test'
+import { draftCard } from '@/lib/card-draft'
 import { cardmarketPage, readCardmarketId } from '@/lib/cardmarket'
 import { parseEuros, parseQuantity } from '@/lib/format'
 import { readDraft, toDraft, type Draft } from '@/pages/shopping/orderDraft'
@@ -167,6 +171,64 @@ describe('readCardmarketId', () => {
     expect(readCardmarketId('1.5')).toBeUndefined()
     expect(readCardmarketId('-3')).toBeUndefined()
     expect(readCardmarketId('0')).toBeUndefined()
+  })
+})
+
+describe('draftCard : la carte saisie, son id Cardmarket corrigé', () => {
+  const oldPage =
+    'https://www.cardmarket.com/fr/Pokemon/Products/Singles/Pokemon-Card-151/Bulbasaur-V2-sv2a166'
+  const newPage =
+    'https://www.cardmarket.com/fr/Pokemon/Products/Singles/Pokemon-Card-151/Ivysaur-V1-sv2a167'
+  const kept = { small: '/images/cards/SV2A/166-md.webp', large: '/images/cards/SV2A/166-hd.webp' }
+  const found = { small: '/images/cards/SV2A/167-md.webp', large: '/images/cards/SV2A/167-hd.webp' }
+  /**
+   * Une carte enregistrée sans référence notée (le nom de son id chez Cardmarket la remplaçait),
+   * avec la page de cet id et son image ; son id corrigé de 719442 en 719603 ; et `change`.
+   */
+  const read = (change: Partial<Parameters<typeof draftCard>[0]> = {}) =>
+    draftCard({
+      id: 'manual:a',
+      dexIds: [1],
+      fallback: 'Bulbizarre',
+      language: 'ja',
+      reference: 'Bulbasaur [Overgrow]',
+      cardmarket: 719603,
+      initial: { cardmarket: 719442, page: oldPage },
+      page: oldPage,
+      pageUrl: oldPage,
+      pasted: null,
+      found: null,
+      kept,
+      name: 'Ivysaur [Overgrow]',
+      previousName: 'Bulbasaur [Overgrow]',
+      ...change,
+    })
+
+  test('la page de départ est oubliée, la référence suit le nouvel id, l’image d’avant aussi', () => {
+    expect(read()).toEqual({
+      id: 'manual:a',
+      dexIds: [1],
+      reference: 'Ivysaur [Overgrow]',
+      image: null,
+      cardmarket: 719603,
+    })
+  })
+
+  test('une page collée pour le nouvel id est gardée ; une référence notée aussi, avec son image', () => {
+    expect(read({ page: newPage, pageUrl: newPage }).page).toBe(newPage)
+    const typed = read({ reference: 'Bulbizarre (SV2a 166)' })
+    expect([typed.reference, typed.image]).toEqual(['Bulbizarre (SV2a 166)', kept])
+  })
+
+  test('l’id inchangé : la page, la référence et l’image restent', () => {
+    const same = read({ cardmarket: 719442, name: 'Bulbasaur [Overgrow]', previousName: null })
+    expect([same.reference, same.page, same.image]).toEqual(['Bulbasaur [Overgrow]', oldPage, kept])
+  })
+
+  test('l’image collée, ou retrouvée d’après la référence, remplace celle d’avant', () => {
+    const pasted = { small: 'https://exemple.fr/a.png', large: 'https://exemple.fr/a.png' }
+    expect(read({ reference: 'Bulbizarre (SV2a 166)', pasted }).image).toEqual(pasted)
+    expect(read({ reference: 'Bulbizarre (SV2a 166)', found }).image).toEqual(found)
   })
 })
 
