@@ -27,7 +27,9 @@
  * chargement du Worker : en production, un Worker mal réglé ne démarre pas.
  */
 
-import { betterAuth, type BetterAuthOptions } from 'better-auth'
+// `minimal` : sans Kysely (environ 500 Ko chargés à chaque démarrage), inutile ici : la base passe
+// par Drizzle (`drizzleAdapter`), ses migrations aussi.
+import { betterAuth, type BetterAuthOptions } from 'better-auth/minimal'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { APIError, createAuthMiddleware, getSessionFromCtx, isAPIError } from 'better-auth/api'
 import { username, USERNAME_ERROR_CODES } from 'better-auth/plugins'
