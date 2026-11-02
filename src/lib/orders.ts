@@ -162,6 +162,14 @@ export const isInAnOrder = (orders: readonly Order[], cardId: string) =>
 /** Midi, heure locale, du jour donné : la date d'obtention d'une carte reçue. */
 const noonOf = (day: string) => new Date(`${day}T12:00:00`).toISOString()
 
+/** Possédée grâce à la commande reçue : à sa date de réception, même corrigée après coup. */
+const ownedBy = (order: Order, paidPrice: number | undefined, now: string): CardOwnership => ({
+  status: 'owned',
+  updatedAt: now,
+  acquiredAt: noonOf(order.receivedAt ?? order.date),
+  paidPrice,
+})
+
 /**
  * Reporte sur la collection le passage d'une commande de `before` à `after` (`null` : création,
  * suppression). `others` : les autres commandes, pour ne pas défaire ce qu'elles ont fait.
@@ -204,12 +212,7 @@ export function applyOrder(
     ) {
       const received = orderWith(others, line.cardId, 'received')
       cards[line.cardId] = received
-        ? {
-            status: 'owned',
-            updatedAt: now,
-            acquiredAt: noonOf(received.receivedAt ?? received.date),
-            paidPrice: costIn(received, line.cardId),
-          }
+        ? ownedBy(received, costIn(received, line.cardId), now)
         : { status: 'owned', updatedAt: now, acquiredAt: null }
       continue
     }
@@ -231,13 +234,7 @@ export function applyOrder(
     const paidPrice = costs[index]
     let next: CardOwnership | null = null
     if (active.state === 'received') {
-      // La date de réception, même corrigée après coup.
-      next = {
-        status: 'owned',
-        updatedAt: now,
-        acquiredAt: noonOf(active.receivedAt ?? active.date),
-        paidPrice,
-      }
+      next = ownedBy(active, paidPrice, now)
     } else if (current?.status !== 'owned') {
       next = { status: 'ordered', updatedAt: now, acquiredAt: null, paidPrice }
     }
