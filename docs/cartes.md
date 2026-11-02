@@ -29,12 +29,12 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   achetée une fois (décision de l'utilisateur, octobre 2026) : choisie dans la fenêtre d'ajout,
   elle va à tous ses Pokémon, sauf à ceux qui l'ont déjà ; déjà dans la collection comme carte d'un
   autre de ses Pokémon (une TAG TEAM ajoutée avant à certains seulement), elle n'est pas recopiée :
-  ceux qui la reçoivent s'ajoutent à elle (même id) ; son statut et son prix payé valent pour tous ;
-  elle peut être la favorite de chacun, chacun pour soi ; la valeur, le coût
-  pour compléter et la prochaine commande ne la comptent qu'une fois. La retirer d'un de ses
-  Pokémon l'en détache seulement (`removeCard` : elle reste aux autres, avec son statut, son prix
-  payé ; possible même dans une commande) ; du dernier, elle part. La fiche dit « aussi
-  celle de … ».
+  ceux qui la reçoivent s'ajoutent à elle (même id ; `catalogTarget`, `lib/card-catalog.ts`) ;
+  son statut et son prix payé valent pour tous ; elle peut être la favorite de chacun, chacun pour
+  soi ; la valeur, le coût pour compléter et la prochaine commande ne la comptent qu'une fois. La
+  retirer d'un de ses Pokémon l'en détache seulement (`removeCard` : elle reste aux autres, avec
+  son statut, son prix payé ; possible même dans une commande) ; du dernier, elle part. La fiche
+  dit « aussi celle de … ».
   Ajouter une carte à un Pokémon dit déjà qu'on la veut : tant qu'elle n'est ni commandée ni
   possédée, elle est dans la liste d'achats (`docs/collection-et-achats.md`).
 - Catalogue (de l'API des données : sa lecture de Pokécardex, ses gardes et ses tables sont dans

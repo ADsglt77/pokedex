@@ -14,7 +14,7 @@ import { Suspense, useCallback, useRef, useState } from 'react'
 import { useCardDraft } from '@/hooks/useCardDraft'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { useSeriesSlot } from '@/hooks/useSeriesSlot'
-import { collectionCard, isCatalogCard, NO_FILTER, type CatalogCard } from '@/lib/card-catalog'
+import { catalogTarget, NO_FILTER, type CatalogCard } from '@/lib/card-catalog'
 import { addCard, useCollectionStore } from '@/store/collection'
 import type { AddAs, PokemonCard, PokemonSpecies } from '@/types'
 import { CardFields } from './CardFields'
@@ -30,10 +30,10 @@ import { speciesNames } from '@/lib/species'
 /**
  * Ajouter une carte à un Pokémon, à côté de celles qu'il a (la choisir dans le catalogue, japonaise
  * ou française, qui remplit la saisie, ou la saisir à la main ; une carte qu'il a déjà est
- * refusée, une carte déjà celle d'un autre de ses Pokémon n'est pas recopiée : il s'y ajoute ; une
- * case pas encore obtenue d'une collection d'extension non plus : elle devient une carte de ses
- * Pokémon, avec son statut), ou la corriger (`card`) : sa saisie seulement (une case d'une
- * collection d'extension prévient que sa case change avec elle). Une autre carte ne
+ * refusée, une carte déjà celle d'un autre de ses Pokémon n'est pas recopiée : il s'y ajoute
+ * (`catalogTarget`) ; une case pas encore obtenue d'une collection d'extension non plus : elle
+ * devient une carte de ses Pokémon, avec son statut), ou la corriger (`card`) : sa saisie seulement
+ * (une case d'une collection d'extension prévient que sa case change avec elle). Une autre carte ne
  * remplace pas celle-ci : son statut, son prix payé et ses commandes lui appartiennent. Montée
  * seulement quand la fenêtre est ouverte.
  */
@@ -53,24 +53,16 @@ export function CardForm({
   const [tab, setTab] = useState('catalogue')
   const [picked, setPicked] = useState<CatalogCard | null>(null)
   const { entryById } = usePokedex()
-  // Ce Pokémon (`id`) a-t-il déjà cette carte du catalogue (même code, ou même id Cardmarket) ?
-  const holds = (id: number, listed: CatalogCard) =>
-    entryById.get(id)!.cards.some((view) => isCatalogCard(view.card, listed))
   // La carte choisie, tant que la référence reste la sienne ; sinon, c'est une saisie.
   const listed = draft.reference.trim() === picked?.reference ? picked : null
-  // La carte choisie est déjà l'une des siennes : l'ajouter ferait un doublon. Sa référence
-  // corrigée, c'est une saisie : plus un doublon.
-  const duplicate = listed !== null && holds(species.id, listed)
+  // Un doublon (refusé), les Pokémon qui la recevront, et la carte de la collection qu'elle est
+  // déjà (celle d'un autre de ses Pokémon : ils s'y ajoutent). Sa référence corrigée : une saisie.
+  const target = catalogTarget(entryById, species.id, listed)
+  const { duplicate, existing } = target
   // Corrigée, une case d'une collection d'extension le reste : la fenêtre le dit.
   const series = useCollectionStore((state) => card && seriesOf(state.collection, card.id))
-  // Les Pokémon qui recevront la carte : choisie dans le catalogue, tous les siens (TAG TEAM : une
-  // seule carte, achetée une fois), sauf ceux qui l'ont déjà ; saisie à la main, celui-ci.
-  const receivers =
-    card?.dexIds ?? (listed ? listed.dexIds.filter((id) => !holds(id, listed)) : [species.id])
-  // Déjà dans la collection, celle d'un autre de ses Pokémon (une TAG TEAM ajoutée avant à certains
-  // seulement) : une carte n'existe qu'une fois, les Pokémon qui la reçoivent s'ajoutent à elle (même
-  // id : son statut, son prix payé et ses commandes la suivent).
-  const existing = listed && !duplicate ? collectionCard(entryById, listed)?.card : undefined
+  // Corrigée, la carte garde ses Pokémon.
+  const receivers = card?.dexIds ?? target.receivers
   // Pas encore une carte de ses Pokémon : une case pas encore obtenue d'une collection d'extension,
   // reprise telle quelle, pour tous ses Pokémon (une carte n'existe qu'une fois).
   const slot = useSeriesSlot(listed && !duplicate && !existing ? listed : null)

@@ -10,8 +10,9 @@
  *   série, dresseurs et énergies compris, avec tout ce qu'on en sait (la page Catalogue) ; elles
  *   donnent aussi l'image exacte d'une carte (`findCardImage`).
  * Une carte du catalogue devient une carte de la collection (`cardFromCatalog`), ou une case d'une
- * collection d'extension (`seriesSlot`). Aucun tri ni détection : l'utilisateur choisit, l'app ne
- * propose rien seule.
+ * collection d'extension (`seriesSlot`) ; ajoutée à un Pokémon, elle va à ceux de ses Pokémon qui
+ * ne l'ont pas, sans doublon ni copie (`catalogTarget`). Aucun tri ni détection : l'utilisateur
+ * choisit, l'app ne propose rien seule.
  */
 
 import { CARD_TYPES } from '@/config/catalog'
@@ -279,7 +280,7 @@ async function catalogCard(reference: string, lang: CardLanguage): Promise<SetCa
  * Une carte de la collection est-elle celle-ci du catalogue ? De la même langue, avec le même code
  * (série et numéro) dans sa référence, ou le même id Cardmarket.
  */
-export const isCatalogCard = (card: PokemonCard, listed: CatalogCard) =>
+const isCatalogCard = (card: PokemonCard, listed: CatalogCard) =>
   isCardOf(
     card,
     listed.set.language,
@@ -304,6 +305,32 @@ export const collectionCard = (entryById: ReadonlyMap<number, PokedexEntry>, lis
   listed.dexIds
     .flatMap((id) => entryById.get(id)!.cards)
     .find((view) => isCatalogCard(view.card, listed)) ?? null
+
+/**
+ * Ce que fait l'ajout à un Pokémon (`speciesId`) de cette carte du catalogue (`listed`, la fenêtre
+ * d'ajout) ; `null` : une saisie à la main, pour ce Pokémon seul, jamais un doublon.
+ * - `duplicate` : il l'a déjà (`isCatalogCard`), l'ajouter ferait un doublon ;
+ * - `receivers` : les Pokémon qui la recevront, tous les siens (TAG TEAM : une seule carte,
+ *   achetée une fois), sauf ceux qui l'ont déjà ;
+ * - `existing` : déjà dans la collection, celle d'un autre de ses Pokémon (une TAG TEAM ajoutée
+ *   avant à certains seulement) : une carte n'existe qu'une fois, ceux qui la reçoivent s'ajoutent
+ *   à elle (même id : son statut, son prix payé et ses commandes la suivent).
+ */
+export function catalogTarget(
+  entryById: ReadonlyMap<number, PokedexEntry>,
+  speciesId: number,
+  listed: CatalogCard | null,
+) {
+  if (!listed) return { duplicate: false, receivers: [speciesId], existing: undefined }
+  const holds = (id: number) =>
+    entryById.get(id)!.cards.some((view) => isCatalogCard(view.card, listed))
+  const duplicate = holds(speciesId)
+  return {
+    duplicate,
+    receivers: listed.dexIds.filter((id) => !holds(id)),
+    existing: duplicate ? undefined : collectionCard(entryById, listed)?.card,
+  }
+}
 
 /**
  * Une nouvelle carte de la collection, celle-ci du catalogue : ses Pokémon, sa référence, son
