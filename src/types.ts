@@ -1,3 +1,10 @@
+/**
+ * Les types de l'app : la collection et les achats, le compte, et les réponses de l'API des
+ * données, une copie de `../pokedex-data/src/contract.ts` (chaque dépôt se construit seul). Les
+ * types copiés sont listés dans `scripts/check-data-contracts.ts`, contrôlé par `bun run contracts`
+ * (et `bun lint`).
+ */
+
 /* Référence : les espèces (PokéAPI), lues sur le serveur (`/api/species`) */
 
 export type PokemonTypeId =

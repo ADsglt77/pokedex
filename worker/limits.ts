@@ -11,7 +11,13 @@ import { env } from 'cloudflare:workers'
 import type { MiddlewareHandler } from 'hono'
 import { journalOnce, visitorOf } from './journal'
 
-type Limit = 'COLLECTION_LIMIT' | 'ACCOUNT_LIMIT' | 'HEAVY_LIMIT' | 'DATA_LIMIT' | 'IMAGES_LIMIT'
+/**
+ * Le nom d'une limite : une liaison `RateLimit` de `Env` (`env.d.ts`), sans répéter les noms
+ * (`-?` : sans lui, une liaison facultative ajouterait `undefined`).
+ */
+type Limit = {
+  [K in keyof Cloudflare.Env]-?: Cloudflare.Env[K] extends RateLimit ? K : never
+}[keyof Cloudflare.Env]
 
 /** Chaque groupe de routes et sa limite. */
 const LIMITS: [routes: RegExp, limit: Limit][] = [

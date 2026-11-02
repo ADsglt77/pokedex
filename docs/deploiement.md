@@ -146,10 +146,11 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
 
 ## Au quotidien
 
-- **Un push sur `main`** : Workers Builds lance `bun run ci` (tests, lint, types, construction),
-  puis, s'ils passent, `bun run deploy` : les migrations de la base d'abord, puis le nouveau code.
-  Un contrôle en échec : rien n'est déployé, la version d'avant continue. Le résultat s'affiche sur
-  le commit dans GitHub et dans le tableau de bord.
+- **Un push sur `main`** : Workers Builds lance `bun run ci` (format, tests, lint, types,
+  construction), puis, s'ils passent, `bun run deploy` : les migrations de la base d'abord, puis le
+  nouveau code. Un contrôle en échec, un fichier pas au format compris : rien n'est déployé, la
+  version d'avant continue. Le résultat s'affiche sur le commit dans GitHub et dans le tableau de
+  bord.
 - **Les deux dépôts se déploient chacun de leur côté** : un changement de l'API que le site attend
   (le contrat : `bun run contracts`) se pousse d'abord dans `pokedex-data`.
 - **Le journal** : tableau de bord › le Worker › Logs (7 jours), ou en direct :

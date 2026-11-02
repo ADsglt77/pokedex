@@ -11,8 +11,8 @@ cartes, images et prix relus par l'API des données, un dépôt à part (plus ba
 bun install
 bun dev          # Vite et le Worker du site, sur sa base D1 locale (migrée au démarrage)
 bun run build    # type-check + build
-bun lint         # ESLint, puis knip (code mort : exports, fichiers, dépendances)
-bun run contracts # vérifie les types partagés avec ../pokedex-data (Cloudflare construit sans)
+bun lint         # ESLint, knip (code mort : exports, fichiers, dépendances), puis le contrat
+bun run contracts # le contrat : les types partagés avec ../pokedex-data (Cloudflare construit sans)
 bun test         # tests des règles où une erreur coûte : argent, collection (l'en-tête le dit)
 bun run test:worker # tests du Worker, dans le moteur de Cloudflare (worker/tests)
 bun run db:generate # après une modification de worker/schema.ts : sa migration
@@ -127,9 +127,9 @@ Le site est le Worker Cloudflare `pokedex`, à https://pokecodex.fr (`http://` e
 `www.pokecodex.fr` y redirigent) ; l'API des données, le Worker `pokedex-data`, à https://api.pokecodex.fr. Chacun a son
 domaine personnalisé (`routes` de `wrangler.jsonc`), sans adresse `workers.dev`. **Workers
 Builds** (Cloudflare relié aux dépôts GitHub) déploie chacun à chaque push sur `main` de son dépôt.
-Pour le site, `bun run ci` construit (`bun test`, `bun run lint:ci`, `bun run test:worker`,
-`bun run build` ; un échec arrête là), puis `bun run deploy` applique les migrations à la base D1
-en ligne et publie le Worker.
+Pour le site, `bun run ci` construit (`bun run format:check`, `bun test`, `bun run lint:ci`,
+`bun run test:worker`, `bun run build` ; un échec arrête là), puis `bun run deploy` applique les
+migrations à la base D1 en ligne et publie le Worker.
 `lint:ci` est le lint sans `../pokedex-data`, que la construction de Cloudflare n'a pas
 (`knip.ci.json`). Le guide complet : [docs/deploiement.md](docs/deploiement.md).
 
