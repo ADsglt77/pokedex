@@ -46,3 +46,14 @@
     opacity: 0;
   }
 }
+
+/* Contraste élevé (Windows) : le navigateur effacerait le glyphe (masque sur `currentColor`). Les
+   couleurs du système à la place : le glyphe du texte sur le fond de la page, cerclé. */
+@media (forced-colors: active) {
+  .mark {
+    forced-color-adjust: none;
+    background: Canvas;
+    color: CanvasText;
+    outline: 1px solid CanvasText;
+  }
+}

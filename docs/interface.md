@@ -246,7 +246,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   dessine un écran de pochettes, puis les autres en arrière-plan (`useDeferredValue` avec une
   valeur de départ : 111 ms → 42 avant la première image ; pas en arrivant par l'historique, qui
   retrouve le défilement). Les marques de possession sont des icônes CSS (masques, pas de SVG :
-  plus de 1 000 sinon), et rien de ce qui défile n'a de `backdrop-filter` (flou recalculé à chaque
+  plus de 1 000 sinon ; en contraste élevé, `forced-colors`, les couleurs du système, sans quoi le
+  glyphe disparaîtrait), et rien de ce qui défile n'a de `backdrop-filter` (flou recalculé à chaque
   image). Les pochettes, comme les cartes de la liste d'achats, sont de simples liens (`<a>`, pas
   un `Link` de react-router, qui lit l'adresse : des centaines se redessineraient à chaque frappe
   d'une recherche gardée dans l'adresse) ; la liste lit le clic une fois pour toutes
@@ -337,7 +338,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   d'emblée la garde : la coquille ne mène pas le focus au contenu, derrière elle, quand il est
   déjà dans une fenêtre. Le nombre de résultats est
   annoncé (`aria-live`) dans le Pokédex, la liste d'achats, le catalogue, la fenêtre d'ajout et
-  celle des extensions. « Annuler » se lance aussi par Ctrl+Z (⌘Z) tant que son toast est affiché
+  celle des extensions. Les listes dont le nombre compte (grilles du Pokédex, du catalogue et d'une
+  collection, liste d'achats, dernières cartes obtenues, lignes d'une commande en saisie,
+  `OrderLines`) ont `role="list"` :
+  sans puces (`global.css`), Safari leur retire le rôle de liste, et VoiceOver ne dirait plus
+  « liste, 24 éléments ». « Annuler » se lance aussi par Ctrl+Z (⌘Z) tant que son toast est affiché
   (`useNotify` ; pas dans un champ, ni avec une fenêtre ouverte) : au clavier, le toast, rendu à la
   fin de la page, était hors d'atteinte en 12 s. « Catalogue indisponible » (la page,
   la fenêtre des extensions) propose « Réessayer ».

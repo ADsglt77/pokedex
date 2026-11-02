@@ -1,6 +1,6 @@
 import { Button, DropdownMenu, MenuItem, MenuLabel, MenuSeparator } from '@camply/ui'
 import { CloudAlert, CloudCheck, CloudOff, LogIn, LogOut, RefreshCw } from '@camply/ui/icons'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExportCollectionButton } from '@/components/ExportCollectionButton'
@@ -78,6 +78,8 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const [confirmingLogin, setConfirmingLogin] = useState(false)
   // La déconnexion attend la réponse du serveur : le bouton du compte le dit pendant ce temps.
   const [leaving, setLeaving] = useState(false)
+  // Le menu est décrit par la phrase d'état : au clavier, seules ses entrées sont parcourues.
+  const statusId = useId()
 
   // « Rechargée » et « Envoi refusé » : au passage seulement, pas à l'affichage du menu. Les 80 % :
   // une fois par page, à l'affichage (la collection déjà lourde à l'ouverture) ou au passage.
@@ -122,6 +124,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
     <>
       <DropdownMenu
         placement={compact ? 'bottom-end' : 'top-start'}
+        aria-describedby={statusId}
         trigger={
           <Button
             size="sm"
@@ -142,7 +145,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
         <MenuLabel uppercase={false} className={styles.name}>
           {account.name}
         </MenuLabel>
-        <MenuLabel uppercase={false} className={styles.text}>
+        <MenuLabel id={statusId} uppercase={false} className={styles.text}>
           {text}
         </MenuLabel>
         {weight > HEAVY && (

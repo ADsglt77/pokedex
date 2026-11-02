@@ -76,7 +76,7 @@ export function OrderLines({
         Cartes
       </h3>
       {lines.length > 0 && (
-        <ul ref={list} className={page.lines}>
+        <ul ref={list} role="list" className={page.lines}>
           {lines.map((line, index) => {
             const card = findCard(line.cardId, collection)
             const duplicate = duplicateReason(order.lines[index]!, others)

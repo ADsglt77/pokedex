@@ -71,7 +71,7 @@ export const PokedexGrid = memo(function PokedexGrid({
             <span className={styles.count}>{unlockedOf(progress)}</span>
           </div>
         )}
-        <ul className={styles.grid}>
+        <ul role="list" className={styles.grid}>
           {groupEntries.map((entry) => {
             const visible = isShown(entry)
             return (

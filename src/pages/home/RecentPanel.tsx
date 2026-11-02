@@ -38,7 +38,7 @@ export function RecentPanel({ cards }: { cards: RecentCard[] }) {
         </Button>
       }
     >
-      <ul className={styles.cards}>
+      <ul role="list" className={styles.cards}>
         {shown.map((recent) => {
           const [speciesId] = recent.card.dexIds
           const date = formatDate(recent.acquiredAt)

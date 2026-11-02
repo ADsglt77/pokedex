@@ -135,7 +135,7 @@ export function WishlistPanel({
       ) : (
         // Le clic de ses liens se lit ici, une fois pour toute la liste.
         <div className="growing">
-          <ul className={styles.wishGrid} onClick={followLinks}>
+          <ul role="list" className={styles.wishGrid} onClick={followLinks}>
             {shown.slice(0, limit).map((row) => (
               <li key={row.card.id}>
                 <WishCard row={row} />

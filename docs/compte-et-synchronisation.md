@@ -240,8 +240,9 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   (`AccountMenu`, en pied de la barre latérale, ou en icône dans la barre du haut sur petit écran ;
   seulement connecté) montre son pseudo et l'état : enregistrée, enregistrement, hors ligne
   (« Réessayer maintenant »), reconnectez-vous (« Se reconnecter »), rechargée, envoi refusé
-  (avec sa raison), et le poids passé 80 % ; puis « Se déconnecter » ; une modification pas encore
-  enregistrée, la déconnexion le demande d'abord, avec un bouton d'export
+  (avec sa raison), et le poids passé 80 % ; puis « Se déconnecter » (la phrase d'état décrit le
+  menu, `aria-describedby` : au clavier, seules ses entrées sont parcourues) ; une modification
+  pas encore enregistrée, la déconnexion le demande d'abord, avec un bouton d'export
   (`ExportCollectionButton`). Sur téléphone, le menu n'est qu'une icône : « Rechargée » et « Envoi
   refusé » ont aussi leur toast, au passage seulement (jamais à l'affichage du menu) ; les 80 %
   aussi, une fois par page, à l'affichage du menu si la collection est déjà lourde ou au passage du

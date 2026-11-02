@@ -89,7 +89,9 @@ p {
   text-wrap: pretty;
 }
 
-/* Les listes de l'app sont des grilles et des piles de cartes, pas des listes à puces. */
+/* Les listes de l'app sont des grilles et des piles de cartes, pas des listes à puces. Sans puces,
+   Safari leur retire le rôle de liste : celles dont le nombre compte le reprennent
+   (`role="list"`). */
 ul {
   margin: 0;
   padding: 0;

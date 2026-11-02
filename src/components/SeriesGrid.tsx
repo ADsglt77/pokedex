@@ -63,7 +63,7 @@ export function SeriesGrid({
 
   return (
     <div className="growing">
-      <ul ref={grid} className={styles.grid}>
+      <ul ref={grid} role="list" className={styles.grid}>
         {series.cards.slice(0, limit).map((id) => (
           <li key={id}>
             <SeriesTile
