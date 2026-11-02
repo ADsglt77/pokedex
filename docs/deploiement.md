@@ -160,6 +160,15 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
 
 - **Revenir en arrière** : tableau de bord › le Worker › Deployments › Rollback (le code seulement :
   une migration de la base ne se défait pas ; d'où des migrations qui n'effacent rien d'utile).
+- **Une migration qui reconstruit une table** : pour la plupart des changements de colonne (NOT
+  NULL, CHECK, type), `bun run db:generate` écrit une migration qui reconstruit la table
+  (`PRAGMA foreign_keys=OFF`, `__new_user`, puis `DROP TABLE user`). Sur D1, ce PRAGMA ne fait rien
+  et `defer_foreign_keys` n'arrête pas les cascades : reconstruire `user` efface les sessions, les
+  comptes et les collections, et ses déclencheurs des pseudos partent avec elle (essayé sur une D1
+  locale). Une telle migration ne part donc jamais telle quelle : pour une contrainte sur `user`, un
+  déclencheur `RAISE(ABORT)` (comme ceux de `0001_pseudos.sql`) ; si la reconstruction est
+  inévitable, l'écrire à la main : mettre de côté sessions, comptes et collections, reconstruire,
+  les remettre, puis recréer les déclencheurs.
 - **Réparer la base après une erreur** (pas une sauvegarde : aucune n'est gardée, décision de
   l'utilisateur) : D1 garde son historique 30 jours (Time Travel), `npx wrangler d1 time-travel
   restore`. Pour celle du site, relever ensuite les numéros des collections (`UPDATE collections

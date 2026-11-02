@@ -23,10 +23,14 @@ Bun pour les paquets (pas npm/pnpm/yarn) ; Vite, Wrangler et Vitest tournent sou
 ARM64 sur ce poste : le plugin Cloudflare ne tourne pas sous Bun). `bun dev` (Vite et le Worker,
 sa base D1 locale migrée d'abord), et `bun run dev` dans `../pokedex-data` (son Worker, que ses
 propres tâches remplissent, `bun run ingest setup` la première fois : README). `bun run build` (pas `bun build`). Schéma du Worker changé
-(`worker/schema.ts`) : `bun run db:generate`. Après chaque changement : `bun lint` (ESLint +
-knip), `bun test`, `bun run test:worker`, `bun run format`. `bun run ci` : ce que lance la
-construction de Cloudflare avant de déployer (`lint:ci`, `knip.ci.json` : sans `../pokedex-data`).
-Quand un type partagé avec l'API change : `bun run contracts` (exige `../pokedex-data`).
+(`worker/schema.ts`) : `bun run db:generate`. Une migration générée qui reconstruit `user` ne part
+jamais telle quelle : sur D1, `PRAGMA foreign_keys=OFF` ne fait rien et `defer_foreign_keys`
+n'arrête pas les cascades, son `DROP TABLE` effacerait sessions, comptes et collections ; à la
+place, passer par un déclencheur `RAISE(ABORT)` ou par une reconstruction écrite à la main
+(`docs/deploiement.md`). Après chaque changement : `bun lint` (ESLint + knip), `bun test`,
+`bun run test:worker`, `bun run format`. `bun run ci` : ce que lance la construction de Cloudflare
+avant de déployer (`lint:ci`, `knip.ci.json` : sans `../pokedex-data`). Quand un type partagé avec
+l'API change : `bun run contracts` (exige `../pokedex-data`).
 
 ## Règles
 
@@ -57,10 +61,11 @@ Quand un type partagé avec l'API change : `bun run contracts` (exige `../pokede
 
 ## Structure
 
-`src/lib/` : règles **pures**, un domaine par module (son en-tête le décrit), certaines importées
-par `worker/`. `worker/schema.ts` : le schéma D1 (Drizzle), ses migrations dans
-`worker/migrations` (générées ; les déclencheurs écrits à la main) ; `worker/tests` : dans le
-moteur de Cloudflare.
+`src/lib/` : un domaine par module (son en-tête le décrit) : surtout des règles pures, et aussi les
+appels au serveur (`api`, `account`, `auth`, `species`, `card-catalog`) et le focus au clavier
+(`focus`, seul à toucher au DOM) ; certains sont importés par `worker/` et `tests/`, sans DOM.
+`worker/schema.ts` : le schéma D1 (Drizzle), ses migrations dans `worker/migrations` (générées ; les
+déclencheurs écrits à la main) ; `worker/tests` : dans le moteur de Cloudflare.
 
 **Lire la page du domaine avant d'y toucher, et la tenir à jour** :
 [cartes, catalogue, images](docs/cartes.md) · [prix, historique, état des données](docs/prix.md) ·

@@ -25,6 +25,8 @@
  * par minute au plus (`journalOnce`) ; une visite, par heure ; un compte (un export ou un import
  * signalé, un envoi refusé), par compte et par minute.
  * En couleurs en développement seulement : les journaux de Cloudflare les montreraient en codes.
+ * Le cœur (la ligne, `detail`, `journalOnce`) : même règle que `../pokedex-data/worker/journal.ts`
+ * (une copie, chaque dépôt se construit seul) : une correction se reporte de l'autre côté.
  */
 
 import { ORDER_STATE_LABELS } from '@/config/shopping'

@@ -1,4 +1,7 @@
-/** Les durées en millisecondes, et le calcul des jours (YYYY-MM-DD, en temps universel). */
+/**
+ * Les durées en millisecondes, et le calcul des jours (YYYY-MM-DD, en temps universel). Même règle
+ * que `../pokedex-data/src/lib/time.ts` (une copie, chaque dépôt se construit seul).
+ */
 
 export const MINUTE = 60_000
 export const HOUR = 60 * MINUTE

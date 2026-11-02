@@ -173,6 +173,7 @@ async function dataPricesOf(ids: number[]): Promise<PriceFile | null> {
 /**
  * Une réponse JSON et son ETag, tiré de son contenu : un visiteur qui revient sur un Pokédex
  * inchangé reçoit un 304, sans corps (un relais peut affaiblir l'ETag en `W/"…"` : c'est le même).
+ * L'ETag : même règle que `etagOf` de `../pokedex-data/worker/snapshots.ts` (une copie).
  */
 async function serveJson(request: Request, body: unknown) {
   const text = JSON.stringify(body)
