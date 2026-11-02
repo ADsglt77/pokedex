@@ -1,10 +1,9 @@
 import { Breadcrumbs } from '@camply/ui'
-import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { usePageShortcut } from '@/hooks/usePageShortcut'
 import { pokedexHref } from '@/hooks/usePokedexFilters'
 import { generationById } from '@/config/pokedex'
 import { pokedexUrl, speciesPath } from '@/lib/filters'
-import { shortcutBlocked } from '@/lib/focus'
 import { formatDexNumber } from '@/lib/format'
 import type { PokemonSpecies } from '@/types'
 import styles from './SpeciesNav.module.css'
@@ -24,17 +23,13 @@ export function SpeciesNav({ species, previous, next }: SpeciesNavProps) {
 
   // ← et → changent de Pokémon, sauf dans un champ ou une fenêtre ouverte, ou quand un réglage s'en
   // est déjà servi (un choix au clavier ne doit pas quitter la page).
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (shortcutBlocked(event) || event.shiftKey) return
-      const target = event.key === 'ArrowLeft' ? previous : event.key === 'ArrowRight' ? next : null
-      if (!target) return
-      event.preventDefault()
-      navigate(speciesPath(target.id))
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [previous, next, navigate])
+  usePageShortcut((event) => {
+    if (event.shiftKey) return
+    const target = event.key === 'ArrowLeft' ? previous : event.key === 'ArrowRight' ? next : null
+    if (!target) return
+    event.preventDefault()
+    navigate(speciesPath(target.id))
+  })
 
   return (
     <div className={styles.nav}>

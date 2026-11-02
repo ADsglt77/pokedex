@@ -1,6 +1,6 @@
 import { Button, IconButton, Input, Kbd, Select, Tag, Toggle } from '@camply/ui'
 import { ArrowDown01, ArrowDown10, Search, X } from '@camply/ui/icons'
-import { useEffect, type RefObject } from 'react'
+import type { RefObject } from 'react'
 import { FiltersPopover } from '@/components/FiltersPopover'
 import { ProgressRuler } from '@/components/ProgressRuler'
 import {
@@ -9,8 +9,9 @@ import {
   generationLabel,
   POKEMON_TYPES,
 } from '@/config/pokedex'
+import { usePageShortcut } from '@/hooks/usePageShortcut'
 import { cx } from '@/lib/cx'
-import { focusAfter, shortcutBlocked } from '@/lib/focus'
+import { focusAfter } from '@/lib/focus'
 import type { CardFilter, PokedexFilters, PossessionFilter } from '@/lib/filters'
 import { formatInteger, plural, toOptions } from '@/lib/format'
 import type { GenerationProgress } from '@/lib/pokedex'
@@ -73,15 +74,11 @@ export function PokedexToolbar({
   search,
 }: PokedexToolbarProps) {
   // « / » place le curseur dans la recherche, sauf quand on tape déjà dans un champ.
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== '/' || shortcutBlocked(event)) return
-      event.preventDefault()
-      search.current?.focus()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [search])
+  usePageShortcut((event) => {
+    if (event.key !== '/') return
+    event.preventDefault()
+    search.current?.focus()
+  })
 
   const clearSearch = () => {
     setFilters({ search: '' })

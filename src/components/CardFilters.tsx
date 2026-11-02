@@ -1,5 +1,5 @@
 import { Button, Toggle } from '@camply/ui'
-import { useRef } from 'react'
+import { useRef, type ReactNode, type RefObject } from 'react'
 import { CARD_TYPES } from '@/config/catalog'
 import {
   NO_FILTER,
@@ -52,50 +52,35 @@ export function CardFilters({
   const filtered = value.rarities.length > 0 || value.types.length > 0
   if (rarities.length < 2 && types.length < 2 && !filtered) return null
 
-  const label = (name: string, count: number) => `${name} : ${plural(count, 'carte', 'cartes')}`
   return (
     <div className={styles.filters}>
       {showRarities && (
-        <fieldset className={styles.group}>
-          <legend className={styles.legend}>Rareté</legend>
-          {rarities.map(({ rarity, count }, index) => (
-            <Toggle
-              key={rarity.id}
-              ref={index === 0 ? first : undefined}
-              size="sm"
-              className={styles.chip}
-              pressed={value.rarities.includes(rarity.id)}
-              onChange={(on) =>
-                onChange({ ...value, rarities: toggled(value.rarities, rarity.id, on) })
-              }
-              aria-label={label(rarity.name, count)}
-              title={label(rarity.name, count)}
-            >
-              <RarityIcon rarity={rarity} className={styles.rarity} />
-              <span className="numeric">{formatInteger(count)}</span>
-            </Toggle>
-          ))}
-        </fieldset>
+        <ChipGroup
+          legend="Rareté"
+          chips={rarities.map(({ rarity, count }) => ({
+            id: rarity.id,
+            name: rarity.name,
+            count,
+            icon: <RarityIcon rarity={rarity} className={styles.rarity} />,
+          }))}
+          selected={value.rarities}
+          onSelect={(rarities) => onChange({ ...value, rarities })}
+          first={first}
+        />
       )}
       {(types.length > 1 || value.types.length > 0) && (
-        <fieldset className={styles.group}>
-          <legend className={styles.legend}>Type</legend>
-          {types.map((type, index) => (
-            <Toggle
-              key={type}
-              ref={index === 0 && !showRarities ? first : undefined}
-              size="sm"
-              className={styles.chip}
-              pressed={value.types.includes(type)}
-              onChange={(on) => onChange({ ...value, types: toggled(value.types, type, on) })}
-              aria-label={label(CARD_TYPES.get(type)!, typeCounts.get(type)!)}
-              title={label(CARD_TYPES.get(type)!, typeCounts.get(type)!)}
-            >
-              <TypeIcon type={type} />
-              <span className="numeric">{formatInteger(typeCounts.get(type)!)}</span>
-            </Toggle>
-          ))}
-        </fieldset>
+        <ChipGroup
+          legend="Type"
+          chips={types.map((type) => ({
+            id: type,
+            name: CARD_TYPES.get(type)!,
+            count: typeCounts.get(type)!,
+            icon: <TypeIcon type={type} />,
+          }))}
+          selected={value.types}
+          onSelect={(types) => onChange({ ...value, types })}
+          first={showRarities ? undefined : first}
+        />
       )}
       {filtered && (
         <Button
@@ -107,5 +92,48 @@ export function CardFilters({
         </Button>
       )}
     </div>
+  )
+}
+
+/**
+ * Un filtre en pastilles : chacune son icône et son nombre de cartes, `selected` les choisies.
+ * `first` va à la première. Au niveau du module : défini dans `CardFilters`, il serait recréé à
+ * chaque rendu et ferait perdre le focus à la pastille cliquée.
+ */
+function ChipGroup({
+  legend,
+  chips,
+  selected,
+  onSelect,
+  first,
+}: {
+  legend: string
+  chips: { id: number; name: string; count: number; icon: ReactNode }[]
+  selected: number[]
+  onSelect: (selected: number[]) => void
+  first?: RefObject<HTMLButtonElement | null>
+}) {
+  return (
+    <fieldset className={styles.group}>
+      <legend className={styles.legend}>{legend}</legend>
+      {chips.map(({ id, name, count, icon }, index) => {
+        const label = `${name} : ${plural(count, 'carte', 'cartes')}`
+        return (
+          <Toggle
+            key={id}
+            ref={index === 0 ? first : undefined}
+            size="sm"
+            className={styles.chip}
+            pressed={selected.includes(id)}
+            onChange={(on) => onSelect(toggled(selected, id, on))}
+            aria-label={label}
+            title={label}
+          >
+            {icon}
+            <span className="numeric">{formatInteger(count)}</span>
+          </Toggle>
+        )
+      })}
+    </fieldset>
   )
 }

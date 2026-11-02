@@ -18,6 +18,16 @@ import styles from './PricePanel.module.css'
 type PricedCard = Pick<PokemonCard, 'cardmarket' | 'page' | 'reference' | 'language'>
 
 /**
+ * Ce que dit le panneau d'une carte sans prix : les prix manquent, Cardmarket n'en a pas pour elle,
+ * ou elle n'a pas d'id Cardmarket (`withoutId`).
+ */
+function noPriceText(missing: boolean, cardmarket: number | undefined, withoutId: string) {
+  if (missing) return 'Les prix ne sont pas disponibles pour le moment.'
+  if (cardmarket) return 'Cardmarket n’a pas de prix pour cette carte.'
+  return withoutId
+}
+
+/**
  * La carte chez Cardmarket : son id et sa page, son prix du jour, son évolution et, si le prix
  * payé (`paid`) est noté, l'écart (la fiche d'un Pokémon, une carte du catalogue). `withoutId` :
  * ce qu'il dit d'une carte sans id Cardmarket (par défaut, qu'il n'est pas connu). Le prix d'une
@@ -82,13 +92,7 @@ export function PricePanel({
           </Suspense>
         </>
       ) : prices || missing ? (
-        <p className="muted">
-          {missing
-            ? 'Les prix ne sont pas disponibles pour le moment.'
-            : card.cardmarket
-              ? 'Cardmarket n’a pas de prix pour cette carte.'
-              : withoutId}
-        </p>
+        <p className="muted">{noPriceText(missing, card.cardmarket, withoutId)}</p>
       ) : (
         // Les prix arrivent : la place du prix est gardée.
         <Skeleton height="4.5rem" />
