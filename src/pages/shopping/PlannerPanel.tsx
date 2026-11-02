@@ -17,7 +17,7 @@ import { cx } from '@/lib/cx'
 import { keepFocusInList } from '@/lib/focus'
 import { formatEuro, plural, today } from '@/lib/format'
 import { cents, newOrder } from '@/lib/orders'
-import { planPurchase } from '@/lib/purchase-planner'
+import { planPurchase, type Plan } from '@/lib/purchase-planner'
 import type { WishRow } from '@/lib/wishlist'
 import { useShoppingStore } from '@/store/shopping'
 import type { Order } from '@/types'
@@ -144,60 +144,15 @@ export function PlannerPanel({
       </Card>
 
       <Stack as="section" gap={5} aria-labelledby={planTitle}>
-        <div className={styles.planSummary}>
-          <h2 ref={heading} id={planTitle} tabIndex={-1} className={styles.sectionTitle}>
-            {plan.picked.length
-              ? plural(plan.picked.length, 'carte proposée', 'cartes proposées')
-              : 'Aucune carte proposée'}
-          </h2>
-          <p className={styles.planTotal}>
-            <span className="numeric">{formatEuro(plan.total)}</span>
-            <span className="muted"> sur {formatEuro(planned)}</span>
-          </p>
-          <Progress
-            value={plan.total}
-            max={planned}
-            tone={plan.overBudget ? 'danger' : 'info'}
-            size="sm"
-            aria-label="Part du budget utilisée"
-          />
-          <p className="muted">
-            Cartes {formatEuro(plan.cardsTotal)}
-            {plan.picked.length > 0 && ` · port réservé ${formatEuro(budget.shippingReserve)}`}
-            {` · reste ${formatEuro(Math.max(0, planned - plan.total))}`}
-          </p>
-          {plan.picked.length > 0 && (
-            <Stack direction="horizontal" gap={2} wrap className={styles.planActions}>
-              <Button
-                variant="secondary"
-                leftIcon={<Copy size={16} />}
-                onClick={() => setWantsOpen(true)}
-              >
-                Copier pour Cardmarket
-              </Button>
-              <Button
-                leftIcon={<Receipt size={16} />}
-                onClick={() =>
-                  // Les cartes du plan au prix du marché, le port réservé : une commande à compléter.
-                  setDraft(
-                    newOrder(
-                      today(),
-                      plan.picked.map((row) => ({
-                        cardId: row.card.id,
-                        quantity: 1,
-                        unitPrice: row.price,
-                        previous: null,
-                      })),
-                      budget.shippingReserve,
-                    ),
-                  )
-                }
-              >
-                Enregistrer comme commande…
-              </Button>
-            </Stack>
-          )}
-        </div>
+        <PlanSummary
+          plan={plan}
+          planned={planned}
+          shippingReserve={budget.shippingReserve}
+          titleId={planTitle}
+          heading={heading}
+          onCopy={() => setWantsOpen(true)}
+          onRecord={setDraft}
+        />
 
         {plan.overBudget && (
           <Alert tone="warn" title="Les cartes ajoutées à la main dépassent le budget.">
@@ -275,27 +230,7 @@ export function PlannerPanel({
               fallback={heading}
             />
           ))}
-          <AccordionItem value="how" title="Comment le plan est construit" headingLevel={3}>
-            <Stack gap={3}>
-              <ol className={page.steps}>
-                <li>
-                  Les cartes de vos Pokémon et de vos collections d’extensions, ni possédées ni
-                  commandées.
-                </li>
-                <li>Les cartes sans prix sont mises de côté.</li>
-                <li>Dans l’ordre : vos ajouts à la main, puis le prix le plus bas.</li>
-                <li>
-                  Une carte est prise si elle tient dans le budget, port réservé, et, pour une carte
-                  du Pokédex, si son Pokémon n’est pas déjà dans le plan. Les cartes d’une
-                  collection d’extension pas encore obtenues sont prises même si leur Pokémon l’est.
-                </li>
-              </ol>
-              <p className="muted">
-                Un calcul simple et indicatif : les prix du marché ne sont pas ceux des annonces, et
-                plusieurs vendeurs veulent dire plusieurs frais de port.
-              </p>
-            </Stack>
-          </AccordionItem>
+          <PlanHelp />
         </Accordion>
       </Stack>
 
@@ -400,6 +335,109 @@ function PlanGroup({
             <PlanList rows={rows} fallback={fallback} action={action} />
           </>
         ))}
+    </AccordionItem>
+  )
+}
+
+/**
+ * Le haut du plan : son titre (`heading`, où va le focus quand une liste se vide), son coût sur le
+ * budget, et, s'il a des cartes, ses actions : les copier (`onCopy`), l'enregistrer comme commande
+ * (`onRecord`).
+ */
+function PlanSummary({
+  plan,
+  planned,
+  shippingReserve,
+  titleId,
+  heading,
+  onCopy,
+  onRecord,
+}: {
+  plan: Plan<WishRow>
+  planned: number
+  shippingReserve: number
+  titleId: string
+  heading: RefObject<HTMLHeadingElement | null>
+  onCopy: () => void
+  onRecord: (order: Order) => void
+}) {
+  return (
+    <div className={styles.planSummary}>
+      <h2 ref={heading} id={titleId} tabIndex={-1} className={styles.sectionTitle}>
+        {plan.picked.length
+          ? plural(plan.picked.length, 'carte proposée', 'cartes proposées')
+          : 'Aucune carte proposée'}
+      </h2>
+      <p className={styles.planTotal}>
+        <span className="numeric">{formatEuro(plan.total)}</span>
+        <span className="muted"> sur {formatEuro(planned)}</span>
+      </p>
+      <Progress
+        value={plan.total}
+        max={planned}
+        tone={plan.overBudget ? 'danger' : 'info'}
+        size="sm"
+        aria-label="Part du budget utilisée"
+      />
+      <p className="muted">
+        Cartes {formatEuro(plan.cardsTotal)}
+        {plan.picked.length > 0 && ` · port réservé ${formatEuro(shippingReserve)}`}
+        {` · reste ${formatEuro(Math.max(0, planned - plan.total))}`}
+      </p>
+      {plan.picked.length > 0 && (
+        <Stack direction="horizontal" gap={2} wrap className={styles.planActions}>
+          <Button variant="secondary" leftIcon={<Copy size={16} />} onClick={onCopy}>
+            Copier pour Cardmarket
+          </Button>
+          <Button
+            leftIcon={<Receipt size={16} />}
+            onClick={() =>
+              // Les cartes du plan au prix du marché, le port réservé : une commande à compléter.
+              onRecord(
+                newOrder(
+                  today(),
+                  plan.picked.map((row) => ({
+                    cardId: row.card.id,
+                    quantity: 1,
+                    unitPrice: row.price,
+                    previous: null,
+                  })),
+                  shippingReserve,
+                ),
+              )
+            }
+          >
+            Enregistrer comme commande…
+          </Button>
+        </Stack>
+      )}
+    </div>
+  )
+}
+
+/** Comment le plan est construit : les règles de `planPurchase`, dites simplement. */
+function PlanHelp() {
+  return (
+    <AccordionItem value="how" title="Comment le plan est construit" headingLevel={3}>
+      <Stack gap={3}>
+        <ol className={page.steps}>
+          <li>
+            Les cartes de vos Pokémon et de vos collections d’extensions, ni possédées ni
+            commandées.
+          </li>
+          <li>Les cartes sans prix sont mises de côté.</li>
+          <li>Dans l’ordre : vos ajouts à la main, puis le prix le plus bas.</li>
+          <li>
+            Une carte est prise si elle tient dans le budget, port réservé, et, pour une carte du
+            Pokédex, si son Pokémon n’est pas déjà dans le plan. Les cartes d’une collection
+            d’extension pas encore obtenues sont prises même si leur Pokémon l’est.
+          </li>
+        </ol>
+        <p className="muted">
+          Un calcul simple et indicatif : les prix du marché ne sont pas ceux des annonces, et
+          plusieurs vendeurs veulent dire plusieurs frais de port.
+        </p>
+      </Stack>
     </AccordionItem>
   )
 }

@@ -246,8 +246,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   (`ExportCollectionButton`). Sur téléphone, le menu n'est qu'une icône : « Rechargée » et « Envoi
   refusé » ont aussi leur toast, au passage seulement (jamais à l'affichage du menu) ; les 80 %
   aussi, une fois par page, à l'affichage du menu si la collection est déjà lourde ou au passage du
-  seuil (`warnHeavy`, `AccountMenu`). Se déconnecter vide la mémoire
-  de la page.
+  seuil (`warnHeavy`, dans `useSaveStatusToasts` d'`AccountMenu`). Se déconnecter vide la
+  mémoire de la page.
 - Retirés à la demande de l'utilisateur, à ne pas réintroduire sans demande : le compte unique,
   puis les invitations ; la collection « dans ce navigateur » sans compte, sa copie hors ligne et
   le rappel de sauvegarde ; le réglage public ou privé du Pokédex public.

@@ -34,7 +34,7 @@ export interface PlanOptions {
 /** Une carte avec son prix : celles que le plan prend, laisse ou couvre en ont toutes un. */
 type Priced<T> = T & { price: number }
 
-interface Plan<T> {
+export interface Plan<T> {
   picked: Priced<T>[]
   /** Candidates qui ne tiennent pas dans le budget. */
   left: Priced<T>[]

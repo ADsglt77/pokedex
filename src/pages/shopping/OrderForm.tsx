@@ -56,24 +56,13 @@ export function OrderForm({
   const [submitted, setSubmitted] = useState(false)
   // La question du plafond : la saisie est cachée pendant ce temps, la commande ne change pas.
   const [overCeiling, setOverCeiling] = useState(false)
-  const [abandoning, setAbandoning] = useState(false)
   const fields = useRef<HTMLElement>(null)
   const set = (change: Partial<Draft>) => setDraft({ ...draft, ...change })
   const started = JSON.stringify(draft) !== JSON.stringify(initial)
-  // Enregistrer ou abandonner ferme la saisie : la page peut alors changer sans question
-  // (« Enregistrer comme commande » ouvre « Commandes »). Une `ref` : lue par le routeur au moment
-  // de la navigation, dans le même clic, avant que la fenêtre ne soit retirée.
-  const closing = useRef(false)
-  // Quitter la page avec une saisie commencée (le titre d'une carte, le retour du navigateur, la
-  // recherche Ctrl K) : la même question que fermer la fenêtre.
-  const blocker = useBlocker(() => started && !closing.current)
-  const asking = abandoning || blocker.state === 'blocked'
+  const { asking, markClosing, close, abandon, keepEditing } = useAbandonGuard(started, onClose)
   const formOpen = !asking && !overCeiling
-  // Le focus : après « Abandonner », il revient au bouton qui avait ouvert la saisie (`opener`, le
-  // focus à l'ouverture ; la question le rendrait sinon à un champ qui n'existe plus). Après
-  // « Annuler », la fenêtre revient et le met à son premier bouton, comme à son ouverture ; au
-  // plafond, il retourne plutôt à « Enregistrer ».
-  const [opener] = useState(() => document.activeElement as HTMLElement | null)
+  // Le focus : après « Annuler », la fenêtre revient et le met à son premier bouton, comme à son
+  // ouverture ; au plafond, il retourne plutôt à « Enregistrer ».
   const saveButton = useRef<HTMLButtonElement>(null)
   const backToSave = useRef(false)
   useEffect(() => {
@@ -81,26 +70,6 @@ export function OrderForm({
     backToSave.current = false
     saveButton.current?.focus()
   }, [formOpen])
-  // Échap (même depuis un champ), la croix ou « Annuler » : une saisie commencée n'est pas perdue
-  // sans confirmation.
-  const close = () => {
-    if (started) setAbandoning(true)
-    else onClose()
-  }
-  // « Abandonner » : la fenêtre se ferme, et la navigation retenue repart.
-  const abandon = () => {
-    closing.current = true
-    blocker.proceed?.()
-    onClose()
-    // Une fois la question retirée (elle rend le focus en se fermant).
-    requestAnimationFrame(() => opener?.focus())
-  }
-  // « Annuler » (aussi appelé après « Abandonner », par ConfirmDialog : la navigation est déjà
-  // repartie) : la saisie revient, et la navigation retenue est oubliée.
-  const keepEditing = () => {
-    setAbandoning(false)
-    if (!closing.current) blocker.reset?.()
-  }
 
   const read = readDraft(draft, base, stored, collection)
   const { order } = read
@@ -109,7 +78,7 @@ export function OrderForm({
   const { month, total: monthTotal, ask } = askBeforeSaving(orders, order, budget)
 
   const save = () => {
-    closing.current = true
+    markClosing()
     const count = cardCount(order.lines)
     act(
       () => useShoppingStore.getState().saveOrder(order),
@@ -303,4 +272,49 @@ export function OrderForm({
       </ConfirmDialog>
     </>
   )
+}
+
+/**
+ * La question d'abandon d'une saisie commencée (`started`) : en la fermant, ou en quittant la page
+ * avec elle. `asking` tant qu'elle est posée ; `markClosing` quand la saisie se ferme d'elle-même
+ * (enregistrée).
+ */
+function useAbandonGuard(started: boolean, onClose: () => void) {
+  const [abandoning, setAbandoning] = useState(false)
+  // Enregistrer ou abandonner ferme la saisie : la page peut alors changer sans question
+  // (« Enregistrer comme commande » ouvre « Commandes »). Une `ref` : lue par le routeur au moment
+  // de la navigation, dans le même clic, avant que la fenêtre ne soit retirée.
+  const closing = useRef(false)
+  // Quitter la page avec une saisie commencée (le titre d'une carte, le retour du navigateur, la
+  // recherche Ctrl K) : la même question que fermer la fenêtre.
+  const blocker = useBlocker(() => started && !closing.current)
+  // Après « Abandonner », le focus revient au bouton qui avait ouvert la saisie (`opener`, le focus
+  // à l'ouverture ; la question le rendrait sinon à un champ qui n'existe plus).
+  const [opener] = useState(() => document.activeElement as HTMLElement | null)
+  return {
+    asking: abandoning || blocker.state === 'blocked',
+    markClosing: () => {
+      closing.current = true
+    },
+    // Échap (même depuis un champ), la croix ou « Annuler » : une saisie commencée n'est pas
+    // perdue sans confirmation.
+    close: () => {
+      if (started) setAbandoning(true)
+      else onClose()
+    },
+    // « Abandonner » : la fenêtre se ferme, et la navigation retenue repart.
+    abandon: () => {
+      closing.current = true
+      blocker.proceed?.()
+      onClose()
+      // Une fois la question retirée (elle rend le focus en se fermant).
+      requestAnimationFrame(() => opener?.focus())
+    },
+    // « Annuler » (aussi appelé après « Abandonner », par ConfirmDialog : la navigation est déjà
+    // repartie) : la saisie revient, et la navigation retenue est oubliée.
+    keepEditing: () => {
+      setAbandoning(false)
+      if (!closing.current) blocker.reset?.()
+    },
+  }
 }

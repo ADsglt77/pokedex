@@ -214,7 +214,8 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     blocage ; le formulaire montre le mois avec la commande en cours de
     saisie ; fermer une saisie commencée (Échap, « Annuler »), ou quitter la page avec elle (le
     titre d'une carte, le retour du navigateur, la recherche Ctrl K : `useBlocker`), demande
-    confirmation (« Abandonner la saisie ? ») ; enregistrer ou abandonner ne demande rien de plus.
+    confirmation (« Abandonner la saisie ? », `useAbandonGuard` d'`OrderForm`) ; enregistrer ou
+    abandonner ne demande rien de plus.
     Une question (plafond, abandon) remplace la fenêtre le temps d'y répondre, jamais ouverte
     dedans (deux fenêtres se disputeraient le focus, et la page resterait sans défilement) : la
     saisie revient telle quelle après « Annuler ». Les dates (achat, réception) sont celles que

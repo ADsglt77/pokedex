@@ -1,4 +1,4 @@
-import { Badge, Button, EmptyState, IconButton, Stack, Table } from '@camply/ui'
+import { Badge, Button, EmptyState, IconButton, Stack, Table, type Column } from '@camply/ui'
 import { Eye, PackageCheck, Pencil, Plus, Receipt, Trash2 } from '@camply/ui/icons'
 import { useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
@@ -94,124 +94,12 @@ export function OrdersPanel() {
           className={cx('stack-table', styles.orders)}
           data={orders}
           rowKey={(order) => order.id}
-          // L'état et « Marquer reçue » juste après la date : sur téléphone, sans faire défiler.
-          columns={[
-            {
-              key: 'date',
-              header: 'Date',
-              sortValue: (order) => order.date,
-              cell: (order) => formatDate(order.date),
-            },
-            {
-              key: 'state',
-              header: 'État',
-              sortValue: (order) => order.state,
-              cell: (order) => (
-                <span className={page.stacked}>
-                  <span className={styles.badges}>
-                    <OrderStateBadge state={order.state} />
-                    {late.has(order.id) && (
-                      <Badge size="sm" tone="warn">
-                        En retard
-                      </Badge>
-                    )}
-                  </span>
-                  {order.receivedAt && (
-                    <span className="muted">le {formatDate(order.receivedAt)}</span>
-                  )}
-                  {order.state === 'pending' && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      leftIcon={<PackageCheck size={14} />}
-                      onClick={() => {
-                        receive(order)
-                        // Le bouton disparaît avec l'état « en cours » : « Voir » la commande.
-                        document.querySelector<HTMLElement>(`[data-order="${order.id}"]`)?.focus()
-                      }}
-                    >
-                      Marquer reçue
-                    </Button>
-                  )}
-                </span>
-              ),
-            },
-            {
-              key: 'supplier',
-              header: 'Fournisseur',
-              sortValue: (order) => supplierLabel(order),
-              cell: (order) => (
-                <span className={page.stacked}>
-                  {order.link ? (
-                    <ExternalLink href={order.link}>{supplierLabel(order)}</ExternalLink>
-                  ) : (
-                    supplierLabel(order)
-                  )}
-                  {order.reference && <span className="muted">{order.reference}</span>}
-                </span>
-              ),
-            },
-            {
-              key: 'cards',
-              header: 'Cartes',
-              align: 'right',
-              sortValue: (order) => cardCount(order.lines),
-              cell: (order) => (
-                <TableCount count={cardCount(order.lines)} one="carte" many="cartes" />
-              ),
-            },
-            {
-              key: 'total',
-              header: 'Total',
-              align: 'right',
-              sortValue: (order) => orderSpent(order),
-              cell: (order) => (
-                <span className={page.stacked}>
-                  {formatEuro(orderSpent(order))}
-                  {order.refunded > 0 && (
-                    <span className="muted">remboursé {formatEuro(order.refunded)}</span>
-                  )}
-                </span>
-              ),
-            },
-            {
-              key: 'actions',
-              header: <span className="visually-hidden">Actions</span>,
-              align: 'right',
-              cell: (order) => {
-                const name = `la commande ${supplierLabel(order)} du ${formatDate(order.date)}`
-                return (
-                  <span className={styles.rowActions}>
-                    <IconButton
-                      data-order={order.id}
-                      label={`Voir ${name}`}
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setOpenId(order.id)}
-                    >
-                      <Eye size={15} />
-                    </IconButton>
-                    <IconButton
-                      label={`Modifier ${name}`}
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setEditing(order)}
-                    >
-                      <Pencil size={15} />
-                    </IconButton>
-                    <IconButton
-                      label={`Supprimer ${name}`}
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setDeleting(order)}
-                    >
-                      <Trash2 size={15} />
-                    </IconButton>
-                  </span>
-                )
-              },
-            },
-          ]}
+          columns={orderColumns(late, {
+            onReceive: receive,
+            onView: (order) => setOpenId(order.id),
+            onEdit: setEditing,
+            onDelete: setDeleting,
+          })}
         />
       )}
 
@@ -233,28 +121,181 @@ export function OrdersPanel() {
 
       {editing && <OrderForm order={editing} onClose={() => setEditing(null)} />}
 
-      <ConfirmDialog
-        open={deleting !== null}
-        title="Supprimer cette commande ?"
-        confirmLabel="Supprimer"
+      <DeleteOrderDialog
+        order={deleting}
         onClose={() => setDeleting(null)}
         onConfirm={() => remove(deleting!)}
-      >
-        <p>
-          {deleting?.state === 'cancelled'
-            ? 'Elle disparaît du registre.'
-            : 'Elle disparaît du registre et du budget.'}{' '}
-          {deleting?.state === 'pending' &&
-            'Ses cartes encore commandées retrouvent leur état d’avant la commande.'}
-          {deleting?.state === 'received' &&
-            'Ses cartes restent possédées, sans le prix payé ni la date qu’elle leur avait donnés.'}
-        </p>
-        {deleting?.state !== 'cancelled' && (
-          <p>
-            Pour une commande annulée, préférez l’état « Annulée » : elle reste dans l’historique.
-          </p>
-        )}
-      </ConfirmDialog>
+      />
     </Stack>
+  )
+}
+
+/**
+ * Les colonnes du registre ; `late` : les commandes en retard. L'état et « Marquer reçue » juste
+ * après la date : sur téléphone, sans faire défiler.
+ */
+function orderColumns(
+  late: ReadonlySet<string>,
+  {
+    onReceive,
+    onView,
+    onEdit,
+    onDelete,
+  }: {
+    onReceive: (order: Order) => void
+    onView: (order: Order) => void
+    onEdit: (order: Order) => void
+    /** Demande d'abord (`DeleteOrderDialog`). */
+    onDelete: (order: Order) => void
+  },
+): Column<Order>[] {
+  return [
+    {
+      key: 'date',
+      header: 'Date',
+      sortValue: (order) => order.date,
+      cell: (order) => formatDate(order.date),
+    },
+    {
+      key: 'state',
+      header: 'État',
+      sortValue: (order) => order.state,
+      cell: (order) => (
+        <span className={page.stacked}>
+          <span className={styles.badges}>
+            <OrderStateBadge state={order.state} />
+            {late.has(order.id) && (
+              <Badge size="sm" tone="warn">
+                En retard
+              </Badge>
+            )}
+          </span>
+          {order.receivedAt && <span className="muted">le {formatDate(order.receivedAt)}</span>}
+          {order.state === 'pending' && (
+            <Button
+              size="sm"
+              variant="secondary"
+              leftIcon={<PackageCheck size={14} />}
+              onClick={() => {
+                onReceive(order)
+                // Le bouton disparaît avec l'état « en cours » : « Voir » la commande.
+                document.querySelector<HTMLElement>(`[data-order="${order.id}"]`)?.focus()
+              }}
+            >
+              Marquer reçue
+            </Button>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: 'supplier',
+      header: 'Fournisseur',
+      sortValue: (order) => supplierLabel(order),
+      cell: (order) => (
+        <span className={page.stacked}>
+          {order.link ? (
+            <ExternalLink href={order.link}>{supplierLabel(order)}</ExternalLink>
+          ) : (
+            supplierLabel(order)
+          )}
+          {order.reference && <span className="muted">{order.reference}</span>}
+        </span>
+      ),
+    },
+    {
+      key: 'cards',
+      header: 'Cartes',
+      align: 'right',
+      sortValue: (order) => cardCount(order.lines),
+      cell: (order) => <TableCount count={cardCount(order.lines)} one="carte" many="cartes" />,
+    },
+    {
+      key: 'total',
+      header: 'Total',
+      align: 'right',
+      sortValue: (order) => orderSpent(order),
+      cell: (order) => (
+        <span className={page.stacked}>
+          {formatEuro(orderSpent(order))}
+          {order.refunded > 0 && (
+            <span className="muted">remboursé {formatEuro(order.refunded)}</span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: <span className="visually-hidden">Actions</span>,
+      align: 'right',
+      cell: (order) => {
+        const name = `la commande ${supplierLabel(order)} du ${formatDate(order.date)}`
+        return (
+          <span className={styles.rowActions}>
+            <IconButton
+              data-order={order.id}
+              label={`Voir ${name}`}
+              size="sm"
+              variant="ghost"
+              onClick={() => onView(order)}
+            >
+              <Eye size={15} />
+            </IconButton>
+            <IconButton
+              label={`Modifier ${name}`}
+              size="sm"
+              variant="ghost"
+              onClick={() => onEdit(order)}
+            >
+              <Pencil size={15} />
+            </IconButton>
+            <IconButton
+              label={`Supprimer ${name}`}
+              size="sm"
+              variant="ghost"
+              onClick={() => onDelete(order)}
+            >
+              <Trash2 size={15} />
+            </IconButton>
+          </span>
+        )
+      },
+    },
+  ]
+}
+
+/** La question avant de supprimer une commande (`order`) : ce que deviennent ses cartes. */
+function DeleteOrderDialog({
+  order,
+  onClose,
+  onConfirm,
+}: {
+  order: Order | null
+  onClose: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <ConfirmDialog
+      open={order !== null}
+      title="Supprimer cette commande ?"
+      confirmLabel="Supprimer"
+      onClose={onClose}
+      onConfirm={onConfirm}
+    >
+      <p>
+        {order?.state === 'cancelled'
+          ? 'Elle disparaît du registre.'
+          : 'Elle disparaît du registre et du budget.'}{' '}
+        {order?.state === 'pending' &&
+          'Ses cartes encore commandées retrouvent leur état d’avant la commande.'}
+        {order?.state === 'received' &&
+          'Ses cartes restent possédées, sans le prix payé ni la date qu’elle leur avait donnés.'}
+      </p>
+      {order?.state !== 'cancelled' && (
+        <p>
+          Pour une commande annulée, préférez l’état « Annulée » : elle reste dans l’historique.
+        </p>
+      )}
+    </ConfirmDialog>
   )
 }
