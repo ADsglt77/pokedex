@@ -14,6 +14,7 @@ import { STATUS_ICONS } from '@/components/statusIcons'
 import { Unavailable } from '@/components/Unavailable'
 import { UnlockedChart } from '@/components/UnlockedChart'
 import { usePhone } from '@/hooks/useMediaQuery'
+import { usePokedexGrid } from '@/hooks/usePokedexGrid'
 import { isPseudo } from '@/lib/account'
 import { requestFailed } from '@/lib/api'
 import type { ChartPeriod } from '@/lib/chart'
@@ -163,10 +164,15 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
   // Sur téléphone, la réglette n'est qu'une image : la liste des régions la remplace.
   const narrow = usePhone()
   const wanted = entries.filter(isWanted).length
-  const visible =
-    shown === 'all'
-      ? entries
-      : entries.filter(shown === 'unlocked' ? (entry) => entry.unlocked : isWanted)
+  const visible = useMemo(
+    () =>
+      shown === 'all'
+        ? entries
+        : entries.filter(shown === 'unlocked' ? (entry) => entry.unlocked : isWanted),
+    [entries, shown],
+  )
+  // Toutes les pochettes ; le choix des Pokémon montrés masque les autres.
+  const grid = usePokedexGrid(entries, visible)
   const updated = formatDate(collection.updatedAt)
 
   return (
@@ -260,28 +266,24 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
             onChange={setShown}
           />
         </div>
-        {visible.length > 0 ? (
-          <PokedexGrid
-            entries={visible}
-            generations={generations}
-            linked={false}
-            headingLevel={3}
-          />
-        ) : shown === 'unlocked' ? (
-          <EmptyState
-            icon={<Lock size={22} />}
-            title="Aucun Pokémon débloqué pour l’instant"
-            description="Un Pokémon est débloqué dès qu’une de ses cartes est possédée."
-            actions={<Button onClick={() => setShown('all')}>Voir tous les Pokémon</Button>}
-          />
-        ) : (
-          <EmptyState
-            icon={<Layers size={22} />}
-            title="Aucun Pokémon à obtenir"
-            description="Les Pokémon dont une carte est choisie, aucune obtenue, apparaissent ici."
-            actions={<Button onClick={() => setShown('all')}>Voir tous les Pokémon</Button>}
-          />
-        )}
+        {/* Rien de montré : chaque génération est masquée, la grille reste. */}
+        <PokedexGrid {...grid} generations={generations} linked={false} headingLevel={3} />
+        {visible.length === 0 &&
+          (shown === 'unlocked' ? (
+            <EmptyState
+              icon={<Lock size={22} />}
+              title="Aucun Pokémon débloqué pour l’instant"
+              description="Un Pokémon est débloqué dès qu’une de ses cartes est possédée."
+              actions={<Button onClick={() => setShown('all')}>Voir tous les Pokémon</Button>}
+            />
+          ) : (
+            <EmptyState
+              icon={<Layers size={22} />}
+              title="Aucun Pokémon à obtenir"
+              description="Les Pokémon dont une carte est choisie, aucune obtenue, apparaissent ici."
+              actions={<Button onClick={() => setShown('all')}>Voir tous les Pokémon</Button>}
+            />
+          ))}
       </section>
 
       {collection.series.length > 0 && (

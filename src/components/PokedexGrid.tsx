@@ -13,9 +13,9 @@ interface PokedexGridProps {
   entries: PokedexEntry[]
   /**
    * Les Pokémon montrés (numéros) ; les autres pochettes restent, masquées : un filtre ou une
-   * frappe ne refait pas des centaines de pochettes. Sans : toutes.
+   * frappe ne refait pas des centaines de pochettes.
    */
-  shown?: ReadonlySet<number>
+  shown: ReadonlySet<number>
   generations: GenerationProgress[]
   /**
    * Faux sur le Pokédex public : les pochettes ne mènent pas aux fiches. Vrai, ce sont de simples
@@ -26,10 +26,10 @@ interface PokedexGridProps {
   headingLevel?: 2 | 3
   /**
    * Les intertitres des générations, si la liste montrée en couvre plusieurs : la page le sait
-   * (`PokedexPage`), même quand `entries` n'a encore que les premières pochettes (l'intertitre
-   * ajouté ensuite pousserait les pochettes déjà peintes). Sans : d'après `entries`.
+   * (`usePokedexGrid`), même quand `entries` n'a encore que les premières pochettes (l'intertitre
+   * ajouté ensuite pousserait les pochettes déjà peintes).
    */
-  headings?: boolean
+  headings: boolean
 }
 
 /**
@@ -46,8 +46,7 @@ export const PokedexGrid = memo(function PokedexGrid({
   headings,
 }: PokedexGridProps) {
   const groups = groupByGeneration(entries)
-  const isShown = (entry: PokedexEntry) => !shown || shown.has(entry.species.id)
-  const showHeadings = headings ?? groups.filter((group) => group.entries.some(isShown)).length > 1
+  const isShown = (entry: PokedexEntry) => shown.has(entry.species.id)
   const Heading = headingLevel === 3 ? 'h3' : 'h2'
   let rank = 0
 
@@ -62,7 +61,7 @@ export const PokedexGrid = memo(function PokedexGrid({
         // Sa hauteur estimée tant qu'elle n'a pas été montrée (`PokedexGrid.module.css`).
         style={{ '--tiles': tiles } as CSSProperties}
       >
-        {showHeadings && (
+        {headings && (
           <div className={styles.heading}>
             <Heading>
               {generation.region}{' '}

@@ -1,12 +1,13 @@
 import { Button } from '@camply/ui'
 import { Layers } from '@camply/ui/icons'
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef } from 'react'
 import { Link, useNavigationType } from 'react-router'
 import { NoMatch } from '@/components/NoMatch'
 import { PageHeader } from '@/components/PageHeader'
 import { useFollowLinks } from '@/hooks/useFollowLinks'
 import { usePokedex } from '@/hooks/usePokedex'
 import { usePokedexFilters } from '@/hooks/usePokedexFilters'
+import { usePokedexGrid } from '@/hooks/usePokedexGrid'
 import { DEFAULT_FILTERS, filterEntries, POSSESSIONS, type PossessionFilter } from '@/lib/filters'
 import { formatInteger, pageTitle, plural } from '@/lib/format'
 import { PokedexGrid } from '@/components/PokedexGrid'
@@ -14,9 +15,6 @@ import { PokedexToolbar } from './PokedexToolbar'
 
 /** Où le routeur garde les positions de défilement (sa clé par défaut). */
 const SCROLL_POSITIONS = 'react-router-scroll-positions'
-
-/** Les pochettes du premier affichage : plus qu'un grand écran n'en montre. */
-const FIRST_TILES = 60
 
 /**
  * Le classeur a-t-il déjà été affiché dans ce document ? Le routeur dit `POP` au premier chargement
@@ -55,23 +53,20 @@ export function PokedexPage() {
     () => (shownFilters.descending ? [...pokedex.entries].reverse() : pokedex.entries),
     [pokedex.entries, shownFilters.descending],
   )
-  const shown = useMemo(() => new Set(visible.map((entry) => entry.species.id)), [visible])
-  // Au premier affichage, les pochettes d'un écran d'abord, toutes les autres juste après, en
-  // arrière-plan : la page paraît sans attendre les 1 025 (la coquille la garde ensuite en vie),
-  // ouverte directement aussi. Pas en revenant en arrière dans la même visite (`mounted`), ni quand
-  // une position est gardée pour cette adresse (après un rechargement) : le défilement retrouvé a
-  // besoin de toute la hauteur.
+  // Au premier affichage, même la page ouverte directement, les pochettes d'un écran d'abord
+  // (`usePokedexGrid` ; la coquille garde ensuite la page en vie). Pas en revenant en arrière dans
+  // la même visite (`mounted`), ni quand une position est gardée pour cette adresse (après un
+  // rechargement) : le défilement retrouvé a besoin de toute la hauteur.
   const navigationType = useNavigationType()
-  const [firstEntries] = useState(() =>
-    (navigationType === 'POP' && mounted) || hasScrollPosition()
-      ? ordered
-      : ordered.slice(0, FIRST_TILES),
+  const grid = usePokedexGrid(
+    ordered,
+    visible,
+    () => (navigationType === 'POP' && mounted) || hasScrollPosition(),
   )
   // Posé après l'affichage, pas pendant le rendu : un rendu que React abandonne ne compte pas.
   useEffect(() => {
     mounted = true
   }, [])
-  const gridEntries = useDeferredValue(ordered, firstEntries)
   const counts = useMemo(
     () =>
       Object.fromEntries(
@@ -81,11 +76,6 @@ export function PokedexPage() {
         ]),
       ) as Record<PossessionFilter, number>,
     [pokedex.entries, shownFilters],
-  )
-  // Plusieurs générations montrées : leurs intertitres, dès le premier affichage (`PokedexGrid`).
-  const manyGenerations = useMemo(
-    () => new Set(visible.map((entry) => entry.species.generation)).size > 1,
-    [visible],
   )
   const filtering =
     filters.search.trim() !== '' ||
@@ -126,12 +116,7 @@ export function PokedexPage() {
 
       {/* Le clic se lit ici, une fois pour toute la grille (pas un gestionnaire par pochette). */}
       <div onClick={followTile} hidden={visible.length === 0}>
-        <PokedexGrid
-          entries={gridEntries}
-          shown={shown}
-          generations={pokedex.generations}
-          headings={manyGenerations}
-        />
+        <PokedexGrid {...grid} generations={pokedex.generations} />
       </div>
       {visible.length === 0 && (
         <NoMatch

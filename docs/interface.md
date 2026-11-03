@@ -272,7 +272,13 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   plus longue tâche 574 ms → 257, TBT 744 → 469, LCP 1 688 → 1 336). Pas en revenant par
   l'historique dans la même visite (`mounted` : le routeur dit `POP` au premier chargement aussi),
   ni après un rechargement (position gardée dans le stockage de la session) : le défilement retrouvé
-  a besoin de toute la hauteur. Les marques de possession sont des icônes CSS (masques, pas de SVG :
+  a besoin de toute la hauteur. Le Pokédex public fait de même, toujours (hors de la coquille,
+  aucune position de défilement à retrouver ; `usePokedexGrid`, commun aux deux classeurs) : premier
+  écran d'abord, et son choix « Tous », « Débloqués », « À obtenir » masque les pochettes (mesuré en novembre 2026 sur un compte de 897 cartes, site construit, mobile, CPU ×4 :
+  un changement de filtre 940 ms → 240 vers « Tous », 448 → 200 vers « À obtenir », 216 → 196 vers
+  « Débloqués » ; la première pochette 2,4 s → 1,0 après l'arrivée des données, LCP 4,0 s → 2,6,
+  mais toute la grille une demi-seconde plus tard).
+  Les marques de possession sont des icônes CSS (masques, pas de SVG :
   plus de 1 000 sinon ; en contraste élevé, `forced-colors`, les couleurs du système, sans quoi le
   glyphe disparaîtrait), et rien de ce qui défile n'a de `backdrop-filter` (flou recalculé à chaque
   image). Les pochettes, comme les cartes de la liste d'achats, sont de simples liens (`<a>`, pas
@@ -301,9 +307,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   pas à chaque visite (les pages se remontent) : la marque de possession seulement quand le statut
   change sous les yeux, une fois (une marque cachée puis remontrée, le Pokédex gardé en vie ou un
   filtre, ne la rejoue pas), les cartes de l'accueil seulement quand une nouvelle arrive. Le premier
-  affichage du Pokédex montre ses intertitres de génération dès le premier écran de pochettes (la
-  page sait combien de générations la liste montre : l'intertitre ajouté ensuite pousserait les
-  pochettes déjà peintes). Les pages autres que l'accueil,
+  affichage d'un classeur (Pokédex, Pokédex public) montre ses intertitres de génération dès le
+  premier écran de pochettes (la page sait combien de générations la liste montre : l'intertitre
+  ajouté ensuite pousserait les pochettes déjà peintes). Les pages autres que l'accueil,
   le Pokédex, les fiches, la page introuvable et la page d'erreur sont chargées à leur première
   ouverture (`lazy`, `router.tsx` : une
   route parente sans chemin porte une seule fois la page d'erreur et l'attente, vide, d'une page
