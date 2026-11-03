@@ -5,6 +5,7 @@ import { focusAfter } from '@/lib/focus'
 import { useNavigate } from 'react-router'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExportCollectionButton } from '@/components/ExportCollectionButton'
+import { FieldAlert } from '@/components/FieldAlert'
 import { NEW_PASSWORD_FIELD, PSEUDO_FIELD, PSEUDO_HINT } from '@/config/account'
 import { useNotify } from '@/hooks/useNotify'
 import { authCall, authClient } from '@/lib/auth'
@@ -61,18 +62,33 @@ export function AccountSection() {
 function NameForm({ current }: { current: string }) {
   const notify = useNotify()
   const [name, setName] = useState(current)
+  const [error, setError] = useState<string | null>(null)
+  const [refusals, setRefusals] = useState(0)
   const [busy, setBusy] = useState(false)
+  const field = useRef<HTMLInputElement>(null)
+
+  // Comme pour le mot de passe, le refus s'affiche sous le pseudo, qui reçoit le focus ; il est
+  // aussi annoncé (`FieldAlert`) : envoyé par Entrée, le focus y est déjà, et rien ne serait lu.
+  const refuse = (message: string) =>
+    focusAfter(() => {
+      setError(message)
+      setRefusals((count) => count + 1)
+    }, field)
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
-    if (reservedPseudo(name)) return notify(PSEUDO_RESERVED, { tone: 'danger' })
+    setError(null)
+    if (reservedPseudo(name)) return refuse(PSEUDO_RESERVED)
     setBusy(true)
-    const { error } = await authCall(() => authClient.updateUser({ name, username: name }))
+    const { error: refused } = await authCall(() => authClient.updateUser({ name, username: name }))
     setBusy(false)
-    if (error) {
-      return notify(
-        failure(error, `Pseudo refusé : ${PSEUDO_HINT}`, 'Pseudo inchangé : réessayez plus tard.'),
-        { tone: 'danger' },
+    if (refused) {
+      return refuse(
+        failure(
+          refused,
+          `Pseudo refusé : ${PSEUDO_HINT}`,
+          'Pseudo inchangé : réessayez plus tard.',
+        ),
       )
     }
     renameAccount(name)
@@ -85,11 +101,14 @@ function NameForm({ current }: { current: string }) {
     <form onSubmit={submit}>
       <Stack gap={3} align="start">
         <Input
+          ref={field}
           {...PSEUDO_FIELD}
           hint={`${PSEUDO_HINT} Le titre de votre Pokédex public (« Le Pokédex de … ») et son adresse.`}
+          error={error ?? undefined}
           value={name}
           onChange={(event) => setName(event.target.value.trim())}
         />
+        <FieldAlert key={refusals}>{error}</FieldAlert>
         <Button
           type="submit"
           size="sm"

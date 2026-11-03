@@ -45,6 +45,12 @@ Textarea, Timeline, Toast (ToastProvider, `useToast`), Toggle, Tooltip, Tree.
   `NumberInput`: they carry the app's money rules (« 12,50 », saved when leaving the field, Enter
   or Escape, with « Annuler » ; empty means `undefined`), tested in `tests/`. `NumberInput
   allowEmpty` exists since 0.3 but has steppers and no euro parsing.
+- **A field's `error` is not announced** (its text has no `role="alert"`): a refused form moves
+  the focus to the field in error (`focusAfter`, `focusFirstError`), where it is read when the
+  focus comes from elsewhere. Where it does not, `FieldAlert` (`src/components/FieldAlert.tsx`, a
+  hidden `role="alert"` remounted by a new `key` at each refusal) also announces it: `EuroInput`
+  (checked when the focus has already left) and the pseudo (one field, sent by Enter). Drop it
+  when camply announces the error.
 - **`SegmentedControl` segment with a drawing** (the flags of `LanguageSwitch`):
   `SegmentOption.label` is typed `string`, but camply writes it as is (`{label}`) and names the
   segment from its content. `segment()` in `LanguageSwitch` passes an SVG (`role="img"` +
@@ -73,6 +79,7 @@ Domain components shared by several pages (card art, possession mark, pokédex t
 ruler, price chart) live in `src/components/`; a component used by one page lives in that page's
 folder (e.g. `TypeChip` in `src/pages/pokemon/`). The only generic wrappers allowed here are those
 camply lacks: `ConfirmDialog`, `PageHeader`, `Panel` (a page block: `Card` + titled head +
-actions), `ExternalLink`, `EuroInput`/`EuroField`, and the app's shared pieces built on camply
+actions), `ExternalLink`, `EuroInput`/`EuroField`, `FieldAlert` (until camply announces a field's
+error), and the app's shared pieces built on camply
 (`StandalonePage`, `FiltersPopover`, the `EmptyState`s `Unavailable` and `NoMatch`). Anything
 else generic belongs in camply.

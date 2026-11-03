@@ -356,7 +356,13 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   `lib/focus.ts` : la fenêtre le rendrait sinon au document ; la grille a dessiné d'emblée les
   tuiles jusqu'à la sienne, `useGrowingList`). Une page qui ouvre une fenêtre
   d'emblée la garde : la coquille ne mène pas le focus au contenu, derrière elle, quand il est
-  déjà dans une fenêtre. Le nombre de résultats est
+  déjà dans une fenêtre. Une saisie refusée s'affiche sous son champ (camply : `aria-invalid`,
+  `aria-describedby`) : un formulaire refusé (Mon compte, une carte, une commande) y mène le focus,
+  où elle est lue s'il y arrive d'ailleurs. L'erreur d'un champ de camply n'est pas annoncée :
+  `FieldAlert` (`role="alert"` caché, remonté à chaque refus) la dit quand le focus est déjà au
+  champ suivant (un montant refusé en quittant le champ, `EuroInput` : budget, prix payé) ou déjà
+  dans le sien (le pseudo, envoyé par Entrée) ; à retirer quand camply l'annoncera. Le nombre de
+  résultats est
   annoncé (`aria-live`) dans le Pokédex, la liste d'achats, le catalogue, la fenêtre d'ajout et
   celle des extensions. Les listes dont le nombre compte (grilles du Pokédex, du catalogue et d'une
   collection, liste d'achats, dernières cartes obtenues, lignes d'une commande en saisie,

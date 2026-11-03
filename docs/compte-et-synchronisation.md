@@ -38,7 +38,10 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   Time Travel ; aucune sauvegarde). Un mauvais mot de passe (400) le dit ;
   une session fermée (401 : une connexion sur un autre appareil) dit « Session expirée », jamais
   « mot de passe incorrect » (l'utilisateur croirait le sien perdu), et le menu du compte propose
-  de se reconnecter (`markExpired`) ; un pseudo pris (`USERNAME_IS_ALREADY_TAKEN`) le dit. Les
+  de se reconnecter (`markExpired`) ; un pseudo pris (`USERNAME_IS_ALREADY_TAKEN`) le dit. Chaque
+  refus (pseudo réservé, pris ou refusé, mot de passe, session expirée) s'affiche sous le champ en
+  cause, qui reçoit le focus ; celui du pseudo est aussi annoncé (`FieldAlert` : envoyé par Entrée,
+  le focus est déjà dans son champ). Seule la réussite est un toast. Les
   réponses du client Better Auth passent par `authCall` (`lib/auth.ts` : sans réponse du serveur,
   un refus de statut 0) et leurs messages par `refusalMessage` (`lib/account.ts`). Un appareil
   dont la session a été fermée par une connexion ailleurs affiche « Reconnectez-vous ». Le
