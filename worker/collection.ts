@@ -23,7 +23,6 @@
 
 import { eq, sql, type AnyColumn } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { bodyLimit } from 'hono/body-limit'
 import { gunzipSync } from 'node:zlib'
 import { readSent } from '@/lib/transfer'
 import {
@@ -147,7 +146,7 @@ export const collectionRoutes = new Hono<SignedIn>()
     '/collection',
     signedIn,
     // Compressé ou non, 1,9 Mo au plus tel qu'envoyé.
-    bodyLimit({ maxSize: MAX_DOCUMENT, onError: (c) => c.json(null, 413) }),
+    maxBody(MAX_DOCUMENT),
     async (c) => {
       const { user } = c.var
       const compte = user.username ?? undefined
