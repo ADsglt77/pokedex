@@ -91,3 +91,9 @@
   filter: grayscale(0.95);
   opacity: 0.7;
 }
+
+/* L'opacité de la carte grisée pâlit aussi son texte : « Pas d'image » passe au ton du texte pour
+   rester lisible (4,5:1 au moins). */
+.locked .note {
+  color: var(--camply-text);
+}

@@ -23,7 +23,13 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   et de la langue d'une carte (`LanguageFlag`), les mêmes dans les deux thèmes, et leur liseré,
   qui détache le blanc d'un fond blanc ou jaune ; `--type-*` : la pastille du type d'un Pokémon,
   `TypeChip`, des tons pastel, les mêmes dans les deux thèmes ; `config/pokedex.ts` n'a que leurs
-  noms).
+  noms). Contrastes : les contours du focus à 3:1 au moins dans les deux thèmes, celui d'un champ
+  en erreur compris (`--camply-danger-ring`) ; le texte à 4,5:1 au moins, sauf des écarts connus du
+  gris discret (`--camply-text-muted-2`) : en sombre, l'indice « Esc » de la palette, sur un fond à
+  peine plus clair que la surface flottante (4,49) ; en clair, sur `surface-2` (4,49 : les
+  intitulés de l'aperçu d'un import) et le nombre d'un filtre rapide du Pokédex au survol (4,39).
+  Sur une carte grisée, `CardArt` `locked`, dont l'opacité pâlit aussi le texte, « Pas d'image »
+  est au ton du texte.
   Le site s'appelle **PokéCodex** (cette graphie), écrit une seule fois (`SITE_NAME`,
   `config/legal.ts`), sauf dans `index.html` et le manifeste : le nom à côté du logo
   (la coquille, les pages seules, celles du compte, la page d'erreur), le titre des onglets

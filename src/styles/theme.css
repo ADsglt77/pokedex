@@ -69,7 +69,9 @@
   --camply-text: #ececed;
   --camply-text-strong: #ffffff;
   --camply-text-muted: #a9a9ae;
-  --camply-text-muted-2: #86868c;
+  /* Le gris discret : 4,5:1 au moins jusque sur une surface flottante (menus, palette), sauf
+     l'indice « Esc » de la palette, 4,49 (`docs/interface.md`). */
+  --camply-text-muted-2: #929298;
   --camply-text-disabled: #56565c;
 
   /* L'accent : le jaune Pokémon, texte gris foncé dessus. */
@@ -88,7 +90,8 @@
   --camply-danger-soft: rgba(255, 95, 82, 0.14);
   --camply-danger-soft-hover: rgba(255, 95, 82, 0.22);
   --camply-danger-border: rgba(255, 95, 82, 0.36);
-  --camply-danger-ring: 0 0 0 3px rgba(255, 95, 82, 0.3);
+  /* Le contour du focus en erreur : 3:1 au moins sur les fonds, comme celui de l'accent. */
+  --camply-danger-ring: 0 0 0 3px rgba(255, 95, 82, 0.7);
   --camply-gradient-danger: linear-gradient(90deg, #c4260a, var(--camply-danger));
 
   /* Avertissement : orange, distinct du jaune de l'accent. */
@@ -163,8 +166,8 @@
   --camply-accent-soft: rgba(212, 42, 12, 0.08);
   --camply-accent-soft-hover: rgba(212, 42, 12, 0.14);
   --camply-accent-border: rgba(212, 42, 12, 0.32);
-  /* Le contour du focus (et `--camply-danger-ring`) : 3:1 au moins sur le blanc, comme en sombre ;
-     plus pâle, il ne se voyait pas. */
+  /* Le contour du focus, et celui d'un champ en erreur (`--camply-danger-ring`) : 3:1 au moins sur
+     le blanc, comme en sombre ; plus pâles, ils ne se voyaient pas. */
   --camply-ring: 0 0 0 3px rgba(212, 42, 12, 0.75);
   --camply-gradient-accent: linear-gradient(90deg, #a81f05, var(--camply-accent));
 
