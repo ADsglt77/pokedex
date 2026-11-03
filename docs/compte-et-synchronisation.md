@@ -54,10 +54,15 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   un visiteur à un compte qu'il ne connaît pas (testé). Un corps de plus de 16 Ko sur
   `/api/auth/*` est refusé (413, `maxBody`, `worker/auth.ts`) avant Better Auth, qui lirait tout :
   Cloudflare accepte 100 Mo, de quoi dépasser les 128 Mo d'un exemplaire du Worker, et couper avec
-  lui les requêtes des autres visiteurs (testé, sa taille annoncée ou non). Devant les limites de
-  Better Auth, le Worker limite tout le compte (`/api/auth/`), avec le Pokédex public
-  (`/api/vitrine/`) et l'aperçu d'un lien partagé (`/pseudo` : toute adresse d'un seul segment), à
-  40 requêtes par 10 s et par visiteur (son réseau /64 en IPv6, `worker/limits.ts`).
+  lui les requêtes des autres visiteurs (testé, sa taille annoncée ou non). Better Auth limite les
+  tentatives de chaque visiteur (`rateLimit`, `worker/auth.ts`, comptées dans la base) : 5
+  connexions, changements du mot de passe ou suppressions du compte par minute, 10 créations de
+  compte et 10 changements de pseudo par heure, 100 requêtes par minute pour le reste ; au-delà,
+  429 (« Trop de tentatives »). En production seulement (`process.env.NODE_ENV`, que Vite écrit au
+  build : `bun run preview` les a aussi) ; ni `bun dev` ni les tests. Devant elles, le Worker
+  limite tout le compte (`/api/auth/`), avec le Pokédex public (`/api/vitrine/`) et l'aperçu d'un
+  lien partagé (`/pseudo` : toute adresse d'un seul segment), à 40 requêtes par 10 s et par
+  visiteur (son réseau /64 en IPv6, `worker/limits.ts`).
 - **L'app ne s'ouvre que connecté** (décision de l'utilisateur, octobre 2026) : le compte connecté
   du store (`account` : son id et son pseudo ; `null` : personne, `store/account.ts`), fixé au
   démarrage avant le routeur (`loadAccount` lit `GET /api/account?demarrage`, qui dit qui est

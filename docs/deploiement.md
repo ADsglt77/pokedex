@@ -182,7 +182,8 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
 
 `bun run dev` dans `pokedex-data`, puis `bun dev` ici (`README.md`). Les deux Workers tournent en
 local dans le moteur de Cloudflare, chacun sa D1 et son R2 dans `.wrangler/`, reliés par Wrangler ;
-la CSP n'y est pas posée (Vite écrit ses propres scripts dans la page). Ils se trouvent par le
+la CSP n'y est pas posée (Vite écrit ses propres scripts dans la page), ni les limites de Better
+Auth (`docs/compte-et-synchronisation.md`). Ils se trouvent par le
 registre de développement de Wrangler, un dossier de ce poste : miniflare 5.20261023.1-beta, que
 tire vite-plugin 1.66.0, range le site dans un autre. Ne pas la forcer ; à cette mise à jour,
 donner le même `CLOUDFLARE_DEV_REGISTRY_PATH` au `dev` des deux dépôts.

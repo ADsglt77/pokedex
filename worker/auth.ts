@@ -198,8 +198,11 @@ export const auth = betterAuth({
   // En production, par visiteur : 10 tentatives de création de compte et 10 changements de pseudo
   // par heure ; 5 tentatives de connexion, de changement du mot de passe ou de suppression du
   // compte par minute ; 100 requêtes pour le reste. Comptées dans la base (`rateLimit` de
-  // `schema.ts`) : chaque exemplaire du Worker les voit.
+  // `schema.ts`) : chaque exemplaire du Worker les voit. `enabled` dit la production : seul, Better
+  // Auth lirait `NODE_ENV` à l'exécution, que le Worker en ligne n'a pas (coupées) ; celui-ci, Vite
+  // l'écrit au build. En développement et dans les tests, pas de limite.
   rateLimit: {
+    enabled: process.env.NODE_ENV === 'production',
     storage: 'database',
     window: 60,
     max: 100,
