@@ -183,7 +183,14 @@ function RemoveSeries({
 
   const remove = () =>
     act(
-      () => useCollectionStore.getState().removeSeries(series.set, cardLanguage(series)),
+      () =>
+        useCollectionStore
+          .getState()
+          .removeSeries(
+            series.set,
+            cardLanguage(series),
+            useShoppingStore.getState().shopping.orders,
+          ),
       `Collection ${series.name} supprimée.`,
       'info',
     )

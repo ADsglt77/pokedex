@@ -6,8 +6,7 @@
 import { create } from 'zustand'
 import * as rules from '@/lib/collection'
 import * as series from '@/lib/series'
-import { useShoppingStore } from '@/store/shopping'
-import type { AddAs, CardLanguage, CardStatus, CollectionData, PokemonCard } from '@/types'
+import type { AddAs, CardLanguage, CardStatus, CollectionData, Order, PokemonCard } from '@/types'
 
 interface CollectionStore {
   collection: CollectionData
@@ -37,9 +36,9 @@ interface CollectionStore {
   ) => void
   /**
    * Supprime la collection d'une extension : ses cartes possédées, commandées ou dans une commande
-   * (celles du magasin des achats) restent.
+   * (`orders` : celles du magasin des achats, lues au clic) restent.
    */
-  removeSeries: (set: string, language: CardLanguage) => void
+  removeSeries: (set: string, language: CardLanguage, orders: readonly Order[]) => void
   /** Remplace toute la collection : lue sur le serveur, import, effacement. */
   replaceCollection: (collection: CollectionData) => void
 }
@@ -67,11 +66,8 @@ export const useCollectionStore = create<CollectionStore>()((set, get) => {
       if (series.findSeries(get().collection, start.set, start.language)) return
       update((collection, now) => series.startSeries(collection, start, slots, now))
     },
-    removeSeries: (code, language) =>
-      update((collection, now) => {
-        const { orders } = useShoppingStore.getState().shopping
-        return series.removeSeries(collection, code, language, orders, now)
-      }),
+    removeSeries: (code, language, orders) =>
+      update((collection, now) => series.removeSeries(collection, code, language, orders, now)),
     replaceCollection: (collection) => set({ collection }),
   }
 })
