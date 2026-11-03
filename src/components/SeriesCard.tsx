@@ -3,9 +3,8 @@ import { Fragment } from 'react'
 import { Link } from 'react-router'
 import { CardArt } from '@/components/CardArt'
 import { CardStatusControls } from '@/components/CardStatusControls'
-import { LanguageFlag } from '@/components/LanguageSwitch'
+import { CardReference } from '@/components/LanguageSwitch'
 import { PricePanel } from '@/components/PricePanel'
-import { cardLanguage } from '@/lib/collection'
 import { speciesPath } from '@/lib/filters'
 import { statusCaption } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
@@ -40,12 +39,7 @@ export function SeriesCard({
       open
       onClose={onClose}
       size="full"
-      title={
-        <>
-          {card.reference}
-          <LanguageFlag language={cardLanguage(card)} />
-        </>
-      }
+      title={<CardReference card={card} />}
       description={`Collection ${series.name}`}
     >
       <div className={styles.sheet}>

@@ -3,10 +3,9 @@ import { Pencil, Plus, Star, Trash2 } from '@camply/ui/icons'
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentProps } from 'react'
 import { CardStatusControls } from '@/components/CardStatusControls'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { LanguageFlag } from '@/components/LanguageSwitch'
+import { CardReference } from '@/components/LanguageSwitch'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { loadSpeciesCards } from '@/lib/card-catalog'
-import { cardLanguage } from '@/lib/collection'
 import { isInAnOrder } from '@/lib/orders'
 import { focusAfter } from '@/lib/focus'
 import { noLongerUnlocked, otherSpeciesNames } from '@/lib/species'
@@ -227,14 +226,7 @@ export function CardActions({ view, entry }: { view: CardView; entry: PokedexEnt
                 // `label` est typé `string` dans camply, qui l'écrit tel quel : le drapeau y tient
                 // (comme le segment de `LanguageSwitch`). Un code d'extension existe dans les deux
                 // langues : la référence seule ne suffit pas.
-                label={
-                  (
-                    <>
-                      {other.reference}
-                      <LanguageFlag language={cardLanguage(other)} />
-                    </>
-                  ) as unknown as string
-                }
+                label={(<CardReference card={other} />) as unknown as string}
                 hint={statusLabel(otherStatus)}
               />
             ))}

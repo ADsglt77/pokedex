@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react'
 import { CardArt } from '@/components/CardArt'
 import { CardPageLink } from '@/components/CardPageLink'
-import { LanguageFlag } from '@/components/LanguageSwitch'
-import { cardLanguage } from '@/lib/collection'
+import { CardReference } from '@/components/LanguageSwitch'
 import { cx } from '@/lib/cx'
 import { cardTitle } from '@/lib/species'
 import type { PokemonCard, SeriesCollection } from '@/types'
@@ -39,8 +38,7 @@ export function CardLine({
               {cardTitle(card)}
             </CardPageLink>
             <span className="muted">
-              {card.reference}
-              <LanguageFlag language={cardLanguage(card)} />
+              <CardReference card={card} />
               {series && <> · collection {series.name}</>}
               {detail && <> · {detail}</>}
             </span>

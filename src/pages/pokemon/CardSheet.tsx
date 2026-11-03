@@ -2,10 +2,9 @@ import { Button } from '@camply/ui'
 import { ArrowRight } from '@camply/ui/icons'
 import type { Ref } from 'react'
 import { Link } from 'react-router'
-import { LanguageFlag } from '@/components/LanguageSwitch'
+import { CardReference } from '@/components/LanguageSwitch'
 import { Panel } from '@/components/Panel'
 import { PricePanel } from '@/components/PricePanel'
-import { cardLanguage } from '@/lib/collection'
 import { speciesPath } from '@/lib/filters'
 import { details, statusCaption } from '@/lib/format'
 import type { CardView, PokedexEntry } from '@/lib/pokedex'
@@ -40,8 +39,7 @@ export function CardSheet({
       <Panel
         title={
           <>
-            Carte {card.reference}
-            <LanguageFlag language={cardLanguage(card)} />
+            Carte <CardReference card={card} />
             {entry.card?.card.id === card.id && (
               <span className={styles.favorite}>
                 <FavoriteBadge />

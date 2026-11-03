@@ -7,7 +7,7 @@ import { NoMatch } from '@/components/NoMatch'
 import { GENERATION_OPTIONS } from '@/config/pokedex'
 import { useFollowLinks } from '@/hooks/useFollowLinks'
 import { useGrowingList } from '@/hooks/useGrowingList'
-import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { usePhone } from '@/hooks/useMediaQuery'
 import {
   DEFAULT_WISHLIST_FILTERS,
   pokedexUrl,
@@ -54,7 +54,7 @@ export function WishlistPanel({
   // Jusqu'à un millier de cartes : dessinées au fur et à mesure du défilement.
   const { limit, end } = useGrowingList(shown.length, CARDS_STEP)
   // Sur téléphone, les listes passent dans un panneau « Filtres » : la liste commence plus haut.
-  const compact = useMediaQuery('(max-width: 40rem)')
+  const compact = usePhone()
   const searchField = useRef<HTMLInputElement>(null)
 
   if (rows.length === 0) {

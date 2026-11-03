@@ -3,17 +3,18 @@ import { Download } from '@camply/ui/icons'
 import { useExportCollection } from '@/hooks/useExportCollection'
 
 /**
- * Exporter avant de remplacer ou d'effacer la collection : un petit bouton secondaire, dans son
- * propre bloc (il ne s'étire pas dans une pile).
+ * Le bouton « Exporter ma collection », dans son propre bloc (il ne s'étire pas dans une pile) :
+ * l'action de la section Exporter des Réglages (`primary`), sinon un petit bouton secondaire, pour
+ * exporter avant de remplacer ou d'effacer la collection.
  */
-export function ExportCollectionButton() {
+export function ExportCollectionButton({ primary }: { primary?: boolean }) {
   const exportCollection = useExportCollection()
   return (
     <div>
       <Button
-        size="sm"
-        variant="secondary"
-        leftIcon={<Download size={14} />}
+        size={primary ? undefined : 'sm'}
+        variant={primary ? 'primary' : 'secondary'}
+        leftIcon={<Download size={primary ? 16 : 14} />}
         onClick={exportCollection}
       >
         Exporter ma collection

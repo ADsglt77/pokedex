@@ -64,8 +64,9 @@ Cloudflare avant de déployer (le format d'abord, `format:check` ; `lint:ci`, `k
 ## Structure
 
 `src/lib/` : un domaine par module (son en-tête le décrit) : surtout des règles pures, et aussi les
-appels au serveur (`api`, `account`, `auth`, `species`, `card-catalog`) et le focus au clavier
-(`focus`, seul à toucher au DOM) ; certains sont importés par `worker/` et `tests/`, sans DOM.
+appels au serveur (`api`, `account`, `auth`, `species`, `card-catalog`), le focus au clavier et
+le réglage « moins de mouvement » (`focus`, `motion`, seuls à toucher au DOM) ; certains sont
+importés par `worker/` et `tests/`, sans DOM.
 `worker/schema.ts` : le schéma D1 (Drizzle), ses migrations dans `worker/migrations` (générées ; les
 déclencheurs écrits à la main) ; `worker/tests` : dans le moteur de Cloudflare.
 

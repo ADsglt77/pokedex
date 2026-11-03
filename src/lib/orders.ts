@@ -7,7 +7,7 @@
 
 import { DEFAULT_BUDGET, SUPPLIER_LABELS } from '@/config/shopping'
 import { obtain } from '@/lib/collection'
-import { formatDate, formatEuro } from '@/lib/format'
+import { formatDate, formatEuro, noonOf } from '@/lib/format'
 import { daysBetween } from '@/lib/time'
 import type {
   CardOwnership,
@@ -159,14 +159,14 @@ const orderWith = (orders: readonly Order[], cardId: string, state: OrderState) 
 export const isInAnOrder = (orders: readonly Order[], cardId: string) =>
   orders.some((order) => hasCard(order, cardId))
 
-/** Midi, heure locale, du jour donné : la date d'obtention d'une carte reçue. */
-const noonOf = (day: string) => new Date(`${day}T12:00:00`).toISOString()
-
-/** Possédée grâce à la commande reçue : à sa date de réception, même corrigée après coup. */
+/**
+ * Possédée grâce à la commande reçue : à sa date de réception (à midi, heure locale), même
+ * corrigée après coup.
+ */
 const ownedBy = (order: Order, paidPrice: number | undefined, now: string): CardOwnership => ({
   status: 'owned',
   updatedAt: now,
-  acquiredAt: noonOf(order.receivedAt ?? order.date),
+  acquiredAt: noonOf(order.receivedAt ?? order.date).toISOString(),
   paidPrice,
 })
 

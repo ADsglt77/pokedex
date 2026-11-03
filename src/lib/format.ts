@@ -1,5 +1,6 @@
 /** Mise en forme française (nombres, dates, montants) et lecture des montants et liens saisis. */
 
+import { SITE_NAME } from '@/config/legal'
 import type { CardStatus } from '@/types'
 
 const integerFormat = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 })
@@ -40,9 +41,12 @@ export const today = () => localDay(new Date())
  */
 export const localDayOf = (iso: string) => localDay(new Date(iso))
 
-/** Une date ISO ; un jour seul (`2026-10-09`) est lu à midi, heure locale : jamais la veille. */
+/** Un jour (YYYY-MM-DD) à midi, heure locale : jamais la veille, affiché comme enregistré. */
+export const noonOf = (day: string) => new Date(`${day}T12:00:00`)
+
+/** Une date ISO ; un jour seul (`2026-10-09`) est lu à midi, heure locale (`noonOf`). */
 function toDate(iso: string | null | undefined): Date | null {
-  const date = iso ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : iso) : null
+  const date = iso ? (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? noonOf(iso) : new Date(iso)) : null
   return date && !Number.isNaN(date.getTime()) ? date : null
 }
 
@@ -193,5 +197,5 @@ export function statusCaption(status: CardStatus | null, acquiredAt: string | nu
 export const toOptions = <T extends string>(labels: Record<T, string>) =>
   (Object.entries(labels) as [T, string][]).map(([value, label]) => ({ value, label }))
 
-/** Titre de l'onglet : « Pikachu – PokéCodex », le nom du site. */
-export const pageTitle = (name?: string) => (name ? `${name} – PokéCodex` : 'PokéCodex')
+/** Titre de l'onglet : le nom du site, après celui de la page (« Pikachu – … »). */
+export const pageTitle = (name?: string) => (name ? `${name} – ${SITE_NAME}` : SITE_NAME)

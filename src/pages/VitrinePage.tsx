@@ -13,7 +13,7 @@ import { StandalonePage } from '@/components/StandalonePage'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { Unavailable } from '@/components/Unavailable'
 import { UnlockedChart } from '@/components/UnlockedChart'
-import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { usePhone } from '@/hooks/useMediaQuery'
 import { isPseudo } from '@/lib/account'
 import { getJson, requestFailed } from '@/lib/api'
 import type { ChartPeriod } from '@/lib/chart'
@@ -162,7 +162,7 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
   const [period, setPeriod] = useState<ChartPeriod>('month')
   const [shown, setShown] = useState<Shown>('all')
   // Sur téléphone, la réglette n'est qu'une image : la liste des régions la remplace.
-  const narrow = useMediaQuery('(max-width: 40rem)')
+  const narrow = usePhone()
   const wanted = entries.filter(isWanted).length
   const visible =
     shown === 'all'

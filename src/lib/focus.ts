@@ -7,6 +7,7 @@
 
 import type { RefObject } from 'react'
 import { flushSync } from 'react-dom'
+import { reducedMotion } from '@/lib/motion'
 
 /**
  * Une action qui retire ou déplace l'élément `index` d'une liste (`ul`) : le focus va au premier
@@ -73,7 +74,7 @@ export function focusFirstError(fields: RefObject<HTMLElement | null>, show: () 
   const field = fields.current?.querySelector<HTMLElement>('[aria-invalid="true"]')
   field?.scrollIntoView({
     block: 'center',
-    behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    behavior: reducedMotion.matches ? 'auto' : 'smooth',
   })
   field?.focus({ preventScroll: true })
 }

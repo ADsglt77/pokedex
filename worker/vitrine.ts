@@ -22,6 +22,7 @@
 import { env } from 'cloudflare:workers'
 import { eq } from 'drizzle-orm'
 import { Hono, type MiddlewareHandler } from 'hono'
+import { SITE_NAME } from '@/config/legal'
 import { TOTAL_SPECIES } from '@/config/pokedex'
 import { isPseudo } from '@/lib/account'
 import { emptyCollection } from '@/lib/collection'
@@ -91,11 +92,11 @@ export function vitrineSummary(owner: string, collection: CollectionData) {
 }
 
 /**
- * L'aperçu d'une adresse qui n'est pas un Pokédex public : celui du site, PokéCodex (le même que
- * dans `index.html`).
+ * L'aperçu d'une adresse qui n'est pas un Pokédex public : celui du site, à son nom (le même
+ * que dans `index.html`).
  */
 const SITE_SUMMARY = {
-  title: 'PokéCodex',
+  title: SITE_NAME,
   description:
     'Un Pokédex de cartes Pokémon japonaises et françaises : une carte par Pokémon, à collectionner.',
 }
@@ -255,7 +256,7 @@ export const linkPreview: MiddlewareHandler = async (c) => {
     `<meta property="${property}" content="${escape(content)}">`
   const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${escape(title)}</title>${[
     meta('og:type', 'website'),
-    meta('og:site_name', 'PokéCodex'),
+    meta('og:site_name', SITE_NAME),
     meta('og:title', title),
     meta('og:description', description),
     meta('og:url', url),

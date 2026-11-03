@@ -10,13 +10,13 @@
 import { memo } from '@/lib/memo'
 import { settled } from '@/lib/settled'
 import { MINUTE } from '@/lib/time'
-import type { ServerStatus } from '@/types'
+import type { JournalEvent, ServerStatus } from '@/types'
 
 /**
  * Note dans le journal du serveur ce que le navigateur fait seul (`worker/collection.ts`) : un export,
  * un import. Sans réponse, tant pis : ce n'est qu'un journal.
  */
-export function report(event: 'export' | 'import') {
+export function report(event: JournalEvent) {
   fetch('/api/journal', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

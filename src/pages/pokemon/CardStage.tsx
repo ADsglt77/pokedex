@@ -1,13 +1,12 @@
 import type { PointerEvent } from 'react'
 import { CardArt } from '@/components/CardArt'
+import { reducedMotion } from '@/lib/motion'
 import type { CardView } from '@/lib/pokedex'
 import type { PokemonSpecies } from '@/types'
 import styles from './CardStage.module.css'
 
 /** L'inclinaison la plus forte, en degrés, la souris au bord de la carte. */
 const TILT = 7
-
-const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
 
 /** La souris sur la carte : sa dernière position et l'image demandée. */
 let moving: { frame: number; x: number; y: number } | null = null

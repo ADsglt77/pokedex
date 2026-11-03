@@ -1,8 +1,9 @@
 /**
  * Ce que nomment les mentions légales (`LegalPage`) : le site, son hébergeur et l'adresse de
- * contact. Le site tourne sur le réseau de Cloudflare (société américaine) ; sa base, les comptes
- * et les collections, est gardée dans l'Union européenne (la base D1 créée avec
- * `--jurisdiction eu` : `docs/deploiement.md`), ce que la page dit aussi.
+ * contact ; le nom du site sert aussi partout ailleurs (`SITE_NAME`). Le site tourne sur le réseau
+ * de Cloudflare (société américaine) ; sa base, les comptes et les collections, est gardée dans
+ * l'Union européenne (la base D1 créée avec `--jurisdiction eu` : `docs/deploiement.md`), ce que
+ * la page dit aussi.
  */
 export const LEGAL: {
   /** Le nom du site et son adresse. */
@@ -24,3 +25,9 @@ export const LEGAL: {
   },
   contact: 'contact@pokecodex.fr',
 }
+
+/**
+ * Le nom du site : à côté du logo (`Logo`), dans le titre des onglets (`pageTitle`) et l'aperçu
+ * d'un lien (`worker/vitrine.ts`). `index.html` et le manifeste le gardent en dur.
+ */
+export const SITE_NAME = LEGAL.site.name

@@ -26,7 +26,13 @@ import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { gunzipSync } from 'node:zlib'
 import { readSent } from '@/lib/transfer'
-import { MAX_DOCUMENT, type CollectionData, type CollectionSaved, type ShoppingData } from '@/types'
+import {
+  MAX_DOCUMENT,
+  type CollectionData,
+  type CollectionSaved,
+  type JournalEvent,
+  type ShoppingData,
+} from '@/types'
 import { signedIn, type SignedIn } from './auth'
 import { db } from './db'
 import { documentChanges, journal, journalOnce, type JournalEntry } from './journal'
@@ -106,7 +112,7 @@ const isSent = (body: unknown): body is Sent =>
   Number.isInteger((body as Sent).baseVersion) &&
   (body as Sent).baseVersion >= 0
 
-const EVENTS: Record<'export' | 'import', JournalEntry> = {
+const EVENTS: Record<JournalEvent, JournalEntry> = {
   export: { topic: 'données', message: 'Collection exportée', details: { format: 'JSON' } },
   import: {
     topic: 'données',

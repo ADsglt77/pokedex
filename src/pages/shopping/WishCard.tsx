@@ -3,7 +3,7 @@ import { memo } from 'react'
 import { cardPath, seriesPath } from '@/lib/filters'
 import { CardArt } from '@/components/CardArt'
 import { CardmarketLink } from '@/components/CardmarketLink'
-import { LanguageFlag } from '@/components/LanguageSwitch'
+import { CardReference } from '@/components/LanguageSwitch'
 import { PricedValue } from '@/components/PricedValue'
 import { cardLanguage } from '@/lib/collection'
 import { formatDexNumber, formatPercent } from '@/lib/format'
@@ -52,8 +52,7 @@ export const WishCard = memo(function WishCard({ row }: { row: WishRow }) {
           )}
         </header>
         <p className={styles.wishReference}>
-          {card.reference}
-          <LanguageFlag language={cardLanguage(card)} />
+          <CardReference card={card} />
         </p>
         {series && (
           <p className="hint">

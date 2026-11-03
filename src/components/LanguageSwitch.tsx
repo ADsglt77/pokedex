@@ -1,6 +1,7 @@
 import { SegmentedControl } from '@camply/ui'
 import type { ReactNode } from 'react'
-import type { CardLanguage } from '@/types'
+import { cardLanguage } from '@/lib/collection'
+import type { CardLanguage, PokemonCard } from '@/types'
 import styles from './LanguageSwitch.module.css'
 
 /** Le dessin du drapeau de chaque langue, sur 30 × 20. */
@@ -62,6 +63,16 @@ export function LanguageFlag({
   of?: keyof typeof FLAG_NAMES
 }) {
   return <Flag language={language} label={FLAG_NAMES[of][language]} className={styles.inline} />
+}
+
+/** La référence d'une carte, suivie du drapeau de sa langue (`LanguageFlag`). */
+export function CardReference({ card }: { card: Pick<PokemonCard, 'reference' | 'language'> }) {
+  return (
+    <>
+      {card.reference}
+      <LanguageFlag language={cardLanguage(card)} />
+    </>
+  )
 }
 
 /**

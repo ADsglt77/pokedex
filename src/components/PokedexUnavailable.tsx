@@ -1,4 +1,5 @@
 import { Button, EmptyState } from '@camply/ui'
+import { SITE_NAME } from '@/config/legal'
 
 /**
  * Le Pokédex ne peut pas s'afficher, une page entière : le serveur ne répond pas au démarrage
@@ -9,7 +10,7 @@ import { Button, EmptyState } from '@camply/ui'
 export function PokedexUnavailable() {
   return (
     <main className="container">
-      <h1 className="visually-hidden">PokéCodex</h1>
+      <h1 className="visually-hidden">{SITE_NAME}</h1>
       <EmptyState
         title="Le Pokédex ne peut pas s’afficher"
         description="Le serveur ne répond pas, ou ses données ne sont pas encore prêtes (premier démarrage). Réessayez dans un instant."

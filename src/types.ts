@@ -411,6 +411,9 @@ export interface CollectionSaved {
   version: number
 }
 
+/** Ce que le navigateur fait seul de la collection, et signale au journal (`POST /api/journal`). */
+export type JournalEvent = 'export' | 'import'
+
 /** Le Pokédex public d'un compte (`/api/vitrine/<pseudo>`, `worker/vitrine.ts`). */
 export interface VitrineData {
   /** Le pseudo du compte, tel que tapé. */

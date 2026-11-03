@@ -13,3 +13,9 @@ export function useMediaQuery(query: string) {
   )
   return useSyncExternalStore(subscribe, () => matchMedia(query).matches)
 }
+
+/**
+ * Un téléphone : 40rem de large au plus, la même borne que les feuilles CSS
+ * (`@media (max-width: 40rem)`, une douzaine de modules) ; à changer avec elles.
+ */
+export const usePhone = () => useMediaQuery('(max-width: 40rem)')

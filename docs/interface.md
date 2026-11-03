@@ -24,7 +24,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   qui détache le blanc d'un fond blanc ou jaune ; `--type-*` : la pastille du type d'un Pokémon,
   `TypeChip`, des tons pastel, les mêmes dans les deux thèmes ; `config/pokedex.ts` n'a que leurs
   noms).
-  Le site s'appelle **PokéCodex** (cette graphie) : le nom à côté du logo
+  Le site s'appelle **PokéCodex** (cette graphie), écrit une seule fois (`SITE_NAME`,
+  `config/legal.ts`), sauf dans `index.html` et le manifeste : le nom à côté du logo
   (la coquille, les pages seules, celles du compte, la page d'erreur), le titre des onglets
   (« Pikachu – PokéCodex », `pageTitle`), le manifeste et l'aperçu d'un lien (`index.html`,
   `SITE_SUMMARY` de `worker/vitrine.ts`). « Mon Pokédex » n'est que le Pokédex de l'utilisateur :
@@ -61,7 +62,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   (titre, phrase, actions à droite), puis ses blocs en `Panel` (une `Card` de camply : titre `h2`, phrase, actions, contenu ; `flush`
   pour un tableau bord à bord, `Table bordered={false}` ; pas une région nommée : trop de points de
   repère) ; statistiques par deux, par quatre quand la page a 50rem (`.stat-grid` ; compactes sur
-  téléphone, `Stat size="sm"` par `useStatSize`). Une page
+  téléphone, `Stat size="sm"` par `useStatSize` ; le téléphone, 40rem de large au plus :
+  `usePhone` en JS, la même borne que les feuilles CSS). Une page
   découpée en composants (l'accueil, `pages/home/` ; Achats) : les classes d'un seul composant dans
   son propre module CSS, celles qu'en partagent plusieurs dans celui de la page, importé sous le
   nom `page`. Occuper l'écran : une page va jusqu'à 120rem (`--page-max`, toute la largeur jusqu'au très grand écran,
@@ -192,7 +194,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   le lien vers le prochain Pokémon sans carte vient après les actions de la carte,
   « Dans le Pokédex » à part sur grand écran ;
   seul effet appuyé de l'app, la carte en grand suit la souris et la lumière y glisse
-  (`CardStage` : variables CSS, sans rendu React ; ni au toucher ni en mouvement réduit). Un lien
+  (`CardStage` : variables CSS, sans rendu React ; ni au toucher ni en mouvement réduit,
+  `reducedMotion` de `lib/motion.ts`). Un lien
   partagé a son aperçu (`og:` dans `index.html`, l'adresse du site et l'icône pour image ; celui du
   Pokédex public, son titre et sa progression). Les
   courbes (`PriceChart`, `lib/chart.ts`) vont jour par jour, sur la période choisie (7 jours,

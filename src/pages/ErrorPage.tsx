@@ -21,7 +21,7 @@ export function ErrorPage() {
     <main className={cx('container', styles.page)}>
       <title>{pageTitle('Erreur')}</title>
       <div className={styles.brand}>
-        <Logo>PokéCodex</Logo>
+        <Logo />
       </div>
       <PageHeader title="Quelque chose s’est mal passé">
         L’affichage de cette page a échoué. Recharger la page règle souvent le problème&#8239;;

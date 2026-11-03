@@ -22,13 +22,20 @@ import { refusalMessage } from '@/lib/account'
 import { forget } from '@/lib/api'
 import { emptyCollection } from '@/lib/collection'
 import { vitrineUrl } from '@/lib/filters'
+import { formatDecimal } from '@/lib/format'
 import { emptyShopping } from '@/lib/orders'
 import { loadSpecies } from '@/lib/species'
 import { documentProblem, readCollection, readShopping } from '@/lib/transfer'
 import { useCollectionStore } from '@/store/collection'
 import { currentDocument, replaceDocument } from '@/store/document'
 import { useShoppingStore } from '@/store/shopping'
-import type { AccountUser, CollectionDocument, CollectionResponse, CollectionSaved } from '@/types'
+import {
+  MAX_DOCUMENT,
+  type AccountUser,
+  type CollectionDocument,
+  type CollectionResponse,
+  type CollectionSaved,
+} from '@/types'
 
 /**
  * - `saved` : tout est enregistré ; `saving` : un envoi en cours ;
@@ -217,7 +224,7 @@ const refusalReason = (status: number, document: CollectionDocument) =>
   status === 403
     ? 'il refuse les envois depuis cette adresse, que son réglage BETTER_AUTH_URL ne nomme pas'
     : status === 413
-      ? 'elle dépasse 5 Mo'
+      ? `elle dépasse ${formatDecimal(MAX_DOCUMENT / 1_000_000)} Mo`
       : (documentProblem(document) ?? 'elle ne passe pas ses contrôles')
 
 /**

@@ -30,6 +30,7 @@ import {
   useNavigation,
 } from 'react-router'
 import { Logo } from '@/components/Logo'
+import { SITE_NAME } from '@/config/legal'
 import { SiteDisclaimer } from '@/components/SiteDisclaimer'
 import { shoppingUrl } from '@/lib/filters'
 import { AccountMenu } from '@/components/AccountMenu'
@@ -115,7 +116,7 @@ function Brand() {
   return (
     <Link to="/" className={styles.brand}>
       <Logo>
-        <span className={styles.brandName}>PokéCodex</span>
+        <span className={styles.brandName}>{SITE_NAME}</span>
       </Logo>
     </Link>
   )

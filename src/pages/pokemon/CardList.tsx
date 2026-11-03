@@ -1,8 +1,7 @@
 import { Badge } from '@camply/ui'
 import { Star } from '@camply/ui/icons'
 import { CardArt } from '@/components/CardArt'
-import { LanguageFlag } from '@/components/LanguageSwitch'
-import { cardLanguage } from '@/lib/collection'
+import { CardReference } from '@/components/LanguageSwitch'
 import type { PokedexEntry } from '@/lib/pokedex'
 import { AddCardButton } from './CardActions'
 import styles from './CardList.module.css'
@@ -47,8 +46,7 @@ export function CardList({
               <CardArt card={card} speciesId={species.id} alt="" />
               <span className={styles.text}>
                 <span className={styles.reference}>
-                  {card.reference}
-                  <LanguageFlag language={cardLanguage(card)} />
+                  <CardReference card={card} />
                 </span>
                 {entry.card?.card.id === card.id && <FavoriteBadge />}
               </span>
