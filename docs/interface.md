@@ -32,7 +32,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   le titre de l'accueil, le bouton du Pokédex public pour qui est connecté. Le logo est une Poké
   Ball plate (`Logo`, `AppShell` ; couleurs `--brand-*`, les mêmes dans les deux thèmes), la même
   que l'icône de l'onglet (`public/favicon.svg`).
-- Filtres du Pokédex dans l'adresse : `q` (raccourci « / »), `generation`, `type`, `possession` (`owned` :
+- Filtres du Pokédex dans l'adresse : `q` (raccourci « / », sauf depuis un champ ou une fenêtre :
+  d'une seule touche et sans moyen de le couper, il s'écarte sciemment de WCAG 2.1.4, niveau A,
+  choix de l'utilisateur de novembre 2026 ; la recherche de l'app, Ctrl/⌘ K, reste l'autre accès ;
+  pas d'interrupteur, le navigateur ne garde aucun réglage sauf le thème), `generation`, `type`,
+  `possession` (`owned` :
   débloqués, une de leurs cartes est possédée ; `missing` : à débloquer, aucune ne l'est ;
   `ordered` : aucune possédée, une commandée), `card` (`with` : avec des cartes, `without` : sans ;
   à compléter, dès qu'une de leurs cartes l'est, favorite ou non, `cardNeeds` : `no-image`,
