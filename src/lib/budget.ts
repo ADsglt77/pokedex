@@ -7,6 +7,7 @@
 
 import { today } from '@/lib/format'
 import { cardCount, cents, orderSpent, supplierLabel } from '@/lib/orders'
+import { groupBy } from '@/lib/series'
 import type { PricePoint } from '@/lib/chart'
 import type { BudgetSettings, Order, ShoppingData } from '@/types'
 
@@ -59,14 +60,8 @@ export const defaultPlanBudget = (budget: BudgetSettings, spent: number, step: n
   Math.floor(Math.min(Math.max(budget.monthly - spent, 0), budget.ceiling) / step) * step
 
 /** Un total par mois, ou par fournisseur… (`key`), sans les commandes annulées. */
-function spendingBy(orders: readonly Order[], keyOf: (order: Order) => string) {
-  const groups = new Map<string, Order[]>()
-  for (const order of counted(orders)) {
-    const key = keyOf(order)
-    groups.set(key, [...(groups.get(key) ?? []), order])
-  }
-  return [...groups].map(([key, group]) => ({ key, ...spentOn(group) }))
-}
+const spendingBy = (orders: readonly Order[], keyOf: (order: Order) => string) =>
+  [...groupBy(counted(orders), keyOf)].map(([key, group]) => ({ key, ...spentOn(group) }))
 
 /** Un total par mois (`key` : `2026-10`), le plus récent d'abord. */
 export const spendingByMonth = (orders: readonly Order[]) =>

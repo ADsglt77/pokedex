@@ -153,8 +153,9 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     `tests/purchase-planner.test.ts`). Une carte sans Pokémon ni collection (un dresseur gardé par
     une commande après la suppression de sa collection, puis sorti de la commande) n'y est pas :
     rien ne la veut, et aucune page ne la montre plus (testé). Une case dit sa collection
-    (`WishRow.series`, `seriesOf` : la première, pour une carte obtenue qui l'est de plusieurs), sur
-    sa carte de la liste comme sur sa ligne (prochaine commande, commandes). Une carte sans Pokémon n'a pas de génération (un filtre
+    (`WishRow.series`, `seriesByCard`, la règle de `seriesOf` : la première, pour une carte obtenue
+    qui l'est de plusieurs), sur sa carte de la liste comme sur sa ligne (prochaine commande,
+    commandes). Une carte sans Pokémon n'a pas de génération (un filtre
     de génération l'écarte), se cherche par sa référence et vient après les autres au tri par
     numéro (`filterWishlist`). Le lien vers Cardmarket est `cardmarketPage` : la page notée, sinon
     l'id. La prochaine commande (`planPurchase`, `purchase-planner`) ne lit qu'elle : elle y prend

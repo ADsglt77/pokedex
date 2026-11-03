@@ -9,6 +9,7 @@ import { speciesOf } from '@/lib/species'
 import { searchForm, searchMatcher, type WishlistFilters, type WishlistSort } from '@/lib/filters'
 import { isToBuy } from '@/lib/collection'
 import { priceChange, priceOf } from '@/lib/prices'
+import { seriesByCard } from '@/lib/series'
 import type { CollectionData, PokemonCard, PriceFile, SeriesCollection } from '@/types'
 
 /** Une carte de la liste d'achats, ni possédée ni commandée, prête à afficher et à planifier. */
@@ -29,12 +30,7 @@ export interface WishRow {
  * commande après la suppression de sa collection) : rien ne la veut, et rien ne la montre plus.
  */
 export function wishlistRows(collection: CollectionData, prices: PriceFile | null): WishRow[] {
-  // La collection de chaque case, la première qui la compte (`seriesOf`), lue une fois pour toutes
-  // les cartes : le compte peut en avoir des milliers.
-  const seriesOfCard = new Map<string, SeriesCollection>()
-  for (const series of collection.series) {
-    for (const id of series.cards) if (!seriesOfCard.has(id)) seriesOfCard.set(id, series)
-  }
+  const seriesOfCard = seriesByCard(collection)
   return Object.values(collection.customCards).flatMap((card) => {
     if (!isToBuy({ status: collection.cards[card.id]?.status ?? null })) return []
     const series = seriesOfCard.get(card.id) ?? null

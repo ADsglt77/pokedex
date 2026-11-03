@@ -5,8 +5,10 @@
  * `cardCodeKey`, `cardmarketKey`), est reprise ; les autres sont ajoutées comme cases pas encore
  * obtenues (`seriesOnly`), qui ne remplissent pas le Pokédex. Possédée une fois, une case devient
  * pour de bon une carte de ses Pokémon (`obtain`). Ce qui distingue une collection (`seriesId`) ;
- * la collection d'une carte (`seriesOf`) ; ce que la suppression d'une collection fait de ses
- * cases (`seriesRemoval`) ; leur progression : cases possédées, valeur, coût pour compléter.
+ * la collection d'une carte (`seriesOf`, `seriesByCard` pour toutes) ; ce que la suppression d'une
+ * collection fait de ses cases (`seriesRemoval`) ; leur progression : cases possédées, valeur, coût
+ * pour compléter. Et le regroupement par clé (`groupBy`), que reprennent le budget et le choix
+ * d'une extension.
  */
 
 import { cardCodeKey, cardmarketKey } from '@/lib/card-code'
@@ -41,17 +43,32 @@ export const findSeries = (data: CollectionData, set: string, language: CardLang
 export const seriesOf = (data: CollectionData, cardId: string) =>
   data.series.find((series) => series.cards.includes(cardId)) ?? null
 
-/** Les cartes de chaque clé (`key`), dans leur ordre ; une carte sans clé n'y est pas. */
-function byKey(cards: readonly PokemonCard[], key: (card: PokemonCard) => string | null) {
-  const index = new Map<string, PokemonCard[]>()
-  for (const card of cards) {
-    const value = key(card)
-    if (value === null) continue
-    const known = index.get(value)
-    if (known) known.push(card)
-    else index.set(value, [card])
+/**
+ * La collection de chaque case, la même que `seriesOf` (la première qui la compte), lue une fois
+ * pour toutes les cartes : le compte peut en avoir des milliers.
+ */
+export function seriesByCard(data: CollectionData) {
+  const byCard = new Map<string, SeriesCollection>()
+  for (const series of data.series) {
+    for (const id of series.cards) if (!byCard.has(id)) byCard.set(id, series)
   }
-  return index
+  return byCard
+}
+
+/**
+ * Les éléments de chaque clé (`keyOf`), dans leur ordre, les clés dans l'ordre de leur premier
+ * élément ; un élément sans clé (`null`) n'y est pas.
+ */
+export function groupBy<T, K>(items: Iterable<T>, keyOf: (item: T) => K | null): Map<K, T[]> {
+  const groups = new Map<K, T[]>()
+  for (const item of items) {
+    const key = keyOf(item)
+    if (key === null) continue
+    const group = groups.get(key)
+    if (group) group.push(item)
+    else groups.set(key, [item])
+  }
+  return groups
 }
 
 /**
@@ -73,8 +90,8 @@ export function startSeries(
   // fois : le compte peut en avoir des milliers, et le clic attend. Pas une case pas encore obtenue
   // d'une autre collection : supprimer celle-ci la retirerait.
   const free = Object.values(data.customCards).filter((card) => !card.seriesOnly)
-  const byCode = byKey(free, cardCodeKey)
-  const byCardmarket = byKey(free, cardmarketKey)
+  const byCode = groupBy(free, cardCodeKey)
+  const byCardmarket = groupBy(free, cardmarketKey)
   const taken = new Set<PokemonCard>()
   // La première carte libre de cette clé prend la case, et n'en prend pas d'autre.
   const take = (index: Map<string, PokemonCard[]>, key: string | null) => {

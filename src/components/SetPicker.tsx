@@ -29,6 +29,7 @@ import { useRetry } from '@/hooks/useRetry'
 import { catalogSetsUrl, loadSets, type SetSummary } from '@/lib/card-catalog'
 import { searchForm } from '@/lib/filters'
 import { details, plural } from '@/lib/format'
+import { groupBy } from '@/lib/series'
 import type { CardLanguage } from '@/types'
 import styles from './SetPicker.module.css'
 
@@ -226,13 +227,9 @@ function SetResults({
     )
   }
 
-  const groups = new Map<string, SetSummary[]>()
-  for (const set of found.slice(0, limit)) {
-    const key = order === 'recent' ? (set.year ?? 'Sans date') : (set.block ?? 'Hors des blocs')
-    const list = groups.get(key)
-    if (list) list.push(set)
-    else groups.set(key, [set])
-  }
+  const groups = groupBy(found.slice(0, limit), (set) =>
+    order === 'recent' ? (set.year ?? 'Sans date') : (set.block ?? 'Hors des blocs'),
+  )
 
   return (
     <>
