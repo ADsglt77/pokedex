@@ -106,7 +106,13 @@ function NameForm({ current }: { current: string }) {
           hint={`${PSEUDO_HINT} Le titre de votre Pokédex public (« Le Pokédex de … ») et son adresse.`}
           error={error ?? undefined}
           value={name}
-          onChange={(event) => setName(event.target.value.trim())}
+          onChange={(event) => {
+            const next = event.target.value.trim()
+            setName(next)
+            // Revenu au pseudo actuel, plus rien à envoyer (bouton désactivé) : le refus d'avant
+            // ne s'effacerait qu'au prochain envoi.
+            if (next === current) setError(null)
+          }}
         />
         <FieldAlert key={refusals}>{error}</FieldAlert>
         <Button

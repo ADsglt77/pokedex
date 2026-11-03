@@ -41,7 +41,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   de se reconnecter (`markExpired`) ; un pseudo pris (`USERNAME_IS_ALREADY_TAKEN`) le dit. Chaque
   refus (pseudo réservé, pris ou refusé, mot de passe, session expirée) s'affiche sous le champ en
   cause, qui reçoit le focus ; celui du pseudo est aussi annoncé (`FieldAlert` : envoyé par Entrée,
-  le focus est déjà dans son champ). Seule la réussite est un toast. Les
+  le focus est déjà dans son champ), et s'efface quand le champ revient au pseudo actuel (plus rien
+  à envoyer). Seule la réussite est un toast. Les
   réponses du client Better Auth passent par `authCall` (`lib/auth.ts` : sans réponse du serveur,
   un refus de statut 0) et leurs messages par `refusalMessage` (`lib/account.ts`). Un appareil
   dont la session a été fermée par une connexion ailleurs affiche « Reconnectez-vous ». Le
