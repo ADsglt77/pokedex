@@ -50,9 +50,19 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   fois suivante où elle sert, au plus une fois par minute (`getJson`, `retryDue`, `lib/api.ts` : la
   règle vaut pour les données de référence, catalogue et historiques compris, sauf l'état des
   tâches et les lignes de la liste de souhaits, demandés à chaque fois : `fetchFresh` ; le compte
-  et la collection ont leurs propres lectures). Les lectures du catalogue ont un délai de 15 s
-  (`CATALOG_TIMEOUT`, `lib/card-catalog.ts`) : « Enregistrer » une carte (son image) et
-  « Commencer la collection » les attendent, et ne restent jamais bloqués. Une carte sans id
+  et la collection ont leurs propres lectures). Chaque lecture de `getJson` a son délai, la
+  lecture du corps comprise (`AbortSignal.timeout` la coupe aussi) : une requête figée devient une
+  panne passagère (« — » pour un prix), redemandée une minute après au plus tôt, au lieu d'attendre
+  que le navigateur l'abandonne (de quelques dizaines de secondes à quelques minutes ; décision de
+  l'utilisateur, novembre 2026). 15 s pour un paquet de prix du jour (quelques Ko : un paquet figé
+  retenait tous ceux de sa liste), pour la liste des espèces (`loadSpecies`, `lib/species.ts`) et
+  pour le catalogue (`CATALOG_TIMEOUT`, `lib/card-catalog.ts` : « Enregistrer » une carte, son
+  image, et « Commencer la collection » l'attendent, et ne restent jamais bloqués), 10 s pour
+  l'historique d'une carte, une minute pour les grosses réponses
+  (`LARGE_TIMEOUT`, `lib/api.ts`) : les historiques de la collection, le Pokédex public, les
+  détails des espèces. Mesuré : un paquet de 1 000 historiques fait environ 360 Ko compressés
+  aujourd'hui (185 jours) et 1 Mo dans un an, un Pokédex public au plafond (4 400 cartes) 360 Ko ;
+  une minute laisse lire le plus gros à 130 kbit/s, trois fois moins qu'une 3G lente. Une carte sans id
   Cardmarket, ou dont l'id n'a pas de prix ce jour, n'a pas de prix (aucun n'est inventé).
 - Historiques de la collection (`GET /api/histories?ids=719621,719654`) : la courbe de la valeur
   (Valeur › Évolution) demande ceux de ses cartes possédées qu'elle n'a pas encore : l'app les
@@ -69,8 +79,9 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   (`historiesOf`, `lib/prices.ts`, testé) : la même carte Cardmarket possédée pour deux Pokémon
   compte deux fois, comme dans la valeur du jour (une TAG TEAM, une seule carte, une fois) ; une
   carte sans id ou sans historique ne pèse pas sur la courbe, calculée une fois par réponse (ni la
-  période ni les prix du jour ne la changent). Sans réponse pour l'un des paquets (une courbe
-  partielle serait fausse) : « L'historique des prix n'est pas disponible pour le moment »,
+  période ni les prix du jour ne la changent). Sans réponse pour l'un des paquets, ou pas en une
+  minute (une courbe partielle serait fausse) : « L'historique des prix n'est pas disponible pour
+  le moment »,
   redemandé une minute après au plus tôt (les paquets déjà reçus ne le sont pas : `getJson` les
   garde).
 - Liste de souhaits Cardmarket (`GET /api/wants?ids=…`) : pour chaque id Cardmarket demandé, sa

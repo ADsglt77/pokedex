@@ -10,7 +10,7 @@
  */
 
 import { create } from 'zustand'
-import { fetchFresh, forget, getJson, markFailed, retryDue } from '@/lib/api'
+import { fetchFresh, forget, getJson, LARGE_TIMEOUT, markFailed, retryDue } from '@/lib/api'
 import { memo } from '@/lib/memo'
 import { cardmarketIds, historiesOf, loadInBatches, priceBatches } from '@/lib/prices'
 import { settled } from '@/lib/settled'
@@ -112,13 +112,14 @@ interface Answer {
 /**
  * Demande les prix de ces paquets, une demande chacun (une demande en cours ou en panne n'est pas
  * refaite : `getJson`), et ajoute leurs réponses aux autres en une fois : un rafraîchissement en a
- * des dizaines, et chaque montant affiché se redessinerait à chacune.
+ * des dizaines, et chaque montant affiché se redessinerait à chacune. Un paquet sans réponse en 15 s
+ * (quelques Ko) est en panne : il ne retient pas les autres plus longtemps.
  */
 function requestBatches(batches: readonly number[][]) {
   const answers = batches.flatMap((batch) => {
     const url = `/api/prices?ids=${batch.join()}`
     priceUrls.add(url)
-    const response = getJson<PriceFile>(url)
+    const response = getJson<PriceFile>(url, 15_000)
     if (followed.has(response)) return []
     followed.add(response)
     return [response.then((file): Answer => ({ url, batch, response, file }))]
@@ -251,9 +252,9 @@ export function loadPriceHistory(cardmarket: number) {
  * Les historiques des cartes `cardmarkets` (au moins une) : ceux déjà reçus, et les autres
  * demandés au serveur (`/api/histories`, chaque id une fois, par paquets de 1 000 l'un après
  * l'autre : `loadInBatches`), relus dans l'ordre de la liste (`historiesOf`) ; `null` si le serveur
- * ne répond pas pour l'un des paquets (une courbe partielle serait fausse ; redemandés une minute
- * après au plus tôt, la prochaine fois qu'ils servent, `getJson`). La même promesse pour la même
- * liste, lue par `use()`.
+ * ne répond pas pour l'un des paquets, ou pas en une minute (`LARGE_TIMEOUT`) : une courbe
+ * partielle serait fausse ; redemandés une minute après au plus tôt, la prochaine fois qu'ils
+ * servent (`getJson`). La même promesse pour la même liste, lue par `use()`.
  */
 export function loadPriceHistories(cardmarkets: readonly number[]) {
   const key = cardmarkets.join()
@@ -267,7 +268,7 @@ export function loadPriceHistories(cardmarkets: readonly number[]) {
       loadInBatches(unknown, (batch) => {
         const url = `/api/histories?ids=${batch.join()}`
         priceUrls.add(url)
-        return getJson<PriceHistories>(url)
+        return getJson<PriceHistories>(url, LARGE_TIMEOUT)
       }).then((found) => {
         if (!found) {
           current.failedAt = Date.now()

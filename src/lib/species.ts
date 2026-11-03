@@ -4,7 +4,7 @@
  * détails à la demande. Les cartes, elles, sont celles que l'utilisateur ajoute (`customCards`).
  */
 
-import { derived, getJson } from '@/lib/api'
+import { derived, getJson, LARGE_TIMEOUT } from '@/lib/api'
 import { referenceName } from '@/lib/card-code'
 import { formatList } from '@/lib/format'
 import type {
@@ -64,11 +64,12 @@ export const cardTitle = (card: PokemonCard) =>
 
 /**
  * Description, taille, poids… (`/api/species/details`), chargés à la première fiche ouverte ; vide
- * si le serveur ne répond pas (redemandé une minute après au plus tôt, `getJson`). Toujours la
- * même promesse, lue par `use()`.
+ * si le serveur ne répond pas, ou pas en une minute (`LARGE_TIMEOUT` ; redemandé une minute après
+ * au plus tôt, `getJson`). Toujours la même promesse, lue par `use()`.
  */
 export const loadSpeciesDetails = () =>
   derived<SpeciesDetailsFile, Map<number, PokemonSpeciesDetails>>(
     '/api/species/details',
     (file) => new Map((file?.details ?? []).map((entry) => [entry.id, entry])),
+    LARGE_TIMEOUT,
   )

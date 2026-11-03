@@ -128,8 +128,11 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   Pokédex) et les possessions avec leur date (`shownCollection`, testé) : jamais un prix payé, une
   commande, le budget, la liste d'achats ni le statut « commandée » (une case commandée n'a pas de
   statut) ; une collection vide tant qu'aucun appareil n'a rien envoyé. Il montre la version que
-  le serveur a reçue. La page la lit une fois (`getJson`, gardée pour la vie de la page, à son
-  adresse en minuscules quelle que soit la casse tapée : `vitrineUrl`) ; celle
+  le serveur a reçue. La page la lit une fois (`loadVitrine`, `store/account.ts` : `getJson`,
+  gardée pour la vie de la page, à son adresse en minuscules quelle que soit la casse tapée :
+  `vitrineUrl`) ; sans réponse, ou pas lue en entier en une minute (`LARGE_TIMEOUT`, mesuré :
+  `docs/prix.md`), « Le Pokédex ne peut pas s'afficher », redemandé à l'affichage suivant, une
+  minute après au plus tôt ; celle
   du compte est relue après une connexion, une déconnexion ou un changement de pseudo (`forget`,
   `store/account.ts`). Au journal, une visite (« Pokédex public consulté ») ou un aperçu
   (« Lien partagé lu ») une fois par visiteur, par Pokédex et par heure au plus (`journalOnce`, son

@@ -15,7 +15,7 @@ import { Unavailable } from '@/components/Unavailable'
 import { UnlockedChart } from '@/components/UnlockedChart'
 import { usePhone } from '@/hooks/useMediaQuery'
 import { isPseudo } from '@/lib/account'
-import { getJson, requestFailed } from '@/lib/api'
+import { requestFailed } from '@/lib/api'
 import type { ChartPeriod } from '@/lib/chart'
 import { cx } from '@/lib/cx'
 import { vitrineUrl } from '@/lib/filters'
@@ -31,7 +31,7 @@ import {
 import { buildPokedex, unlockEvents, type PokedexEntry } from '@/lib/pokedex'
 import { tallyByStatus, trackedCards } from '@/lib/prices'
 import { seriesId, seriesProgress } from '@/lib/series'
-import { useAccountStore } from '@/store/account'
+import { loadVitrine, useAccountStore } from '@/store/account'
 import type { CollectionData, PriceFile, SeriesCollection, VitrineData } from '@/types'
 import styles from './VitrinePage.module.css'
 import { useStatSize } from '@/hooks/useStatSize'
@@ -128,10 +128,9 @@ function Missing() {
 }
 
 function VitrineContent({ pseudo }: { pseudo: string }) {
-  const url = vitrineUrl(pseudo)
-  const shown = use(getJson<VitrineData>(url))
+  const shown = use(loadVitrine(pseudo))
   if (shown) return <Vitrine {...shown} />
-  if (!requestFailed(url)) return <Missing />
+  if (!requestFailed(vitrineUrl(pseudo))) return <Missing />
   return (
     <>
       <title>{pageTitle('Pokédex public')}</title>

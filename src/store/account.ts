@@ -14,12 +14,12 @@
  * d'enregistrer, la collection est relue si rien n'attend d'être envoyé, et seulement si elle a
  * changé ; jamais celle d'un autre compte ; une modification faite pendant cette lecture n'est pas
  * écrasée (`load`). Sans connexion, l'app ne s'ouvre pas : on voit la connexion, ou le Pokédex
- * public d'un compte (`router.tsx`).
+ * public d'un compte (`router.tsx`, lu par `loadVitrine`).
  */
 
 import { create } from 'zustand'
 import { refusalMessage } from '@/lib/account'
-import { forget } from '@/lib/api'
+import { forget, getJson, LARGE_TIMEOUT } from '@/lib/api'
 import { emptyCollection } from '@/lib/collection'
 import { vitrineUrl } from '@/lib/filters'
 import { formatMegabytes } from '@/lib/format'
@@ -35,6 +35,7 @@ import {
   type CollectionDocument,
   type CollectionResponse,
   type CollectionSaved,
+  type VitrineData,
 } from '@/types'
 
 /**
@@ -285,6 +286,13 @@ async function push(): Promise<void> {
 
 /** Envoie ce qui attend (« Réessayer », le retour du réseau). */
 export const save = () => void inTurn(push)
+
+/**
+ * Le Pokédex public d'un compte (`/api/vitrine/<pseudo>`, `VitrinePage`), demandé dès le chargement
+ * de sa route (`router.tsx`), lu une fois par `getJson`, en une minute au plus (`LARGE_TIMEOUT`).
+ */
+export const loadVitrine = (pseudo: string) =>
+  getJson<VitrineData>(vitrineUrl(pseudo), LARGE_TIMEOUT)
 
 /**
  * Le Pokédex public du compte (`/api/vitrine/<pseudo>`), lu une fois par `getJson` : oublié à la

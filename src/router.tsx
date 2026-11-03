@@ -2,16 +2,15 @@ import type { ComponentType } from 'react'
 import { createBrowserRouter, data, redirect, type LoaderFunctionArgs } from 'react-router'
 import { AppShell } from '@/components/AppShell'
 import { isPseudo, loginPath } from '@/lib/account'
-import { getJson } from '@/lib/api'
 import { loadSetCards, loadSets } from '@/lib/card-catalog'
-import { catalogLanguage, catalogSet, vitrineUrl } from '@/lib/filters'
+import { catalogLanguage, catalogSet } from '@/lib/filters'
 import { loadSpecies } from '@/lib/species'
 import { ErrorPage } from '@/pages/ErrorPage'
 import { HomePage } from '@/pages/home/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PokedexPage } from '@/pages/pokedex/PokedexPage'
 import { PokemonPage } from '@/pages/pokemon/PokemonPage'
-import { useAccountStore } from '@/store/account'
+import { loadVitrine, useAccountStore } from '@/store/account'
 
 /**
  * Les espèces (l'API des données), avant une page qui les montre : la coquille, un Pokédex public.
@@ -76,11 +75,11 @@ export const createRouter = () =>
         {
           path: ':pseudo',
           // Ses données demandées en même temps que la page et les espèces, pas après elles
-          // (`getJson` garde la réponse, que la page lit).
+          // (`loadVitrine` : `getJson` garde la réponse, que la page lit).
           loader: async ({ params }) => {
             const pseudo = params.pseudo!
             if (!isPseudo(pseudo)) return null
-            void getJson(vitrineUrl(pseudo))
+            void loadVitrine(pseudo)
             await needSpecies()
             return null
           },

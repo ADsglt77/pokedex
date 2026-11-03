@@ -40,19 +40,28 @@ export const retryDue = (failedAt: number | undefined) =>
   failedAt !== undefined && Date.now() - failedAt > MINUTE
 
 /**
- * Une réponse de l'API, toujours la même promesse pour une adresse (lue par `use()`), tant qu'elle
- * n'est pas oubliée (`forget`) : `null` si elle manque (404). Une panne passagère (réseau, pas de
- * réponse en `timeout` ms, réponse illisible) donne aussi `null`, mais la réponse est redemandée la
- * prochaine fois qu'elle sert, une minute après au plus tôt : pas une requête à chaque affichage
- * tant que le serveur ne répond pas.
+ * Le délai des grosses réponses de `getJson` : les historiques de la collection, le Pokédex public,
+ * les détails des espèces. Large, car `AbortSignal.timeout` coupe aussi la lecture du corps : la plus
+ * grosse (un paquet de 1 000 historiques, 1 Mo compressé quand ils auront un an et demi ; un Pokédex
+ * public au plafond, 360 Ko) s'y lit à 130 kbit/s, trois fois moins qu'une 3G lente.
  */
-export function getJson<T>(url: string, timeout?: number): Promise<T | null> {
+export const LARGE_TIMEOUT = MINUTE
+
+/**
+ * Une réponse de l'API, toujours la même promesse pour une adresse (lue par `use()`), tant qu'elle
+ * n'est pas oubliée (`forget`) : `null` si elle manque (404). Une panne passagère (réseau, réponse
+ * illisible, ou pas lue en entier en `timeout` ms : une requête figée n'attend pas que le navigateur
+ * l'abandonne) donne aussi `null`, mais la réponse est redemandée la prochaine fois qu'elle sert,
+ * une minute après au plus tôt : pas une requête à chaque affichage tant que le serveur ne répond
+ * pas.
+ */
+export function getJson<T>(url: string, timeout: number): Promise<T | null> {
   const known = requests.get(url)
   if (known && !retryDue(known.failedAt)) return known.response as Promise<T | null>
 
   const request: Request = {
     response: settled(
-      fetch(url, { signal: timeout ? AbortSignal.timeout(timeout) : undefined })
+      fetch(url, { signal: AbortSignal.timeout(timeout) })
         .then((response) => {
           if (response.status === 404) return null
           if (!response.ok) throw new Error(`HTTP ${response.status}`)
@@ -128,7 +137,7 @@ const derivations = new WeakMap<Promise<unknown>, Promise<unknown>>()
 export function derived<T, R>(
   url: string,
   compute: (response: T | null) => R,
-  timeout?: number,
+  timeout: number,
 ): Promise<R> {
   const response = getJson<T>(url, timeout)
   return memo(derivations, response, () => settled(response.then(compute))) as Promise<R>
