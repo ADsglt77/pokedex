@@ -5,9 +5,10 @@
  * passe, ni d'un autre site (une modification : 403) ; un document abîmé est refusé (400). Une
  * erreur ici écraserait les commandes d'un autre appareil. La lecture dit à quel compte est la
  * collection, et seulement sa version quand l'appareil a déjà celle-là (`?version=`) ; un envoi
- * compressé (`gzip`, celui du site) est enregistré, mais refusé (413) au-delà de 5 000 000 octets
+ * compressé (`gzip`, celui du site) est enregistré, mais refusé (413) au-delà de 1 900 000 octets
  * décompressés, sans jamais décompresser plus (une bombe de 100 Mo suivie d'octets illisibles : lue
- * jusqu'au bout, elle ferait un 400) ; sans session, 401 sans rien décompresser (le cookie
+ * jusqu'au bout, elle ferait un 400), et au-delà de 1 990 000 une fois relu (un document de 2,1 Mo,
+ * que D1 refuserait) ; sans session, 401 sans rien décompresser (le cookie
  * renouvelé d'une session repart toujours) ; une panne en lisant la session, 500 (pas le 400 d'un
  * document refusé) ; un envoi renvoyé tel quel après une réponse perdue est reconnu (200, la même
  * version), un autre parti de la même version reste refusé (409). Chaque compte ne touche qu'à sa
@@ -250,9 +251,9 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
 
   test('compressée, sans session : 401, sans rien lire', async () => {
     const before = await stored()
-    // 4 Mo une fois décompressés, dans 4 Ko ; une bombe ; du gzip illisible : lus, ils feraient
+    // 1,5 Mo une fois décompressés, dans 1,5 Ko ; une bombe ; du gzip illisible : lus, ils feraient
     // un 400 ou un 413. Sans session, rien n'est lu : 401.
-    const heavy = await gzip(' '.repeat(4_000_000))
+    const heavy = await gzip(' '.repeat(1_500_000))
     const bomb = await gzip(new Uint8Array(100_000_000))
     for (const noSession of ['', 'better-auth.session_token=inconnu']) {
       for (const body of [heavy, bomb, 'pas du gzip']) {
@@ -318,7 +319,7 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
     expect(response.headers.getSetCookie().join()).toContain('session_token=')
   })
 
-  test('plus de 5 000 000 octets une fois décompressée : 413, sans décompresser plus', async () => {
+  test('plus de 1 900 000 octets une fois décompressée : 413, sans décompresser plus', async () => {
     const before = await stored()
     // Une « bombe » : 100 Mo de zéros une fois décompressée, 100 Ko compressée, suivie de trois
     // octets qui ne sont pas du gzip. Décompressée jusqu'au bout, elle lèverait une erreur (400) ;
@@ -329,8 +330,29 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
     bomb.set([1, 2, 3], member.length)
     const response = await gzipped(bomb)
     expect(response.status).toBe(413)
-    // Tel qu'envoyé, plus de 5 Mo : 413 aussi.
-    expect((await gzipped(new Uint8Array(5_000_001))).status).toBe(413)
+    // Tel qu'envoyé, plus de 1,9 Mo : 413 aussi.
+    expect((await gzipped(new Uint8Array(1_900_001))).status).toBe(413)
+    expect(await stored()).toEqual(before)
+  })
+
+  test('environ 2,1 Mo, tel qu’envoyé ou une fois relu : 413, rien d’écrit', async () => {
+    // D1 refuse toute ligne de plus de 2 000 000 octets (une erreur 500, l'appareil réessaierait
+    // sans fin), mais pas la base locale des tests : seule la limite de l'app est vérifiée ici.
+    const before = await stored()
+    const heavy = card('lourde', [25], { reference: 'x'.repeat(2_100_000) })
+    // Envoyée en 1,1 Mo, relue en 2,1 Mo : une carte de tous les Pokémon à l'id de 1 000 caractères,
+    // sans favorite ; `readSent` la donne en favorite à chacun (1 Mo de plus).
+    const everyone = Array.from({ length: 1025 }, (_, index) => index + 1)
+    const grown = card('x'.repeat(1000), everyone, { reference: 'x'.repeat(1_050_000) })
+    for (const big of [heavy, grown]) {
+      const sent = {
+        account: sacha,
+        baseVersion: before.version,
+        collection: { ...withCards(collectionWith(), big), favorites: {} },
+        shopping: emptyShopping(),
+      }
+      expect((await gzipped(await gzip(JSON.stringify(sent)))).status).toBe(413)
+    }
     expect(await stored()).toEqual(before)
   })
 

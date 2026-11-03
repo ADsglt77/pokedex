@@ -151,10 +151,17 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   compressé (`CompressionStream('gzip')`, `Content-Encoding: gzip` : 2 Mo en font 400 Ko),
   décompressé par le Worker (`gunzipSync` de `node:zlib`, qui s'arrête au plafond :
   `DecompressionStream` décompresse tout ce qu'il reçoit sans attendre qu'on le lise), 413 au-delà
-  de 5 000 000 octets décompressés (`MAX_DOCUMENT`, `types.ts`), sans jamais décompresser plus
+  de 1 900 000 octets décompressés (`MAX_DOCUMENT`, `types.ts`), sans jamais décompresser plus
   (une « bombe » gzip, testée : 100 Mo décompressés pour 100 Ko envoyés, suivis d'octets
-  illisibles, qui feraient un 400 si elle était lue jusqu'au bout) ; 413 aussi au-delà de 5 Mo
-  tels qu'envoyés. Et seulement avec une session : elle est lue avant le corps (`signedIn`), sans
+  illisibles, qui feraient un 400 si elle était lue jusqu'au bout) ; 413 aussi au-delà de 1,9 Mo
+  tels qu'envoyés, et au-delà de 1 990 000 octets tel qu'il serait écrit (`MAX_STORED`,
+  `worker/collection.ts` : la collection et les achats tels que lus, un octet illisible devenu
+  « � » au décodage par `readBody` et les favorites complétées par `readSent`, si bien qu'un envoi
+  de 1,1 Mo peut en écrire 2,1).
+  D1 refuse toute ligne de plus de 2 000 000 octets, d'une erreur 500 que l'appareil prendrait
+  pour une panne passagère, renvoyant sans fin ; la base locale (Miniflare) en accepte 4 Mo : le
+  test (un document de 2,1 Mo, envoyé tel quel ou grossi une fois relu : 413) ne vérifie que la
+  limite de l'app. Et seulement avec une session : elle est lue avant le corps (`signedIn`), sans
   elle 401 sans rien lire ; le cookie renouvelé repart avec la réponse (testé). Une panne en
   lisant la session (la base occupée) : 500, l'appareil réessaie (un 400 dirait « Envoi refusé »,
   un 401 la session fermée, testé) ; un corps illisible, compressé ou non, 400, sans rien au
@@ -179,9 +186,9 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   réponse, puis ce qui a changé depuis (rien de perdu, rien de « Rechargée » ; ce renvoi refusé,
   ce qui a changé depuis part aussitôt). Testé sur le
   serveur entier avec 401, 403, une mise à jour, un document refusé (400), un envoi compressé, la
-  bombe, l'envoi renvoyé reconnu et un autre document de la même version toujours refusé (409),
-  `worker/tests/collection.test.ts`. Après un 409, le navigateur relit la version du serveur, à la
-  place de la sienne : rien n'est écrasé, sa dernière modification est
+  bombe, un document de 2,1 Mo (413), l'envoi renvoyé reconnu et un autre document de la même
+  version toujours refusé (409), `worker/tests/collection.test.ts`. Après un 409, le navigateur
+  relit la version du serveur, à la place de la sienne : rien n'est écrasé, sa dernière modification est
   perdue, et le menu du compte le dit (« Rechargée », et un toast : « Vos dernières modifications
   ont été remplacées par celles d'un autre appareil. ») ; sans réponse à cette relecture, « Hors
   ligne », et l'envoi repart plus tard (refusé, puis relu), de plus en plus tard tant que la
@@ -201,7 +208,7 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   quand une modification attend : une relecture qui échoue sans rien en attente ne change pas
   l'état) : elle repart au retour du réseau ou de la page, sinon de plus en plus tard (30 s, 60 s,
   120 s… 5 min au plus), et quitter la page le demande d'abord (`beforeunload`). Un refus pour de
-  bon (400 : un document qui ne passe pas les contrôles ; 413 : plus de 5 Mo ; 403 : une
+  bon (400 : un document qui ne passe pas les contrôles ; 413 : plus de 1,9 Mo ; 403 : une
   origine refusée) donne « Envoi refusé », avec sa raison (la règle en cause, relue par le
   navigateur avec le même code sur le document envoyé, `documentProblem`) et un toast ; le
   document refusé ne repart pas
@@ -209,14 +216,15 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   demande, et il n'est jamais remplacé par celui du serveur au retour sur la page ; seule une
   nouvelle modification (« Annuler » compris) repart. Le plafond tombe plus tôt qu'on ne croit :
   une case d'une collection d'extension pèse 320 octets pas encore obtenue, 463 possédée, 566
-  possédée et achetée par une commande (mesuré, octobre 2026) ; le Pokédex compris, 5 Mo font
-  environ 14 000, 9 700 ou 7 950 cases selon leur état, soit 61, 42 ou 34 extensions de 230
-  cartes. Un compte qui progresse franchit donc le plafond sans commencer de collection : passé
-  80 %, le menu du compte le dit (« Votre collection pèse 4,2 Mo sur les 5 Mo que garde le
-  serveur… » ; le poids est connu dès la lecture du document, puis à chaque envoi), avec un toast
-  une fois par page (à l'affichage du menu, la collection déjà lourde, ou au passage du seuil) ;
+  possédée et achetée par une commande (mesuré, octobre 2026) ; le Pokédex compris (environ
+  0,5 Mo), 1,9 Mo font environ 4 400, 3 000 ou 2 500 cases selon leur état, soit 19, 13 ou 11
+  extensions de 230 cartes (2 Mo, la limite de D1, en feraient 4 700, 3 250 ou 2 650). Un compte
+  qui progresse franchit donc le plafond sans commencer de collection : passé 80 % (1,52 Mo), le
+  menu du compte le dit (« Votre collection pèse 1,6 Mo sur les 1,9 Mo que garde le serveur… » ;
+  le poids est connu dès la lecture du document, puis à chaque envoi), avec un toast une fois par
+  page (à l'affichage du menu, la collection déjà lourde, ou au passage du seuil) ;
   au-delà, chaque envoi est refusé (« elle dépasse
-  5 Mo »). Une session fermée (401, « Reconnectez-vous ») : plus rien ne part, ni ne se relit,
+  1,9 Mo »). Une session fermée (401, « Reconnectez-vous ») : plus rien ne part, ni ne se relit,
   jusqu'à « Se reconnecter » ; reconnecté au même compte, ce qui attendait reste et part, depuis sa
   version (changée ailleurs entre-temps : 409, puis relue) ; avec une modification en attente,
   « Se reconnecter » prévient d'abord qu'un autre compte la perdrait, avec le bouton d'export. Au

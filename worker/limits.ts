@@ -21,7 +21,7 @@ type Limit = {
 
 /** Chaque groupe de routes et sa limite. */
 const LIMITS: [routes: RegExp, limit: Limit][] = [
-  // La collection du compte : des corps de 5 Mo, lus et contrôlés.
+  // La collection du compte : des corps de 1,9 Mo, lus et contrôlés.
   [/^\/api\/collection\/?$/, 'COLLECTION_LIMIT'],
   // Le compte (Better Auth limite déjà ses tentatives, pas une déconnexion répétée), le Pokédex
   // public d'un compte et toute adresse d'un seul segment : l'aperçu d'un lien partagé

@@ -13,8 +13,8 @@
  *   le même document que celui enregistré, il rend cette version, sans rien écrire. Le document
  *   est contrôlé aux règles d'un fichier importé (`readSent` ; 400 sinon, la règle en cause au
  *   journal). Le site l'envoie compressé (`Content-Encoding: gzip`), décompressé ici :
- *   413 au-delà de `MAX_DOCUMENT` octets, compressé ou une fois décompressé ; un corps illisible,
- *   400, sans rien au journal.
+ *   413 au-delà de `MAX_DOCUMENT` octets, compressé ou une fois décompressé, et au-delà de
+ *   `MAX_STORED` tel qu'il serait écrit ; un corps illisible, 400, sans rien au journal.
  * - `POST /api/journal` `{ event }` : ce que le navigateur fait seul de la collection (export,
  *   import), au journal. Une ligne par compte, par évènement et par minute au plus : n'importe quel
  *   compte peut l'appeler à volonté. Plus de 1 Ko : 413 (`maxBody`).
@@ -74,6 +74,15 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' }
 
 /** Trop gros (413). */
 const TOO_LARGE = Symbol('trop gros')
+
+/**
+ * Le plus gros document écrit (collection et achats, tels que relus par `readSent`), en octets : D1
+ * refuse toute ligne de plus de 2 000 000 octets (une erreur 500, que l'appareil renverrait sans
+ * fin), le reste de la ligne tient dans la marge. Lu, un document peut peser plus qu'envoyé
+ * (`MAX_DOCUMENT`) : ses octets illisibles remplacés par « � » au décodage (`readBody`), ses
+ * favorites complétées par `readSent`.
+ */
+const MAX_STORED = 1_990_000
 
 /**
  * Le corps envoyé, décompressé s'il l'est (`gzip`) : `TOO_LARGE` au-delà de `MAX_DOCUMENT` octets
@@ -137,7 +146,7 @@ export const collectionRoutes = new Hono<SignedIn>()
   .put(
     '/collection',
     signedIn,
-    // Compressé ou non, 5 Mo au plus tel qu'envoyé.
+    // Compressé ou non, 1,9 Mo au plus tel qu'envoyé.
     bodyLimit({ maxSize: MAX_DOCUMENT, onError: (c) => c.json(null, 413) }),
     async (c) => {
       const { user } = c.var
@@ -166,6 +175,10 @@ export const collectionRoutes = new Hono<SignedIn>()
       const { baseVersion } = body
       const collection = JSON.stringify(document.collection)
       const shopping = JSON.stringify(document.shopping)
+      // Plus que D1 n'en écrit : 413, comme trop gros envoyé.
+      if (new TextEncoder().encode(collection + shopping).length > MAX_STORED) {
+        return c.json(null, 413)
+      }
 
       const row = await stored(user.id)
       // Renvoyé après une réponse perdue : déjà enregistré tel quel (et noté au journal), de la

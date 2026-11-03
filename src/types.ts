@@ -401,10 +401,11 @@ export interface CollectionResponse {
 
 /**
  * Le plus gros document que garde le serveur (`PUT /api/collection`), en octets, décompressé : 413
- * au-delà (`worker/collection.ts`) ; l'app avertit à 80 % (`components/AccountMenu.tsx`, d'après
- * le poids que mesure `store/account.ts`).
+ * au-delà (`worker/collection.ts`, qui contrôle encore ce qu'il écrit : D1 refuse toute ligne de
+ * plus de 2 000 000 octets) ; l'app avertit à 80 % (`components/AccountMenu.tsx`, d'après le poids
+ * que mesure `store/account.ts`).
  */
-export const MAX_DOCUMENT = 5_000_000
+export const MAX_DOCUMENT = 1_900_000
 
 /** `PUT /api/collection`, enregistré : la nouvelle version du document. */
 export interface CollectionSaved {

@@ -53,7 +53,7 @@ const refusalText = (refusal: string) =>
 /** À 80 % du plus gros document que garde le serveur, l'app avertit. */
 const HEAVY = MAX_DOCUMENT * 0.8
 
-/** « Votre collection pèse 4,2 Mo sur les 5 Mo que garde le serveur : … » */
+/** « Votre collection pèse 1,6 Mo sur les 1,9 Mo que garde le serveur : … » */
 const heavyText = (weight: number) =>
   `Votre collection pèse ${formatMegabytes(weight)}\u00a0Mo sur les ${formatMegabytes(MAX_DOCUMENT)}\u00a0Mo que garde le serveur\u00a0: au-delà, plus rien ne s’enregistrerait.`
 
