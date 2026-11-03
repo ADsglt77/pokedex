@@ -7,7 +7,7 @@ import { ExportCollectionButton } from '@/components/ExportCollectionButton'
 import { useNotify } from '@/hooks/useNotify'
 import { loginPath } from '@/lib/account'
 import { cx } from '@/lib/cx'
-import { formatDecimal } from '@/lib/format'
+import { formatMegabytes } from '@/lib/format'
 import { hasUnsavedChanges, save, signOut, useAccountStore, type SaveStatus } from '@/store/account'
 import { MAX_DOCUMENT } from '@/types'
 import styles from './AccountMenu.module.css'
@@ -55,7 +55,7 @@ const HEAVY = MAX_DOCUMENT * 0.8
 
 /** « Votre collection pèse 4,2 Mo sur les 5 Mo que garde le serveur : … » */
 const heavyText = (weight: number) =>
-  `Votre collection pèse ${formatDecimal(weight / 1_000_000)}\u00a0Mo sur les ${formatDecimal(MAX_DOCUMENT / 1_000_000)}\u00a0Mo que garde le serveur\u00a0: au-delà, plus rien ne s’enregistrerait.`
+  `Votre collection pèse ${formatMegabytes(weight)}\u00a0Mo sur les ${formatMegabytes(MAX_DOCUMENT)}\u00a0Mo que garde le serveur\u00a0: au-delà, plus rien ne s’enregistrerait.`
 
 /** L'avertissement des 80 % n'est donné en toast qu'une fois par page (`StrictMode` compris). */
 let heavyWarned = false

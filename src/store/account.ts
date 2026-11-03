@@ -22,7 +22,7 @@ import { refusalMessage } from '@/lib/account'
 import { forget } from '@/lib/api'
 import { emptyCollection } from '@/lib/collection'
 import { vitrineUrl } from '@/lib/filters'
-import { formatDecimal } from '@/lib/format'
+import { formatMegabytes } from '@/lib/format'
 import { emptyShopping } from '@/lib/orders'
 import { loadSpecies } from '@/lib/species'
 import { documentProblem, readCollection, readShopping } from '@/lib/transfer'
@@ -224,7 +224,7 @@ const refusalReason = (status: number, document: CollectionDocument) =>
   status === 403
     ? 'il refuse les envois depuis cette adresse, que son réglage BETTER_AUTH_URL ne nomme pas'
     : status === 413
-      ? `elle dépasse ${formatDecimal(MAX_DOCUMENT / 1_000_000)} Mo`
+      ? `elle dépasse ${formatMegabytes(MAX_DOCUMENT)} Mo`
       : (documentProblem(document) ?? 'elle ne passe pas ses contrôles')
 
 /**

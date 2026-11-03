@@ -23,6 +23,9 @@ export const formatList = (items: readonly string[]) => listFormat.format(items)
 
 export const formatDecimal = (value: number) => spaced(decimalFormat.format(value))
 
+/** « 4,2 » : des octets en Mo (1 000 000 octets), au dixième ; l'unité reste au texte. */
+export const formatMegabytes = (bytes: number) => formatDecimal(bytes / 1_000_000)
+
 /** « 12,5 % » : une part, au dixième. */
 export const formatShare = (percent: number) => `${formatDecimal(percent)}\u00a0%`
 

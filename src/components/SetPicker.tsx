@@ -29,7 +29,7 @@ import { useRetry } from '@/hooks/useRetry'
 import { catalogSetsUrl, loadSets, type SetSummary } from '@/lib/card-catalog'
 import { searchForm } from '@/lib/filters'
 import { details, plural } from '@/lib/format'
-import { groupBy } from '@/lib/series'
+import { groupBy } from '@/lib/group-by'
 import type { CardLanguage } from '@/types'
 import styles from './SetPicker.module.css'
 

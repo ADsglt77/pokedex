@@ -7,12 +7,12 @@
  * pour de bon une carte de ses Pokémon (`obtain`). Ce qui distingue une collection (`seriesId`) ;
  * la collection d'une carte (`seriesOf`, `seriesByCard` pour toutes) ; ce que la suppression d'une
  * collection fait de ses cases (`seriesRemoval`) ; leur progression : cases possédées, valeur, coût
- * pour compléter. Et le regroupement par clé (`groupBy`), que reprennent le budget et le choix
- * d'une extension.
+ * pour compléter.
  */
 
 import { cardCodeKey, cardmarketKey } from '@/lib/card-code'
 import { cardLanguage, isToBuy, languageField, obtain } from '@/lib/collection'
+import { groupBy } from '@/lib/group-by'
 import { isInAnOrder } from '@/lib/orders'
 import { marketPrice } from '@/lib/prices'
 import type {
@@ -53,22 +53,6 @@ export function seriesByCard(data: CollectionData) {
     for (const id of series.cards) if (!byCard.has(id)) byCard.set(id, series)
   }
   return byCard
-}
-
-/**
- * Les éléments de chaque clé (`keyOf`), dans leur ordre, les clés dans l'ordre de leur premier
- * élément ; un élément sans clé (`null`) n'y est pas.
- */
-export function groupBy<T, K>(items: Iterable<T>, keyOf: (item: T) => K | null): Map<K, T[]> {
-  const groups = new Map<K, T[]>()
-  for (const item of items) {
-    const key = keyOf(item)
-    if (key === null) continue
-    const group = groups.get(key)
-    if (group) group.push(item)
-    else groups.set(key, [item])
-  }
-  return groups
 }
 
 /**

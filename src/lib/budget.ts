@@ -6,8 +6,8 @@
  */
 
 import { today } from '@/lib/format'
+import { groupBy } from '@/lib/group-by'
 import { cardCount, cents, orderSpent, supplierLabel } from '@/lib/orders'
-import { groupBy } from '@/lib/series'
 import type { PricePoint } from '@/lib/chart'
 import type { BudgetSettings, Order, ShoppingData } from '@/types'
 

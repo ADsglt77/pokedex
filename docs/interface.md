@@ -128,7 +128,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   le sont (`content-visibility`), et mémoïsées : une carte qui change de statut ne redessine
   qu'elle.
   Une carte ouvre sa fenêtre (`SeriesCard`, pleine page et mise en page comme la fiche d'une carte
-  du catalogue : `CardLayout`) :
+  du catalogue : `CardLayout`, que les deux reprennent par `composes … from` ; à la construction,
+  Vite écrit pour cela un avertissement PostCSS (`from`), attendu et sans effet tant que le
+  fichier partagé n'a pas d'`url()`) :
   son image, sa référence et son drapeau, son statut et ses Pokémon (chacun vers sa fiche ; aucun
   pour un dresseur), « Je possède cette carte » et « Marquer comme commandée », le prix payé et la
   confirmation pour quitter « possédée » (`CardStatusControls`, les mêmes que sur la fiche d'un
