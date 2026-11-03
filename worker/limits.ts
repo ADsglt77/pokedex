@@ -27,8 +27,11 @@ const LIMITS: [routes: RegExp, limit: Limit][] = [
   // public d'un compte et toute adresse d'un seul segment : l'aperçu d'un lien partagé
   // (`linkPreview`).
   [/^\/(api\/(auth|vitrine)\/|[A-Za-z0-9_-]+$)/, 'ACCOUNT_LIMIT'],
-  // Les routes coûteuses de l'API des données : jusqu'à 1 025 cartes par demande.
-  [/^\/api\/(histories|wants)$/, 'HEAVY_LIMIT'],
+  // Les routes coûteuses de l'API des données : jusqu'à 1 025 cartes par demande. Les lignes de la
+  // liste de souhaits, les plus lourdes pour sa base (tous les produits des extensions touchées),
+  // ont la leur, plus basse.
+  [/^\/api\/histories$/, 'HEAVY_LIMIT'],
+  [/^\/api\/wants$/, 'WANTS_LIMIT'],
   [/^\/api\/(catalog|prices)(\/|$)/, 'DATA_LIMIT'],
   [/^\/images\//, 'IMAGES_LIMIT'],
 ]

@@ -35,7 +35,8 @@
   "services": [{ "binding": "DATA", "service": "pokedex-data", "entrypoint": "SiteEntrypoint" }],
   // Les limites par visiteur (`worker/limits.ts`), par 10 s : chacune loin de ce que demande une
   // visite (la collection : un envoi toutes les 0,5 s par onglet au plus ; les prix d'une collection
-  // de 5 000 cartes : 25 demandes à la première page ; le Pokédex : 1 025 pochettes). Leurs
+  // de 5 000 cartes : 25 demandes à la première page ; le Pokédex : 1 025 pochettes ; les lignes de
+  // la liste de souhaits : une demande par 1 000 cartes, à l'ouverture de leur fenêtre). Leurs
   // `namespace_id` ne doivent pas reprendre ceux du Worker des données (1001, 1002) : ils sont
   // partagés par tout le compte Cloudflare.
   "ratelimits": [
@@ -44,6 +45,7 @@
     { "name": "HEAVY_LIMIT", "namespace_id": "2003", "simple": { "limit": 30, "period": 10 } },
     { "name": "DATA_LIMIT", "namespace_id": "2004", "simple": { "limit": 400, "period": 10 } },
     { "name": "IMAGES_LIMIT", "namespace_id": "2005", "simple": { "limit": 1300, "period": 10 } },
+    { "name": "WANTS_LIMIT", "namespace_id": "2006", "simple": { "limit": 5, "period": 10 } },
   ],
   // L'adresse publique du site ; en développement, celle de Vite (`.env`, qui la remplace). La clé
   // des sessions (`BETTER_AUTH_SECRET`) est un secret du Worker, jamais dans ce fichier.

@@ -24,7 +24,7 @@ Qui fait quoi (le détail est dans l'en-tête de chaque fichier) :
 
 | Fichier | Rôle |
 |---|---|
-| `wrangler.jsonc` (chaque dépôt) | Le Worker : ses liaisons, ses domaines (`routes`), ses limites (`ratelimits`) |
+| `wrangler.jsonc` (chaque dépôt) | Le Worker : ses liaisons, ses domaines (`routes`), ses limites (`ratelimits` : leurs `namespace_id` sont partagés par tout le compte Cloudflare, le site a 2001 à 2006, les données 1001 et 1002 ; une nouvelle limite part avec le déploiement, sans rien régler dans le tableau de bord) |
 | `package.json` : `ci`, `deploy` (chaque dépôt) | Ce que lance Workers Builds : les contrôles et la construction, puis les migrations de la base et le déploiement |
 | `package.json` : `overrides` (site) | Une seule copie de zod et de Wrangler, undici sans ses avis. `@cloudflare/vite-plugin` 1.65.0 épingle Wrangler 4.152.0 et une miniflare qui tire undici 7.29.1 : retirer `wrangler` et `undici` quand vite-plugin, `@cloudflare/vitest-plugin` et `wrangler` épingleront les mêmes versions (vite-plugin 1.66.0 : voir aussi « En développement ») |
 | `worker/headers.ts`, `worker/limits.ts` (site) | En-têtes de sécurité, cache, moteurs de recherche, `http://` et `www` vers `https://pokecodex.fr`, limites par visiteur |

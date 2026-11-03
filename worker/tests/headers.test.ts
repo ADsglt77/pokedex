@@ -3,7 +3,8 @@
  * de sécurité sur chaque réponse, même une erreur ; `http://` et `www.pokecodex.fr` qui mènent à
  * `https://pokecodex.fr` ; les images réservées aux pages du site ; un fichier absent, 404 et non
  * la page de l'app (`worker/index.ts`) ; et une route répétée à l'excès par un même visiteur, 429,
- * sans compter les autres visiteurs.
+ * sans compter les autres visiteurs (les historiques ; les lignes de la liste de souhaits, à leur
+ * propre limite, plus basse).
  */
 
 import { describe, expect, test } from 'vitest'
@@ -58,14 +59,16 @@ describe('les en-têtes du site', () => {
 })
 
 describe('les limites par visiteur', () => {
-  test('la 31e demande coûteuse en 10 s : 429, et un autre visiteur passe toujours', async () => {
-    const from = (ip: string) =>
-      call('/api/histories?ids=1', { headers: { 'CF-Connecting-IP': ip } })
+  test.each([
+    ['la 31e demande d’historiques', '/api/histories?ids=1', 30],
+    ['la 6e demande de lignes de souhaits', '/api/wants?ids=1', 5],
+  ])('%s en 10 s : 429, et un autre visiteur passe toujours', async (_, path, allowed) => {
+    const from = (ip: string) => call(path, { headers: { 'CF-Connecting-IP': ip } })
     // Les fenêtres de 10 s du limiteur suivent l'horloge : finie en pleine série, une fenêtre
-    // remettrait le compte à zéro et la 31e passerait. La série part à 2 s au moins de sa fin.
+    // remettrait le compte à zéro et la dernière passerait. La série part à 2 s au moins de sa fin.
     const left = 10_000 - (Date.now() % 10_000)
     if (left < 2_000) await sleep(left + 50)
-    for (let count = 1; count <= 30; count++) {
+    for (let count = 1; count <= allowed; count++) {
       expect((await from('203.0.113.7')).status).not.toBe(429)
     }
     const refused = await from('203.0.113.7')

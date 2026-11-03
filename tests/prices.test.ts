@@ -187,8 +187,8 @@ describe('les demandes par paquets', () => {
   }
 
   test('les historiques, les lignes de Cardmarket : des paquets de 1 000, l’un après l’autre, réunis', async () => {
-    // Le Worker du site n'accepte que 30 de ces demandes par 10 s (`worker/limits.ts`) ; l'API,
-    // 1 025 ids chacune.
+    // Le Worker du site n'accepte par 10 s que 30 demandes d'historiques et 5 de lignes de la liste
+    // de souhaits (`worker/limits.ts`) ; l'API, 1 025 ids chacune.
     const lines = slowLoad((batch) => Object.fromEntries(batch.map((id) => [id, `ligne ${id}`])))
     const found = await loadInBatches([...range(1, 2500), 7, 2500], lines.load)
     expect(sizes(lines.asked)).toEqual([1000, 1000, 500])

@@ -17,6 +17,7 @@ declare namespace Cloudflare {
     HEAVY_LIMIT: RateLimit
     DATA_LIMIT: RateLimit
     IMAGES_LIMIT: RateLimit
+    WANTS_LIMIT: RateLimit
   }
 }
 
