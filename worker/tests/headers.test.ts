@@ -1,10 +1,11 @@
 /**
  * Ce que le Worker ajoute à ses réponses (`worker/headers.ts`, `worker/limits.ts`) : les en-têtes
  * de sécurité sur chaque réponse, même une erreur ; `http://` et `www.pokecodex.fr` qui mènent à
- * `https://pokecodex.fr` ; les images réservées aux pages du site ; un fichier absent, 404 et non
- * la page de l'app (`worker/index.ts`) ; et une route répétée à l'excès par un même visiteur, 429,
- * sans compter les autres visiteurs (les historiques ; les lignes de la liste de souhaits, à leur
- * propre limite, plus basse).
+ * `https://pokecodex.fr` ; les espèces préchargées avec une session, jamais sur la connexion ni
+ * l'inscription ; les images réservées aux pages du site ; un fichier absent, 404 et non la page
+ * de l'app (`worker/index.ts`) ; et une route répétée à l'excès par un même visiteur, 429, sans
+ * compter les autres visiteurs (les historiques ; les lignes de la liste de souhaits, à leur propre
+ * limite, plus basse).
  */
 
 import { describe, expect, test } from 'vitest'
@@ -38,6 +39,18 @@ describe('les en-têtes du site', () => {
       expect(response.status).toBe(301)
       expect(response.headers.get('location')).toBe(to)
     }
+  })
+
+  test('les espèces préchargées avec une session, sauf sur la connexion et l’inscription', async () => {
+    const link = async (path: string, cookie = 'better-auth.session_token=essai') =>
+      (await call(path, { headers: { Cookie: cookie } })).headers.get('link')
+    for (const path of ['/', '/pokedex', '/mentions-legales']) {
+      expect(await link(path)).toBe('</api/species>; rel=preload; as=fetch; crossorigin')
+    }
+    for (const path of ['/connexion', '/connexion?retour=/achats', '/inscription']) {
+      expect(await link(path)).toBeNull()
+    }
+    expect(await link('/pokedex', '')).toBeNull()
   })
 
   test('une image : pour les pages du site seulement', async () => {

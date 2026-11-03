@@ -20,7 +20,10 @@
  *   connexion, l'inscription, les mentions légales ; le Pokédex public d'un compte n'en est pas) ;
  *   et, quand le navigateur a une session (le cookie de Better Auth), les espèces préchargées sans
  *   attendre le script (elles ne servent qu'une fois connecté : un visiteur sur la connexion ne
- *   les télécharge pas). `crossorigin` : la même demande que le `fetch` de l'app.
+ *   les télécharge pas), sauf sur la connexion et l'inscription (`SIGN_IN_PAGES`), qui n'en ont
+ *   pas besoin : avec un cookie périmé, le préchargement y restait inutilisé (Chrome le
+ *   signalait) ; connecté, `signIn` les y demande, sans lui. `crossorigin` : la même demande que
+ *   le `fetch` de l'app.
  * Et le 404 du site, le même partout (`notFound`) : sans corps, revalidé à chaque fois (une adresse
  * inconnue de l'API, un fichier absent, un pseudo qui n'est à personne).
  */
@@ -54,6 +57,12 @@ const CSP = [
 /** Les pages publiques, que les moteurs de recherche indexent. */
 const PUBLIC_PAGES = /^\/(connexion|inscription|mentions-legales)?$/
 
+/**
+ * La connexion et l'inscription, qui n'ont pas besoin des espèces (pas de `needSpecies`,
+ * `router.tsx`) : connecté, `signIn` les y demande, sans le préchargement.
+ */
+const SIGN_IN_PAGES = /^\/(connexion|inscription)$/
+
 /** Le poste du développeur, en http : Vite et les tests. */
 const LOCAL = /^(localhost|127\.0\.0\.1)$/
 
@@ -84,7 +93,10 @@ export const siteHeaders: MiddlewareHandler = async (c, next) => {
   if (path.startsWith('/images/')) headers.set('Cross-Origin-Resource-Policy', 'same-origin')
   if (headers.get('Content-Type')?.startsWith('text/html')) {
     if (!PUBLIC_PAGES.test(path)) headers.set('X-Robots-Tag', 'noindex')
-    if (/better-auth\.session_token=/.test(c.req.header('cookie') ?? '')) {
+    if (
+      !SIGN_IN_PAGES.test(path) &&
+      /better-auth\.session_token=/.test(c.req.header('cookie') ?? '')
+    ) {
       headers.set('Link', '</api/species>; rel=preload; as=fetch; crossorigin')
     }
   }

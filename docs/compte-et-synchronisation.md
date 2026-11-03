@@ -76,7 +76,10 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   peut pas s'afficher », par `ErrorPage`) : la connexion, l'inscription et les mentions légales
   s'affichent sans l'API des données, et un visiteur ne les télécharge pas. Connecté, elles sont
   demandées avec la collection (`signIn`), et le Worker les fait précharger avec la page quand le
-  navigateur a une session (`Link`, d'après le cookie de Better Auth, `worker/headers.ts`). Le
+  navigateur a une session (`Link`, d'après le cookie de Better Auth, `worker/headers.ts`), sauf
+  sur la connexion et l'inscription, qui n'en ont pas besoin (pas de `needSpecies`) : avec un
+  cookie périmé, le préchargement y restait inutilisé (Chrome le signalait) ; connecté, `signIn`
+  les y demande, sans le préchargement (testé, `worker/tests/headers.test.ts`). Le
   routeur, le menu du compte et le Pokédex public lisent le store (`account`), jamais `useSession`
   de Better Auth, qui redemande la session à chaque montage. Pas connecté, `/`
   mène à `/connexion` et toute autre page de la coquille à `/connexion?retour=…` (`appLoader`,

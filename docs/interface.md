@@ -251,7 +251,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
 - Performance (mesurer en production, `bun run build` puis `bun run preview` : `bun dev` est 3 à 4
   fois plus lent ; mesuré en octobre 2026 sur une collection de 1 025 cartes, avant → après) : au
   démarrage, rien n'attend le script (le compte préchargé par `index.html`, les espèces par le
-  Worker quand le navigateur a une session, `worker/headers.ts` ; une fois le compte connu, elles
+  Worker quand le navigateur a une session, sauf sur la connexion et l'inscription,
+  `worker/headers.ts` ; une fois le compte connu, elles
   partent avec la collection, `signIn`), et la connexion, l'inscription
   et les mentions légales ne demandent pas les espèces (`docs/compte-et-synchronisation.md`). Les
   polices : seules les graisses que l'app emploie (`main.tsx` : Manrope 400 à 700, Space Grotesk 600
