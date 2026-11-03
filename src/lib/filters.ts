@@ -4,13 +4,14 @@
  * fiche d'un Pokémon (`speciesPath`), les onglets des Achats et les filtres de leur liste
  * d'achats (`parseShopping`, `shoppingUrl`), le Pokédex public d'un compte et son API
  * (`vitrinePath`, `vitrineUrl`), la langue et l'extension du Catalogue (`catalogLanguage`,
- * `catalogParams`), la page d'une collection d'extension et la carte dont elle ouvre la fenêtre
- * (`seriesPath`, `seriesCard`), où mène le lien d'une carte (`cardPath`) ; et la façon d'y changer
- * les filtres (`filterUpdate`).
+ * `catalogSet`, `catalogParams`), la page d'une collection d'extension et la carte dont elle ouvre
+ * la fenêtre (`seriesPath`, `seriesCard`), où mène le lien d'une carte (`cardPath`) ; et la façon
+ * d'y changer les filtres (`filterUpdate`).
  */
 
 import type { NavigateOptions } from 'react-router'
 import { generationById, POKEMON_TYPES, type Generation } from '@/config/pokedex'
+import type { CatalogSets } from '@/lib/card-catalog'
 import { cardLanguage } from '@/lib/collection'
 import { SPECIES } from '@/lib/species'
 import type { CardView, PokedexEntry } from '@/lib/pokedex'
@@ -191,6 +192,13 @@ export const filterUpdate = (search: boolean): NavigateOptions => ({
  */
 export const catalogLanguage = (params: URLSearchParams): CardLanguage =>
   params.get('langue') === 'fr' ? 'fr' : 'ja'
+
+/**
+ * L'adresse du Catalogue → son extension (`?set=`) parmi ses séries ; `undefined` sans elle, ou si
+ * elles ne l'ont pas (la page montre alors la plus récente, et sa route ne demande rien d'avance).
+ */
+export const catalogSet = (params: URLSearchParams, catalog: CatalogSets) =>
+  catalog.sets.find((known) => known.id === params.get('set'))
 
 /**
  * La langue et l'extension du Catalogue → l'adresse, sans la langue par défaut (le japonais) :

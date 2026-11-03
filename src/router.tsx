@@ -3,8 +3,8 @@ import { createBrowserRouter, data, redirect, type LoaderFunctionArgs } from 're
 import { AppShell } from '@/components/AppShell'
 import { isPseudo, loginPath } from '@/lib/account'
 import { getJson } from '@/lib/api'
-import { loadSets, prefetchSetCards } from '@/lib/card-catalog'
-import { catalogLanguage, vitrineUrl } from '@/lib/filters'
+import { loadSetCards, loadSets } from '@/lib/card-catalog'
+import { catalogLanguage, catalogSet, vitrineUrl } from '@/lib/filters'
 import { loadSpecies } from '@/lib/species'
 import { ErrorPage } from '@/pages/ErrorPage'
 import { HomePage } from '@/pages/home/HomePage'
@@ -51,8 +51,8 @@ const page = <M,>(module: Promise<M>, name: keyof M) =>
  * chargement ; les autres pages, plus lourdes (achats, valeur…), sont chargées à leur première
  * ouverture (`page`). La coquille et le Pokédex public attendent les espèces (`needSpecies`), pas
  * les autres pages ; le Pokédex public et le Catalogue demandent leurs données en même temps que
- * leur code. Créé une fois le compte connu (`main.tsx`) : le routeur lit la page ouverte dès sa
- * création.
+ * leur code (le Catalogue, les cartes de l'extension de l'adresse dès qu'arrivent ses séries).
+ * Créé une fois le compte connu (`main.tsx`) : le routeur lit la page ouverte dès sa création.
  */
 export const createRouter = () =>
   createBrowserRouter([
@@ -117,16 +117,17 @@ export const createRouter = () =>
             },
             {
               path: 'catalogue',
-              // Les extensions, et les cartes de celle de l'adresse, demandées en même temps que la
-              // page, pas après elle (`getJson` garde les réponses, que la page lit) ; rien pour un
-              // visiteur, que `appLoader` mène à la connexion.
+              // Les extensions demandées en même temps que la page, pas après elle, puis, dès
+              // qu'elles arrivent, les cartes de celle de l'adresse si elles l'ont (`catalogSet` :
+              // un code inconnu ne demande rien) ; `getJson` garde les réponses, que la page lit.
+              // Rien pour un visiteur, que `appLoader` mène à la connexion.
               loader: ({ request }) => {
                 if (!useAccountStore.getState().account) return null
                 const params = new URL(request.url).searchParams
-                const lang = catalogLanguage(params)
-                void loadSets(lang)
-                const set = params.get('set')
-                if (set) prefetchSetCards(lang, set)
+                void loadSets(catalogLanguage(params)).then((catalog) => {
+                  const set = catalog && catalogSet(params, catalog)
+                  if (set) void loadSetCards(set)
+                })
                 return null
               },
               lazy: () => page(import('@/pages/catalog/CatalogPage'), 'CatalogPage'),

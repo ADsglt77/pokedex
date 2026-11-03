@@ -305,10 +305,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   le navigateur est libre (les siennes seulement, `/api/catalog/species/<n°>` : moins de 1 Ko
   compressé en moyenne, 7 pour Pikachu). La page Catalogue ne charge que la liste
   des séries (`/api/catalog/sets`, environ 8 Ko compressés) puis les cartes de l'extension montrée
-  (`/api/catalog/sets/<code>`), chacune une fois, et leurs seuls prix ; la liste, et les cartes
-  de l'extension de l'adresse (`?set=`), sont demandées en même temps que le code de la page (le
-  `loader` de sa route, `router.tsx`), pas après lui ; un code que la liste n'a pas coûte une
-  requête de plus (un 404). Les longues listes
+  (`/api/catalog/sets/<code>`), chacune une fois, et leurs seuls prix ; la liste est demandée en
+  même temps que le code de la page (le `loader` de sa route, `router.tsx`), pas après lui, et les
+  cartes de l'extension de l'adresse (`?set=`) dès que la liste arrive, si elle a ce code
+  (`catalogSet` : un code inconnu ne demande rien, la page montre la plus récente).
+  Les longues listes
   du catalogue (les cartes d'une extension ou d'un Pokémon, jusqu'à 382 pour Pikachu ; les plus de
   400 extensions) sont dessinées au fur et à mesure (`useGrowingList` : 60 cartes ou 40
   extensions, puis autant chaque fois qu'un repère haut d'un écran, `growing-sentinel`, paraît au

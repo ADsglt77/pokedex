@@ -16,7 +16,7 @@
  */
 
 import { CARD_TYPES } from '@/config/catalog'
-import { derived, getJson } from '@/lib/api'
+import { derived } from '@/lib/api'
 import { isCardOf, numberKey, referenceCode, setKey } from '@/lib/card-code'
 import { catalogImage } from '@/lib/card-images'
 import { languageField, newCardId } from '@/lib/collection'
@@ -243,15 +243,8 @@ function readSet(set: SetSummary, file: CatalogSetFile): SetCard[] {
 }
 
 /** L'adresse des cartes d'une série (oubliée pour « Réessayer », `CatalogPage`). */
-export const setCardsUrl = (set: Pick<CatalogSet, 'language' | 'id'>) =>
+export const setCardsUrl = (set: SetSummary) =>
   `${catalogPath(set.language)}/sets/${encodeURIComponent(set.id)}`
-
-/**
- * Les cartes d'une série demandées d'avance, d'après son seul code (celui de l'adresse du
- * Catalogue, `router.tsx`) : `loadSetCards` lira la même réponse (`getJson` la garde).
- */
-export const prefetchSetCards = (language: CardLanguage, id: string) =>
-  void getJson(setCardsUrl({ language, id }), CATALOG_TIMEOUT)
 
 /**
  * Toutes les cartes d'une série, dans son ordre ; `null` si elles ne sont pas disponibles. Chaque

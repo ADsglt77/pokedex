@@ -24,7 +24,7 @@ import {
   type SetCard,
   type SetSummary,
 } from '@/lib/card-catalog'
-import { catalogLanguage, catalogParams, searchForm, seriesPath } from '@/lib/filters'
+import { catalogLanguage, catalogParams, catalogSet, searchForm, seriesPath } from '@/lib/filters'
 import { focusAfter, focusTileAfter } from '@/lib/focus'
 import { details, formatDate, formatInteger, formatList, pageTitle, plural } from '@/lib/format'
 import { cardmarketIds, priceText } from '@/lib/prices'
@@ -115,7 +115,7 @@ function CatalogUnavailable({ retry }: { retry: ReturnType<typeof useRetry> }) {
 function SetBrowser({ catalog }: { catalog: CatalogSets }) {
   const [params, setParams] = useSearchParams()
   // L'extension de l'adresse, sinon la plus récente.
-  const set = catalog.sets.find((known) => known.id === params.get('set')) ?? catalog.sets[0]!
+  const set = catalogSet(params, catalog) ?? catalog.sets[0]!
 
   return (
     <Stack gap={4}>
