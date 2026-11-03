@@ -51,10 +51,13 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   routes ne sont jamais gardées en cache (`no-store`). Une modification (ni `GET` ni `HEAD`) venue
   d'une autre origine est refusée (403) avant la lecture de son corps, sur toute adresse du
   serveur, `/api/auth/*` compris (`sameOrigin`, `worker/auth.ts`) : un autre site ne connecte pas
-  un visiteur à un compte qu'il ne connaît pas (testé). Devant les limites de Better Auth, le
-  Worker limite tout le compte (`/api/auth/`), avec le Pokédex public (`/api/vitrine/`) et
-  l'aperçu d'un lien partagé (`/pseudo` : toute adresse d'un seul segment), à 40 requêtes par
-  10 s et par visiteur (son réseau /64 en IPv6, `worker/limits.ts`).
+  un visiteur à un compte qu'il ne connaît pas (testé). Un corps de plus de 16 Ko sur
+  `/api/auth/*` est refusé (413, `maxBody`, `worker/auth.ts`) avant Better Auth, qui lirait tout :
+  Cloudflare accepte 100 Mo, de quoi dépasser les 128 Mo d'un exemplaire du Worker, et couper avec
+  lui les requêtes des autres visiteurs (testé, sa taille annoncée ou non). Devant les limites de
+  Better Auth, le Worker limite tout le compte (`/api/auth/`), avec le Pokédex public
+  (`/api/vitrine/`) et l'aperçu d'un lien partagé (`/pseudo` : toute adresse d'un seul segment), à
+  40 requêtes par 10 s et par visiteur (son réseau /64 en IPv6, `worker/limits.ts`).
 - **L'app ne s'ouvre que connecté** (décision de l'utilisateur, octobre 2026) : le compte connecté
   du store (`account` : son id et son pseudo ; `null` : personne, `store/account.ts`), fixé au
   démarrage avant le routeur (`loadAccount` lit `GET /api/account?demarrage`, qui dit qui est
@@ -238,7 +241,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   possédé ni commandé est « Collection supprimée ») ; une case obtenue est « Carte possédée », sans
   « Carte modifiée » (testé, `worker/tests/journal.test.ts`). L'export et l'import, que le navigateur
   signale (`POST /api/journal`) : une ligne par compte, par évènement et par minute au plus
-  (`journalOnce` : un compte qui l'appellerait sans fin noierait le journal ; testé).
+  (`journalOnce` : un compte qui l'appellerait sans fin noierait le journal ; testé) ; plus de
+  1 Ko, 413 (`maxBody`, après la session : sans elle, 401 ; testé).
   « Annuler », l'import, « Effacer » sont des modifications comme les autres. Le compte
   (`AccountMenu`, en pied de la barre latérale, ou en icône dans la barre du haut sur petit écran ;
   seulement connecté) montre son pseudo et l'état : enregistrée, enregistrement, hors ligne

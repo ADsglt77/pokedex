@@ -4,7 +4,8 @@
  * une sans boîte) ; une seule session par compte ; supprimé seulement avec son mot de passe ; un
  * pseudo quitté jamais repris par un autre compte (la base le refuse elle-même), seuls les 3
  * derniers réservés. D'un autre site, une modification est refusée partout (403, avant la lecture
- * de son corps), une lecture jamais. Les données de référence partent au Worker des données, sous
+ * de son corps), une lecture jamais. Un corps de plus de 16 Ko, refusé (413) avant Better Auth,
+ * que sa taille soit annoncée ou non. Les données de référence partent au Worker des données, sous
  * `/v1`, jamais avec le cookie de la session (`worker/data.ts`). Le Worker entier, dans le
  * moteur de Cloudflare, sur une base D1 neuve pour le fichier : chaque test crée ses comptes, sous
  * des pseudos à lui.
@@ -165,6 +166,32 @@ describe('d’un autre site : une modification refusée partout, une lecture jam
       expect(response.status).toBe(200)
       expect(await response.json()).toEqual({ user: null })
     }
+  })
+})
+
+describe('un corps de plus de 16 Ko : refusé avant Better Auth', () => {
+  test('une inscription allongée à 1 Mo, annoncée ou en flux : 413 sans corps, jamais en cache, rien de créé', async () => {
+    // Une inscription valable, suivie d'espaces : lue jusqu'au bout, elle créerait le compte.
+    const json =
+      JSON.stringify({ name: 'Gary', username: 'Gary', email: '', password: PASSWORD }) +
+      ' '.repeat(1_000_000)
+    const send = (body: BodyInit, headers: Record<string, string> = {}) =>
+      call('/api/auth/sign-up/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Origin: ORIGIN, ...headers },
+        body,
+      })
+    // Sa taille annoncée (`Content-Length`, une requête ordinaire), ou en flux, sans taille.
+    const declared = await send(json, { 'Content-Length': String(json.length) })
+    const streamed = await send(new Blob([json]).stream())
+    for (const response of [declared, streamed]) {
+      expect(response.status).toBe(413)
+      expect(response.headers.get('cache-control')).toBe('no-store')
+      expect(await response.text()).toBe('')
+    }
+    expect(await holders('gary')).toHaveLength(0)
+    // Sans les espaces : créé, comme avant.
+    expect((await createAccount('Gary')).response.status).toBe(200)
   })
 })
 

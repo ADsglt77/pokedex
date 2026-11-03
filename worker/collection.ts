@@ -17,7 +17,7 @@
  *   400, sans rien au journal.
  * - `POST /api/journal` `{ event }` : ce que le navigateur fait seul de la collection (export,
  *   import), au journal. Une ligne par compte, par évènement et par minute au plus : n'importe quel
- *   compte peut l'appeler à volonté.
+ *   compte peut l'appeler à volonté. Plus de 1 Ko : 413 (`maxBody`).
  * Sans session : 401, avant de rien lire ni décompresser ; jamais gardé en cache (`signedIn`).
  */
 
@@ -33,7 +33,7 @@ import {
   type JournalEvent,
   type ShoppingData,
 } from '@/types'
-import { signedIn, type SignedIn } from './auth'
+import { maxBody, signedIn, type SignedIn } from './auth'
 import { db } from './db'
 import { documentChanges, journal, journalOnce, type JournalEntry } from './journal'
 import { collections } from './schema'
@@ -204,7 +204,7 @@ export const collectionRoutes = new Hono<SignedIn>()
       return c.json<CollectionSaved>({ version })
     },
   )
-  .post('/journal', signedIn, async (c) => {
+  .post('/journal', signedIn, maxBody(1024), async (c) => {
     const { event } = ((await c.req.json().catch(() => null)) ?? {}) as { event?: unknown }
     if (event !== 'export' && event !== 'import') return c.json(null, 400)
     journalOnce(`${c.var.user.id} ${event}`, EVENTS[event], c.req.raw)

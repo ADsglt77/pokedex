@@ -15,6 +15,8 @@
  *   autre. Les adresses du site (`RESERVED_PSEUDOS`) ne sont à personne.
  * - Une modification venue d'une autre origine est refusée (403, `sameOrigin`) : un autre site ne
  *   connecte pas un visiteur à un compte qu'il ne connaît pas.
+ * - Un corps de plus de 16 Ko (le site n'envoie qu'un pseudo et des mots de passe) est refusé
+ *   (413, `maxBody`) avant Better Auth, qui lit tout ce qu'il reçoit.
  * - Une seule session par compte : se connecter sur un appareil déconnecte ses autres. La
  *   collection n'est donc modifiée que d'un appareil à la fois.
  * Sessions de 60 jours, renouvelées chaque jour d'usage, dans un cookie (`__Secure-`, SameSite
@@ -36,6 +38,7 @@ import { username, USERNAME_ERROR_CODES } from 'better-auth/plugins'
 import { env } from 'cloudflare:workers'
 import { and, eq, ne } from 'drizzle-orm'
 import { Hono, type Context, type MiddlewareHandler } from 'hono'
+import { bodyLimit } from 'hono/body-limit'
 import { createMiddleware } from 'hono/factory'
 import { PASSWORD_MIN, PSEUDO } from '@/config/account'
 import { isPseudo } from '@/lib/account'
@@ -293,6 +296,15 @@ export const sameOrigin: MiddlewareHandler = async (c, next) => {
 }
 
 /**
+ * Un corps de plus de `maxSize` octets : 413 sans corps, jamais en cache, sans le lire plus loin
+ * (sa taille annoncée suffit ; envoyé en flux, il n'est lu que jusqu'au plafond). Cloudflare en
+ * accepte jusqu'à 100 Mo : lu en entier, un seul ferait dépasser ses 128 Mo à l'exemplaire du
+ * Worker, et couperait avec lui les requêtes des autres visiteurs.
+ */
+export const maxBody = (maxSize: number) =>
+  bodyLimit({ maxSize, onError: (c) => c.body(null, 413, { 'Cache-Control': 'no-store' }) })
+
+/**
  * La session d'une requête, et sa réponse jamais en cache. Renouvelée (une fois par jour d'usage),
  * son nouveau cookie part avec la réponse : sans lui, le navigateur garderait l'ancien, et il
  * faudrait se reconnecter au bout de 60 jours.
@@ -333,7 +345,7 @@ export const signedIn = createMiddleware<SignedIn>(async (c, next) => {
  *   une seule requête au démarrage.
  */
 export const accountRoutes = new Hono()
-  .all('/auth/*', async (c) => {
+  .all('/auth/*', maxBody(16 * 1024), async (c) => {
     const request = c.req.raw
     // Pour le journal, l'adresse comme la lit Better Auth (« /update-user/ » aussi).
     const path = new URL(request.url).pathname.replace(/\/{2,}/g, '/').replace(/\/$/, '')

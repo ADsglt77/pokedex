@@ -12,7 +12,8 @@
  * document refusé) ; un envoi renvoyé tel quel après une réponse perdue est reconnu (200, la même
  * version), un autre parti de la même version reste refusé (409). Chaque compte ne touche qu'à sa
  * collection, et la sienne part avec lui. Le journal : ce qu'un compte peut répéter à volonté (un
- * export signalé, un envoi refusé) n'y écrit qu'une ligne par minute. Et ce que montre le Pokédex
+ * export signalé, un envoi refusé) n'y écrit qu'une ligne par minute ; un signalement de plus de
+ * 1 Ko, refusé (413 ; sans session, 401). Et ce que montre le Pokédex
  * public d'un compte (`/api/vitrine/<pseudo>`, l'aperçu d'un lien partagé) : ce qu'il laisserait
  * passer serait public. Le Worker entier, sur une base D1 neuve pour le fichier, avec un compte
  * créé comme à l'inscription et un premier envoi ; chaque test part de la version du moment.
@@ -464,6 +465,24 @@ describe('le journal : aucun compte ne le noie', () => {
       expect((await collection('PUT', sent, asRocky)).status).toBe(400)
     }
     expect(lines('Envoi refusé')).toBe(1)
+  })
+
+  test('un signalement de plus de 1 Ko : 413 avec la session, 401 sans, rien au journal', async () => {
+    // Un export valable, suivi d'espaces jusqu'à 1 Mo : lu jusqu'au bout, il serait noté.
+    const body = JSON.stringify({ event: 'export' }) + ' '.repeat(1_000_000)
+    log.mockClear()
+    for (const [session, status] of [
+      [cookie, 413],
+      ['', 401],
+    ] as const) {
+      const response = await call('/api/journal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: session },
+        body,
+      })
+      expect(response.status).toBe(status)
+    }
+    expect(log).not.toHaveBeenCalled()
   })
 })
 
