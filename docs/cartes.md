@@ -111,6 +111,12 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   de la nouvelle favorite (`CardActions`), la fenêtre d'une carte d'une collection
   (`SeriesCard`), la liste d'achats (`WishCard`) et les lignes des commandes et de l'assistant
   (`CardLine`).
+  En quittant le champ de l'id, la saisie dit ce que Cardmarket en sait (`CardmarketCheck` :
+  « Chez Cardmarket : <nom> · <prix> », ou pas de prix connu). Cette ligne a sa place, même vide
+  (une ligne, `.idCheck` de `CardFields.module.css`) : en apparaissant, elle ne pousse pas
+  « Ajouter comme » sous le pointeur (un clic sur « Possédée » juste après l'id était perdu,
+  novembre 2026). Plus longue qu'une ligne (un nom long sur téléphone, un id sans prix), elle
+  pousse encore ce qui suit.
   L'enregistrement (`useCardDraft.save`) attend le prix et l'image : une seule fois à la fois, la
   fenêtre ne se ferme pas pendant ce temps. Une page Cardmarket qui n'était que celle de l'id de
   départ est oubliée quand l'id change (le lien suit alors le nouvel id) ; une référence qui

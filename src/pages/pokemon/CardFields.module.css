@@ -28,6 +28,13 @@
   font-size: var(--text-md);
 }
 
+/* La ligne de l'id Cardmarket (« Chez Cardmarket : … ») a sa place, même vide : en quittant le
+   champ, elle ne pousse pas « Ajouter comme » sous le pointeur (un clic sur « Possédée » juste
+   après l'id était perdu). */
+.idCheck {
+  min-height: 1lh;
+}
+
 @media (max-width: 40rem) {
   .layout {
     grid-template-columns: minmax(0, 1fr);

@@ -86,7 +86,7 @@ export function CardFields({
           onBlur={draft.check}
           error={errors.cardmarket}
         />
-        <div role="status">
+        <div role="status" className={styles.idCheck}>
           {draft.checkedId !== null && (
             <Suspense fallback={<p className="muted">Recherche de la carte chez Cardmarket…</p>}>
               <CardmarketCheck cardmarket={draft.checkedId} />
