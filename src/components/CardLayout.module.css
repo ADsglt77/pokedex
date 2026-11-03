@@ -1,0 +1,29 @@
+/* Une carte en grand : son image à gauche, qui reste à l'écran quand le reste défile, ses infos à
+   droite ; l'une sous l'autre sur un écran étroit. La fiche d'une carte du catalogue
+   (`CardDetails`) et la fenêtre d'une case (`SeriesCard`) y renvoient (`composes`), chacune avec
+   ses infos (`.info`). */
+.sheet {
+  display: grid;
+  grid-template-columns: minmax(14rem, 22rem) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--camply-space-6);
+  max-width: 72rem;
+  margin-inline: auto;
+}
+
+.art {
+  position: sticky;
+  top: 0;
+}
+
+@media (max-width: 48rem) {
+  .sheet {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .art {
+    position: static;
+    justify-self: center;
+    width: min(100%, 18rem);
+  }
+}

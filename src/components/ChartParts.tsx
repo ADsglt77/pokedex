@@ -1,6 +1,15 @@
 import { SegmentedControl } from '@camply/ui'
-import { CHART_PERIOD_LABELS, type ChartPeriod, type ChartStat } from '@/lib/chart'
-import { toOptions } from '@/lib/format'
+import { PriceChart } from '@/components/PriceChart'
+import {
+  CHART_PERIOD_LABELS,
+  inWindow,
+  levelStats,
+  periodWindow,
+  type ChartPeriod,
+  type ChartStat,
+  type PricePoint,
+} from '@/lib/chart'
+import { toOptions, today } from '@/lib/format'
 import styles from './ChartParts.module.css'
 
 const PERIOD_OPTIONS = toOptions(CHART_PERIOD_LABELS)
@@ -36,5 +45,28 @@ export function ChartStats({ items }: { items: ChartStat[] }) {
         </div>
       ))}
     </dl>
+  )
+}
+
+/**
+ * Un prix ou une valeur (`series`, du premier jour connu au dernier), jour par jour sur la période,
+ * et ses chiffres : le prix d'une carte, la valeur de la collection.
+ */
+export function LevelChart({
+  series,
+  period,
+  label,
+}: {
+  series: PricePoint[]
+  period: ChartPeriod
+  label: string
+}) {
+  const window = periodWindow(period, today(), series[0]?.date ?? null)
+  const points = inWindow(series, window)
+  return (
+    <>
+      <PriceChart points={points} window={window} label={label} />
+      <ChartStats items={levelStats(points)} />
+    </>
   )
 }

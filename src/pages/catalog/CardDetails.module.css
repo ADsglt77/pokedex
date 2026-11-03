@@ -1,20 +1,14 @@
-/* La fiche d'une carte : son image à gauche, qui reste à l'écran quand le reste défile, ce qu'on en
-   sait et son prix à droite ; l'une sous l'autre sur un écran étroit. */
+/* La fiche d'une carte (`CardLayout`) : son image à gauche, ce qu'on en sait et son prix à
+   droite. */
 .sheet {
-  display: grid;
-  grid-template-columns: minmax(14rem, 22rem) minmax(0, 1fr);
-  align-items: start;
-  gap: var(--camply-space-6);
-  max-width: 72rem;
-  margin-inline: auto;
+  composes: sheet from '../../components/CardLayout.module.css';
   /* Ramenée à l'écran pour une autre carte (`scrollIntoView`), la fiche remonte tout en haut de
      ce qui défile, marge de la fenêtre comprise. */
   scroll-margin-top: 100vh;
 }
 
 .art {
-  position: sticky;
-  top: 0;
+  composes: art from '../../components/CardLayout.module.css';
 }
 
 .info {
@@ -75,16 +69,4 @@
   color: var(--camply-success);
   font-size: var(--text-md);
   font-weight: 600;
-}
-
-@media (max-width: 48rem) {
-  .sheet {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .art {
-    position: static;
-    justify-self: center;
-    width: min(100%, 18rem);
-  }
 }

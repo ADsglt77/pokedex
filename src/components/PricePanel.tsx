@@ -1,11 +1,10 @@
 import { Skeleton, Stat } from '@camply/ui'
 import { Suspense, use, useState } from 'react'
-import { ChartPeriodControl, ChartStats } from '@/components/ChartParts'
+import { ChartPeriodControl, LevelChart } from '@/components/ChartParts'
 import { CardmarketLink } from '@/components/CardmarketLink'
 import { Panel } from '@/components/Panel'
-import { PriceChart } from '@/components/PriceChart'
-import { inWindow, levelStats, periodWindow, type ChartPeriod } from '@/lib/chart'
-import { details, formatEuro, today } from '@/lib/format'
+import type { ChartPeriod } from '@/lib/chart'
+import { details, formatEuro } from '@/lib/format'
 import { cardHistory, gainPercent, priceOf } from '@/lib/prices'
 import { loadPriceHistory, usePrices, usePricesMissing } from '@/store/prices'
 import type { PokemonCard } from '@/types'
@@ -108,14 +107,14 @@ export function PricePanel({
 function PriceHistory({ card }: { card: PricedCard }) {
   const [period, setPeriod] = useState<ChartPeriod>('month')
   const history = use(loadPriceHistory(card.cardmarket!))
-  const series = cardHistory(history)
-  const window = periodWindow(period, today(), series[0]?.date ?? null)
-  const points = inWindow(series, window)
   return (
     <div className={styles.history}>
       <ChartPeriodControl value={period} onChange={setPeriod} />
-      <PriceChart points={points} window={window} label={`Prix de la carte ${card.reference}`} />
-      <ChartStats items={levelStats(points)} />
+      <LevelChart
+        series={cardHistory(history)}
+        period={period}
+        label={`Prix de la carte ${card.reference}`}
+      />
     </div>
   )
 }

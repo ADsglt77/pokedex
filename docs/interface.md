@@ -127,7 +127,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   `?carte=`, arrondi au palier, souvent une case loin dans l'extension), seules celles à l'écran
   le sont (`content-visibility`), et mémoïsées : une carte qui change de statut ne redessine
   qu'elle.
-  Une carte ouvre sa fenêtre (`SeriesCard`, pleine page comme la fiche d'une carte du catalogue) :
+  Une carte ouvre sa fenêtre (`SeriesCard`, pleine page et mise en page comme la fiche d'une carte
+  du catalogue : `CardLayout`) :
   son image, sa référence et son drapeau, son statut et ses Pokémon (chacun vers sa fiche ; aucun
   pour un dresseur), « Je possède cette carte » et « Marquer comme commandée », le prix payé et la
   confirmation pour quitter « possédée » (`CardStatusControls`, les mêmes que sur la fiche d'un
@@ -201,8 +202,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   courbes (`PriceChart`, `lib/chart.ts`) vont jour par jour, sur la période choisie (7 jours,
   30 jours, 1 an, tout ; 7 jours au moins, l'axe la couvre en entier) : Valeur › Évolution (valeur
   de la collection, Pokémon débloqués, dépenses cumulées depuis le début de la période) et le prix
-  d'une carte sur sa fiche, chacune avec ses chiffres dessous (`ChartStats` : évolution, plus haut,
-  plus bas, moyenne ; pour un total, ce qu'il a gagné et son rythme par semaine). Aucun point
+  d'une carte sur sa fiche (la même courbe que la valeur : `LevelChart`), chacune avec ses chiffres
+  dessous (`ChartStats` : évolution, plus haut, plus bas, moyenne ; pour un total, ce qu'il a gagné
+  et son rythme par semaine). Aucun point
   inventé : un jour sans prix n'en a pas ; un total (`fromZero`) part de zéro. Cardmarket ne publie
   que le guide du jour (aucune archive) : l'historique vient du relevé quotidien de l'API des
   données, et, pour les 180 jours qui le précèdent, de Pokécardex (sa tâche `history`), au même

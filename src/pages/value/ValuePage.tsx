@@ -2,7 +2,7 @@ import { Alert, Skeleton, SkeletonText, Stack, Stat } from '@camply/ui'
 import { Flag, Wallet } from '@camply/ui/icons'
 import { Suspense, use, useMemo, useState } from 'react'
 import { CardPageLink } from '@/components/CardPageLink'
-import { ChartPeriodControl, ChartStats } from '@/components/ChartParts'
+import { ChartPeriodControl, ChartStats, LevelChart } from '@/components/ChartParts'
 import { CollectionValueStat } from '@/components/CollectionValueStat'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
@@ -26,7 +26,6 @@ import { spendingEvents, spentOn } from '@/lib/budget'
 import {
   firstDate,
   inWindow,
-  levelStats,
   periodWindow,
   runningTotal,
   weeksOf,
@@ -219,14 +218,7 @@ function CollectionChart({ cards, period }: { cards: PokemonCard[]; period: Char
       </p>
     )
   }
-  const window = periodWindow(period, today(), series[0]?.date ?? null)
-  const points = inWindow(series, window)
-  return (
-    <>
-      <PriceChart points={points} window={window} label="Valeur de ma collection" />
-      <ChartStats items={levelStats(points)} />
-    </>
-  )
+  return <LevelChart series={series} period={period} label="Valeur de ma collection" />
 }
 
 function SpendingChart({ events, period }: { events: PricePoint[]; period: ChartPeriod }) {
