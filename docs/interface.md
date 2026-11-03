@@ -76,7 +76,13 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   `usePhone` en JS, la même borne que les feuilles CSS). Une page
   découpée en composants (l'accueil, `pages/home/` ; Achats) : les classes d'un seul composant dans
   son propre module CSS, celles qu'en partagent plusieurs dans celui de la page, importé sous le
-  nom `page`. Occuper l'écran : une page va jusqu'à 120rem (`--page-max`, toute la largeur jusqu'au très grand écran,
+  nom `page`. Un bloc que reprennent deux feuilles est un module à part, auquel chacune renvoie par
+  `composes … from` en gardant ses propres réglages : `CardLayout` (plus bas), le cadre du logo
+  d'une extension (`LogoFrame` : tuiles des Collections, page d'une collection, chacune sa
+  hauteur), le bouton en tuile (`TileButton` : `SetPicker`, `CardList`, chacun son bord, sa grille
+  et son survol). Vite recopie ce module devant chaque feuille qui y renvoie : une de ses
+  propriétés ne se redéfinit que sous un sélecteur plus précis (`:hover`), jamais dans la classe
+  qui y renvoie, où la copie chargée en dernier l'emporterait. Occuper l'écran : une page va jusqu'à 120rem (`--page-max`, toute la largeur jusqu'au très grand écran,
   où elle reste centrée) et c'est un conteneur (`.container` : `container: page`) ; ses blocs se
   règlent sur la place qu'elle a vraiment (`@container page`, barre latérale déduite), pas sur la
   largeur de l'écran (à 1 024 px, la barre latérale en prend un quart). Un tableau de données

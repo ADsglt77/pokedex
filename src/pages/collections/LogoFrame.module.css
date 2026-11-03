@@ -1,0 +1,20 @@
+/* Le cadre du logo d'une extension (ou du dessin du Pokédex) : centré sur son fond. Les tuiles des
+   Collections et la page d'une collection y renvoient (`composes`), chacune avec sa hauteur. Vite
+   le recopie devant chaque feuille qui y renvoie : une propriété d'ici ne se redéfinit jamais dans
+   la classe qui y renvoie (la copie chargée en dernier l'emporterait). */
+.frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--camply-space-3);
+  border-radius: var(--camply-radius);
+  background: var(--camply-fill-2);
+  color: var(--camply-text-muted);
+}
+
+/* Sans logo, le code de l'extension, à la taille d'un titre. */
+.logo {
+  width: 100%;
+  height: 100%;
+  font-size: var(--title-sm);
+}

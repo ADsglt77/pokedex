@@ -48,21 +48,11 @@
 
 /* Une extension : son logo, son nom, son code et son année, puis son nombre de cartes. */
 .set {
+  composes: tile from './TileButton.module.css';
   display: grid;
   gap: 0.25rem;
-  width: 100%;
-  height: 100%;
   padding: var(--camply-space-2) var(--camply-space-3) var(--camply-space-3);
-  border: 1px solid var(--camply-border-soft);
-  border-radius: var(--camply-radius);
-  background: var(--camply-fill-1);
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    background var(--duration-fast),
-    border-color var(--duration-fast);
+  border-color: var(--camply-border-soft);
 }
 
 .set:hover {

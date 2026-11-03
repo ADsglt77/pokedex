@@ -9,21 +9,12 @@
 }
 
 .art {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  composes: frame from './LogoFrame.module.css';
   height: 7rem;
-  padding: var(--camply-space-3);
-  border-radius: var(--camply-radius);
-  background: var(--camply-fill-2);
-  color: var(--camply-text-muted);
 }
 
-/* Sans logo, le code de l'extension, à la taille d'un titre. */
 .logo {
-  width: 100%;
-  height: 100%;
-  font-size: var(--title-sm);
+  composes: logo from './LogoFrame.module.css';
 }
 
 /* Les trois chiffres côte à côte quand ils tiennent (deux sur téléphone), la barre sur toute la
