@@ -170,7 +170,8 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
   locale). Une telle migration ne part donc jamais telle quelle : pour une contrainte sur `user`, un
   déclencheur `RAISE(ABORT)` (comme ceux de `0001_pseudos.sql`) ; si la reconstruction est
   inévitable, l'écrire à la main : mettre de côté sessions, comptes et collections, reconstruire,
-  les remettre, puis recréer les déclencheurs.
+  les remettre, puis recréer les déclencheurs, et la marquer en tête `-- reconstruction vérifiée`
+  (sans cette marque, son `PRAGMA foreign_keys=OFF` fait échouer `tests/migrations.test.ts`).
 - **Réparer la base après une erreur** (pas une sauvegarde : aucune n'est gardée, décision de
   l'utilisateur) : D1 garde son historique 30 jours (Time Travel), `npx wrangler d1 time-travel
   restore`. Pour celle du site, relever ensuite les numéros des collections (`UPDATE collections

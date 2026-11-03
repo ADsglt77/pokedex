@@ -1,15 +1,17 @@
 /**
  * Le prix d'une carte, que lisent la liste d'achats et le plan : celui de son id Cardmarket, jamais
- * celui d'une autre carte, et aucun s'il n'y en a pas (aucun prix n'est inventé). Et les
- * historiques de la collection, que la courbe de sa valeur additionne. Et les demandes par paquets
- * (l'API des données refuse plus de 1 025 ids ; des paquets de prix qui se décaleraient seraient
- * redemandés sans fin, et le Worker du site en refuserait l'excès (`worker/limits.ts`) : plus aucun
- * prix ; les historiques et les lignes de Cardmarket demandés d'un coup dépasseraient sa limite,
- * et une réponse partielle fausserait la courbe ou la liste de souhaits). Et le coût pour
- * compléter le Pokédex : la favorite de chaque Pokémon à débloquer, une carte comptée
- * une fois, rien pour un Pokémon déjà débloqué (par n'importe quelle de ses cartes) ou dont une
- * carte est commandée. Les prix et leur historique eux-mêmes : l'API des données (ses propres
- * tests).
+ * celui d'une autre carte, et aucun s'il n'y en a pas (aucun prix n'est inventé). Et la valeur de
+ * la collection, que montrent l'accueil, la page Valeur et le Pokédex public : par statut, la somme
+ * des prix connus, les cartes sans prix à part, le prix payé ; et son gain, où une carte payée sans
+ * prix compte ce qu'elle a coûté (aucun gain inventé). Et les historiques de la collection, que la
+ * courbe de sa valeur additionne. Et les demandes par paquets (l'API des données refuse plus de
+ * 1 025 ids ; des paquets de prix qui se décaleraient seraient redemandés sans fin, et le Worker du
+ * site en refuserait l'excès (`worker/limits.ts`) : plus aucun prix ; les historiques et les lignes
+ * de Cardmarket demandés d'un coup dépasseraient sa limite, et une réponse partielle fausserait la
+ * courbe ou la liste de souhaits). Et le coût pour compléter le Pokédex : la favorite de chaque
+ * Pokémon à débloquer, une carte comptée une fois, rien pour un Pokémon déjà débloqué (par
+ * n'importe quelle de ses cartes) ou dont une carte est commandée. Les prix et leur historique
+ * eux-mêmes : l'API des données (ses propres tests).
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test'
@@ -17,11 +19,14 @@ import { buildPokedex } from '@/lib/pokedex'
 import {
   collectionHistory,
   completionCost,
+  gainPercent,
   historiesOf,
   idBatches,
   loadInBatches,
   priceBatches,
   priceOf,
+  tallyByStatus,
+  trackedCards,
 } from '@/lib/prices'
 import type { CardPriceHistory, PriceFile } from '@/types'
 import { card, collectionWith, loadTestSpecies, ownership, withCards } from './fixtures'
@@ -52,6 +57,57 @@ describe('priceOf', () => {
 
   test('sans fichier de prix : pas de prix', () => {
     expect(priceOf(null, { cardmarket: 719445 })).toBeNull()
+  })
+})
+
+describe('la valeur de la collection', () => {
+  const values: PriceFile = {
+    date: '2026-10-12',
+    cards: { '1': [50, 40, 45], '3': [8, 7, 8], '4': [20, 18, 20] },
+  }
+  const tallies = tallyByStatus(
+    trackedCards(
+      withCards(
+        collectionWith({
+          paid: ownership('owned', { paidPrice: 40 }),
+          unpriced: ownership('owned', { paidPrice: 12 }),
+          gift: ownership('owned'),
+          waiting: ownership('ordered', { paidPrice: 15 }),
+        }),
+        // Possédée, avec un prix et un prix payé.
+        card('paid', [25], { cardmarket: 1 }),
+        // Possédée et payée, sans prix ce jour.
+        card('unpriced', [1], { cardmarket: 2 }),
+        // Possédée avec un prix, sans prix payé noté.
+        card('gift', [4], { cardmarket: 3 }),
+        card('waiting', [644], { cardmarket: 4 }),
+      ),
+      values,
+    ),
+  )
+
+  test('par statut : la somme des prix connus, les cartes sans prix à part, le prix payé', () => {
+    expect(tallies.owned).toEqual({
+      count: 3,
+      value: 58,
+      unpriced: 1,
+      paid: 52,
+      paidCardsValue: 62,
+    })
+    expect(tallies.ordered).toEqual({
+      count: 1,
+      value: 20,
+      unpriced: 0,
+      paid: 15,
+      paidCardsValue: 20,
+    })
+  })
+
+  test('le gain : une carte payée sans prix compte ce qu’elle a coûté, une carte sans prix payé n’y est pas', () => {
+    // 50 € payée 40 €, et 12 € payée 12 € : 62 € pour 52 € payés, +19 %.
+    expect(gainPercent(tallies.owned.paidCardsValue, tallies.owned.paid)).toBe(19)
+    // Aucun prix payé noté : pas de gain.
+    expect(gainPercent(8, 0)).toBeUndefined()
   })
 })
 

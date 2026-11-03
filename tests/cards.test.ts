@@ -6,12 +6,25 @@
  * ajoute, qu'on retire ou qu'on corrige, un Pokémon qui a des cartes en ayant toujours une, jamais
  * celle d'un autre. Et les règles de la collection, des commandes et des collections
  * d'extensions ne modifient jamais ce qu'elles reçoivent : « Annuler » remet l'état d'avant,
- * qu'une règle qui le modifierait aurait déjà changé. Enfin, la langue d'une carte (absente :
- * japonaise), qui la suit quand on la détache d'un Pokémon.
+ * qu'une règle qui le modifierait aurait déjà changé. La langue d'une carte (absente :
+ * japonaise), qui la suit quand on la détache d'un Pokémon. Enfin, les chemins des images que la
+ * collection garde, ceux que sert l'API des données (ses tests les figent de son côté), et le
+ * numéro comparable d'une carte, sa règle aussi ; et une image de chez la source, que son accord
+ * interdit d'afficher : refusée, ses domaines reconnus par leur empreinte, pas leurs voisins.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test'
+import { artworkUrl, spriteUrl } from '@/config/pokedex'
 import { catalogTarget, type CatalogCard } from '@/lib/card-catalog'
+import { numberKey } from '@/lib/card-code'
+import {
+  catalogImage,
+  isSourceImage,
+  rarityIcon,
+  setLogo,
+  showsImage,
+  typeIcon,
+} from '@/lib/card-images'
 import {
   adopt,
   cardLanguage,
@@ -203,5 +216,53 @@ describe('les règles ne modifient pas ce qu’elles reçoivent (« Annuler »)'
     expect(placed).toEqual(placedBefore)
     expect(slots).toEqual(slotsBefore)
     expect(started).toEqual(startedBefore)
+  })
+})
+
+describe('les images', () => {
+  test('les chemins que sert l’API des données, ceux du français sous fr/', () => {
+    expect(catalogImage('ja', 'SVP', 1)).toEqual({
+      small: '/images/cards/SVP/1-md.webp',
+      large: '/images/cards/SVP/1-hd.webp',
+    })
+    expect(catalogImage('fr', 'SVP', 1)).toEqual({
+      small: '/images/cards/fr/SVP/1-md.webp',
+      large: '/images/cards/fr/SVP/1-hd.webp',
+    })
+    expect([setLogo('ja', 'SVP', 'md'), setLogo('fr', 'SVP', 'hd')]).toEqual([
+      '/images/sets/SVP-md.webp',
+      '/images/sets/fr/SVP-hd.webp',
+    ])
+    expect([typeIcon(3), rarityIcon(33), spriteUrl(25), artworkUrl(25)]).toEqual([
+      '/images/types/3.webp',
+      '/images/rarities/33.webp',
+      '/images/species/25.png',
+      '/images/species/artwork/25.png',
+    ])
+  })
+
+  test('le numéro d’une carte : 017 et 17 sont la même carte, tg01 et TG01 aussi', () => {
+    expect([numberKey('017'), numberKey('tg01')]).toEqual(['17', 'TG01'])
+  })
+
+  test('une adresse de chez la source : refusée, son site comme ses serveurs d’images', () => {
+    const source = [
+      'https://pokecardex.com/carte.jpg',
+      'https://www.pokecardex.com/carte.jpg',
+      'https://pokecardex.b-cdn.net/logo.png',
+      'https://pokecardex-scans.b-cdn.net/scan.jpg',
+      'https://pokecardex.com./carte.jpg',
+    ]
+    expect(source.filter((url) => !isSourceImage(url))).toEqual([])
+    // Le serveur d'images partagé seul, un domaine voisin, un chemin du site : affichés.
+    const others = [
+      'https://b-cdn.net/carte.jpg',
+      'https://autre.b-cdn.net/carte.jpg',
+      '/images/cards/SVP/1-md.webp',
+    ]
+    expect(others.filter(isSourceImage)).toEqual([])
+    expect(showsImage(catalogImage('ja', 'SVP', 1))).toBe(true)
+    expect(showsImage({ small: source[3]!, large: source[3]! })).toBe(false)
+    expect(showsImage(null)).toBe(false)
   })
 })

@@ -193,26 +193,26 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   de l'adresse, et de chacun de ses domaines parents, à celles des domaines de Pokécardex
   (`SOURCE_DOMAINS`) : `0xdef02a18` pokecardex.com (son site, `www.` compris : un domaine parent),
   `0x6e583970` pokecardex.b-cdn.net (ses logos et icônes), `0x82cad49f` pokecardex-scans.b-cdn.net
-  (ses scans ; les adresses que lit l'API des données, `worker/ingest/images.ts` de son dépôt). Un
-  nouveau domaine de la source s'y ajoute par son empreinte, jamais par son nom ; après `bun run
-  build`, le nom ne doit apparaître nulle part dans `dist/`. Réglages › Sauvegarde › « Chercher
-  les images » cherche d'un coup celles des cartes sans image à montrer : aucune, ou une adresse
-  de chez la source (gardée par une version d'avant les images copiées chez nous), remplacée par
-  l'image copiée. `findCardImage` (`lib/card-catalog.ts`) : l'image du catalogue pour
-  cette référence, dans la langue donnée (celle de la carte, `cardLanguage` ; lue dans sa série :
-  `/api/catalog/sets`, puis `/api/catalog/sets/<code>`, sous `fr/` en français), **prise telle
-  quelle**, sans la charger, comme l'ajoute « Ajouter à la collection » de la page Catalogue : son
-  chemin (la série et le rang de la carte au catalogue) ne change pas d'ordinaire d'image, et une
-  image pas encore copiée par l'API des données (les françaises, les heures qui suivent leur
-  arrivée) s'affiche dès qu'elle l'est (d'ici là, la carte de substitution). Seule une
-  renumérotation d'une série par la source (jamais vue : aucun rang changé du 19 au 24 octobre
-  2026) change l'image d'un chemin : l'API recopie alors le scan de chaque carte déplacée, dont le
-  fichier est celui de la carte qui avait ce rang. Une carte déjà enregistrée garde son chemin, le
-  rang d'avant : celles à ce rang ou après le point d'insertion montrent le scan de leur nouvelle
-  occupante, jusqu'à ce que leur image soit choisie de nouveau (le journal de la tâche `catalog`
-  de l'API compte ces cartes, `docs/donnees.md` de son dépôt, « Une série renumérotée ») ; un
-  navigateur garde l'ancien scan de ce chemin jusqu'à ce que son cache se vide (`immutable`) ;
-  une carte que le catalogue dit sans image n'en a
+  (ses scans ; les adresses que lit l'API des données, `worker/ingest/images.ts` de son dépôt) ;
+  testé avec les chemins des images (`tests/cards.test.ts`). Un nouveau domaine de la source s'y
+  ajoute par son empreinte, jamais par son nom ; après `bun run build`, le nom ne doit apparaître
+  nulle part dans `dist/`. Réglages › Sauvegarde › « Chercher les images » cherche d'un coup celles
+  des cartes sans image à montrer : aucune, ou une adresse de chez la source (gardée par une version
+  d'avant les images copiées chez nous), remplacée par l'image copiée. `findCardImage`
+  (`lib/card-catalog.ts`) : l'image du catalogue pour cette référence, dans la langue donnée (celle
+  de la carte, `cardLanguage` ; lue dans sa série : `/api/catalog/sets`, puis
+  `/api/catalog/sets/<code>`, sous `fr/` en français), **prise telle quelle**, sans la charger,
+  comme l'ajoute « Ajouter à la collection » de la page Catalogue : son chemin (la série et le rang
+  de la carte au catalogue) ne change pas d'ordinaire d'image, et une image pas encore copiée par
+  l'API des données (les françaises, les heures qui suivent leur arrivée) s'affiche dès qu'elle
+  l'est (d'ici là, la carte de substitution). Seule une renumérotation d'une série par la source
+  (jamais vue : aucun rang changé du 19 au 24 octobre 2026) change l'image d'un chemin : l'API
+  recopie alors le scan de chaque carte déplacée, dont le fichier est celui de la carte qui avait ce
+  rang. Une carte déjà enregistrée garde son chemin, le rang d'avant : celles à ce rang ou après le
+  point d'insertion montrent le scan de leur nouvelle occupante, jusqu'à ce que leur image soit
+  choisie de nouveau (le journal de la tâche `catalog` de l'API compte ces cartes, `docs/donnees.md`
+  de son dépôt, « Une série renumérotée ») ; un navigateur garde l'ancien scan de ce chemin jusqu'à
+  ce que son cache se vide (`immutable`) ; une carte que le catalogue dit sans image n'en a
   pas ; un catalogue sans réponse en 15 s (`CATALOG_TIMEOUT`, ses séries puis celle de la carte) la
   compte pour absente, pour ne pas bloquer l'enregistrement. Hors du catalogue, aucune image ; la
   saisie le dit, sans nommer de source (aucun crédit dans l'app, à la demande de l'utilisateur,
