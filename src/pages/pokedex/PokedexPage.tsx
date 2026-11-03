@@ -1,6 +1,6 @@
 import { Button } from '@camply/ui'
 import { Layers } from '@camply/ui/icons'
-import { useDeferredValue, useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigationType } from 'react-router'
 import { NoMatch } from '@/components/NoMatch'
 import { PageHeader } from '@/components/PageHeader'
@@ -17,6 +17,12 @@ const SCROLL_POSITIONS = 'react-router-scroll-positions'
 
 /** Les pochettes du premier affichage : plus qu'un grand écran n'en montre. */
 const FIRST_TILES = 60
+
+/**
+ * Le classeur a-t-il déjà été affiché dans ce document ? Le routeur dit `POP` au premier chargement
+ * aussi (nouvel onglet, favori) : seul un retour dans la même visite a une position en mémoire.
+ */
+let mounted = false
 
 /**
  * Le routeur garde-t-il une position de défilement pour cette adresse (`ScrollRestoration`, la
@@ -51,13 +57,20 @@ export function PokedexPage() {
   )
   const shown = useMemo(() => new Set(visible.map((entry) => entry.species.id)), [visible])
   // Au premier affichage, les pochettes d'un écran d'abord, toutes les autres juste après, en
-  // arrière-plan : la page paraît sans attendre les 1 025 (la coquille la garde ensuite en vie). Pas
-  // en revenant en arrière, ni par un lien quand une position est gardée pour cette adresse (après
-  // un rechargement) : le défilement retrouvé a besoin de toute la hauteur.
+  // arrière-plan : la page paraît sans attendre les 1 025 (la coquille la garde ensuite en vie),
+  // ouverte directement aussi. Pas en revenant en arrière dans la même visite (`mounted`), ni quand
+  // une position est gardée pour cette adresse (après un rechargement) : le défilement retrouvé a
+  // besoin de toute la hauteur.
   const navigationType = useNavigationType()
   const [firstEntries] = useState(() =>
-    navigationType === 'POP' || hasScrollPosition() ? ordered : ordered.slice(0, FIRST_TILES),
+    (navigationType === 'POP' && mounted) || hasScrollPosition()
+      ? ordered
+      : ordered.slice(0, FIRST_TILES),
   )
+  // Posé après l'affichage, pas pendant le rendu : un rendu que React abandonne ne compte pas.
+  useEffect(() => {
+    mounted = true
+  }, [])
   const gridEntries = useDeferredValue(ordered, firstEntries)
   const counts = useMemo(
     () =>

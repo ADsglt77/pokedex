@@ -267,8 +267,12 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   dernière adresse, `usePokedexFilters`) : le retour depuis une fiche le montre aussitôt, à la même
   position (330 à 410 ms → une quarantaine), sans refaire ses pochettes. Son premier affichage
   dessine un écran de pochettes, puis les autres en arrière-plan (`useDeferredValue` avec une
-  valeur de départ : 111 ms → 42 avant la première image ; pas en arrivant par l'historique, qui
-  retrouve le défilement). Les marques de possession sont des icônes CSS (masques, pas de SVG :
+  valeur de départ : 111 ms → 42 avant la première image), ouvert directement aussi (nouvel
+  onglet, favori ; mesuré en novembre 2026 avec une collection presque vide, sur mobile, CPU ×4 :
+  plus longue tâche 574 ms → 257, TBT 744 → 469, LCP 1 688 → 1 336). Pas en revenant par
+  l'historique dans la même visite (`mounted` : le routeur dit `POP` au premier chargement aussi),
+  ni après un rechargement (position gardée dans le stockage de la session) : le défilement retrouvé
+  a besoin de toute la hauteur. Les marques de possession sont des icônes CSS (masques, pas de SVG :
   plus de 1 000 sinon ; en contraste élevé, `forced-colors`, les couleurs du système, sans quoi le
   glyphe disparaîtrait), et rien de ce qui défile n'a de `backdrop-filter` (flou recalculé à chaque
   image). Les pochettes, comme les cartes de la liste d'achats, sont de simples liens (`<a>`, pas
