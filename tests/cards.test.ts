@@ -10,7 +10,8 @@
  * japonaise), qui la suit quand on la détache d'un Pokémon. Enfin, les chemins des images que la
  * collection garde, ceux que sert l'API des données (ses tests les figent de son côté), et le
  * numéro comparable d'une carte, sa règle aussi ; et une image de chez la source, que son accord
- * interdit d'afficher : refusée, ses domaines reconnus par leur empreinte, pas leurs voisins.
+ * interdit d'afficher : refusée, ses domaines reconnus par leur empreinte, pas leurs voisins, et
+ * jamais affichée, la petite comme la grande.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test'
@@ -262,7 +263,10 @@ describe('les images', () => {
     ]
     expect(others.filter(isSourceImage)).toEqual([])
     expect(showsImage(catalogImage('ja', 'SVP', 1))).toBe(true)
-    expect(showsImage({ small: source[3]!, large: source[3]! })).toBe(false)
+    // Une carte retouchée, la petite image (celle de la grille) ou la grande (celle de la fiche)
+    // seule de chez la source.
+    expect(showsImage({ ...catalogImage('ja', 'SVP', 1), small: source[3]! })).toBe(false)
+    expect(showsImage({ ...catalogImage('ja', 'SVP', 1), large: source[3]! })).toBe(false)
     expect(showsImage(null)).toBe(false)
   })
 })

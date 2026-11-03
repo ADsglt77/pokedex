@@ -51,10 +51,11 @@ export function isSourceImage(url: string) {
 }
 
 /**
- * Une image qui s'affiche : pas une adresse de chez la source (`isSourceImage`), jamais affichée.
+ * Une image qui s'affiche : ni la petite (grille) ni la grande (fiche) n'est une adresse de chez la
+ * source (`isSourceImage`), jamais affichée.
  */
 export const showsImage = (image: CardImage | null | undefined): image is CardImage =>
-  !!image && !isSourceImage(image.small)
+  !!image && !isSourceImage(image.small) && !isSourceImage(image.large)
 
 /** Le logo d'une série, en deux tailles : `md` pour la liste, `hd` en tête de page. */
 export const setLogo = (lang: CardLanguage, set: string, size: 'md' | 'hd') =>

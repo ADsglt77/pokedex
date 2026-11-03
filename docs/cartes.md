@@ -189,8 +189,8 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   la référence) ; aucun ne nomme la source. L'API ne copie aucune image à la demande, la tâche
   `images` les copie toutes d'avance : une image absente répond 404 (la carte de substitution). Une adresse collée de chez la
   source (son site ou ses serveurs d'images) est refusée à la saisie, et jamais affichée (`isSourceImage` : son accord,
-  jamais une image affichée depuis chez elle ; une carte qui en garde une montre la carte de
-  substitution, jusqu'à ce qu'elle soit corrigée). Le code que reçoit le navigateur ne la nomme
+  jamais une image affichée depuis chez elle ; une carte qui en garde une, en petite ou en grande
+  image, `showsImage`, montre la carte de substitution, jusqu'à ce qu'elle soit corrigée). Le code que reçoit le navigateur ne la nomme
   pas : `isSourceImage` compare l'empreinte (FNV-1a sur 32 bits, `fingerprint`) du nom de domaine
   de l'adresse, et de chacun de ses domaines parents, à celles des domaines de Pokécardex
   (`SOURCE_DOMAINS`) : `0xdef02a18` pokecardex.com (son site, `www.` compris : un domaine parent),
