@@ -22,7 +22,7 @@ import { Hono } from 'hono'
 import { accountRoutes, sameOrigin } from './auth'
 import { collectionRoutes } from './collection'
 import { dataRoutes } from './data'
-import { canonicalHost, siteHeaders } from './headers'
+import { canonicalHost, notFound, siteHeaders } from './headers'
 import { journal, loggable } from './journal'
 import { limits } from './limits'
 import { linkPreview, vitrineRoutes } from './vitrine'
@@ -44,14 +44,12 @@ export default new Hono()
   .route('/api', accountRoutes)
   .route('/api', collectionRoutes)
   .route('/api', vitrineRoutes)
-  .all('/api/*', (c) => c.body(null, 404, { 'Cache-Control': 'no-cache' }))
+  .all('/api/*', notFound)
   .get('/:segment{[A-Za-z0-9_-]+}', linkPreview)
   .all('*', async (c) => {
     const response = await env.ASSETS.fetch(c.req.raw)
     const page = response.headers.get('Content-Type')?.startsWith('text/html')
-    if (page && FILES.test(c.req.path) && !c.req.path.endsWith('.html')) {
-      return c.body(null, 404, { 'Cache-Control': 'no-cache' })
-    }
+    if (page && FILES.test(c.req.path) && !c.req.path.endsWith('.html')) return notFound(c)
     return response
   })
   .onError((error, c) => {

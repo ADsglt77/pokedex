@@ -293,11 +293,12 @@ export const sameOrigin: MiddlewareHandler = async (c, next) => {
 }
 
 /**
- * La session d'une requête. Renouvelée (une fois par jour d'usage), son nouveau cookie part avec
- * la réponse : sans lui, le navigateur garderait l'ancien, et il faudrait se reconnecter au bout
- * de 60 jours.
+ * La session d'une requête, et sa réponse jamais en cache. Renouvelée (une fois par jour d'usage),
+ * son nouveau cookie part avec la réponse : sans lui, le navigateur garderait l'ancien, et il
+ * faudrait se reconnecter au bout de 60 jours.
  */
 async function sessionOf(c: Context) {
+  c.header('Cache-Control', 'no-store')
   const { headers, response } = await auth.api.getSession({
     headers: c.req.raw.headers,
     returnHeaders: true,
@@ -318,7 +319,6 @@ export interface SignedIn {
  * fermée.
  */
 export const signedIn = createMiddleware<SignedIn>(async (c, next) => {
-  c.header('Cache-Control', 'no-store')
   const session = await sessionOf(c)
   if (!session) return c.json(null, 401)
   c.set('user', session.user)
@@ -350,7 +350,6 @@ export const accountRoutes = new Hono()
     return response
   })
   .get('/account', async (c) => {
-    c.header('Cache-Control', 'no-store')
     const session = await sessionOf(c)
     return c.json<AccountState>({
       user: session && { id: session.user.id, name: session.user.name },

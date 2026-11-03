@@ -21,9 +21,11 @@
  *   et, quand le navigateur a une session (le cookie de Better Auth), les espèces préchargées sans
  *   attendre le script (elles ne servent qu'une fois connecté : un visiteur sur la connexion ne
  *   les télécharge pas). `crossorigin` : la même demande que le `fetch` de l'app.
+ * Et le 404 du site, le même partout (`notFound`) : sans corps, revalidé à chaque fois (une adresse
+ * inconnue de l'API, un fichier absent, un pseudo qui n'est à personne).
  */
 
-import type { MiddlewareHandler } from 'hono'
+import type { Context, MiddlewareHandler } from 'hono'
 
 const SECURITY = {
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
@@ -54,6 +56,9 @@ const PUBLIC_PAGES = /^\/(connexion|inscription|mentions-legales)?$/
 
 /** Le poste du développeur, en http : Vite et les tests. */
 const LOCAL = /^(localhost|127\.0\.0\.1)$/
+
+/** Une adresse qui ne mène à rien : 404 sans corps, revalidé à chaque fois. */
+export const notFound = (c: Context) => c.body(null, 404, { 'Cache-Control': 'no-cache' })
 
 /** `http://pokecodex.fr/x` ou `www.pokecodex.fr/x` : `https://pokecodex.fr/x`, pour de bon. */
 export const canonicalHost: MiddlewareHandler = async (c, next) => {

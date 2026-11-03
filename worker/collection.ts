@@ -155,6 +155,8 @@ export const collectionRoutes = new Hono<SignedIn>()
         })
         return c.json(null, status)
       }
+      /** Une autre version enregistrée entre-temps (un autre appareil) : 409. */
+      const conflict = () => refused(409, 'warn', 'conflit, changée ailleurs entre-temps')
       const body = await readBody(c.req.raw)
       if (body === TOO_LARGE) return c.json(null, 413)
       if (!isSent(body)) return c.json(null, 400)
@@ -175,9 +177,7 @@ export const collectionRoutes = new Hono<SignedIn>()
       ) {
         return c.json<CollectionSaved>({ version: row.version })
       }
-      if ((row?.version ?? 0) !== baseVersion) {
-        return refused(409, 'warn', 'conflit, changée ailleurs entre-temps')
-      }
+      if ((row?.version ?? 0) !== baseVersion) return conflict()
       // Écrit seulement si la version est encore celle lue : une seule requête, que la base passe
       // d'un seul tenant (un autre appareil qui a écrit entre-temps : 409).
       const version = baseVersion + 1
@@ -191,7 +191,7 @@ export const collectionRoutes = new Hono<SignedIn>()
           setWhere: eq(collections.version, baseVersion),
         })
         .run()
-      if (meta.changes === 0) return refused(409, 'warn', 'conflit, changée ailleurs entre-temps')
+      if (meta.changes === 0) return conflict()
       const previous = row
         ? {
             collection: JSON.parse(row.collection) as CollectionData,

@@ -34,6 +34,7 @@ import type { CardOwnership, CollectionData, PokemonCard, PriceFile, VitrineData
 import { ORIGIN } from './auth'
 import { dataFetch } from './data'
 import { db } from './db'
+import { notFound } from './headers'
 import { journalOnce, reasonOf, visitorOf, type JournalEntry } from './journal'
 import { collections, user } from './schema'
 
@@ -214,7 +215,7 @@ async function ownerWithCollection(pseudo: string) {
 export const vitrineRoutes = new Hono().get('/vitrine/:pseudo', async (c) => {
   const pseudo = c.req.param('pseudo')
   const owner = await ownerWithCollection(pseudo)
-  if (!owner) return c.body(null, 404, { 'Cache-Control': 'no-cache' })
+  if (!owner) return notFound(c)
   const { collection } = owner
   journalVisit(
     {

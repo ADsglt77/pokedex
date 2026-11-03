@@ -267,7 +267,7 @@ export function documentChanges(
 
 /**
  * Les collections d'extensions commencées ou supprimées : une ligne chacune. Leurs cases, ajoutées
- * ou retirées avec elles (`seriesOnly`), n'ont pas chacune la leur (`cardChanges`).
+ * ou retirées avec elles (`seriesOnly`), n'ont pas chacune la leur (`customCardChanges`).
  */
 function seriesChanges(before: CollectionData, after: CollectionData): JournalEntry[] {
   const line = (message: string, series: SeriesCollection, level: JournalLevel): JournalEntry => ({
@@ -295,10 +295,65 @@ function seriesChanges(before: CollectionData, after: CollectionData): JournalEn
  */
 const cardContent = (card: PokemonCard) => JSON.stringify({ ...card, seriesOnly: undefined })
 
+/** La ligne d'une carte : sa référence, et son prix payé quand il compte. */
+const cardLine = (
+  message: string,
+  carte: string,
+  level?: JournalLevel,
+  payé?: string,
+): JournalEntry => ({ topic: 'collection', level, message, details: { carte, payé } })
+
 /**
- * Les cartes : ajoutées, retirées, corrigées ; leur statut et leur prix payé ; et les collections
- * d'extensions. Une case pas encore obtenue (`seriesOnly`) n'est jamais ajoutée ni retirée seule :
- * c'est sa collection qui est commencée ou supprimée.
+ * Les cartes ajoutées, corrigées, retirées (`removed`). Une case pas encore obtenue (`seriesOnly`)
+ * n'est jamais ajoutée ni retirée seule : c'est sa collection qui est commencée ou supprimée.
+ */
+function customCardChanges(
+  before: CollectionData,
+  after: CollectionData,
+  removed: string[],
+): JournalEntry[] {
+  const lines: JournalEntry[] = []
+  for (const [id, card] of Object.entries(after.customCards)) {
+    const known = before.customCards[id]
+    if (!known) {
+      if (!card.seriesOnly) lines.push(cardLine('Carte ajoutée', card.reference))
+    } else if (cardContent(known) !== cardContent(card)) {
+      lines.push(cardLine('Carte modifiée', card.reference))
+    }
+  }
+  for (const id of removed) {
+    const { reference, seriesOnly } = before.customCards[id]!
+    if (!seriesOnly) lines.push(cardLine('Carte retirée', reference))
+  }
+  return lines
+}
+
+/** Le statut des cartes (possédée, commandée, retiré) et leur prix payé. */
+function statusChanges(before: CollectionData, after: CollectionData): JournalEntry[] {
+  const lines: JournalEntry[] = []
+  for (const id of new Set([...Object.keys(before.cards), ...Object.keys(after.cards)])) {
+    const reference = after.customCards[id]?.reference
+    // Une carte retirée emporte son statut : la ligne « Carte retirée » le dit.
+    if (!reference) continue
+    const was = before.cards[id]
+    const now = after.cards[id]
+    const paid = now?.paidPrice === undefined ? undefined : formatEuro(now.paidPrice)
+    if (now?.status === 'owned' && was?.status !== 'owned') {
+      lines.push(cardLine('Carte possédée', reference, 'ok', paid))
+    } else if (now?.status === 'ordered' && was?.status !== 'ordered') {
+      lines.push(cardLine('Carte commandée', reference))
+    } else if (!now && was) {
+      lines.push(cardLine('Statut retiré', reference))
+    } else if (now && now.paidPrice !== was?.paidPrice) {
+      lines.push(cardLine(paid ? 'Prix payé noté' : 'Prix payé effacé', reference, 'info', paid))
+    }
+  }
+  return lines
+}
+
+/**
+ * Les cartes : les collections d'extensions, puis les cartes ajoutées, corrigées, retirées, puis
+ * leur statut et leur prix payé.
  */
 function cardChanges(before: CollectionData, after: CollectionData): JournalEntry[] {
   const removed = Object.keys(before.customCards).filter((id) => !after.customCards[id])
@@ -311,38 +366,11 @@ function cardChanges(before: CollectionData, after: CollectionData): JournalEntr
     const details = { cartes: removed.length }
     return [{ topic: 'collection', level: 'warn', message: 'Collection effacée', details }]
   }
-  const lines = seriesChanges(before, after)
-  const add = (message: string, carte: string, level?: JournalLevel, payé?: string) =>
-    lines.push({ topic: 'collection', level, message, details: { carte, payé } })
-  for (const [id, card] of Object.entries(after.customCards)) {
-    const known = before.customCards[id]
-    if (!known) {
-      if (!card.seriesOnly) add('Carte ajoutée', card.reference)
-    } else if (cardContent(known) !== cardContent(card)) add('Carte modifiée', card.reference)
-  }
-  for (const id of removed) {
-    const { reference, seriesOnly } = before.customCards[id]!
-    if (!seriesOnly) add('Carte retirée', reference)
-  }
-
-  for (const id of new Set([...Object.keys(before.cards), ...Object.keys(after.cards)])) {
-    const reference = after.customCards[id]?.reference
-    // Une carte retirée emporte son statut : la ligne « Carte retirée » le dit.
-    if (!reference) continue
-    const was = before.cards[id]
-    const now = after.cards[id]
-    const paid = now?.paidPrice === undefined ? undefined : formatEuro(now.paidPrice)
-    if (now?.status === 'owned' && was?.status !== 'owned') {
-      add('Carte possédée', reference, 'ok', paid)
-    } else if (now?.status === 'ordered' && was?.status !== 'ordered') {
-      add('Carte commandée', reference)
-    } else if (!now && was) {
-      add('Statut retiré', reference)
-    } else if (now && now.paidPrice !== was?.paidPrice) {
-      add(paid ? 'Prix payé noté' : 'Prix payé effacé', reference, 'info', paid)
-    }
-  }
-  return lines
+  return [
+    ...seriesChanges(before, after),
+    ...customCardChanges(before, after, removed),
+    ...statusChanges(before, after),
+  ]
 }
 
 /** Une commande en détails : fournisseur, référence, nombre de cartes, total. */
