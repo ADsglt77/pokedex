@@ -12,6 +12,7 @@ import {
 } from '@camply/ui'
 import { Copy, Receipt, Sparkles } from '@camply/ui/icons'
 import { useDeferredValue, useId, useMemo, useRef, useState, type RefObject } from 'react'
+import { useGrowingList } from '@/hooks/useGrowingList'
 import { budgetLevel, defaultPlanBudget, spentThisMonth } from '@/lib/budget'
 import { cx } from '@/lib/cx'
 import { keepFocusInList } from '@/lib/focus'
@@ -30,6 +31,9 @@ import styles from './PlannerPanel.module.css'
 
 /** Le pas du curseur de budget, en euros. */
 const BUDGET_STEP = 5
+
+/** Les cartes d'une liste dessinées d'un coup : plus qu'un grand écran n'en montre. */
+const LINES_STEP = 60
 
 /** Ajoute ou retire un id d'un ensemble, sans le modifier. */
 const toggled = (set: ReadonlySet<string>, id: string, on: boolean) => {
@@ -259,7 +263,11 @@ interface PlanAction {
   run: (row: WishRow) => void
 }
 
-/** Des cartes du plan, chacune avec son prix et son action ; `forced` : ajoutées à la main. */
+/**
+ * Des cartes du plan, chacune avec son prix et son action ; `forced` : ajoutées à la main. Plus de
+ * 1 000 possibles : dessinées au fur et à mesure du défilement, et chaque pas du curseur ne
+ * redessine que celles-là.
+ */
 function PlanList({
   rows,
   fallback,
@@ -272,35 +280,40 @@ function PlanList({
   forced?: ReadonlySet<string>
 }) {
   const list = useRef<HTMLUListElement>(null)
+  const { limit, end } = useGrowingList(rows.length, LINES_STEP)
   return (
-    <ul ref={list} className={page.lines}>
-      {rows.map((row, index) => (
-        <li key={row.card.id}>
-          <CardLine
-            card={row.card}
-            series={row.series}
-            detail={row.price === null ? 'sans prix' : formatEuro(row.price)}
-          >
-            {action && (
-              <>
-                {forced?.has(row.card.id) && (
-                  <Badge size="sm" tone="info">
-                    Ajoutée à la main
-                  </Badge>
-                )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => keepFocusInList(list, index, () => action.run(row), fallback)}
-                >
-                  {action.label}
-                </Button>
-              </>
-            )}
-          </CardLine>
-        </li>
-      ))}
-    </ul>
+    // Le repère hors de la liste : `keepFocusInList` n'y trouve que des cartes.
+    <div className="growing">
+      <ul ref={list} className={page.lines}>
+        {rows.slice(0, limit).map((row, index) => (
+          <li key={row.card.id}>
+            <CardLine
+              card={row.card}
+              series={row.series}
+              detail={row.price === null ? 'sans prix' : formatEuro(row.price)}
+            >
+              {action && (
+                <>
+                  {forced?.has(row.card.id) && (
+                    <Badge size="sm" tone="info">
+                      Ajoutée à la main
+                    </Badge>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => keepFocusInList(list, index, () => action.run(row), fallback)}
+                  >
+                    {action.label}
+                  </Button>
+                </>
+              )}
+            </CardLine>
+          </li>
+        ))}
+      </ul>
+      {end}
+    </div>
   )
 }
 

@@ -270,8 +270,10 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   sont dessinés au fur et à mesure (`useGrowingList` : Valeur 151 ms → 60 à l'ouverture, Achats 254
   → 53). Un montant au prix du jour (`PricedValue`, des centaines par page) lit la réponse des prix
   de la collection une fois par état (`store/prices.ts`). Le plan de la prochaine commande suit le
-  curseur du budget en différé (`useDeferredValue`) ; la liste des cartes à ajouter à une commande
-  est triée une fois. La collection est envoyée au serveur une fois pour les modifications
+  curseur du budget en différé (`useDeferredValue`), et ses listes sont dessinées au fur et à
+  mesure (`useGrowingList`, 60 cartes à la fois) : un pas du curseur ne redessine pas toutes ses
+  cartes. La liste des cartes à ajouter à une commande est triée une fois par collection, pas à
+  chaque frappe. La collection est envoyée au serveur une fois pour les modifications
   d'une demi-seconde (`store/account.ts`). La carte
   d'une fiche ne suit la souris qu'une fois par image (`CardStage`). Les animations ne se rejouent
   pas à chaque visite (les pages se remontent) : la marque de possession seulement quand le statut

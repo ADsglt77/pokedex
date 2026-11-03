@@ -49,15 +49,17 @@ export function OrderLines({
   const list = useRef<HTMLUListElement>(null)
   const cardsTitle = useRef<HTMLHeadingElement>(null)
   const costs = unitCosts(order)
-  // Les cartes du compte qui ne sont pas déjà dans la commande, triées une fois par collection et
-  // par liste (pas à chaque frappe dans un montant).
-  const addable = useMemo(() => {
-    const inLines = new Set(lines.map((line) => line.cardId))
-    return Object.values(collection.customCards)
-      .filter((card) => !inLines.has(card.id))
-      .map((card) => ({ value: card.id, label: `${cardTitle(card)} · ${card.reference}` }))
-      .sort((a, b) => collator.compare(a.label, b.label))
-  }, [collection, lines])
+  // Les cartes du compte, triées une fois par collection (pas à chaque frappe dans un montant),
+  // moins celles déjà dans la commande.
+  const sorted = useMemo(
+    () =>
+      Object.values(collection.customCards)
+        .map((card) => ({ value: card.id, label: `${cardTitle(card)} · ${card.reference}` }))
+        .sort((a, b) => collator.compare(a.label, b.label)),
+    [collection],
+  )
+  const inLines = new Set(lines.map((line) => line.cardId))
+  const addable = sorted.filter((option) => !inLines.has(option.value))
 
   const addLine = (cardId: string) => {
     const card = findCard(cardId, collection)!
