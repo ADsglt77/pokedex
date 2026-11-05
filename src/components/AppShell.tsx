@@ -260,7 +260,9 @@ const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pok
       {searchUsed && <AppSearch open={searching} onClose={closeSearch} />}
 
       <ScrollRestoration
-        // Revenir au Pokédex avec les mêmes filtres, même par un lien, retrouve la position.
+        // Une position par entrée de l'historique (sa clé, même chargée en entier : `main.tsx`),
+        // retrouvée par « Précédent » ou un rechargement. Le Pokédex garde la sienne sous son
+        // adresse et ses filtres : y revenir par un lien la retrouve aussi.
         getKey={(location) =>
           location.pathname === '/pokedex' ? location.pathname + location.search : location.key
         }

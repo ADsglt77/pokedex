@@ -36,6 +36,20 @@ addEventListener('vite:preloadError', (event) => {
   location.reload()
 })
 
+// Une entrée de l'historique sans clé : chargée en entier (adresse tapée, favori, lien d'un autre
+// site), ou créée par une ancre de la page (`#main`, `#importer`). Le routeur leur donnerait à
+// toutes « default », et une page reprendrait la position de défilement gardée pour une autre
+// (`ScrollRestoration`, `AppShell`). Chacune reçoit sa clé avant que le routeur la lise, comme
+// celles qu'il crée : au chargement, et à `popstate`, écouté avant lui ; un rechargement ou
+// « Précédent » la garde, et retrouve sa position.
+const giveKey = () => {
+  if (!history.state?.key) {
+    history.replaceState({ ...history.state, key: Math.random().toString(36).slice(2, 10) }, '')
+  }
+}
+giveKey()
+addEventListener('popstate', giveKey)
+
 const root = createRoot(document.getElementById('root')!)
 
 // Point d'entrée : polices, styles camply, le thème (ses couleurs redéfinies), puis ceux de l'app.

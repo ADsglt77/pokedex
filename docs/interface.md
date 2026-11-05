@@ -94,7 +94,14 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   Valeur ; la progression ; Réglages et le compte en pied ; Collections est la page ouverte aussi
   sur le Pokédex et les fiches, qui s'ouvrent depuis elle) ; en dessous, une barre en haut (nom,
   recherche, Réglages, thème, compte en icône) et cinq onglets en bas ; le bouton du thème est aussi
-  en pied de la barre latérale. Partout, la recherche
+  en pied de la barre latérale. Chaque entrée de l'historique garde sa position de défilement
+  (`ScrollRestoration`, la coquille), retrouvée par « Précédent » ou un rechargement ; une page
+  chargée en entier (adresse tapée, favori, lien d'un autre site) s'ouvre en haut : son entrée,
+  comme celle d'une ancre de la page (lien d'évitement `#main`, `#importer`), reçoit sa propre clé
+  avant le routeur (`main.tsx`), qui leur donnait sinon à toutes la même, « default », et une page
+  reprenait la position d'une autre (corrigé en novembre 2026). Le
+  Pokédex garde la sienne sous son adresse et ses filtres, même rouvert par un lien.
+  Partout, la recherche
   (`AppSearch`, Ctrl/⌘ K, la palette de camply) : les pages, quelques actions (exporter, importer) et les 1 025 Pokémon (noms français, anglais, japonais, numéro ; groupe
   « Espèces » : la palette cherche aussi dans le nom du groupe, « Pokémon » ferait tout trouver à
   « poké »). L'accueil est un
