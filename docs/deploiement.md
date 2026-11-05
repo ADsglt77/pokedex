@@ -26,6 +26,7 @@ Qui fait quoi (le détail est dans l'en-tête de chaque fichier) :
 |---|---|
 | `wrangler.jsonc` (chaque dépôt) | Le Worker : ses liaisons, ses domaines (`routes`), ses limites (`ratelimits` : leurs `namespace_id` sont partagés par tout le compte Cloudflare, le site a 2001 à 2006, les données 1001 et 1002 ; une nouvelle limite part avec le déploiement, sans rien régler dans le tableau de bord) |
 | `package.json` : `ci`, `deploy` (chaque dépôt) | Ce que lance Workers Builds : les contrôles et la construction, puis les migrations de la base et le déploiement |
+| `package.json` : `packageManager` (site) | La version de Bun, la même sur le poste et pour Workers Builds, qui la lit ici : `bun@1.4.4` (Cloudflare demande au moins la 1.4.4 depuis le 23 octobre 2026 : les plus anciennes font confiance à des certificats compromis). Pour en changer : `bun upgrade` sur le poste, ce champ, puis vérifier que `bun install --frozen-lockfile` ne réécrit pas `bun.lock` |
 | `package.json` : `overrides` (site) | Une seule copie de zod et de Wrangler, undici sans ses avis. `@cloudflare/vite-plugin` 1.65.0 épingle Wrangler 4.152.0 et une miniflare qui tire undici 7.29.1 : retirer `wrangler` et `undici` quand vite-plugin, `@cloudflare/vitest-plugin` et `wrangler` épingleront les mêmes versions (vite-plugin 1.66.0 : voir aussi « En développement ») |
 | `worker/headers.ts`, `worker/limits.ts` (site) | En-têtes de sécurité, cache, moteurs de recherche, `http://` et `www` vers `https://pokecodex.fr`, limites par visiteur |
 | `worker/index.ts` (données) | Son entrée d'Internet : lecture seule, en-têtes d'une API, limites, token |
@@ -100,8 +101,10 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
    - la branche : `main` ;
    - la commande de construction : `bun run ci` ; celle de déploiement : `bun run deploy` ;
    - les variables de **construction** (Settings › Builds › Variables and secrets, pas celles
-     d'exécution du Worker) : `NODE_VERSION` = `24` (Wrangler et Vitest veulent Node 22 ou plus) et
-     `BUN_VERSION` = `1.3.10`.
+     d'exécution du Worker) : `NODE_VERSION` = `24` (Wrangler et Vitest veulent Node 22 ou plus).
+     Pas de `BUN_VERSION` : le site prend la version de Bun du champ `packageManager` de son
+     `package.json` ; `pokedex-data`, qui n'a pas ce champ, celle par défaut de l'image de
+     construction.
 
    L'import crée le Worker, vide, et lance la première construction, qui le déploie. Si la
    migration de la base échoue faute de droits, donner « D1 : Edit » au token de construction
