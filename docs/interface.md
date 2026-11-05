@@ -95,7 +95,10 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   sur le Pokédex et les fiches, qui s'ouvrent depuis elle) ; en dessous, une barre en haut (nom,
   recherche, Réglages, thème, compte en icône) et cinq onglets en bas ; le bouton du thème est aussi
   en pied de la barre latérale. Chaque entrée de l'historique garde sa position de défilement
-  (`ScrollRestoration`, la coquille), retrouvée par « Précédent » ou un rechargement ; une page
+  (`ScrollRestoration`, la coquille), retrouvée par « Précédent » ou un rechargement, sauf en
+  revenant tout droit d'une page hors de la coquille (connexion, inscription, mentions légales,
+  Pokédex public) : le routeur ne retient les positions que la coquille montée, la page s'ouvre
+  alors en haut ; une page
   chargée en entier (adresse tapée, favori, lien d'un autre site) s'ouvre en haut : son entrée,
   comme celle d'une ancre de la page (lien d'évitement `#main`, `#importer`), reçoit sa propre clé
   avant le routeur (`main.tsx`), qui leur donnait sinon à toutes la même, « default », et une page

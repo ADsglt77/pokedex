@@ -261,8 +261,11 @@ const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pok
 
       <ScrollRestoration
         // Une position par entrée de l'historique (sa clé, même chargée en entier : `main.tsx`),
-        // retrouvée par « Précédent » ou un rechargement. Le Pokédex garde la sienne sous son
-        // adresse et ses filtres : y revenir par un lien la retrouve aussi.
+        // retrouvée par « Précédent » ou un rechargement, sauf en revenant tout droit d'une page
+        // hors de la coquille (connexion, inscription, mentions légales, Pokédex public) : le
+        // routeur ne retient les positions que la coquille montée, la page s'ouvre en haut. Le
+        // Pokédex garde la sienne sous son adresse et ses filtres : y revenir par un lien la
+        // retrouve aussi.
         getKey={(location) =>
           location.pathname === '/pokedex' ? location.pathname + location.search : location.key
         }

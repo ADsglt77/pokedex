@@ -41,10 +41,15 @@ addEventListener('vite:preloadError', (event) => {
 // toutes « default », et une page reprendrait la position de défilement gardée pour une autre
 // (`ScrollRestoration`, `AppShell`). Chacune reçoit sa clé avant que le routeur la lise, comme
 // celles qu'il crée : au chargement, et à `popstate`, écouté avant lui ; un rechargement ou
-// « Précédent » la garde, et retrouve sa position.
+// « Précédent » la garde, et retrouve sa position. Son rang (`idx`) reste nul, comme le routeur
+// l'attend d'une entrée qu'il n'a pas créée : absent, il compterait les suivantes en `NaN`, et la
+// garde d'abandon d'une saisie (`useBlocker`) rechargerait la page au lieu de demander.
 const giveKey = () => {
   if (!history.state?.key) {
-    history.replaceState({ ...history.state, key: Math.random().toString(36).slice(2, 10) }, '')
+    history.replaceState(
+      { idx: null, ...history.state, key: Math.random().toString(36).slice(2, 10) },
+      '',
+    )
   }
 }
 giveKey()
