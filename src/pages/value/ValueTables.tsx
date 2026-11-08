@@ -77,7 +77,7 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
       ),
     [cards, sort],
   )
-  const { limit, end } = useGrowingList(rows.length, ROWS_STEP)
+  const { limit, end } = useGrowingList(rows.length, ROWS_STEP, 0, 'valeur-cartes')
 
   return (
     <div className="growing">

@@ -20,7 +20,7 @@ import { cardFromCatalog, collectionCard, type SetCard } from '@/lib/card-catalo
 import { languageField } from '@/lib/collection'
 import { details, formatDate, formatDexNumber, formatList, statusText } from '@/lib/format'
 import { getSpecies, speciesNames } from '@/lib/species'
-import { addCard } from '@/store/collection'
+import { addCard, useCollectionStore } from '@/store/collection'
 import styles from './CardDetails.module.css'
 
 /**
@@ -31,8 +31,9 @@ import styles from './CardDetails.module.css'
  */
 function useCollectionPlace(card: SetCard) {
   const { entryById } = usePokedex()
+  const collection = useCollectionStore((state) => state.collection)
   const entries = card.dexIds.map((id) => entryById.get(id)!)
-  const mine = collectionCard(entryById, card)
+  const mine = collectionCard(collection, entryById, card)
   const slot = useSeriesSlot(mine ? null : card)
   const holders = entries.filter(({ cards }) => cards.length > 0)
   return { mine, slot, holders }

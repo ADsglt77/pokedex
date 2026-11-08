@@ -119,30 +119,48 @@ const costIn = (order: Order, cardId: string) =>
   unitCosts(order)[order.lines.findIndex((line) => line.cardId === cardId)]
 
 /**
+ * La carte (`current`, son état actuel) porte-t-elle encore l'effet d'une commande dans cet état :
+ * « commandée » par elle en cours, « possédée » par elle reçue ; annulée après sa réception,
+ * possédée sans date (une possession n'est jamais retirée : `applyOrder`). Marquée possédée à la
+ * main, une carte est datée.
+ */
+function carriesEffect(state: OrderState, current: CardOwnership | null) {
+  if (state === 'pending') return current?.status === 'ordered'
+  if (state === 'received') return current?.status === 'owned'
+  return current?.status === 'owned' && current.acquiredAt === null
+}
+
+/** La ligne porte l'effet de la commande, sur une carte qui n'était pas possédée avant elle. */
+const keepsEffect = (line: OrderLine, state: OrderState, collection: CollectionData) =>
+  line.previous?.status !== 'owned' && carriesEffect(state, collection.cards[line.cardId] ?? null)
+
+/**
  * L'état d'une carte avant une commande (`null` : aucun statut), relu à chaque enregistrement :
  * celui que garde la version enregistrée tant que la carte porte l'effet de la commande
- * (« commandée » par elle en cours, « possédée » par elle reçue), sinon son état actuel : carte
- * ajoutée, commande annulée (ses cartes ont retrouvé leur état), ou carte corrigée à la main
- * depuis (possédée par erreur, achetée ailleurs).
+ * (`carriesEffect` : même reçue puis annulée, qui laisse ses cartes possédées sans date), sinon son
+ * état actuel : carte ajoutée, commande annulée avant sa réception (ses cartes ont retrouvé leur
+ * état), ou carte corrigée à la main depuis (possédée par erreur, achetée ailleurs).
  */
 export function previousOf(cardId: string, stored: Order | null, collection: CollectionData) {
   const current = collection.cards[cardId] ?? null
   const line = stored?.lines.find((known) => known.cardId === cardId)
-  const effect =
-    stored?.state === 'pending' ? 'ordered' : stored?.state === 'received' ? 'owned' : null
-  return line && line.previous?.status !== 'owned' && current?.status === effect
-    ? line.previous
-    : current
+  return line && keepsEffect(line, stored!.state, collection) ? line.previous : current
 }
 
 /**
  * La commande peut être (re)mise « en cours » (`stored` : sa version enregistrée, `null` pour une
- * nouvelle). Pas une commande reçue : ses cartes resteraient possédées (une possession n'est jamais
- * retirée), avec sa date et son prix payé, sans plus porter son effet. Au prochain enregistrement,
- * `previousOf` les croirait possédées avant elle : son remboursé ne changerait plus leur prix payé,
- * et l'annuler ou la supprimer leur laisserait sa date et son prix.
+ * nouvelle). Pas une commande reçue, ni reçue puis annulée (des cartes possédées sans date par
+ * elle) : ses cartes resteraient possédées (une possession n'est jamais retirée) sans plus porter
+ * son effet. Au prochain enregistrement, `previousOf` les croirait possédées avant elle : sa
+ * réception ne leur donnerait plus sa date ni son prix payé, son remboursé ne changerait plus leur
+ * prix payé, et l'annuler ou la supprimer leur laisserait sa date et son prix.
  */
-export const canBePending = (stored: Order | null) => stored?.state !== 'received'
+export const canBePending = (stored: Order | null, collection: CollectionData) =>
+  stored?.state !== 'received' &&
+  !(
+    stored?.state === 'cancelled' &&
+    stored.lines.some((line) => keepsEffect(line, 'cancelled', collection))
+  )
 
 /** La commande contient-elle la carte ? */
 const hasCard = (order: Order, cardId: string) => order.lines.some((line) => line.cardId === cardId)

@@ -44,6 +44,7 @@ export function SeriesGrid({
     series.cards.length,
     TILES_STEP,
     open === null ? 0 : series.cards.indexOf(open) + 1,
+    'collection',
   )
   const grid = useRef<HTMLUListElement>(null)
 

@@ -52,7 +52,7 @@ export function WishlistPanel({
   const shownFilters = useDeferredValue(filters)
   const shown = useMemo(() => filterWishlist(rows, shownFilters), [rows, shownFilters])
   // Jusqu'à un millier de cartes : dessinées au fur et à mesure du défilement.
-  const { limit, end } = useGrowingList(shown.length, CARDS_STEP)
+  const { limit, end } = useGrowingList(shown.length, CARDS_STEP, 0, 'liste-achats')
   // Sur téléphone, les listes passent dans un panneau « Filtres » : la liste commence plus haut.
   const compact = usePhone()
   const searchField = useRef<HTMLInputElement>(null)

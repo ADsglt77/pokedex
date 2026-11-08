@@ -1,8 +1,24 @@
 import type { MouseEvent } from 'react'
 import { useNavigate } from 'react-router'
 
-/** Le dernier lien suivi par `useFollowLinks` : sa page, son adresse. */
-let followed: { from: string; href: string } | null = null
+/**
+ * Le dernier lien suivi par `useFollowLinks` : sa page, son adresse, et son rang parmi les liens
+ * de cette adresse que le focus peut prendre (`focusableLinks` : deux cartes d'un même Pokémon dans
+ * la liste d'achats mènent à la même fiche).
+ */
+let followed: { from: string; href: string; rank: number } | null = null
+
+/**
+ * Les liens de `root` vers `href` que le focus peut prendre, dans l'ordre de la page : affichés
+ * (pas ceux du Pokédex gardé caché, ni une pochette filtrée : `display: none`, eux ou un parent,
+ * aucune boîte ; pas `checkVisibility`, absent de Safari avant 17.4 : l'erreur emportait toute
+ * l'app), et pas une vignette qui double le lien du titre (`tabIndex = -1`, cachée aux lecteurs
+ * d'écran).
+ */
+const focusableLinks = (root: ParentNode, href: string) =>
+  [...root.querySelectorAll<HTMLElement>(`a[href="${CSS.escape(href)}"]`)].filter(
+    (link) => link.tabIndex >= 0 && link.getClientRects().length > 0,
+  )
 
 /**
  * De retour sur la page `pathname` d'où un lien a été suivi (une pochette du Pokédex, une carte de
@@ -11,11 +27,9 @@ let followed: { from: string; href: string } | null = null
  */
 export function returnedLink(root: HTMLElement, pathname: string) {
   if (followed?.from !== pathname) return null
-  const link = root.querySelector<HTMLElement>(`a[href="${CSS.escape(followed.href)}"]`)
+  const { href, rank } = followed
   followed = null
-  // Caché (une pochette filtrée, `display: none`, elle ou un parent) : aucune boîte, pas de focus
-  // possible. Pas `checkVisibility`, absent de Safari avant 17.4 : l'erreur emportait toute l'app.
-  return link && link.getClientRects().length > 0 ? link : null
+  return focusableLinks(root, href)[rank] ?? null
 }
 
 /**
@@ -25,7 +39,8 @@ export function returnedLink(root: HTMLElement, pathname: string) {
  * comme pour tout lien (nouvel onglet…). Des liens simples, pas des `Link` de react-router : ceux-ci
  * lisent l'adresse, et des centaines se redessineraient à chaque frappe d'une recherche gardée dans
  * l'adresse (environ 20 ms). Le lien suivi est retenu : de retour sur la page, le focus y revient
- * (`returnedLink`, la coquille), au lieu de repartir du haut.
+ * (`returnedLink`, la coquille), au lieu de repartir du haut ; suivi par sa vignette, au lien du
+ * titre qu'elle double (le premier qui la suit).
  */
 export function useFollowLinks() {
   const navigate = useNavigate()
@@ -48,7 +63,12 @@ export function useFollowLinks() {
     }
     event.preventDefault()
     const href = link.getAttribute('href')!
-    followed = { from: location.pathname, href }
+    const rank = focusableLinks(link.closest('main') ?? document, href).findIndex(
+      (other) =>
+        other === link ||
+        !!(link.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING),
+    )
+    followed = { from: location.pathname, href, rank: Math.max(rank, 0) }
     void navigate(href)
   }
 }

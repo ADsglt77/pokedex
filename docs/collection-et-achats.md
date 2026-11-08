@@ -43,7 +43,7 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   dresseur ou une énergie est une carte sans Pokémon (`dexIds` vide).
   - Commencer (`startSeries`) : une carte n'existe qu'une fois. Une carte déjà dans le compte, de
     même langue et de même code (extension et numéro) ou de même id Cardmarket (`cardCodeKey`,
-    `cardmarketKey`, `lib/card-code.ts`, la règle d'`isCatalogCard` en clés), est reprise comme sa
+    `cardmarketKey`, `lib/card-code.ts`, la règle de `catalogMatch` en clés), est reprise comme sa
     case, telle quelle (statut, achats, place au Pokédex). Une case chacune (jamais deux fois le
     même id dans une collection) : celle de son code d'abord, sinon celle de son id Cardmarket, car
     deux cartes d'une extension ont parfois le même id Cardmarket au catalogue (« AR 94 » et « AR
@@ -163,7 +163,9 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     Pokédex ; une case d'extension pas encore obtenue (`seriesOnly`) n'est pas encore une carte de
     ses Pokémon : elle est libre de cette règle, ni écartée par une carte du même Pokémon prise
     avant elle, ni écartant celles prises après (deux cases du même Pokémon sont prises ; testé).
-    On peut en retirer ou en ajouter à la main. Après « Enregistrer comme commande », l'assistant
+    On peut en retirer ou en ajouter à la main. Sans les prix du jour (en chemin : une ébauche ;
+    en panne : « Le plan attend les prix du jour », redemandés d'eux-mêmes), pas de plan : chaque
+    carte y serait « sans prix » (`PlannerPanel`). Après « Enregistrer comme commande », l'assistant
     repart de ses réglages par défaut (le budget : le reste du mois, cette commande comprise, pas
     plus que le plafond, au pas de 5 € vers le bas ; `defaultPlanBudget`, testé) ;
   - « Copier pour Cardmarket » (`shopping/WantsDialog`, à côté d'« Enregistrer comme commande… »,
@@ -193,16 +195,19 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     cours → commandée, reçue → possédée, annulée ou supprimée → l'état d'avant, gardé dans
     `OrderLine.previous`, `previousOf`, relu à chaque enregistrement, formulaire comme « Marquer
     reçue » : l'état actuel dès que la carte ne porte plus l'effet de la commande, commande annulée
-    ou carte corrigée à la main depuis). Une possession n'est jamais retirée ; une carte qui quitte
-    une commande reçue (ligne retirée, commande annulée ou supprimée) reste possédée, sans la date
-    ni le prix payé que la commande lui avait donnés : ceux d'une autre commande reçue qui la
-    contient (réception, prix de revient), sinon aucun. Une commande reçue ne repasse pas « en
-    cours » (le formulaire ne le propose pas : `canBePending`) : ses cartes resteraient possédées
-    avec sa date et son prix payé sans plus porter son effet ; au prochain enregistrement, elles
-    passeraient pour possédées avant elle (« Déjà possédée avant cette commande »), son remboursé
-    ne changerait plus leur prix payé, et l'annuler ou la supprimer leur laisserait sa date et son
-    prix. Une réception notée par erreur se défait par « Annuler » du message ; sinon, l'état
-    « Annulée ». Le prix payé est le prix de revient (port, frais et remboursé répartis au prorata,
+    avant sa réception ou carte corrigée à la main depuis). Une possession n'est jamais retirée ;
+    une carte qui quitte une commande reçue (ligne retirée, commande annulée ou supprimée) reste
+    possédée, sans la date ni le prix payé que la commande lui avait donnés : ceux d'une autre
+    commande reçue qui la contient (réception, prix de revient), sinon aucun. Possédée sans date,
+    elle porte encore l'effet de la commande reçue puis annulée (`carriesEffect` ; marquée à la
+    main, une carte est datée) : remise « Reçue », la commande lui redonne sa date et son prix
+    (testé). Une commande reçue, ou reçue puis annulée, ne repasse pas « en cours » (le formulaire
+    ne le propose pas : `canBePending`) : ses cartes resteraient possédées sans plus porter son
+    effet ; au prochain enregistrement, elles passeraient pour possédées avant elle (« Déjà
+    possédée avant cette commande »), sa réception ne leur donnerait plus sa date ni son prix, son
+    remboursé ne changerait plus leur prix payé, et l'annuler ou la supprimer leur laisserait sa
+    date et son prix. Une réception notée par erreur se défait par « Annuler » du message ; sinon,
+    l'état « Annulée », puis « Reçue » à l'arrivée du colis. Le prix payé est le prix de revient (port, frais et remboursé répartis au prorata,
     au centime ; les centimes d'arrondi vont aux lignes d'une seule carte, en plusieurs tours,
     jamais sous 0 €, pour que les prix de revient fassent le total). Corriger la date de réception
     corrige la date d'obtention. Une carte déjà dans une autre

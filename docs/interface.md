@@ -307,7 +307,10 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   une annulation ou la collection relue du serveur, seules les pochettes changées se redessinent.
   Le tableau des cartes de Valeur (trié par lui, le tri du tableau contrôlé) et la liste d'achats
   sont dessinés au fur et à mesure (`useGrowingList` : Valeur 151 ms → 60 à l'ouverture, Achats 254
-  → 53). Un montant au prix du jour (`PricedValue`, des centaines par page) lit la réponse des prix
+  → 53). Ces deux listes et la grille d'une collection d'extension, qu'on quitte par leurs liens,
+  gardent leur longueur dans l'entrée de l'historique (`name` de `useGrowingList`, dans son état) :
+  « Précédent » ou un rechargement les redessine aussi longues, et la position de défilement et le
+  lien suivi y sont encore. Un montant au prix du jour (`PricedValue`, des centaines par page) lit la réponse des prix
   de la collection une fois par état (`store/prices.ts`). Le plan de la prochaine commande suit le
   curseur du budget en différé (`useDeferredValue`), et ses listes sont dessinées au fur et à
   mesure (`useGrowingList`, 60 cartes à la fois) : un pas du curseur ne redessine pas toutes ses
@@ -376,7 +379,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   l'avait : le focus va au titre du nouveau, s'il était perdu (une carte choisie dans la liste le
   garde). De retour sur une page d'où un lien a été suivi (une pochette du Pokédex,
   une carte de la liste d'achats), le focus revient à ce lien (`returnedLink` de `useFollowLinks`,
-  la coquille) ; la fiche d'une carte du catalogue fermée, il va à la tuile de la carte montrée en
+  la coquille) : celui-là même, par son rang parmi les liens de son adresse que le focus peut
+  prendre (deux cartes d'un même Pokémon), jamais une pochette du Pokédex gardé caché ni une
+  vignette qui double le lien du titre (au lien du titre si la vignette a été suivie) ; la fiche d'une carte du catalogue fermée, il va à la tuile de la carte montrée en
   dernier (parcourue avec ← et →), pas à celle ouverte au départ (une tuile pas encore dessinée,
   loin dans la liste : la fenêtre décide) ; la fenêtre d'une carte d'une collection fermée, à sa
   tuile, mise sous les yeux, même ouverte d'emblée par `?carte=` (`focusTileAfter`,

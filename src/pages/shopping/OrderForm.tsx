@@ -71,6 +71,7 @@ export function OrderForm({
     saveButton.current?.focus()
   }, [formOpen])
 
+  const pendingAllowed = canBePending(stored, collection)
   const read = readDraft(draft, base, stored, collection)
   const { order } = read
   const errors = submitted ? read.errors : {}
@@ -165,11 +166,11 @@ export function OrderForm({
             size="sm"
             label="État"
             hint={
-              canBePending(stored)
+              pendingAllowed
                 ? STATE_HINTS[draft.state]
                 : `${STATE_HINTS[draft.state]} ${RECEIVED_HINT}`
             }
-            options={canBePending(stored) ? STATE_OPTIONS : STATE_OPTIONS_RECEIVED}
+            options={pendingAllowed ? STATE_OPTIONS : STATE_OPTIONS_RECEIVED}
             value={draft.state}
             onChange={(state) => set({ state })}
           />

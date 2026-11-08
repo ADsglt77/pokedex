@@ -1,6 +1,7 @@
 /**
- * Ajouter une carte du catalogue à un Pokémon (`catalogTarget`) : jamais un doublon, et une carte
- * TAG TEAM qu'un autre de ses Pokémon a déjà n'est pas recopiée, il s'ajoute à elle. Retirer la
+ * Ajouter une carte du catalogue à un Pokémon (`catalogTarget`) : jamais un doublon, une carte
+ * TAG TEAM qu'un autre de ses Pokémon a déjà n'est pas recopiée, il s'ajoute à elle, et deux
+ * cartes de même id Cardmarket restent deux cartes, chacune trouvée par son code. Retirer la
  * carte d'un Pokémon : une carte TAG TEAM, achetée une fois, reste aux autres. La carte
  * favorite d'un Pokémon (la première d'office, ensuite son choix) : elle suit les cartes qu'on
  * ajoute, qu'on retire ou qu'on corrige, un Pokémon qui a des cartes en ayant toujours une, jamais
@@ -16,7 +17,7 @@
 
 import { beforeAll, describe, expect, test } from 'bun:test'
 import { artworkUrl, spriteUrl } from '@/config/pokedex'
-import { catalogTarget, type CatalogCard } from '@/lib/card-catalog'
+import { catalogTarget, collectionCard, unobtainedSlot, type CatalogCard } from '@/lib/card-catalog'
 import { numberKey } from '@/lib/card-code'
 import {
   catalogImage,
@@ -71,19 +72,43 @@ const tagTeam: CatalogCard = {
 /** Cette TAG TEAM, ajoutée avant à Pikachu seul. */
 const pikachuOnly = card('tag', [25], { reference: tagTeam.reference })
 
-/** Les entrées du Pokédex d'une collection, par Pokémon (`usePokedex`). */
-const entriesOf = (...cards: PokemonCard[]) =>
-  buildPokedex(withCards(collectionWith(), ...cards)).entryById
+/** Ce que voit l'ajout d'une carte du catalogue à `speciesId`, dans un compte qui a ces cartes. */
+function targetIn(cards: PokemonCard[], speciesId: number, listed: CatalogCard | null) {
+  const data = withCards(collectionWith(), ...cards)
+  return catalogTarget(data, buildPokedex(data).entryById, speciesId, listed)
+}
+
+/** Une carte de Platine : Arceus, à l’id Cardmarket d’AR 94 et d’AR AR7. */
+const arceus = (number: string): CatalogCard => ({
+  key: `fr AR ${number}`,
+  number,
+  set: { language: 'fr', id: 'AR', name: 'Platine : Arceus', year: '2009', logo: false },
+  dexIds: [25],
+  reference: `Arceus (AR ${number})`,
+  image: null,
+  cardmarket: 278966,
+  rarity: null,
+  type: null,
+})
+
+/** Sa case pas encore obtenue d'une collection d'extension, ou sa carte (`seriesOnly: false`). */
+const arceusCard = (number: string, seriesOnly = true) =>
+  card(`ar-${number}`, [25], {
+    reference: `Arceus (AR ${number})`,
+    language: 'fr',
+    cardmarket: 278966,
+    ...(seriesOnly && { seriesOnly }),
+  })
 
 describe('ajouter une carte du catalogue', () => {
   test('une TAG TEAM qu’un seul de ses Pokémon a : les autres s’y ajoutent, sans copie', () => {
-    expect(catalogTarget(entriesOf(pikachuOnly), 644, tagTeam)).toEqual({
+    expect(targetIn([pikachuOnly], 644, tagTeam)).toEqual({
       duplicate: false,
       receivers: [644],
       existing: pikachuOnly,
     })
     // Qu'aucun n'a : une nouvelle carte, pour tous ses Pokémon.
-    expect(catalogTarget(entriesOf(), 644, tagTeam)).toEqual({
+    expect(targetIn([], 644, tagTeam)).toEqual({
       duplicate: false,
       receivers: [25, 644],
       existing: undefined,
@@ -91,15 +116,42 @@ describe('ajouter une carte du catalogue', () => {
   })
 
   test('un doublon : refusé au Pokémon qui l’a déjà ; jamais pour une saisie à la main', () => {
-    const entryById = entriesOf(pikachuOnly)
-    const target = catalogTarget(entryById, 25, tagTeam)
+    const target = targetIn([pikachuOnly], 25, tagTeam)
     expect(target.duplicate).toBe(true)
     expect(target.existing).toBeUndefined()
-    expect(catalogTarget(entryById, 25, null)).toEqual({
+    expect(targetIn([pikachuOnly], 25, null)).toEqual({
       duplicate: false,
       receivers: [25],
       existing: undefined,
     })
+  })
+
+  test('deux cartes de même id Cardmarket : chacune la sienne, par son code', () => {
+    const slots = [arceusCard('94'), arceusCard('AR7')]
+    const data = withCards(collectionWith(), ...slots)
+    // La case reprise est celle du code, pas la première de même id.
+    expect(unobtainedSlot(data, arceus('AR7'))?.id).toBe('ar-AR7')
+    expect(unobtainedSlot(data, arceus('94'))?.id).toBe('ar-94')
+    // AR7 devenue une carte d'Arceus : AR 94 n'est ni un doublon ni elle, sa case reste à prendre.
+    const obtained = [arceusCard('94'), arceusCard('AR7', false)]
+    const withAr7 = withCards(collectionWith(), ...obtained)
+    expect(targetIn(obtained, 25, arceus('94'))).toEqual({
+      duplicate: false,
+      receivers: [25],
+      existing: undefined,
+    })
+    expect(collectionCard(withAr7, buildPokedex(withAr7).entryById, arceus('94'))).toBeNull()
+    expect(unobtainedSlot(withAr7, arceus('94'))?.id).toBe('ar-94')
+  })
+
+  test('sans carte de ce code dans le compte, la carte de même id Cardmarket est la sienne', () => {
+    // Notée sans code, ou d'un code que le catalogue a changé depuis.
+    const noted = card('noted', [25], {
+      reference: 'Arceus Niv.X',
+      language: 'fr',
+      cardmarket: 278966,
+    })
+    expect(targetIn([noted], 25, arceus('94')).duplicate).toBe(true)
   })
 })
 

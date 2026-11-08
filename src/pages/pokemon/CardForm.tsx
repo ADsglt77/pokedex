@@ -57,7 +57,8 @@ export function CardForm({
   const listed = draft.reference.trim() === picked?.reference ? picked : null
   // Un doublon (refusé), les Pokémon qui la recevront, et la carte de la collection qu'elle est
   // déjà (celle d'un autre de ses Pokémon : ils s'y ajoutent). Sa référence corrigée : une saisie.
-  const target = catalogTarget(entryById, species.id, listed)
+  const collection = useCollectionStore((state) => state.collection)
+  const target = catalogTarget(collection, entryById, species.id, listed)
   const { duplicate, existing } = target
   // Corrigée, une case d'une collection d'extension le reste : la fenêtre le dit.
   const series = useCollectionStore((state) => card && seriesOf(state.collection, card.id))

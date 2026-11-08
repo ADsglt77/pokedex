@@ -81,7 +81,7 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   TAG TEAM dit « avec … » dans la grille, et va à tous ses Pokémon qui ne l'ont pas déjà tant que la
   référence reste la sienne ; une saisie à la main ne va qu'au Pokémon de la fiche) et y mène le
   focus ; on la vérifie puis l'enregistre (« Enregistrer » attend que la carte soit choisie, ou
-  l'onglet de saisie ; une carte que le Pokémon a déjà, `isCatalogCard`, est refusée : « Pikachu a
+  l'onglet de saisie ; une carte que le Pokémon a déjà, `catalogMatch`, est refusée : « Pikachu a
   déjà cette carte. », tant que la référence reste la sienne : corrigée, c'est une saisie, plus
   refusée ; une carte qu'un autre de ses Pokémon a déjà lui est ajoutée telle quelle,
   statut, prix payé et commandes compris, la fenêtre le dit et n'offre pas « Ajouter comme » :
@@ -159,8 +159,9 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   ceux qui ont déjà des cartes) : « Pikachu a déjà des cartes : celle-ci s'y ajoute, à acheter,
   sans changer sa favorite. » (« a déjà une carte » s'il n'en a qu'une ; « ont déjà des cartes »,
   « leur favorite » s'ils sont plusieurs). Déjà dans la collection (de la même langue, avec le même
-  code dans la référence ou le même id Cardmarket : `isCatalogCard`, pour n'importe lequel de ses
-  Pokémon) :
+  code dans la référence ; ou, si aucune carte du compte n'a ce code, le même id Cardmarket :
+  `catalogMatch`, testé, pour n'importe lequel de ses Pokémon ; le code d'abord, comme
+  `startSeries` : « AR 94 » et « AR AR7 » ont le même id, et chacune reste la sienne) :
   « Dans votre collection », qui reçoit le focus après l'ajout, et le bouton disparaît : une carte
   du catalogue n'est jamais ajoutée deux fois (une TAG TEAM qu'un seul de ses Pokémon a se donne
   aux autres depuis leur fiche). Annoncé avec « Annuler » : « Carte … ajoutée à Pikachu, à acheter. »
@@ -229,7 +230,7 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   quelle : la seule image que le navigateur va chercher ailleurs. Sans adresse collée, l'image suit
   la référence (cherchée en quittant le champ). Le code d'une carte (`lib/card-code.ts`) : `codeKey`
   en fait une clé (« SV2A 166 », « S8AG 1 » : série en majuscules sans tiret, numéro sans
-  zéro) : ce qui fait la même carte de la collection qu'une carte du catalogue (`isCatalogCard`) ou
+  zéro) : ce qui fait la même carte de la collection qu'une carte du catalogue (`catalogMatch`) ou
   qu'une case (`cardCodeKey`, `startSeries`) ; ses deux moitiés, `setKey` puis `numberKey`,
   retrouvent la carte du catalogue d'une référence (`findCardImage`).
 - Retirés à la demande de l'utilisateur, à ne pas réintroduire sans demande : TCGdex et TCGplayer

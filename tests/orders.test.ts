@@ -331,10 +331,12 @@ describe('commande reçue modifiée', () => {
     const received = order({ lines: [line('a', 20)], state: 'received', receivedAt: '2026-10-09' })
     // En cours, sa carte resterait possédée (jamais retirée) : au prochain enregistrement, elle
     // passerait pour possédée avant la commande, et garderait son prix et sa date.
-    expect(canBePending(received)).toBe(false)
-    expect(canBePending(null)).toBe(true)
-    expect(canBePending({ ...received, state: 'pending' })).toBe(true)
-    expect(canBePending({ ...received, state: 'cancelled' })).toBe(true)
+    const empty = collectionWith()
+    expect(canBePending(received, empty)).toBe(false)
+    expect(canBePending(null, empty)).toBe(true)
+    expect(canBePending({ ...received, state: 'pending' }, empty)).toBe(true)
+    // Annulée avant sa réception : ses cartes ont retrouvé leur état.
+    expect(canBePending({ ...received, state: 'cancelled' }, empty)).toBe(true)
 
     // Les enregistrements suivants, comme le store : l'état d'avant relu (`previousOf`).
     const resave = (before: Order, change: Partial<Order>, collection: CollectionData) => {
@@ -367,6 +369,39 @@ describe('commande reçue modifiée', () => {
       status: 'owned',
       updatedAt: NOW,
       acquiredAt: null,
+    })
+    // Reçue puis annulée, elle ne repasse pas en cours non plus : sa carte resterait possédée.
+    expect(canBePending(cancelled.after, cancelled.collection)).toBe(false)
+  })
+
+  test('reçue par erreur, annulée, puis reçue : sa carte reprend sa date et son prix', () => {
+    const resave = (before: Order, change: Partial<Order>, collection: CollectionData) => {
+      const after = {
+        ...before,
+        ...change,
+        lines: before.lines.map((known) => ({
+          ...known,
+          previous: previousOf(known.cardId, before, collection),
+        })),
+      }
+      return { after, collection: applyOrder(collection, before, after, [], NOW) }
+    }
+    const received = order({ lines: [line('a', 20)], state: 'received', receivedAt: '2026-10-09' })
+    const owned = applyOrder(collectionWith(), null, received, [], NOW)
+    const cancelled = resave(received, { state: 'cancelled', receivedAt: undefined }, owned)
+    expect(cancelled.after.lines[0]?.previous).toBeNull()
+    const again = resave(
+      cancelled.after,
+      { state: 'received', receivedAt: '2026-10-12' },
+      cancelled.collection,
+    )
+    expect(again.after.lines[0]?.previous).toBeNull()
+    expect(duplicateReason(again.after.lines[0]!, [])).toBeNull()
+    expect(again.collection.cards.a).toEqual({
+      status: 'owned',
+      updatedAt: NOW,
+      acquiredAt: new Date('2026-10-12T12:00:00').toISOString(),
+      paidPrice: 20,
     })
   })
 

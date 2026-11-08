@@ -270,39 +270,49 @@ async function catalogCard(reference: string, lang: CardLanguage): Promise<SetCa
 }
 
 /**
- * Une carte de la collection est-elle celle-ci du catalogue ? De la même langue, avec le même code
- * (série et numéro) dans sa référence, ou le même id Cardmarket.
+ * Ce qui fait, dans ce compte (`data`), une carte de la collection celle-ci du catalogue : de la
+ * même langue, avec le même code (série et numéro) dans sa référence ; ou, si aucune carte du
+ * compte n'a ce code, avec le même id Cardmarket (une carte notée sans code, un catalogue
+ * renuméroté depuis). Le code d'abord, comme `startSeries` : deux cartes du catalogue ont parfois
+ * le même id (« AR 94 » et « AR AR7 » en français), et celle de l'autre code n'est pas celle-ci.
  */
-const isCatalogCard = (card: PokemonCard, listed: CatalogCard) =>
-  isCardOf(
-    card,
-    listed.set.language,
-    { set: listed.set.id, number: listed.number },
-    listed.cardmarket,
-  )
+function catalogMatch(data: CollectionData, listed: CatalogCard) {
+  const code = { set: listed.set.id, number: listed.number }
+  const ofCode = (card: PokemonCard) => isCardOf(card, listed.set.language, code, undefined)
+  const cardmarket = Object.values(data.customCards).some(ofCode) ? undefined : listed.cardmarket
+  return (card: PokemonCard) => isCardOf(card, listed.set.language, code, cardmarket)
+}
 
 /**
  * La case pas encore obtenue d'une collection d'extension (`seriesOnly`) qui est cette carte du
- * catalogue (`isCatalogCard`) ; `null` sans. Elle n'est pas encore une carte de ses Pokémon : leurs
+ * catalogue (`catalogMatch`) ; `null` sans. Elle n'est pas encore une carte de ses Pokémon : leurs
  * cartes ne la montrent pas, mais une carte n'existe qu'une fois, l'ajouter la reprend (`adopt`).
  */
-export const unobtainedSlot = (data: CollectionData, listed: CatalogCard) =>
-  Object.values(data.customCards).find((card) => card.seriesOnly && isCatalogCard(card, listed)) ??
-  null
+export function unobtainedSlot(data: CollectionData, listed: CatalogCard) {
+  const isListed = catalogMatch(data, listed)
+  return Object.values(data.customCards).find((card) => card.seriesOnly && isListed(card)) ?? null
+}
 
 /**
- * La carte de la collection qui est celle-ci du catalogue (`isCatalogCard`), parmi les cartes de
+ * La carte de la collection qui est celle-ci du catalogue (`catalogMatch`), parmi les cartes de
  * ses Pokémon (`usePokedex`) ; `null` sans.
  */
-export const collectionCard = (entryById: ReadonlyMap<number, PokedexEntry>, listed: CatalogCard) =>
-  listed.dexIds
-    .flatMap((id) => entryById.get(id)!.cards)
-    .find((view) => isCatalogCard(view.card, listed)) ?? null
+export function collectionCard(
+  data: CollectionData,
+  entryById: ReadonlyMap<number, PokedexEntry>,
+  listed: CatalogCard,
+) {
+  const isListed = catalogMatch(data, listed)
+  return (
+    listed.dexIds.flatMap((id) => entryById.get(id)!.cards).find((view) => isListed(view.card)) ??
+    null
+  )
+}
 
 /**
  * Ce que fait l'ajout à un Pokémon (`speciesId`) de cette carte du catalogue (`listed`, la fenêtre
  * d'ajout) ; `null` : une saisie à la main, pour ce Pokémon seul, jamais un doublon.
- * - `duplicate` : il l'a déjà (`isCatalogCard`), l'ajouter ferait un doublon ;
+ * - `duplicate` : il l'a déjà (`catalogMatch`), l'ajouter ferait un doublon ;
  * - `receivers` : les Pokémon qui la recevront, tous les siens (TAG TEAM : une seule carte,
  *   achetée une fois), sauf ceux qui l'ont déjà ;
  * - `existing` : déjà dans la collection, celle d'un autre de ses Pokémon (une TAG TEAM ajoutée
@@ -310,18 +320,19 @@ export const collectionCard = (entryById: ReadonlyMap<number, PokedexEntry>, lis
  *   à elle (même id : son statut, son prix payé et ses commandes la suivent).
  */
 export function catalogTarget(
+  data: CollectionData,
   entryById: ReadonlyMap<number, PokedexEntry>,
   speciesId: number,
   listed: CatalogCard | null,
 ) {
   if (!listed) return { duplicate: false, receivers: [speciesId], existing: undefined }
-  const holds = (id: number) =>
-    entryById.get(id)!.cards.some((view) => isCatalogCard(view.card, listed))
+  const isListed = catalogMatch(data, listed)
+  const holds = (id: number) => entryById.get(id)!.cards.some((view) => isListed(view.card))
   const duplicate = holds(speciesId)
   return {
     duplicate,
     receivers: listed.dexIds.filter((id) => !holds(id)),
-    existing: duplicate ? undefined : collectionCard(entryById, listed)?.card,
+    existing: duplicate ? undefined : collectionCard(data, entryById, listed)?.card,
   }
 }
 
