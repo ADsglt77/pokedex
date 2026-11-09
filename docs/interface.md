@@ -94,7 +94,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   Valeur ; la progression ; Réglages et le compte en pied ; Collections est la page ouverte aussi
   sur le Pokédex et les fiches, qui s'ouvrent depuis elle) ; en dessous, une barre en haut (nom,
   recherche, Réglages, thème, compte en icône) et cinq onglets en bas ; le bouton du thème est aussi
-  en pied de la barre latérale. Chaque entrée de l'historique garde sa position de défilement
+  en pied de la barre latérale. En haut de `main`, au-dessus de chaque page, le bandeau de
+  l'enregistrement (`SaveBanner`, `docs/compte-et-synchronisation.md`) : hors ligne, session
+  fermée, version mise de côté, rien quand tout va bien. Le `Banner` de camply y est employé sans
+  son `action` (qui place les boutons à droite du texte et l'écrase sur un téléphone, au point de
+  faire défiler la page de côté) : les boutons passent sous le texte. Chaque entrée de l'historique garde sa position de défilement
   (`ScrollRestoration`, la coquille), retrouvée par « Précédent » ou un rechargement, sauf en
   revenant tout droit d'une page hors de la coquille (connexion, inscription, mentions légales,
   Pokédex public) : le routeur ne retient les positions que la coquille montée, la page s'ouvre

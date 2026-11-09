@@ -3,6 +3,7 @@ import { LogIn } from '@camply/ui/icons'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { AuthCard } from '@/components/AuthCard'
+import { useOtherAccountGuard } from '@/hooks/useOtherAccountGuard'
 import { authCall, authClient } from '@/lib/auth'
 import { openSession } from '@/store/account'
 
@@ -16,15 +17,20 @@ const returnPath = (path: string | null) =>
 /**
  * `/connexion` : se connecter par son pseudo pour ouvrir son Pokédex, hors de la coquille (elle ne
  * s'ouvre que connecté), la page d'un visiteur qui ouvre le site ; sans compte, l'inscription
- * (`SignUpPage`). Ensuite, retour à la page d'où l'on venait (`?retour=`), l'accueil sinon.
+ * (`SignUpPage`). Ensuite, retour à la page d'où l'on venait (`?retour=`), l'accueil sinon. Vers
+ * un autre compte que celui resté ici avec des modifications à perdre : d'abord un avertissement
+ * (`useOtherAccountGuard`).
  */
 export function LoginPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const [pseudo, setPseudo] = useState('')
   const [password, setPassword] = useState('')
+  const otherAccount = useOtherAccountGuard()
 
   const submit = async () => {
+    const warning = otherAccount(pseudo)
+    if (warning) return warning
     const problem = await openSession(
       await authCall(() => authClient.signIn.username({ username: pseudo.trim(), password })),
       { 401: 'Pseudo ou mot de passe incorrect.' },

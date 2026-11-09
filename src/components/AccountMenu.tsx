@@ -3,12 +3,12 @@ import { CloudAlert, CloudCheck, CloudOff, LogIn, LogOut, RefreshCw } from '@cam
 import { useEffect, useId, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { ExportCollectionButton } from '@/components/ExportCollectionButton'
+import { ExportCollectionButton, SetAsideExportButtons } from '@/components/ExportCollectionButton'
 import { useNotify } from '@/hooks/useNotify'
 import { loginPath } from '@/lib/account'
 import { cx } from '@/lib/cx'
 import { formatMegabytes } from '@/lib/format'
-import { hasUnsavedChanges, save, signOut, useAccountStore, type SaveStatus } from '@/store/account'
+import { hasChangesAtRisk, save, signOut, useAccountStore, type SaveStatus } from '@/store/account'
 import { MAX_DOCUMENT } from '@/types'
 import styles from './AccountMenu.module.css'
 
@@ -27,17 +27,17 @@ const STATUS: Record<SaveStatus, { label: string; icon: typeof CloudCheck; text:
   offline: {
     label: 'Hors ligne',
     icon: CloudOff,
-    text: 'Le serveur ne répond pas : votre dernière modification n’est pas encore enregistrée. Elle repartira à son retour ; ne fermez pas la page d’ici là.',
+    text: 'Le serveur ne répond pas : votre dernière modification n’est pas encore enregistrée. Elle repartira à son retour ; d’ici là, ne fermez pas la page, ou exportez votre collection.',
   },
   expired: {
     label: 'Reconnectez-vous',
     icon: CloudAlert,
-    text: 'Vous êtes déconnecté : session expirée, connexion sur un autre appareil (un seul à la fois) ou à un autre compte dans un autre onglet. Vos modifications ne s’enregistrent plus ; reconnectez-vous à ce compte, et celles en attente partiront.',
+    text: 'Vous êtes déconnecté : session expirée, connexion sur un autre appareil (un seul à la fois) ou à un autre compte dans un autre onglet. Vos modifications ne s’enregistrent plus ; reconnectez-vous à ce compte pour envoyer celles en attente (si la collection a changé ailleurs entre-temps, votre version sera mise de côté, à exporter).',
   },
   reloaded: {
     label: 'Rechargée',
     icon: CloudAlert,
-    text: 'Votre collection avait changé ailleurs (un autre onglet, un autre appareil) : elle a été rechargée, et votre dernière modification n’a pas été enregistrée.',
+    text: 'Votre collection avait changé ailleurs (un autre onglet, un autre appareil) : elle a été rechargée, et votre version d’ici est mise de côté, à exporter pour la garder (le bandeau en haut de la page).',
   },
   refused: {
     label: 'Envoi refusé',
@@ -64,8 +64,9 @@ let heavyWarned = false
  * Le compte connecté (la coquille ne s'ouvre que connecté) : où en est l'enregistrement de la
  * collection, et un menu : se reconnecter (session fermée) ou renvoyer, puis se déconnecter. En
  * bas de la barre latérale, de sa largeur ; `compact` (barre du haut), son icône seule (le texte
- * reste lu). Ce qui s'y voit mal sur un téléphone (rien que l'icône) a aussi son toast : une
- * collection rechargée ou refusée, et une collection qui approche du plafond du serveur (80 %).
+ * reste lu). Ce qui s'y voit mal sur un téléphone (rien que l'icône) a aussi son toast : la session
+ * fermée, une collection rechargée ou refusée, et une collection qui approche du plafond du serveur
+ * (80 %) ; le bandeau de l'enregistrement (`SaveBanner`) propose l'export au-dessus de chaque page.
  */
 export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const account = useAccountStore((state) => state.account)
@@ -97,7 +98,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
       notify('Déconnexion impossible : le serveur ne répond pas.', { tone: 'danger' })
     }
   }
-  const askToLeave = () => (hasUnsavedChanges() ? setConfirmingSignOut(true) : void leave())
+  const askToLeave = () => (hasChangesAtRisk() ? setConfirmingSignOut(true) : void leave())
 
   return (
     <>
@@ -136,7 +137,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
         {status === 'expired' ? (
           <MenuItem
             icon={<LogIn size={16} />}
-            onSelect={() => (hasUnsavedChanges() ? setConfirmingLogin(true) : login())}
+            onSelect={() => (hasChangesAtRisk() ? setConfirmingLogin(true) : login())}
           >
             Se reconnecter
           </MenuItem>
@@ -160,10 +161,12 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
         onConfirm={() => void leave()}
       >
         <p>
-          Votre dernière modification n’est pas encore enregistrée sur le serveur : en vous
-          déconnectant, elle sera perdue. Exportez d’abord votre collection pour la garder.
+          Des modifications ne sont pas enregistrées sur le serveur, ou une version mise de côté
+          n’est pas exportée&nbsp;: en vous déconnectant, elles seront perdues. Exportez-les d’abord
+          pour les garder.
         </p>
         <ExportCollectionButton />
+        <SetAsideExportButtons />
       </ConfirmDialog>
 
       <ConfirmDialog
@@ -175,20 +178,23 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
         onConfirm={login}
       >
         <p>
-          Votre dernière modification n’est pas encore enregistrée sur le serveur&nbsp;: elle
-          partira si vous vous reconnectez avec le pseudo «&nbsp;{account.name}&nbsp;». Avec un
-          autre compte, elle serait perdue&nbsp;: exportez d’abord votre collection pour la garder.
+          Des modifications ne sont pas enregistrées sur le serveur, ou une version mise de côté
+          n’est pas exportée. Reconnectez-vous avec le pseudo «&nbsp;{account.name}&nbsp;» pour les
+          garder&nbsp;: celles en attente partiront (si la collection a changé ailleurs entre-temps,
+          votre version sera mise de côté), et les versions mises de côté resteront. Avec un autre
+          compte, elles seraient perdues&nbsp;: exportez-les d’abord.
         </p>
         <ExportCollectionButton />
+        <SetAsideExportButtons />
       </ConfirmDialog>
     </>
   )
 }
 
 /**
- * Les toasts de l'état. « Rechargée » et « Envoi refusé » : au passage seulement, pas à
- * l'affichage du menu. Les 80 % : une fois par page, à l'affichage (la collection déjà lourde à
- * l'ouverture) ou au passage.
+ * Les toasts de l'état. « Reconnectez-vous », « Rechargée » et « Envoi refusé » : au passage
+ * seulement, pas à l'affichage du menu. Les 80 % : une fois par page, à l'affichage (la collection
+ * déjà lourde à l'ouverture) ou au passage.
  */
 function useSaveStatusToasts(notify: ReturnType<typeof useNotify>) {
   useEffect(() => {
@@ -199,10 +205,16 @@ function useSaveStatusToasts(notify: ReturnType<typeof useNotify>) {
     }
     warnHeavy(useAccountStore.getState().weight)
     return useAccountStore.subscribe((state, previous) => {
-      if (state.status !== previous.status && state.status === 'reloaded') {
-        notify('Vos dernières modifications ont été remplacées par celles d’un autre appareil.', {
+      if (state.status !== previous.status && state.status === 'expired') {
+        notify('Vous êtes déconnecté de ce compte : vos modifications ne s’enregistrent plus.', {
           tone: 'warn',
         })
+      }
+      if (state.status !== previous.status && state.status === 'reloaded') {
+        notify(
+          'Vos dernières modifications ont été remplacées par celles d’un autre appareil : votre version est mise de côté, à exporter.',
+          { tone: 'warn' },
+        )
       }
       if (state.status !== previous.status && state.status === 'refused' && state.refusal) {
         notify(refusalText(state.refusal), { tone: 'danger' })

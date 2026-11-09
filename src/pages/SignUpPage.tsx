@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { AuthCard } from '@/components/AuthCard'
 import { NEW_PASSWORD_FIELD, PASSWORD_MIN, PSEUDO_FIELD, PSEUDO_HINT } from '@/config/account'
+import { useOtherAccountGuard } from '@/hooks/useOtherAccountGuard'
 import { PSEUDO_RESERVED, reservedPseudo } from '@/lib/account'
 import { authCall, authClient } from '@/lib/auth'
 import { vitrinePath } from '@/lib/filters'
@@ -12,15 +13,19 @@ import { openSession } from '@/store/account'
 /**
  * `/inscription` : créer son compte, hors de la coquille : un pseudo (son Pokédex public sera à
  * `/pseudo` ; pas une adresse du site) et un mot de passe, sans e-mail (`worker/auth.ts`). Puis,
- * connecté, l'accueil.
+ * connecté, l'accueil. Un compte resté ici avec des modifications à perdre : d'abord un
+ * avertissement (`useOtherAccountGuard`).
  */
 export function SignUpPage() {
   const navigate = useNavigate()
   const [pseudo, setPseudo] = useState('')
   const [password, setPassword] = useState('')
+  const otherAccount = useOtherAccountGuard()
 
   const submit = async () => {
     if (reservedPseudo(pseudo)) return PSEUDO_RESERVED
+    const warning = otherAccount(null)
+    if (warning) return warning
     // L'e-mail, que Better Auth exige : le serveur en donne une sans boîte au compte.
     const problem = await openSession(
       await authCall(() =>

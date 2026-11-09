@@ -195,9 +195,20 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   serveur entier avec 401, 403, une mise à jour, un document refusé (400), un envoi compressé, la
   bombe, un document de 2,1 Mo (413), l'envoi renvoyé reconnu et un autre document de la même
   version toujours refusé (409), `worker/tests/collection.test.ts`. Après un 409, le navigateur
-  relit la version du serveur, à la place de la sienne : rien n'est écrasé, sa dernière modification est
-  perdue, et le menu du compte le dit (« Rechargée », et un toast : « Vos dernières modifications
-  ont été remplacées par celles d'un autre appareil. ») ; sans réponse à cette relecture, « Hors
+  relit la version du serveur, à la place de la sienne : rien n'est écrasé sur le serveur, et la
+  version d'ici n'est jamais perdue sans un mot (novembre 2026, lot P0 de l'audit) : elle est
+  **mise de côté** (`setAside`, `load` dans `store/account.ts`), prise à l'instant même du
+  remplacement (une modification faite pendant l'envoi refusé y est), en mémoire seulement (rien
+  dans le navigateur : un onglet que le téléphone ferme de lui-même la perd, comme une
+  modification en attente). Elle reste jusqu'à « Oublier » (qui demande d'abord tant qu'elle n'est
+  pas exportée) ou la sortie du compte (déconnexion, suppression, un autre compte connecté), et
+  chaque conflit garde la sienne. Le menu du compte le dit (« Rechargée », et un toast : « Vos
+  dernières modifications ont été remplacées par celles d'un autre appareil : votre version est
+  mise de côté, à exporter. »), et le bandeau de l'enregistrement aussi (plus bas). Pas de fusion
+  ni de « reprendre ma version » (décision de l'utilisateur) : on l'exporte (« Exporter ma
+  version », le même format que l'export des Réglages), puis l'import des Réglages la reprend, en
+  remplaçant celle du serveur. Tant qu'une version n'est pas exportée, quitter la page le demande
+  (`beforeunload`, `hasChangesAtRisk`). Sans réponse à cette relecture, « Hors
   ligne », et l'envoi repart plus tard (refusé, puis relu), de plus en plus tard tant que la
   relecture échoue. Accepté, la réponse donne
   `{ version }`, et les autres onglets du navigateur l'apprennent (`BroadcastChannel('collection')`
@@ -231,10 +242,16 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   le poids est connu dès la lecture du document, puis à chaque envoi), avec un toast une fois par
   page (à l'affichage du menu, la collection déjà lourde, ou au passage du seuil) ;
   au-delà, chaque envoi est refusé (« elle dépasse
-  1,9 Mo »). Une session fermée (401, « Reconnectez-vous ») : plus rien ne part, ni ne se relit,
-  jusqu'à « Se reconnecter » ; reconnecté au même compte, ce qui attendait reste et part, depuis sa
-  version (changée ailleurs entre-temps : 409, puis relue) ; avec une modification en attente,
-  « Se reconnecter » prévient d'abord qu'un autre compte la perdrait, avec le bouton d'export. Au
+  1,9 Mo »). Une session fermée (401, « Reconnectez-vous », et un toast) : les modifications
+  restent acceptées, mais plus rien ne part, ni ne se relit, jusqu'à « Se reconnecter » ;
+  reconnecté au même compte, rien n'est quitté (`signIn`) : les versions mises de côté restent,
+  ce qui attendait part, depuis sa version (changée ailleurs entre-temps : 409, la version d'ici
+  mise de côté, puis relue), et sans rien en attente la collection est relue. Avec une
+  modification en attente ou une version pas exportée, « Se reconnecter » du menu prévient d'abord
+  qu'un autre compte les perdrait, avec les boutons d'export ; celui du bandeau mène directement à
+  la connexion, où un encadré le redit (`PendingChangesNotice`, dans `AuthCard`) avec les mêmes
+  boutons, et où le premier envoi vers un autre compte, connexion ou inscription, est refusé avec
+  un message (`useOtherAccountGuard`) : le second passe, le même pseudo toujours. Au
   retour sur la page, le document est relu (changé sur un autre appareil), si rien n'attend d'être
   envoyé, et seulement s'il a changé : `GET /api/collection?version=N` ne rend que
   `{ version, account }` quand le serveur a encore cette version (sans lire le document en base,
@@ -243,14 +260,18 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   collection (`account`) : celle d'un autre compte (connecté entre-temps dans un autre onglet) n'est
   jamais prise, l'état passe à « Reconnectez-vous ». Une modification faite pendant cette
   relecture n'est pas écrasée : elle part, depuis la version d'avant (changée ailleurs entre-temps :
-  refusée, 409, puis relue, comme plus haut), et le menu n'affiche pas « Enregistrée » tant qu'elle
-  attend (testé). Testé avec le store tel quel contre le Worker entier
+  refusée, 409, puis relue, comme plus haut : elle est alors dans la version mise de côté), et le
+  menu n'affiche pas « Enregistrée » tant qu'elle attend (testé). Testé avec le store tel quel
+  contre le Worker entier
   (`worker/tests/sync.test.ts`, sans DOM ; il attend chaque état attendu, et ne patiente un moment que
   pour vérifier que rien ne se passe) : le refus, la
   reconnexion, le retour sur la page, l'autre compte, la réponse perdue (et son renvoi refusé), le
   429,
   une modification pendant la compression, l'envoi compressé ou tel quel, la page en
-  arrière-plan et l'autre onglet. Le
+  arrière-plan et l'autre onglet ; les versions mises de côté : deux appareils, deux onglets, deux
+  conflits d'affilée, une modification pendant l'envoi refusé ou pendant la relecture, la
+  reconnexion au même compte sans rien en attente (elles restent), l'export, « Oublier » et un
+  autre compte (elles partent), et aucune gardée à tort. Le
   serveur ne garde que la dernière version (aucune version remplacée, aucune sauvegarde : octobre
   2026 ; seul l'historique de D1, 30 jours, Time Travel). Il note au journal ce qui change d'une version à l'autre (`documentChanges`,
   `worker/journal.ts`) :
@@ -269,12 +290,20 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   (« Réessayer maintenant »), reconnectez-vous (« Se reconnecter »), rechargée, envoi refusé
   (avec sa raison), et le poids passé 80 % ; puis « Se déconnecter » (la phrase d'état décrit le
   menu, `aria-describedby` : au clavier, seules ses entrées sont parcourues) ; une modification
-  pas encore enregistrée, la déconnexion le demande d'abord, avec un bouton d'export
-  (`ExportCollectionButton`). Sur téléphone, le menu n'est qu'une icône : « Rechargée » et « Envoi
-  refusé » ont aussi leur toast, au passage seulement (jamais à l'affichage du menu) ; les 80 %
+  pas encore enregistrée ou une version mise de côté pas exportée, la déconnexion le demande
+  d'abord, avec les boutons d'export (`ExportCollectionButton`, et `SetAsideExportButtons` : un
+  par version mise de côté) ; la suppression du compte (Réglages) les propose aussi. Ses phrases ne
+  promettent pas qu'une modification partira quoi qu'il arrive. Sur téléphone, le menu n'est
+  qu'une icône : « Reconnectez-vous », « Rechargée » et « Envoi refusé » ont aussi leur toast, au
+  passage seulement (jamais à l'affichage du menu) ; les 80 %
   aussi, une fois par page, à l'affichage du menu si la collection est déjà lourde ou au passage du
-  seuil (`warnHeavy`, dans `useSaveStatusToasts` d'`AccountMenu`). Se déconnecter vide la
-  mémoire de la page.
+  seuil (`warnHeavy`, dans `useSaveStatusToasts` d'`AccountMenu`). Au-dessus de chaque page de la
+  coquille, le **bandeau de l'enregistrement** (`SaveBanner`) dit ce qui risque de se perdre, sans
+  attendre l'alerte du navigateur en quittant la page (qu'un téléphone ne montre pas toujours) :
+  hors ligne (« Réessayer maintenant », « Exporter ma collection »), la session fermée (« Se
+  reconnecter », « Exporter ma collection ») et chaque version mise de côté (« Exporter ma
+  version », « Oublier »). « Envoi refusé » n'a pas de bandeau (son toast et le menu). Se
+  déconnecter vide la mémoire de la page, versions mises de côté comprises.
 - Retirés à la demande de l'utilisateur, à ne pas réintroduire sans demande : le compte unique,
   puis les invitations ; la collection « dans ce navigateur » sans compte, sa copie hors ligne et
   le rappel de sauvegarde ; le réglage public ou privé du Pokédex public.

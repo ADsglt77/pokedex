@@ -1,0 +1,7 @@
+/* Les bandeaux de l'enregistrement, au-dessus de la page, dans sa largeur (le haut de `main` a déjà
+   sa marge : l'écart est dessous). */
+.banners {
+  display: grid;
+  gap: var(--camply-space-2);
+  margin-block-end: var(--space-block);
+}

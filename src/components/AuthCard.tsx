@@ -2,6 +2,7 @@ import { Alert, Button, Card, CardDescription, CardHeader, CardTitle, Stack } fr
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Logo } from '@/components/Logo'
+import { PendingChangesNotice } from '@/components/SaveBanner'
 import { SiteDisclaimer } from '@/components/SiteDisclaimer'
 import { pageTitle } from '@/lib/format'
 import styles from './AuthCard.module.css'
@@ -12,7 +13,8 @@ import styles from './AuthCard.module.css'
  * chapeau, puis son formulaire (`children`, ses champs) et son bouton (`submit`), et le lien
  * vers l'autre page (`other`) ; dessous, le pied de page (les mentions légales). `onSubmit`
  * envoie le formulaire et rend ce qui l'a refusé, montré au-dessus des champs, ou `null` ; le
- * bouton est en chargement jusque-là.
+ * bouton est en chargement jusque-là. Au-dessus du formulaire, ce qu'un compte resté ici n'a pas
+ * enregistré, à exporter avant d'en ouvrir un autre (`PendingChangesNotice`).
  */
 export function AuthCard({
   title,
@@ -54,6 +56,7 @@ export function AuthCard({
         </CardHeader>
         <form onSubmit={send} className={styles.form}>
           <Stack gap={4}>
+            <PendingChangesNotice />
             {error && <Alert tone="danger" title={error} />}
             {children}
             <Button type="submit" fullWidth loading={busy} leftIcon={submit.icon}>

@@ -35,6 +35,7 @@ import { SiteDisclaimer } from '@/components/SiteDisclaimer'
 import { shoppingUrl } from '@/lib/filters'
 import { AccountMenu } from '@/components/AccountMenu'
 import { AppSearch } from '@/components/AppSearch'
+import { SaveBanner } from '@/components/SaveBanner'
 import { returnedLink } from '@/hooks/useFollowLinks'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { usePokedex } from '@/hooks/usePokedex'
@@ -224,6 +225,9 @@ const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pok
         </header>
 
         <main id="main" ref={main} tabIndex={-1} className={styles.main}>
+          {/* Ce qui risque de se perdre (hors ligne, session fermée, version mise de côté) : au-dessus
+              de chaque page. */}
+          <SaveBanner />
           {keepPokedex && (
             <Activity mode={onPokedex ? 'visible' : 'hidden'}>
               <div className={styles.page}>{pokedex}</div>

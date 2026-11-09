@@ -13,8 +13,10 @@
  * enregistrer, sans repartir telle quelle. Au retour sur la page, ou quand un autre onglet vient
  * d'enregistrer, la collection est relue si rien n'attend d'être envoyé, et seulement si elle a
  * changé ; jamais celle d'un autre compte ; une modification faite pendant cette lecture n'est pas
- * écrasée (`load`). Sans connexion, l'app ne s'ouvre pas : on voit la connexion, ou le Pokédex
- * public d'un compte (`router.tsx`, lu par `loadVitrine`).
+ * écrasée (`load`). Une version d'ici que remplace celle du serveur (409) alors que des
+ * modifications attendaient est mise de côté (`setAside`), jamais perdue sans un mot : à exporter,
+ * jusqu'à ce qu'on l'oublie ou qu'on passe à un autre compte. Sans connexion, l'app ne s'ouvre pas :
+ * on voit la connexion, ou le Pokédex public d'un compte (`router.tsx`, lu par `loadVitrine`).
  */
 
 import { create } from 'zustand'
@@ -50,6 +52,18 @@ import {
  */
 export type SaveStatus = 'saved' | 'saving' | 'offline' | 'expired' | 'reloaded' | 'refused'
 
+/**
+ * Une version d'ici remplacée par celle du serveur (changée ailleurs, 409) alors que des
+ * modifications attendaient : le document tel qu'il était, l'heure du remplacement (`at`, ISO) et
+ * s'il a été exporté. Gardée en mémoire seulement (rien dans le navigateur).
+ */
+export interface SetAside {
+  id: number
+  document: CollectionDocument
+  at: string
+  exported: boolean
+}
+
 export const useAccountStore = create<{
   /** Le compte connecté ; `null` : personne (`router.tsx`). */
   account: AccountUser | null
@@ -61,7 +75,9 @@ export const useAccountStore = create<{
    * compte, ou tant que le serveur n'a rien).
    */
   weight: number
-}>(() => ({ account: null, status: 'saved', refusal: null, weight: 0 }))
+  /** Les versions d'ici mises de côté, de la plus ancienne à la plus récente. */
+  setAside: SetAside[]
+}>(() => ({ account: null, status: 'saved', refusal: null, weight: 0, setAside: [] }))
 
 const setStatus = (status: SaveStatus) => useAccountStore.setState({ status })
 
@@ -106,6 +122,30 @@ let failures = 0
 export const hasUnsavedChanges = () => edits !== saved
 
 /**
+ * Quitter la page ou le compte perdrait quelque chose : une modification pas encore enregistrée, ou
+ * une version mise de côté pas encore exportée.
+ */
+export const hasChangesAtRisk = () =>
+  hasUnsavedChanges() || useAccountStore.getState().setAside.some(({ exported }) => !exported)
+
+/** Le numéro de la prochaine version mise de côté. */
+let setAsideCount = 0
+
+/** La version mise de côté `id` vient d'être exportée (`useExportSetAside`). */
+export const setAsideExported = (id: number) =>
+  useAccountStore.setState(({ setAside }) => ({
+    setAside: setAside.map((version) =>
+      version.id === id ? { ...version, exported: true } : version,
+    ),
+  }))
+
+/** Oublier la version mise de côté `id`. */
+export const forgetSetAside = (id: number) =>
+  useAccountStore.setState(({ setAside }) => ({
+    setAside: setAside.filter((version) => version.id !== id),
+  }))
+
+/**
  * Les échanges avec le serveur, un à la fois. Une erreur (une réponse illisible : un portail Wi-Fi
  * qui répond à la place du serveur) : « Hors ligne » et un nouvel essai, si une modification
  * attend ; sinon rien ne change.
@@ -141,6 +181,9 @@ const call = (method: 'GET' | 'PUT', query: string, sent?: Sending) =>
  * se redessine). Une modification faite pendant la lecture n'est pas écrasée : la collection en
  * mémoire reste, et l'envoi qui attend part de la version d'avant (changée ailleurs entre-temps, le
  * serveur la refuse, 409, et elle est relue). Relue, son poids est connu (l'avertissement des 80 %).
+ * Remplacée alors que des modifications attendaient (après un 409) : la version d'ici est mise de
+ * côté, prise à l'instant même du remplacement, sans attente entre les deux (aucune modification
+ * ne passe entre elle et la version relue).
  */
 async function load(account: string) {
   const before = edits
@@ -154,6 +197,15 @@ async function load(account: string) {
     return false
   }
   if (edits !== before || body.collection === undefined) return true
+  if (hasUnsavedChanges()) {
+    const mine: SetAside = {
+      id: ++setAsideCount,
+      document: currentDocument(),
+      at: new Date().toISOString(),
+      exported: false,
+    }
+    useAccountStore.setState(({ setAside }) => ({ setAside: [...setAside, mine] }))
+  }
   version = body.version
   saved = edits
   useAccountStore.setState({ weight: new Blob([text]).size })
@@ -306,14 +358,21 @@ const forgetVitrine = (name: string) => forget(vitrineUrl(name))
  * expirée) laissait en mémoire part d'abord, envois en attente compris ; puis la collection du
  * compte est lue, et le compte n'est posé qu'une fois elle lue ; `false` sans elle. Les espèces,
  * que la coquille attendra (`router.tsx`), sont demandées en même temps. Reconnecté au même compte
- * (« Se reconnecter », sa session fermée) avec une modification en attente : elle reste, et part
- * depuis sa version (changée ailleurs entre-temps, le serveur la refuse, 409, et elle est relue).
+ * (« Se reconnecter », sa session fermée), rien n'est quitté : les versions mises de côté restent ;
+ * une modification en attente part depuis sa version (changée ailleurs entre-temps, le serveur la
+ * refuse, 409, elle est mise de côté et la collection relue) ; sans rien en attente, la collection
+ * est relue.
  */
 export async function signIn(account: AccountUser) {
-  if (account.id === useAccountStore.getState().account?.id && hasUnsavedChanges()) {
+  if (account.id === useAccountStore.getState().account?.id) {
     forgetVitrine(account.name)
-    useAccountStore.setState({ account, status: 'saving' })
-    save()
+    if (hasUnsavedChanges()) {
+      useAccountStore.setState({ account, status: 'saving' })
+      save()
+      return true
+    }
+    if (!(await inTurn(() => load(account.id)))) return false
+    useAccountStore.setState({ account, status: 'saved', refusal: null })
     return true
   }
   await leave()
@@ -359,8 +418,8 @@ export function renameAccount(name: string) {
 
 /**
  * Plus de compte en mémoire : ni sa collection (elle reste sur le serveur), ni ses envois en
- * attente. L'échange en cours s'achève d'abord, puis tout est remis à zéro : il ne laisse derrière
- * lui ni nouvel essai, ni état.
+ * attente, ni ses versions mises de côté. L'échange en cours s'achève d'abord, puis tout est remis
+ * à zéro : il ne laisse derrière lui ni nouvel essai, ni état.
  */
 async function leave() {
   const { account } = useAccountStore.getState()
@@ -368,7 +427,7 @@ async function leave() {
   await queue
   clearTimeout(timer)
   clearTimeout(retry)
-  useAccountStore.setState({ status: 'saved', refusal: null, weight: 0 })
+  useAccountStore.setState({ status: 'saved', refusal: null, weight: 0, setAside: [] })
   version = 0
   saved = edits
   unanswered = null
@@ -428,7 +487,8 @@ channel.onmessage = ({ data }: MessageEvent<{ account: string; version: number }
     refresh(account.id)
   }
 }
-// Quitter la page avec une modification pas encore enregistrée : le navigateur le demande.
+// Quitter la page avec une modification pas encore enregistrée, ou une version mise de côté pas
+// encore exportée : le navigateur le demande.
 window.addEventListener('beforeunload', (event) => {
-  if (hasUnsavedChanges()) event.preventDefault()
+  if (hasChangesAtRisk()) event.preventDefault()
 })

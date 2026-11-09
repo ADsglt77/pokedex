@@ -4,7 +4,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { focusAfter } from '@/lib/focus'
 import { useNavigate } from 'react-router'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { ExportCollectionButton } from '@/components/ExportCollectionButton'
+import { ExportCollectionButton, SetAsideExportButtons } from '@/components/ExportCollectionButton'
 import { FieldAlert } from '@/components/FieldAlert'
 import { NEW_PASSWORD_FIELD, PSEUDO_FIELD, PSEUDO_HINT } from '@/config/account'
 import { useNotify } from '@/hooks/useNotify'
@@ -258,9 +258,11 @@ function DeleteForm() {
         <p>
           Votre collection, vos achats, votre budget et votre Pokédex public sont effacés du
           serveur, sans retour possible ; votre pseudo ne sera jamais repris par un autre compte.
-          Exportez d’abord votre collection pour la garder.
+          Exportez d’abord votre collection pour la garder (et votre version mise de côté, s’il y en
+          a une).
         </p>
         <ExportCollectionButton />
+        <SetAsideExportButtons />
       </ConfirmDialog>
     </>
   )

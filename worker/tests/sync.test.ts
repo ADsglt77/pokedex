@@ -11,7 +11,12 @@
  * compression d'un envoi part aussi ; les envois partent compressés, ou tels quels sans
  * `CompressionStream` ; la page passée en arrière-plan envoie aussitôt ce qui attend ; un autre
  * onglet qui enregistre fait relire la collection ; une modification faite pendant cette relecture
- * n'affiche jamais « Enregistrée » tant qu'elle attend. Le navigateur est simulé (`window`,
+ * n'affiche jamais « Enregistrée » tant qu'elle attend. Une version d'ici remplacée par celle du
+ * serveur (409) alors que des modifications attendaient est mise de côté, telle qu'au moment du
+ * remplacement (deux appareils, deux onglets, deux conflits d'affilée, une modification faite
+ * pendant l'envoi refusé ou pendant la relecture) : reconnecté au même compte, elle reste ; pas
+ * exportée, quitter la page le demande ; oubliée ou un autre compte connecté, elle disparaît, et
+ * aucune n'est gardée à tort. Le navigateur est simulé (`window`,
  * `document`, `BroadcastChannel`, `fetch` vers le Worker) ; ni interface, ni DOM. On attend l'état voulu (`until`), jamais une
  * durée fixe, sauf pour vérifier que rien ne se passe (`quietly` : trop court, le test passerait à
  * tort, il n'échouerait jamais à tort).
@@ -95,7 +100,15 @@ interface AccountStore {
   save: () => void
   hasUnsavedChanges: () => boolean
   accountDeleted: () => Promise<void>
-  useAccountStore: { getState: () => { status: string; refusal: string | null } }
+  setAsideExported: (id: number) => void
+  forgetSetAside: (id: number) => void
+  useAccountStore: {
+    getState: () => {
+      status: string
+      refusal: string | null
+      setAside: { id: number; document: { collection: CollectionData }; exported: boolean }[]
+    }
+  }
 }
 const ACCOUNT_STORE: string = '@/store/account'
 
@@ -164,6 +177,11 @@ const inMemory = () => collectionStore.useCollectionStore.getState().collection
 const cardsInMemory = () => Object.keys(inMemory().customCards).sort()
 /** Tout est enregistré : rien n'attend, et le menu le dit. */
 const isSaved = () => status() === 'saved' && !store.hasUnsavedChanges()
+/** Les cartes de chaque version mise de côté, de la plus ancienne à la plus récente. */
+const setAsideCards = () =>
+  store.useAccountStore
+    .getState()
+    .setAside.map(({ document }) => Object.keys(document.collection.customCards).sort())
 
 /** Une carte de plus en mémoire. */
 const addCard = (id: string) =>
@@ -288,6 +306,8 @@ describe('store/account.ts : rien de perdu sans un mot, rien d’écrasé', () =
     await until(isSaved)
     expect(cardsInMemory()).toEqual(['a', 'b', 'c'])
     expect((await onServer(cookie)).cards).toEqual(['a', 'b', 'c'])
+    // Rien n'a changé ailleurs : rien n'est mis de côté.
+    expect(setAsideCards()).toEqual([])
   })
 
   test('au retour sur la page : inchangée, la collection n’est pas remplacée ; changée ailleurs, elle est relue', async () => {
@@ -307,6 +327,8 @@ describe('store/account.ts : rien de perdu sans un mot, rien d’écrasé', () =
     await until(() => cardsInMemory().includes('ailleurs'))
     expect(cardsInMemory()).toEqual(['a', 'ailleurs'])
     await until(isSaved)
+    // Rien n'attendait ici : rien n'est mis de côté.
+    expect(setAsideCards()).toEqual([])
   })
 
   test('la collection d’un autre compte (connecté dans un autre onglet) n’est jamais prise, ni écrasée', async () => {
@@ -438,6 +460,7 @@ describe('store/account.ts : rien de perdu sans un mot, rien d’écrasé', () =
     channel.close()
     await until(() => cardsInMemory().includes('onglet'))
     expect(cardsInMemory()).toEqual(['a', 'onglet'])
+    expect(setAsideCards()).toEqual([])
   })
 
   test('une modification faite pendant la relecture : « Enregistrée » n’est pas affiché tant qu’elle attend', async () => {
@@ -457,8 +480,146 @@ describe('store/account.ts : rien de perdu sans un mot, rien d’écrasé', () =
     await quietly()
     expect(store.hasUnsavedChanges()).toBe(true)
     expect(status()).toBe('reloaded')
-    // Elle part ensuite, depuis la version d'avant (changée ailleurs : refusée, puis relue).
+    // Elle part ensuite, depuis la version d'avant (changée ailleurs : refusée, puis relue) : la
+    // version d'ici, avec elle, est mise de côté après la première.
     store.save()
     await until(() => !store.hasUnsavedChanges())
+    expect(setAsideCards()).toEqual([
+      ['a', 'b'],
+      ['a', 'ailleurs', 'pendant'],
+    ])
+  })
+})
+
+describe('store/account.ts : une version d’ici remplacée par celle du serveur est mise de côté', () => {
+  test('deux appareils : reconnecté après une écriture ailleurs, la version d’ici est mise de côté', async () => {
+    const { account, cookie } = await signedIn('Appareils')
+    change('a')
+    await until(isSaved)
+    // Une connexion sur l'autre appareil ferme la session d'ici, où une modification attend.
+    browser.cookie = ''
+    change('b')
+    await until(() => status() === 'expired')
+    // L'autre appareil enregistre ; reconnecté ici, l'envoi est refusé (409) et la collection relue.
+    await elsewhere(cookie, 'ailleurs')
+    browser.cookie = cookie
+    expect(await store.signIn(account)).toBe(true)
+    await until(() => status() === 'reloaded')
+    expect(cardsInMemory()).toEqual(['a', 'ailleurs'])
+    expect(setAsideCards()).toEqual([['a', 'b']])
+    // Plus rien n'attend, mais la version n'est pas exportée : quitter la page le demande.
+    expect(store.hasUnsavedChanges()).toBe(false)
+    expect(leavingWarns()).toBe(true)
+  })
+
+  test('reconnecté au même compte sans rien en attente : la version mise de côté reste, la collection est relue', async () => {
+    const { account, cookie } = await signedIn('Memecompte')
+    change('a')
+    await until(isSaved)
+    await elsewhere(cookie, 'ailleurs')
+    change('b')
+    await until(() => status() === 'reloaded')
+    // La session tombe (vu au retour sur la page), l'autre appareil enregistre encore, puis
+    // « Se reconnecter » au même compte.
+    browser.cookie = ''
+    showPage()
+    await until(() => status() === 'expired')
+    await elsewhere(cookie, 'encore')
+    browser.cookie = cookie
+    expect(await store.signIn(account)).toBe(true)
+    await until(isSaved)
+    expect(setAsideCards()).toEqual([['a', 'b']])
+    expect(leavingWarns()).toBe(true)
+    expect(cardsInMemory()).toEqual(['a', 'ailleurs', 'encore'])
+  })
+
+  test('deux onglets : l’autre enregistre pendant qu’une modification attend ici, elle est mise de côté', async () => {
+    const { account, cookie } = await signedIn('Deuxonglets')
+    change('a')
+    await until(isSaved)
+    // Une modification attend ici (sans minuterie : seul le test l'envoie) ; l'autre onglet enregistre.
+    withoutTimers(() => addCard('b'))
+    const version = await elsewhere(cookie, 'onglet')
+    const channel = new Channel('collection')
+    channel.postMessage({ account: account.id, version })
+    channel.close()
+    await quietly()
+    // Rien n'est relu tant qu'elle attend : elle part, est refusée (409), puis mise de côté.
+    expect(cardsInMemory()).toEqual(['a', 'b'])
+    store.save()
+    await until(() => status() === 'reloaded')
+    expect(cardsInMemory()).toEqual(['a', 'onglet'])
+    expect(setAsideCards()).toEqual([['a', 'b']])
+  })
+
+  test('deux conflits d’affilée : chaque version remplacée est gardée, la plus ancienne d’abord', async () => {
+    const { cookie } = await signedIn('Affilee')
+    change('a')
+    await until(isSaved)
+    await elsewhere(cookie, 'ailleurs')
+    change('b')
+    await until(() => status() === 'reloaded')
+    await elsewhere(cookie, 'encore')
+    change('c')
+    await until(() => setAsideCards().length === 2)
+    expect(setAsideCards()).toEqual([
+      ['a', 'b'],
+      ['a', 'ailleurs', 'c'],
+    ])
+    await until(() => status() === 'reloaded')
+    expect(cardsInMemory()).toEqual(['a', 'ailleurs', 'encore'])
+  })
+
+  test('une modification faite pendant l’envoi refusé est dans la version mise de côté', async () => {
+    const { cookie } = await signedIn('Concurrence')
+    change('a')
+    await until(isSaved)
+    await elsewhere(cookie, 'ailleurs')
+    // Le clic arrive pendant la compression de l'envoi de « b » : après le document envoyé, avant
+    // le refus (409). La version mise de côté est celle du moment du remplacement, pas celle envoyée.
+    const Original = CompressionStream
+    let once = true
+    class Clicked extends Original {
+      constructor(format: ConstructorParameters<typeof CompressionStream>[0]) {
+        super(format)
+        if (!once) return
+        once = false
+        queueMicrotask(() => withoutTimers(() => addCard('pendant')))
+      }
+    }
+    Object.assign(globalThis, { CompressionStream: Clicked })
+    try {
+      change('b')
+      await until(() => setAsideCards().length === 1)
+    } finally {
+      Object.assign(globalThis, { CompressionStream: Original })
+    }
+    expect(setAsideCards()).toEqual([['a', 'b', 'pendant']])
+    expect(cardsInMemory()).toEqual(['a', 'ailleurs'])
+    await until(() => status() === 'reloaded')
+  })
+
+  test('exportée, elle ne retient plus la page ; oubliée, elle disparaît ; un autre compte ne la voit jamais', async () => {
+    const { cookie } = await signedIn('Oubli')
+    change('a')
+    await until(isSaved)
+    await elsewhere(cookie, 'ailleurs')
+    change('b')
+    await until(() => status() === 'reloaded')
+    const [kept] = store.useAccountStore.getState().setAside
+    expect(kept!.exported).toBe(false)
+    store.setAsideExported(kept!.id)
+    expect(leavingWarns()).toBe(false)
+    expect(setAsideCards()).toEqual([['a', 'b']])
+    store.forgetSetAside(kept!.id)
+    expect(setAsideCards()).toEqual([])
+    // Une autre, puis la connexion à un autre compte : elle ne le suit pas.
+    await elsewhere(cookie, 'encore')
+    change('c')
+    await until(() => setAsideCards().length === 1)
+    await signedIn('Oubliautre')
+    expect(setAsideCards()).toEqual([])
+    expect(cardsInMemory()).toEqual([])
+    expect(leavingWarns()).toBe(false)
   })
 })
