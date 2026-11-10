@@ -7,3 +7,9 @@
 .brand {
   margin-bottom: var(--space-block);
 }
+
+/* Le détail de l'erreur, souvent une adresse sans espace : coupé où il faut, jamais plus large que
+   l'écran d'un téléphone. */
+.detail {
+  overflow-wrap: anywhere;
+}

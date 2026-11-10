@@ -68,7 +68,9 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   rareté » pour celles qui n'en impriment pas. Sans API des données, ou tant qu'aucune carte n'a
   été lue (404), la fenêtre d'ajout et la page Catalogue le disent (« pas disponible pour le
   moment »). La référence d'une carte : « Dracaufeu ex (SV2A 006) », son nom puis le code de
-  sa série et son numéro. « Ajouter une carte »
+  sa série et son numéro. Un clic à côté de la fenêtre d'une carte (ajout ou modification) ne la
+  ferme pas : la saisie ne se perd pas d'un appui (`closeOnBackdrop={false}`, comme la saisie d'une
+  commande). « Ajouter une carte »
   (`pokemon/CardForm`) s'ouvre sur l'onglet « Catalogue », où l'interrupteur de langue
   (`LanguageSwitch`, le même que celui de la page Catalogue, japonais au départ) précède la grille
   (`CatalogPicker` : image Pokécardex, code, rareté, prix du jour, tri par date ou par prix, filtres

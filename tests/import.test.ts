@@ -1,21 +1,34 @@
 /**
  * L'import d'un export, et le document qu'un appareil envoie au serveur (mêmes contrôles) : un
- * fichier retouché qui fausserait le budget est refusé. Ses favorites : complétées à la lecture
- * (un document d'avant les favorites s'importe), refusées si elles ne sont pas une carte de leur
- * Pokémon, sans jamais planter la lecture. Ses collections d'extensions : un export d'avant (sans
- * `series`) s'importe, un dresseur est une carte sans Pokémon, et une case pas encore obtenue qui
- * n'est dans aucune collection, un id inconnu, deux collections d'une même extension et langue,
- * une favorite sur une case sont refusés. Et sa relecture reste rapide même pour un document fait
- * pour l'occuper (des dizaines de milliers de collections, une carte de millions de Pokémon) : le
- * Worker la fait pour chaque envoi, sur son temps de calcul.
+ * fichier retouché qui fausserait le budget est refusé, et un export plus lourd que ce que garde le
+ * serveur aussi (en octets, le document sans l'indentation du fichier). Ses favorites : complétées
+ * à la lecture (un document d'avant les favorites s'importe), refusées si elles ne sont pas une
+ * carte de leur Pokémon, sans jamais planter la lecture. Ses collections d'extensions : un export
+ * d'avant (sans `series`) s'importe, un dresseur est une carte sans Pokémon, et une case pas encore
+ * obtenue qui n'est dans aucune collection, un id inconnu, deux collections d'une même extension et
+ * langue, une favorite sur une case sont refusés. Et sa relecture reste rapide même pour un
+ * document fait pour l'occuper (des dizaines de milliers de collections, une carte de millions de
+ * Pokémon) : le Worker la fait pour chaque envoi, sur son temps de calcul.
  */
 
 import { describe, expect, test } from 'bun:test'
 import { findCard } from '@/lib/collection'
 import { applyOrder, emptyShopping } from '@/lib/orders'
 import { cardsWithStatus, unlockEvents } from '@/lib/pokedex'
-import { buildExportFile, documentProblem, isDay, readImport, readSent } from '@/lib/transfer'
-import type { CollectionData, SeriesCollection, ShoppingData } from '@/types'
+import {
+  buildExportFile,
+  documentProblem,
+  isDay,
+  readImport,
+  readSent,
+  sentText,
+} from '@/lib/transfer'
+import {
+  MAX_DOCUMENT,
+  type CollectionData,
+  type SeriesCollection,
+  type ShoppingData,
+} from '@/types'
 import { card, collectionWith, line, NOW, order, ownership, withCards } from './fixtures'
 
 const collection: CollectionData = withCards(
@@ -48,11 +61,14 @@ function reread(path: (string | number)[] = [], value?: unknown, data = { collec
     if (value === undefined) delete parent[path.at(-1)!]
     else parent[path.at(-1)!] = value
   }
-  return readImport(JSON.stringify(file))
+  return readImport(JSON.stringify(file), SENDER)
 }
 
 /** Le document relu ; `null` si l'import est refusé. */
 const reimport = (...args: Parameters<typeof reread>) => reread(...args).document
+
+/** L'enveloppe d'un envoi : un compte (un id de Better Auth, 32 caractères) et sa version. */
+const SENDER = { account: 'x'.repeat(32), baseVersion: 12 }
 
 const ORDER = ['shopping', 'orders', 0]
 
@@ -197,10 +213,47 @@ describe('import', () => {
   })
 
   test('un fichier qui n’est pas du JSON, ou d’un autre genre : refusé, et dit pourquoi', () => {
-    expect(readImport('pas du JSON').document).toBeNull()
-    expect(readImport(JSON.stringify({ kind: 'autre chose' })).problem).toBe(
+    expect(readImport('pas du JSON', SENDER).document).toBeNull()
+    expect(readImport(JSON.stringify({ kind: 'autre chose' }), SENDER).problem).toBe(
       'ce n’est pas un export de collection de ce Pokédex',
     )
+  })
+
+  describe('plus lourd que ce que garde le serveur (1,9 Mo, en octets) : refusé avant de rien remplacer', () => {
+    const TOO_LARGE =
+      'la collection dépasse les 1,9\u00a0Mo que garde le serveur\u00a0: elle ne pourrait pas être enregistrée'
+    // L'export d'une commande dont la note est `note` (indenté de `space`), et sa lecture.
+    const exported = (note: string, space?: number) =>
+      JSON.stringify(
+        buildExportFile(collection, { ...shopping, orders: [{ ...shopping.orders[0]!, note }] }),
+        null,
+        space,
+      )
+    const withNote = (note: string, sender = SENDER) => readImport(exported(note), sender)
+    // Ce que l'app enverrait ensuite, enveloppe comprise : `base` octets, plus ceux de la note.
+    const base = new Blob([sentText(SENDER, withNote('x').document!)]).size - 1
+    const limit = 'x'.repeat(MAX_DOCUMENT - base)
+
+    test('à la limite de l’envoi qui suivrait, accepté ; un octet de plus, refusé, et dit pourquoi', () => {
+      expect(withNote(limit).document).not.toBeNull()
+      expect(withNote(`${limit}x`).problem).toBe(TOO_LARGE)
+    })
+
+    test('l’enveloppe de l’envoi compte : à une version d’un chiffre de plus, le même fichier est refusé', () => {
+      expect(withNote(limit, { ...SENDER, baseVersion: 120 }).problem).toBe(TOO_LARGE)
+    })
+
+    test('compté en octets, comme le serveur : un « é » en pèse deux', () => {
+      const note = 'é'.repeat(Math.ceil((MAX_DOCUMENT - base + 1) / 2))
+      expect(base + note.length).toBeLessThan(MAX_DOCUMENT)
+      expect(withNote(note).problem).toBe(TOO_LARGE)
+    })
+
+    test('l’indentation de l’export ne compte pas : seul ce qui partira au serveur', () => {
+      const text = exported(limit, 2)
+      expect(new Blob([text]).size).toBeGreaterThan(MAX_DOCUMENT)
+      expect(readImport(text, SENDER).document).not.toBeNull()
+    })
   })
 
   test('un export d’avant les favorites s’importe : chaque Pokémon a pour favorite sa première carte', () => {
@@ -252,7 +305,7 @@ describe('import', () => {
       const file = JSON.parse(JSON.stringify(buildExportFile(several.collection, shopping)))
       file.collection.customCards.a.dexIds = dexIds
       delete file.collection.favorites
-      const read = readImport(JSON.stringify(file))
+      const read = readImport(JSON.stringify(file), SENDER)
       expect(read.document).toBeNull()
       expect(read.problem).toBe('la carte « Carte a » est abîmée')
     }
@@ -261,7 +314,7 @@ describe('import', () => {
       const file = JSON.parse(JSON.stringify(buildExportFile(several.collection, shopping)))
       file.collection.customCards.a = broken
       delete file.collection.favorites
-      expect(readImport(JSON.stringify(file)).problem).toBe('la carte « a » est abîmée')
+      expect(readImport(JSON.stringify(file), SENDER).problem).toBe('la carte « a » est abîmée')
     }
   })
 

@@ -27,7 +27,13 @@ import { vitrineUrl } from '@/lib/filters'
 import { formatMegabytes } from '@/lib/format'
 import { emptyShopping } from '@/lib/orders'
 import { loadSpecies } from '@/lib/species'
-import { documentProblem, readCollection, readShopping } from '@/lib/transfer'
+import {
+  documentProblem,
+  readCollection,
+  readShopping,
+  sentText,
+  type Sender,
+} from '@/lib/transfer'
 import { useCollectionStore } from '@/store/collection'
 import { currentDocument, replaceDocument } from '@/store/document'
 import { useShoppingStore } from '@/store/shopping'
@@ -298,7 +304,7 @@ async function push(): Promise<void> {
     const sending = edits
     const document = currentDocument()
     const { body, gzip, weight } = await pack(
-      JSON.stringify({ account: account.id, baseVersion: version, ...document }),
+      sentText({ account: account.id, baseVersion: version }, document),
     )
     unanswered = { sending, document, body, gzip }
     useAccountStore.setState({ weight })
@@ -338,6 +344,15 @@ async function push(): Promise<void> {
 
 /** Envoie ce qui attend (« Réessayer », le retour du réseau). */
 export const save = () => void inTurn(push)
+
+/**
+ * L'enveloppe du prochain envoi : le compte connecté et la version d'où il partira (personne : rien
+ * ne partira). L'import la compte dans le poids de ce qu'il remplacerait (`readImport`).
+ */
+export const sender = (): Sender => ({
+  account: useAccountStore.getState().account?.id ?? '',
+  baseVersion: version,
+})
 
 /**
  * Le Pokédex public d'un compte (`/api/vitrine/<pseudo>`, `VitrinePage`), demandé dès le chargement

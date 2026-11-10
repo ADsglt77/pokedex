@@ -8,7 +8,8 @@
  * compressé (`gzip`, celui du site) est enregistré, mais refusé (413) au-delà de 1 900 000 octets
  * décompressés, sans jamais décompresser plus (une bombe de 100 Mo suivie d'octets illisibles : lue
  * jusqu'au bout, elle ferait un 400), et au-delà de 1 990 000 une fois relu (un document de 2,1 Mo,
- * que D1 refuserait) ; sans session, 401 sans rien décompresser (le cookie
+ * que D1 refuserait) ; un export juste à la limite, accepté par l'import si et seulement si le
+ * serveur enregistre l'envoi qui suivrait (`readImport`, `sentText`) ; sans session, 401 sans rien décompresser (le cookie
  * renouvelé d'une session repart toujours) ; une panne en lisant la session, 500 (pas le 400 d'un
  * document refusé) ; un envoi renvoyé tel quel après une réponse perdue est reconnu (200, la même
  * version), un autre parti de la même version reste refusé (409). Chaque compte ne touche qu'à sa
@@ -24,7 +25,14 @@ import { env } from 'cloudflare:workers'
 import { afterAll, describe, expect, test, vi } from 'vitest'
 import { emptyShopping } from '@/lib/orders'
 import { DAY } from '@/lib/time'
-import type { CollectionDocument, CollectionResponse, CollectionSaved, VitrineData } from '@/types'
+import { buildExportFile, readImport, sentText } from '@/lib/transfer'
+import {
+  MAX_DOCUMENT,
+  type CollectionDocument,
+  type CollectionResponse,
+  type CollectionSaved,
+  type VitrineData,
+} from '@/types'
 import { card, collectionWith, NOW, order, ownership, withCards } from '../../tests/fixtures'
 import { auth } from '../auth'
 import { authCall, call, createAccount, gzip, ORIGIN, PASSWORD, sleep } from './helpers'
@@ -354,6 +362,38 @@ describe('/api/collection : lue depuis sa version, envoyée compressée, renvoy�
       expect((await gzipped(await gzip(JSON.stringify(sent)))).status).toBe(413)
     }
     expect(await stored()).toEqual(before)
+  })
+
+  test('un export juste à la limite : l’import l’accepte si et seulement si le serveur enregistre ce qui suivrait', async () => {
+    const before = await stored()
+    const sender = { account: sacha, baseVersion: before.version }
+    // Un export (indenté, comme ceux de l'app), et ce que l'app enverrait après l'avoir importé.
+    const exported = (note: string) =>
+      JSON.stringify(
+        buildExportFile(first.collection, { ...emptyShopping(), orders: [order({ note })] }),
+        null,
+        2,
+      )
+    const sentAfter = (note: string) => {
+      const { document } = readImport(exported(note), sender)
+      return document && sentText(sender, document)
+    }
+    const limit = 'x'.repeat(MAX_DOCUMENT - (new Blob([sentAfter('x')!]).size - 1))
+    const exact = sentAfter(limit)!
+    expect(new Blob([exact]).size).toBe(MAX_DOCUMENT)
+    // Un octet de plus : l'import le refuse, et le serveur aussi, tel quel ou compressé.
+    expect(sentAfter(`${limit}x`)).toBeNull()
+    const over = exact.replace(limit, `${limit}x`)
+    const raw = call('/api/collection', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie },
+      body: over,
+    })
+    expect((await raw).status).toBe(413)
+    expect((await gzipped(await gzip(over))).status).toBe(413)
+    expect(await stored()).toEqual(before)
+    // À la limite : l'import l'accepte, et le serveur l'enregistre, compressé comme l'envoie l'app.
+    expect((await gzipped(await gzip(exact))).status).toBe(200)
   })
 
   test('renvoyée telle quelle après une réponse perdue : 200, la version déjà enregistrée, rien de nouveau', async () => {

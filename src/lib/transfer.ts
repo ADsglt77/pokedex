@@ -8,17 +8,18 @@ import { TOTAL_SPECIES } from '@/config/pokedex'
 import { ORDER_STATE_LABELS, SUPPLIER_LABELS } from '@/config/shopping'
 import { parseCardmarketLink, readCardmarketId } from '@/lib/cardmarket'
 import { completeFavorites } from '@/lib/collection'
-import { formatDate, parseLink } from '@/lib/format'
+import { formatDate, formatMegabytes, parseLink } from '@/lib/format'
 import { refundFits } from '@/lib/orders'
 import { seriesId } from '@/lib/series'
-import type {
-  BudgetSettings,
-  CollectionData,
-  CollectionDocument,
-  CollectionExportFile,
-  Order,
-  PokemonCard,
-  ShoppingData,
+import {
+  MAX_DOCUMENT,
+  type BudgetSettings,
+  type CollectionData,
+  type CollectionDocument,
+  type CollectionExportFile,
+  type Order,
+  type PokemonCard,
+  type ShoppingData,
 } from '@/types'
 
 export function buildExportFile(
@@ -296,6 +297,19 @@ type Read<T> = { document: T; problem: null } | { document: null; problem: strin
 
 const refusal = (problem: string) => ({ document: null, problem })
 
+/** Qui envoie un document au serveur, et depuis quelle version (`PUT /api/collection`). */
+export interface Sender {
+  account: string
+  baseVersion: number
+}
+
+/**
+ * Le texte qu'un navigateur envoie au serveur pour ce document : celui dont le serveur compte les
+ * octets (`MAX_DOCUMENT`, décompressés). Le même pour l'envoi (`store/account.ts`) et l'import.
+ */
+export const sentText = ({ account, baseVersion }: Sender, document: CollectionDocument) =>
+  JSON.stringify({ account, baseVersion, ...document })
+
 /** La collection et ses achats, lus et contrôlés. */
 function readParts(collectionValue: unknown, shoppingValue: unknown): Read<CollectionDocument> {
   const collection = readCollection(collectionValue)
@@ -306,13 +320,25 @@ function readParts(collectionValue: unknown, shoppingValue: unknown): Read<Colle
   return problem ? refusal(problem) : { document: { collection, shopping }, problem: null }
 }
 
-/** Le contenu d'un fichier d'export, ou la raison de son refus (pas un export, ou abîmé). */
-export function readImport(text: string) {
+/**
+ * Le contenu d'un fichier d'export, ou la raison de son refus : pas un export, abîmé, ou plus lourd
+ * que ce que garde le serveur. Le poids est celui de l'envoi qui suivrait l'import, de `sender`
+ * (`sentText`, sans l'indentation de l'export), en octets comme le compte le serveur
+ * (`MAX_DOCUMENT`) : refusé ici si et seulement s'il le serait là-bas. Sinon, la collection serait
+ * remplacée, puis chaque envoi refusé.
+ */
+export function readImport(text: string, sender: Sender) {
   const file = parseFile(text)
   if (!isRecord(file) || file.kind !== 'collection-export') {
     return refusal('ce n’est pas un export de collection de ce Pokédex')
   }
-  return readParts(file.collection, file.shopping)
+  const read = readParts(file.collection, file.shopping)
+  if (read.document && new Blob([sentText(sender, read.document)]).size > MAX_DOCUMENT) {
+    return refusal(
+      `la collection dépasse les ${formatMegabytes(MAX_DOCUMENT)}\u00a0Mo que garde le serveur\u00a0: elle ne pourrait pas être enregistrée`,
+    )
+  }
+  return read
 }
 
 /**

@@ -283,7 +283,14 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   le poids est connu dès la lecture du document, puis à chaque envoi), avec un toast une fois par
   page (à l'affichage du menu, la collection déjà lourde, ou au passage du seuil) ;
   au-delà, chaque envoi est refusé (« elle dépasse
-  1,9 Mo »). Une session fermée (401, « Reconnectez-vous », et un toast) : les modifications
+  1,9 Mo »). Un fichier importé plus lourd est refusé avant de rien remplacer (« La collection
+  dépasse les 1,9 Mo que garde le serveur : elle ne pourrait pas être enregistrée. »,
+  `readImport` ; testé) : son poids est celui de l'envoi qui suivrait l'import, enveloppe comprise
+  (le compte et la version : `sentText`, le texte même que le site envoie, `pack`), sans
+  l'indentation de l'export, en octets comme le compte le serveur. L'import refuse donc un fichier
+  si et seulement si le serveur refuserait l'envoi (testé face au Worker, à l'octet près, tel quel
+  ou compressé). La version est celle du moment où le fichier est lu.
+  Une session fermée (401, « Reconnectez-vous », et un toast) : les modifications
   restent acceptées, mais plus rien ne part, ni ne se relit, jusqu'à « Se reconnecter » ;
   reconnecté au même compte, rien n'est quitté (`signIn`) : les versions mises de côté restent,
   ce qui attendait part, depuis sa version (changée ailleurs entre-temps : 409, la version d'ici

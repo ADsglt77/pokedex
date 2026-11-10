@@ -258,7 +258,16 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   de service worker ni d'usage hors ligne (décision de l'utilisateur, octobre 2026 : la collection
   n'est gardée que par le serveur). Une page restée ouverte pendant un déploiement, qui charge une
   page à la demande dont le fichier n'existe plus, se recharge avec la nouvelle version
-  (`vite:preloadError`, `main.tsx` ; une fois par minute au plus). Les moteurs de recherche
+  (`vite:preloadError`, `main.tsx` ; une fois par minute au plus). Hors ligne
+  (`navigator.onLine`, qui compte un réseau sans Internet pour en ligne : la page se recharge
+  alors comme avant), elle ne se recharge pas : recharger mènerait à l'écran d'erreur du
+  navigateur, hors de l'app et de ses modifications en attente. La page d'erreur de l'app
+  s'affiche à la place (`ErrorPage`), l'app reste en mémoire, et ses modifications partent au
+  retour du réseau ; mais la page manquée ne s'ouvre ensuite qu'après un rechargement (le routeur
+  garde l'échec). Hors ligne, `ErrorPage` le dit (« Pas de connexion ») et ramène à la page
+  précédente plutôt que de recharger ; le réseau revenu, elle redevient la page d'erreur ordinaire
+  (« Recharger la page »). Son détail de l'erreur, souvent une adresse sans espace, se coupe pour
+  tenir sur un téléphone. Les moteurs de recherche
   n'indexent que les pages publiques : l'accueil, la connexion, l'inscription et les mentions
   légales ; les autres adresses de l'app, le Pokédex public de chaque compte compris, reçoivent
   `X-Robots-Tag: noindex` du Worker (`worker/headers.ts`), et `public/robots.txt` écarte `/api/`.

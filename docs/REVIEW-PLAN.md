@@ -232,7 +232,22 @@ zéro.*
 
 #### Bug
 
-**L04 — Saisies et navigation sans perte (site)**
+**L04 — Saisies et navigation sans perte (site)** — *fait le 10 novembre 2026. La fenêtre d'une
+carte ne se ferme plus d'un clic à côté (`closeOnBackdrop={false}`). Hors ligne, `vite:preloadError`
+ne recharge plus la page. La page d'erreur de l'app le dit (« Pas de connexion »), ramène à la
+page précédente plutôt que de recharger, et redevient ordinaire au retour du réseau ; l'app garde
+ses modifications en attente, et le détail de l'erreur se coupe sur un téléphone (il débordait de
+61 px). `readImport` refuse, avec sa raison et avant de rien remplacer, un export dont l'envoi qui
+suivrait dépasserait `MAX_DOCUMENT`. Il mesure le texte même que le site enverrait, enveloppe
+comprise (`sentText`, partagé avec `pack`), en octets, sans l'indentation du fichier : refusé si et
+seulement si le serveur le refuserait, sans marge. Tests : `tests/import.test.ts` (+4 : la limite
+à l'octet près, l'enveloppe, les octets, l'indentation) et `worker/tests/collection.test.ts` (+1 :
+face au Worker, l'export accepté est enregistré, compressé, et un octet de plus est refusé par
+l'import comme par le serveur, tel quel ou compressé). L'interface n'est pas testée, selon la
+règle du projet, mais rejouée avec Playwright sur le site local : hors ligne, la page manquée, le
+retour à la page précédente, le retour du réseau puis le rechargement. Contre-review : GO, ses
+restes corrigés. Reste, sans perte : la page manquée ne s'ouvre qu'après un rechargement, une
+fois le réseau revenu (le routeur garde l'échec), ce que dit la page d'erreur.*
 - **Constats** : F-A11Y-02, F-ETAT-03, B-SYNC-03.
 - **Fichiers** : `src/pages/pokemon/CardForm.tsx:131-134`, `src/main.tsx:28-37`,
   `src/lib/transfer.ts:311-317`.

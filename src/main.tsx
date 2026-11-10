@@ -24,8 +24,14 @@ import { signIn } from './store/account'
 // Un déploiement a remplacé les fichiers de l'app pendant que cette page était ouverte : une page
 // chargée à la demande n'existe plus (404). La page se recharge, avec la nouvelle version ; une
 // fois par minute au plus (un fichier qui manquerait encore ne la ferait pas recharger sans fin).
+// Hors ligne (`navigator.onLine` : un réseau sans Internet compte pour en ligne), la page n'a
+// manqué que de réseau : recharger mènerait à l'écran d'erreur du navigateur, hors de l'app et
+// de ses modifications en attente. L'erreur suit son cours (la page d'erreur de l'app, pour une
+// page) ; l'app reste en mémoire, et ses modifications partent au retour du réseau. Cette page-là
+// ne s'ouvre ensuite qu'après un rechargement : le routeur garde l'échec.
 const RELOADED_KEY = 'pokedex-collection.reloaded'
 addEventListener('vite:preloadError', (event) => {
+  if (!navigator.onLine) return
   try {
     if (Date.now() - Number(sessionStorage.getItem(RELOADED_KEY)) < MINUTE) return
     sessionStorage.setItem(RELOADED_KEY, String(Date.now()))

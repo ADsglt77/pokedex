@@ -238,7 +238,10 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     que la saisie refuserait (0, négatif, plus de 9 chiffres…), quantité qui n'est pas un entier
     de 1 ou plus, texte qui n'en est pas un, lien…) est refusé (`lib/transfer.ts`), comme par le
     serveur à l'enregistrement, et la règle en cause est dite (« La commande du 5 octobre 2026
-    est abîmée. », `documentProblem`, `readImport`). Les montants saisis (`parseEuros`) acceptent
+    est abîmée. », `documentProblem`, `readImport`). Un export plus lourd que ce que garde le
+    serveur (1,9 Mo : l'envoi qui suivrait l'import, sans l'indentation du fichier) est refusé de même, avant de rien
+    remplacer : chaque envoi le serait ensuite (`docs/compte-et-synchronisation.md`).
+    Les montants saisis (`parseEuros`) acceptent
     une virgule ou un point, le symbole au début ou à la fin, et une espace entre les milliers
     seulement (« 1 234,50 ») : « 12 50 » (une virgule oubliée) ou « 12€50 » est refusé plutôt que
     lu 1 250 € ; une quantité (`parseQuantity`)

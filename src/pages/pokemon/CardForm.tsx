@@ -132,6 +132,8 @@ export function CardForm({
       open
       size={card ? 'md' : 'full'}
       onClose={close}
+      // Un clic à côté ne perd pas la saisie (camply fermerait dès l'appui, sans rien demander).
+      closeOnBackdrop={false}
       title={
         card
           ? `Modifier la carte de ${species.names.fr}`

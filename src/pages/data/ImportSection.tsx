@@ -7,6 +7,7 @@ import { summarize } from '@/lib/pokedex'
 import { formatDateTime, plural } from '@/lib/format'
 import { readImport } from '@/lib/transfer'
 import { report } from '@/lib/api'
+import { sender } from '@/store/account'
 import { replaceDocument } from '@/store/document'
 import { DataSection } from './DataSection'
 import { SummaryLedger } from './SummaryLedger'
@@ -38,7 +39,7 @@ export function ImportSection() {
     // L'aperçu du fichier d'avant disparaît pendant la lecture : on n'importe que celui affiché.
     setRead(undefined)
     // Un fichier illisible (supprimé, inaccessible) compte pour un fichier qui n'est pas un export.
-    const result = file ? readImport(await file.text().catch(() => '')) : undefined
+    const result = file ? readImport(await file.text().catch(() => ''), sender()) : undefined
     if (chosen.current === file) setRead(result)
   }
 
