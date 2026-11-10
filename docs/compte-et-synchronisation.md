@@ -198,7 +198,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   relit la version du serveur, à la place de la sienne : rien n'est écrasé sur le serveur, et la
   version d'ici n'est jamais perdue sans un mot (novembre 2026, lot P0 de l'audit) : elle est
   **mise de côté** (`setAside`, `load` dans `store/account.ts`), prise à l'instant même du
-  remplacement (une modification faite pendant l'envoi refusé y est), en mémoire seulement (rien
+  remplacement (une modification faite pendant l'envoi refusé y est ; faite pendant la relecture
+  qui suit, rien n'est remplacé tant qu'elle attend, puis elle y est aussi), en mémoire seulement (rien
   dans le navigateur : un onglet que le téléphone ferme de lui-même la perd, comme une
   modification en attente). Elle reste jusqu'à « Oublier » (qui demande d'abord tant qu'elle n'est
   pas exportée) ou la sortie du compte (déconnexion, suppression, un autre compte connecté), et

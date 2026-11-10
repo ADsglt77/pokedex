@@ -599,6 +599,21 @@ describe('store/account.ts : une version d’ici remplacée par celle du serveur
     await until(() => status() === 'reloaded')
   })
 
+  test('une modification faite pendant la relecture d’un conflit est mise de côté avec les autres', async () => {
+    const { cookie } = await signedIn('Relecture')
+    change('a')
+    await until(isSaved)
+    await elsewhere(cookie, 'z')
+    // « b » est refusé (409) ; pendant la relecture qui suit, « d » arrive : rien n'est remplacé
+    // tant qu'elle attend, puis son envoi est refusé à son tour, et la collection relue. Une seule
+    // version mise de côté, avec les deux, jamais une version prise avant la relecture.
+    browser.duringNextGet = () => addCard('d')
+    change('b')
+    await until(() => status() === 'reloaded')
+    expect(setAsideCards()).toEqual([['a', 'b', 'd']])
+    expect(cardsInMemory()).toEqual(['a', 'z'])
+  })
+
   test('exportée, elle ne retient plus la page ; oubliée, elle disparaît ; un autre compte ne la voit jamais', async () => {
     const { cookie } = await signedIn('Oubli')
     change('a')
