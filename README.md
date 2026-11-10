@@ -87,7 +87,7 @@ collée se charge ailleurs ; pas celles de Cardmarket, qui ne s'affichent que su
 site les demande pour tout visiteur, connecté ou non. Les routes `/api/species`, `/api/catalog`,
 `/api/prices`, `/api/histories`, `/api/wants`, `/api/status`, `/api/health` et `/images/…` répondent
 donc à n'importe qui (sous les limites par visiteur du Worker, `worker/limits.ts`, sauf les
-espèces, l'état des tâches et `/api/health`) ; seule l'interface demande d'être connecté. Ce que
+espèces) ; seule l'interface demande d'être connecté. Ce que
 la connexion garde, ce sont les comptes et les collections (`/api/collection`, `/api/auth/…`), pas
 le catalogue, les prix ni les scans.
 
@@ -144,7 +144,8 @@ ou un service du domaine sans https lui serait inaccessible).
 **La surveillance** : `/api/health` est celui de l'API des données (le Worker du site le lui
 demande) : 200 quand chaque tâche à rythme a réussi récemment (les prix en 12 h, les espèces en 60
 jours) et que le guide des prix n'est pas figé, 503 sinon, avec les tâches en retard. Un service
-gratuit (UptimeRobot, Healthchecks…) peut le demander toutes les 5 minutes et vous écrire s'il ne
+gratuit (UptimeRobot, Healthchecks…) peut le demander toutes les 5 minutes (le Worker en accepte
+400 par 10 s et par visiteur, `worker/limits.ts`) et vous écrire s'il ne
 répond plus 200 : sans surveillance, un trou dans l'historique des prix passerait inaperçu ;
 Cardmarket ne le garde pas, un jour manqué l'est pour toujours.
 

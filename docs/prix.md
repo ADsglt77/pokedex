@@ -13,8 +13,9 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
 - Prix du jour : l'app demande ceux des seules cartes qu'elle affiche (`GET /api/prices?ids=…` :
   celles de la collection, d'une extension du catalogue, d'un Pokémon, un id saisi ; le jour, et
   une clé par carte demandée, `[prix, plus bas, prix d'il y a 30 jours]` ou `null` sans prix ce
-  jour ; 1 025 ids au plus ; 404 tant que le guide n'a jamais été lu ; avec le catalogue, 400
-  demandes par 10 s et par visiteur, `worker/limits.ts`). Le prix suivi est la règle de
+  jour ; 1 025 ids au plus ; 404 tant que le guide n'a jamais été lu ; avec le catalogue, l'état
+  des tâches et la surveillance, 400 demandes par 10 s et par visiteur, `worker/limits.ts`). Le
+  prix suivi est la règle de
   Pokécardex (la tendance pour une série de moins de 31 jours, la moyenne sur 30 jours ensuite) ; « Ce qui bouge » (Valeur) et la fiche comparent au
   prix d'il y a 30 jours (`priceChange`, `lib/prices.ts`). Côté navigateur (`store/prices.ts`), les
   réponses s'ajoutent : `usePrices()` rend les prix de la collection (toutes ses cartes, les cases
@@ -117,6 +118,10 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   peuvent ne pas être à jour », ce qui est touché, réessayer plus tard ; aucune consigne
   d'exploitation (relancer une tâche, vérifier un service : l'affaire de l'administrateur, par la
   surveillance et le journal de l'API). L'état reste calculé par l'API : le site n'a ni la liste
-  des tâches ni leurs règles. `/api/health` (la surveillance) : celui de l'API des données.
+  des tâches ni leurs règles. `/api/health` (la surveillance) : celui de l'API des données. Tous
+  deux parcourent les passages des tâches, une table qui grandit : ils comptent avec le catalogue
+  et les prix (400 demandes par 10 s et par visiteur, `worker/limits.ts` ; décision de
+  l'utilisateur, novembre 2026), loin d'une ouverture des Réglages ou d'une surveillance toutes
+  les 5 minutes.
   Dans le formulaire d'une carte, un id Cardmarket n'est pas mis en doute tant que les prix
   manquent tous.

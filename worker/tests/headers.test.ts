@@ -3,9 +3,10 @@
  * de sécurité sur chaque réponse, même une erreur ; `http://` et `www.pokecodex.fr` qui mènent à
  * `https://pokecodex.fr` ; les espèces préchargées avec une session, jamais sur la connexion ni
  * l'inscription ; les images réservées aux pages du site ; un fichier absent, 404 et non la page
- * de l'app (`worker/index.ts`) ; et une route répétée à l'excès par un même visiteur, 429, sans
- * compter les autres visiteurs (les historiques ; les lignes de la liste de souhaits, à leur propre
- * limite, plus basse).
+ * de l'app (`worker/index.ts`) ; et une route répétée à l'excès par un même visiteur, 429 sans corps
+ * ni cache, sans compter les autres visiteurs (les historiques ; les lignes de la liste de
+ * souhaits, à leur propre limite, plus basse ; le compte, `/api/auth` sans barre finale compris ;
+ * le journal ; l'état des tâches et la surveillance).
  */
 
 import { describe, expect, test } from 'vitest'
@@ -72,21 +73,38 @@ describe('les en-têtes du site', () => {
 })
 
 describe('les limites par visiteur', () => {
+  // Un visiteur par cas : deux routes d'une même limite (le compte et le journal, l'état des tâches
+  // et la surveillance) se partagent son compte.
+  let visitor = 0
   test.each([
-    ['la 31e demande d’historiques', '/api/histories?ids=1', 30],
-    ['la 6e demande de lignes de souhaits', '/api/wants?ids=1', 5],
-  ])('%s en 10 s : 429, et un autre visiteur passe toujours', async (_, path, allowed) => {
-    const from = (ip: string) => call(path, { headers: { 'CF-Connecting-IP': ip } })
-    // Les fenêtres de 10 s du limiteur suivent l'horloge : finie en pleine série, une fenêtre
-    // remettrait le compte à zéro et la dernière passerait. La série part à 2 s au moins de sa fin.
-    const left = 10_000 - (Date.now() % 10_000)
-    if (left < 2_000) await sleep(left + 50)
-    for (let count = 1; count <= allowed; count++) {
-      expect((await from('203.0.113.7')).status).not.toBe(429)
-    }
-    const refused = await from('203.0.113.7')
-    expect(refused.status).toBe(429)
-    expect(refused.headers.get('retry-after')).toBe('10')
-    expect((await from('203.0.113.8')).status).not.toBe(429)
-  })
+    ['la 31e demande d’historiques', 'GET', '/api/histories?ids=1', 30],
+    ['la 6e demande de lignes de souhaits', 'GET', '/api/wants?ids=1', 5],
+    ['la 41e requête au compte, sans barre finale', 'GET', '/api/auth', 40],
+    ['la 41e lecture du compte', 'GET', '/api/account', 40],
+    ['le 41e envoi au journal', 'POST', '/api/journal', 40],
+    ['la 401e demande de l’état des tâches', 'GET', '/api/status', 400],
+    ['la 401e demande de la surveillance', 'GET', '/api/health', 400],
+  ])(
+    '%s en 10 s : 429, et un autre visiteur passe toujours',
+    async (_, method, path, allowed) => {
+      visitor += 2
+      const from = (ip: string) => call(path, { method, headers: { 'CF-Connecting-IP': ip } })
+      // Les fenêtres de 10 s du limiteur suivent l'horloge : finie en pleine série, une fenêtre
+      // remettrait le compte à zéro et la dernière passerait. La série part assez loin de sa fin :
+      // 2 s, plus 10 ms par demande (400 demandes prennent jusqu'à 1 s sur un poste de développement).
+      const left = 10_000 - (Date.now() % 10_000)
+      if (left < 2_000 + allowed * 10) await sleep(left + 50)
+      for (let count = 1; count <= allowed; count++) {
+        expect((await from(`203.0.113.${visitor}`)).status).not.toBe(429)
+      }
+      const refused = await from(`203.0.113.${visitor}`)
+      expect(refused.status).toBe(429)
+      expect(refused.headers.get('retry-after')).toBe('10')
+      expect(refused.headers.get('cache-control')).toBe('no-store')
+      expect(await refused.text()).toBe('')
+      expect((await from(`203.0.113.${visitor + 1}`)).status).not.toBe(429)
+    },
+    // L'attente d'une fenêtre neuve (jusqu'à 10 s) et la série : plus que les 5 s par défaut.
+    15_000,
+  )
 })

@@ -61,9 +61,13 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   compte et 10 changements de pseudo par heure, 100 requêtes par minute pour le reste ; au-delà,
   429 (« Trop de tentatives »). En production seulement (`process.env.NODE_ENV`, que Vite écrit au
   build : `bun run preview` les a aussi) ; ni `bun dev` ni les tests. Devant elles, le Worker
-  limite tout le compte (`/api/auth/`), avec le Pokédex public (`/api/vitrine/`) et l'aperçu d'un
-  lien partagé (`/pseudo` : toute adresse d'un seul segment), à 40 requêtes par 10 s et par
-  visiteur (son réseau /64 en IPv6, `worker/limits.ts`).
+  limite tout le compte (`/api/auth`, avec ou sans barre finale), avec le Pokédex public
+  (`/api/vitrine/`) et l'aperçu d'un lien partagé (`/pseudo` : toute adresse d'un seul segment), à
+  40 requêtes par 10 s et par visiteur (son réseau /64 en IPv6, `worker/limits.ts` ; testé).
+  `GET /api/account` (qui est connecté) et le journal (`POST /api/journal`), qui lisent la session
+  dans D1, partagent la limite de la collection (plus bas) : 40 requêtes par 10 s pour les trois
+  routes, loin d'une visite (un compte au démarrage, un envoi de la collection toutes les 500 ms au plus,
+  le journal à l'export et à l'import).
 - **L'app ne s'ouvre que connecté** (décision de l'utilisateur, octobre 2026) : le compte connecté
   du store (`account` : son id et son pseudo ; `null` : personne, `store/account.ts`), fixé au
   démarrage avant le routeur (`loadAccount` lit `GET /api/account?demarrage`, qui dit qui est
@@ -222,7 +226,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   Une modification d'une autre origine est refusée (403, plus haut) ; au journal, elle dit un
   réglage à revoir (`BETTER_AUTH_URL`) ou une tentative depuis un autre site. Sans réponse, ou une
   panne passagère (une erreur 5xx), ou trop d'envois d'affilée (429 : le Worker limite
-  `/api/collection` à 40 requêtes par 10 s et par visiteur, `worker/limits.ts` ; testé), la
+  `/api/collection`, avec `/api/account` et `/api/journal`, à 40 requêtes par 10 s et par
+  visiteur, `worker/limits.ts` ; testé), la
   modification attend (« Hors ligne », seulement
   quand une modification attend : une relecture qui échoue sans rien en attente ne change pas
   l'état) : elle repart au retour du réseau ou de la page, sinon de plus en plus tard (30 s, 60 s,

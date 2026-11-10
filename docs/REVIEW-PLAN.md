@@ -165,7 +165,15 @@ bandeau et le menu hors ligne (« vos modifications » au lot L11).*
 
 #### Sécurité
 
-**L02 — Les routes sans limite du site (site, Worker)**
+**L02 — Les routes sans limite du site (site, Worker)** — *fait le 10 novembre 2026. D-02
+validée. `/api/auth` (sans barre finale) rejoint `ACCOUNT_LIMIT`.
+`/api/account` et `/api/journal` partagent avec `/api/collection` le même compte de
+`COLLECTION_LIMIT` (40 par 10 s et par visiteur), et `/api/status` et `/api/health` celui de
+`DATA_LIMIT` (400 par 10 s). Testé : la dernière demande permise passe, la suivante reçoit 429
+sans corps, avec `Retry-After: 10` et `Cache-Control: no-store`, et un autre visiteur passe
+toujours. Seules les espèces restent sans limite. Hors du lot, non fait : une limite par défaut
+pour tout `/api/*` (piste du rapport), et la purge des passages anciens de `runs` (D-SEC-10, dans
+l'API des données).*
 - **Constats** : B-SEC-01, D-SEC-10.
 - **Fichiers** : `worker/limits.ts` (règles `:23-37`, en-tête `:7`).
 - **Changement** :
@@ -520,7 +528,7 @@ bandeau et le menu hors ligne (« vos modifications » au lot L11).*
 | Id | Question | Proposition |
 |---|---|---|
 | D-01 | En `expired`, garder les modifications, ou les bloquer ? (L01) | Les garder, avec une bannière, la version locale gardée et exportable si elle est remplacée. Les bloquer toucherait chaque action de l'app. |
-| D-02 | Limiter `/api/status` et `/api/health` ? (L02) | Oui, dans `DATA_LIMIT` (400 par 10 s) : loin d'une surveillance normale. |
+| D-02 | Limiter `/api/status` et `/api/health` ? (L02) | Oui, dans `DATA_LIMIT` (400 par 10 s) : loin d'une surveillance normale. **Validée** le 10 novembre 2026. |
 | D-03 | Le seuil des refus par pseudo (L03) | 20 par heure. Contrepartie : un tiers peut bloquer une heure la connexion à un pseudo, et le message le dit. |
 | D-04 | « Ajouter comme » (L06) | Un `Switch` « Je la possède déjà », éteint par défaut. |
 | D-05 | DEC-12 : la clé des limites des données (L08) | Le /64, et les routes lourdes comptées par client. |
