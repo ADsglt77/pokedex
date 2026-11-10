@@ -9,6 +9,27 @@
   max-width: 72rem;
 }
 
+/* Les champs seuls, sous « Modifier les détails » d'une carte choisie : son aperçu est
+   au-dessus. */
+.fieldsOnly {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 40rem;
+}
+
+/* La carte choisie au catalogue, en résumé (`PickedCard`) : son aperçu, puis sa référence et son
+   prix. Sur un téléphone, l'aperçu en vignette : « Ajouter comme » reste à l'écran sans défiler. */
+.picked {
+  display: grid;
+  grid-template-columns: clamp(8rem, 28%, 14rem) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+  max-width: 48rem;
+}
+
+.pickedReference {
+  font-weight: 600;
+}
+
 /* L'aperçu reste à l'écran quand les champs défilent. */
 .preview {
   position: sticky;
@@ -38,6 +59,11 @@
 @media (max-width: 40rem) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .picked {
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    gap: 1rem;
   }
 
   .preview {

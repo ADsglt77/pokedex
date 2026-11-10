@@ -82,7 +82,20 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   référence « Pikachu ex (SV8 033) » et son id, d'où l'image, le prix et le lien Cardmarket ; une carte
   TAG TEAM dit « avec … » dans la grille, et va à tous ses Pokémon qui ne l'ont pas déjà tant que la
   référence reste la sienne ; une saisie à la main ne va qu'au Pokémon de la fiche) et y mène le
-  focus ; on la vérifie puis l'enregistre (« Enregistrer » attend que la carte soit choisie, ou
+  focus. L'onglet « La carte choisie » la résume d'abord (`PickedCard` : son aperçu, sa référence
+  et son drapeau, son prix du jour : ce que la saisie enregistrera ; une correction s'y montre,
+  la référence aussitôt, l'aperçu en quittant la référence, le prix en quittant l'id, et un id
+  vidé n'a pas de prix). Vient ensuite « Ajouter comme », le seul vrai choix (« Non possédée », par
+  défaut, ou
+  « Possédée » ; décision D-04, novembre 2026), le prochain arrêt au clavier. Les champs viennent
+  enfin, repliés sous « Modifier les détails » (`Accordion` de camply, pour le cas rare d'une
+  correction ; repliés à chaque carte choisie, ouverts d'eux-mêmes tant qu'un champ est illisible,
+  même pas encore signalé : un refus les trouve ouverts, et le champ reçoit le focus, à l'écran).
+  Ils
+  restent au même endroit : corriger la référence ne les remonte pas sous la frappe. Sur un
+  téléphone, l'aperçu du résumé est une vignette, et « Ajouter comme » tient à l'écran sans
+  défiler. « Saisie à la main » garde le formulaire complet, « Ajouter comme » à la fin ; on
+  vérifie la carte puis l'enregistre (« Enregistrer » attend que la carte soit choisie, ou
   l'onglet de saisie ; une carte que le Pokémon a déjà, `catalogMatch`, est refusée : « Pikachu a
   déjà cette carte. », tant que la référence reste la sienne : corrigée, c'est une saisie, plus
   refusée ; une carte qu'un autre de ses Pokémon a déjà lui est ajoutée telle quelle,

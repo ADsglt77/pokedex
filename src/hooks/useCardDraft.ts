@@ -156,6 +156,8 @@ export function useCardDraft(card: PokemonCard | null, fields: RefObject<HTMLEle
     setPage,
     // L'id se signale tout de suite ; l'image et la page, à l'enregistrement.
     errors: submitted ? errors : { ...errors, image: undefined, page: undefined },
+    /** Un champ illisible, même pas encore signalé : l'enregistrement serait refusé. */
+    invalid: Object.values(errors).some(Boolean),
     save,
     saving,
   }

@@ -394,7 +394,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   et prend le focus à l'ouverture (`initialFocus`). Dans la fenêtre d'ajout, la fonction qui choisit
   une carte est la même d'un rendu à l'autre (`fill` de `useCardDraft`, `pick` de `CardForm`) : les
   tuiles, mémoïsées, ne se redessinent pas à chaque sélection ; et les prix d'autres cartes que
-  celles de la collection (`usePrices(ids)`) ne suivent pas la collection.
+  celles de la collection (`usePrices(ids)`) ne suivent pas la collection. Une carte choisie y est
+  résumée, « Ajouter comme » d'abord, ses champs repliés sous « Modifier les détails » (`Accordion`
+  de camply ; `docs/cartes.md`) : le geste principal ne passe plus par un écran de saisie.
 - Focus et annonces : une action qui retire ou désactive son propre bouton (« Réinitialiser » les
   filtres ou un filtre retiré dans le Pokédex, « Tout afficher » du catalogue, « Retirer les
   filtres » de raretés et de types, l'aperçu d'un import, « Effacer », « Chercher les images »

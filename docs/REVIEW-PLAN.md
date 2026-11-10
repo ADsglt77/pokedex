@@ -300,8 +300,7 @@ débordements trouvés en vérifiant, d'avant L05, sont corrigés aussi :
 Seconde contre-review, du diff complet : GO. Corrigés aussi, à sa demande, le retrait du choix
 « Trier par » dans un bloc bord à bord (« Mes cartes ») et trois commentaires inexacts.
 
-Reste, hors du lot : les mentions légales disent « Mise à jour le 29 octobre 2026 »
-(`LegalPage.tsx:32`), alors que L03 a changé leur texte le 10 novembre.*
+Reste, hors du lot : la date des mentions légales (H-01, § 8).*
 - **Constats** : F-MOB-01, F-MOB-03, F-MOB-04, F-A11Y-03, F-A11Y-04, F-A11Y-05.
 - **Fichiers** :
   - `src/pages/catalog/CatalogPage.module.css:43` ;
@@ -324,7 +323,31 @@ Reste, hors du lot : les mentions légales disent « Mise à jour le 29 octobre 
 
 #### UX
 
-**L06 — La fenêtre d'ajout d'une carte (site)**
+**L06 — La fenêtre d'ajout d'une carte (site)** — *fait le 10 novembre 2026. D-04 validée :
+« Non possédée » (le libellé, pas l'interrupteur). Une carte choisie au
+catalogue est résumée (`PickedCard` : aperçu, référence et drapeau, prix du jour), « Ajouter
+comme » vient ensuite, puis les quatre champs, repliés sous « Modifier les détails » (`Accordion`
+de camply). Les champs se replient à chaque carte choisie, et s'ouvrent d'eux-mêmes tant qu'un
+champ est illisible, même pas encore signalé : un refus les trouve ouverts, et le champ reçoit le
+focus, à l'écran. Ils ne se remontent pas quand on corrige la référence. « Saisie à la main » garde
+le
+formulaire complet. Sur un téléphone, l'aperçu est une vignette : « Ajouter comme » tient à
+l'écran sans défiler, à 390×844 comme à 320×640. Pas de nouveau test (interface) ; ceux de la
+saisie restent. Rejoué avec Playwright sur le site local, à 1 440, 390 et 320 px, au clavier :
+- l'onglet, puis « Ajouter comme », puis « Modifier les détails » ;
+- la référence corrigée sans perdre le focus ;
+- un refus, détails repliés, qui les rouvre et mène le focus au champ ;
+- l'enregistrement « Possédée » (« Carte ajoutée à Salamèche, possédée. »).
+
+Contre-review : GO, sous réserve de trois défauts mineurs, corrigés :
+- le prix du résumé restait celui du catalogue pour un id vidé ;
+- un refus, détails repliés, laissait le champ sous le bord de la fenêtre (leur animation partait
+  de zéro) ;
+- les détails pouvaient s'ouvrir d'emblée après un choix.
+
+À 320×568, le chapeau de la fenêtre laissait « Ajouter comme » 14 px sous le pied. Il est
+raccourci (ce que dit chaque champ est dans son aide) : le choix tient avec 29 px de marge. Noté
+hors lot : les détails corrigés d'une carte déjà dans la collection sont ignorés (H-02, § 8).*
 - **Constats** : F-UX-01, F-UX-02.
 - **Fichiers** : `src/pages/pokemon/CardForm.tsx` (`:220`), `CardFields.tsx`,
   `src/config/shopping.ts:10`.
@@ -607,7 +630,7 @@ Reste, hors du lot : les mentions légales disent « Mise à jour le 29 octobre 
 | D-01 | En `expired`, garder les modifications, ou les bloquer ? (L01) | Les garder, avec une bannière, la version locale gardée et exportable si elle est remplacée. Les bloquer toucherait chaque action de l'app. |
 | D-02 | Limiter `/api/status` et `/api/health` ? (L02) | Oui, dans `DATA_LIMIT` (400 par 10 s) : loin d'une surveillance normale. **Validée** le 10 novembre 2026. |
 | D-03 | Le seuil des refus par pseudo (L03) | 20 par heure. Contrepartie : un tiers peut bloquer une heure la connexion à un pseudo, et le message le dit. **Validée** le 10 novembre 2026. |
-| D-04 | « Ajouter comme » (L06) | Un `Switch` « Je la possède déjà », éteint par défaut. |
+| D-04 | « Ajouter comme » (L06) | Un `Switch` « Je la possède déjà », éteint par défaut. **Validée** le 10 novembre 2026, avec le libellé « Non possédée » plutôt que le `Switch`. |
 | D-05 | DEC-12 : la clé des limites des données (L08) | Le /64, et les routes lourdes comptées par client. |
 | D-06 | `/donnees` devient `/reglages` (L12) | Oui, avec une redirection. |
 | D-07 | Direction visuelle (L17) | Les tuiles d'indicateurs seulement sur l'Accueil ; ailleurs, une ligne de résumé. |
@@ -692,3 +715,12 @@ Reste, hors du lot : les mentions légales disent « Mise à jour le 29 octobre 
 
 Chaque constat des trois rapports figure dans une ligne de ce tableau, ou au § 5 (plausibles non
 prouvés et choix gardés).
+
+## 8. Constats hors lot
+
+Trouvés en faisant les lots, hors de leur périmètre : à placer dans un lot, ou à décider.
+
+| Id | Constat | Où | Effet | Proposition |
+|---|---|---|---|---|
+| H-01 | Les mentions légales disent « Mise à jour le 29 octobre 2026 », alors que L03 a changé leur texte le 10 novembre (compteurs de tentatives, adresses IP, rétention). | `src/pages/LegalPage.tsx:32` | La date annonce une version plus ancienne que le texte. | La date du jour de la prochaine modification, et la tenir à chaque changement du texte. |
+| H-02 | Une carte choisie au catalogue qui est déjà dans la collection (`existing` : celle d'un autre de ses Pokémon ; `slot` : une case pas encore obtenue d'une collection d'extension) est enregistrée telle quelle. Ce qu'on corrige sous « Modifier les détails » (image, id Cardmarket, page, langue) est ignoré sans le dire ; le résumé montre pourtant la saisie. Le défaut existait avant L06. | `src/pages/pokemon/CardForm.tsx` (`attach`, `slot.adopt`) | Une correction faite dans la fenêtre se perd sans message. | Dans ces deux cas, ne pas offrir « Modifier les détails » (la fenêtre dit déjà que la carte est reprise telle quelle), ou enregistrer la correction sur la carte reprise : un choix à faire. |

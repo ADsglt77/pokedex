@@ -4,6 +4,7 @@ import { CardArt } from '@/components/CardArt'
 import { LanguageSwitch } from '@/components/LanguageSwitch'
 import type { CardDraft } from '@/hooks/useCardDraft'
 import { findCardImage } from '@/lib/card-catalog'
+import { cx } from '@/lib/cx'
 import { formatEuro } from '@/lib/format'
 import { priceOf } from '@/lib/prices'
 import { loadPriceHistory, usePrices, usePricesMissing } from '@/store/prices'
@@ -26,20 +27,23 @@ const REFERENCE_EXAMPLE: Record<CardLanguage, string> = {
  * Les champs d'une carte : sa langue (japonaise ou française : où son image est cherchée, et quelle
  * offre Cardmarket son lien montre), sa référence (d'où son image est retrouvée), l'adresse de son
  * image (vide : celle retrouvée), son id Cardmarket (vérifié dans les prix), sa page Cardmarket, et
- * l'aperçu de la carte. `speciesId` : pour l'aperçu sans image ; `ref` : le bloc des champs.
+ * l'aperçu de la carte (`preview` faux : sans lui, déjà montré au-dessus, `PickedCard`).
+ * `speciesId` : pour l'aperçu sans image ; `ref` : le bloc des champs.
  */
 export function CardFields({
   draft,
   speciesId,
   ref,
+  preview = true,
 }: {
   draft: CardDraft
   speciesId: number
   ref: Ref<HTMLDivElement>
+  preview?: boolean
 }) {
   const { errors } = draft
   return (
-    <div className={styles.layout} ref={ref}>
+    <div className={cx(styles.layout, !preview && styles.fieldsOnly)} ref={ref}>
       <Stack gap={4}>
         <Stack direction="horizontal" align="center" gap={3} wrap>
           <LanguageSwitch value={draft.language} onChange={draft.setLanguage} />
@@ -104,10 +108,17 @@ export function CardFields({
           error={errors.page}
         />
       </Stack>
-      <Suspense fallback={<Preview draft={draft} speciesId={speciesId} searching />}>
-        <Preview draft={draft} speciesId={speciesId} />
-      </Suspense>
+      {preview && <CardPreview draft={draft} speciesId={speciesId} />}
     </div>
+  )
+}
+
+/** L'aperçu de la carte saisie, en grand, et pendant la recherche de son image. */
+export function CardPreview({ draft, speciesId }: { draft: CardDraft; speciesId: number }) {
+  return (
+    <Suspense fallback={<Preview draft={draft} speciesId={speciesId} searching />}>
+      <Preview draft={draft} speciesId={speciesId} />
+    </Suspense>
   )
 }
 

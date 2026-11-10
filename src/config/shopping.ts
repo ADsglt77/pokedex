@@ -7,7 +7,7 @@ import type { AddAs, BudgetSettings, OrderState, Supplier } from '@/types'
 
 /** Ajouter une carte « comme » (la fenêtre d'ajout, `CardForm`) : un seul choix. */
 export const ADD_AS_LABELS: Record<AddAs, string> = {
-  none: 'À acheter',
+  none: 'Non possédée',
   owned: 'Possédée',
 }
 
