@@ -6,16 +6,17 @@
  * (`auth.ts`).
  */
 
-import { PSEUDO, RESERVED_PSEUDOS } from '@/config/account'
+import { PSEUDO, PSEUDO_LOCKED, RESERVED_PSEUDOS } from '@/config/account'
 import type { AccountState, AccountUser } from '@/types'
 
 /** Trop de tentatives (`worker/auth.ts`) : la réponse 429 du serveur. */
 const TOO_MANY_ATTEMPTS = 'Trop de tentatives\u00a0: réessayez un peu plus tard.'
 
 /**
- * Le message d'un refus du serveur : un pseudo déjà pris (le code du refus de Better Auth), son
- * statut (`messages`, propres au formulaire), trop de tentatives (429), ou `otherwise` pour les
- * autres (0 : pas de réponse).
+ * Le message d'un refus du serveur : un pseudo déjà pris ou bloqué (le code du refus), son statut
+ * (`messages`, propres au formulaire), trop de tentatives (429), ou `otherwise` pour les autres
+ * (0 : pas de réponse). Un pseudo bloqué ne dit pas s'il a un compte : le serveur bloque de même un
+ * pseudo sans compte.
  */
 export const refusalMessage = (
   messages: Partial<Record<number, string>>,
@@ -24,7 +25,9 @@ export const refusalMessage = (
 ) =>
   code === 'USERNAME_IS_ALREADY_TAKEN'
     ? 'Ce pseudo est déjà pris\u00a0: choisissez-en un autre.'
-    : (messages[status] ?? (status === 429 ? TOO_MANY_ATTEMPTS : otherwise))
+    : code === PSEUDO_LOCKED
+      ? 'Trop de mots de passe refusés pour ce pseudo, peut-être par quelqu’un d’autre\u00a0: sa connexion est bloquée une heure au plus. Réessayez plus tard.'
+      : (messages[status] ?? (status === 429 ? TOO_MANY_ATTEMPTS : otherwise))
 
 /** Un pseudo réservé au site (le premier segment d'une de ses adresses : `RESERVED_PSEUDOS`) ? */
 export const reservedPseudo = (value: string) => RESERVED_PSEUDOS.includes(value.toLowerCase())

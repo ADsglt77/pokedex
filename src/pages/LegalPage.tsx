@@ -79,15 +79,22 @@ export function LegalPage() {
             changements de la collection…) et les visites des Pokédex publics, avec l’adresse IP.
             Jamais un mot de passe.
           </li>
+          <li>
+            Les compteurs de tentatives&nbsp;: le nombre de demandes faites aux comptes (connexion,
+            création, changements…) par adresse IP, et le nombre de mots de passe refusés sur chaque
+            pseudo, sous une empreinte du pseudo. Ils limitent les essais de qui chercherait à
+            deviner un mot de passe.
+          </li>
         </ul>
         <h3>Pourquoi</h3>
         <p>
           Pour vous rendre le service que vous demandez en créant un compte&nbsp;: garder votre
           collection, la retrouver sur vos appareils, montrer votre Pokédex public. Sa base
-          légale&nbsp;: l’exécution de ce service. Le journal du serveur sert à la sécurité du site
-          (repérer un abus, une panne)&#8239;; sa base légale&nbsp;: l’intérêt légitime de l’éditeur
-          à protéger le site et ses comptes. Rien n’est vendu ni partagé, ni utilisé pour de la
-          publicité&#8239;; pas de mesure d’audience.
+          légale&nbsp;: l’exécution de ce service. Le journal du serveur et les compteurs de
+          tentatives servent à la sécurité du site (repérer ou freiner un abus, une panne)&#8239;;
+          leur base légale&nbsp;: l’intérêt légitime de l’éditeur à protéger le site et ses comptes.
+          Rien n’est vendu ni partagé, ni utilisé pour de la publicité&#8239;; pas de mesure
+          d’audience.
         </p>
         <h3>Ce qui est public</h3>
         <p>
@@ -114,7 +121,11 @@ export function LegalPage() {
           part aussitôt de la base (seul votre pseudo reste réservé&nbsp;: aucun autre compte ne le
           reprendra), dont l’historique, que l’hébergeur garde pour la réparer après une panne, le
           conserve encore 30 jours au plus. Une session est fermée 60 jours après votre dernière
-          visite, ou dès que vous vous connectez sur un autre appareil. Le journal du serveur est
+          visite, ou dès que vous vous connectez sur un autre appareil. Les compteurs de tentatives,
+          avec leurs adresses IP, sont gardés une heure au moins, sans durée maximale
+          garantie&nbsp;: ils ne sont effacés qu’au retour d’un visiteur sur une même action du
+          compte, ce qui peut prendre des semaines quand le site est peu fréquenté, puis
+          l’historique de la base les conserve encore 30 jours au plus. Le journal du serveur est
           gardé 7 jours, puis effacé.
         </p>
         <h3>Vos droits</h3>

@@ -100,7 +100,8 @@ export const verification = sqliteTable(
 
 /**
  * Les tentatives de chaque visiteur (`rateLimit` de `auth.ts`), dans la base : un Worker tourne en
- * plusieurs exemplaires, qui ne partagent pas leur mémoire.
+ * plusieurs exemplaires, qui ne partagent pas leur mémoire. Et les mots de passe refusés sur chaque
+ * pseudo (`REFUSALS` de `auth.ts`, la clé `pseudo|<empreinte>`).
  */
 export const rateLimit = sqliteTable('rateLimit', {
   id: text().primaryKey(),

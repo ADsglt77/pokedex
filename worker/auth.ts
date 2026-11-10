@@ -17,6 +17,8 @@
  *   connecte pas un visiteur à un compte qu'il ne connaît pas.
  * - Un corps de plus de 16 Ko (le site n'envoie qu'un pseudo et des mots de passe) est refusé
  *   (413, `maxBody`) avant Better Auth, qui lit tout ce qu'il reçoit.
+ * - 20 mots de passe refusés par heure sur un même pseudo, d'où qu'ils viennent, qu'il ait un
+ *   compte ou non (`REFUSALS`) : au-delà, sa connexion reçoit 429 (`PSEUDO_LOCKED`).
  * - Une seule session par compte : se connecter sur un appareil déconnecte ses autres. La
  *   collection n'est donc modifiée que d'un appareil à la fois.
  * Sessions de 60 jours, renouvelées chaque jour d'usage, dans un cookie (`__Secure-`, SameSite
@@ -35,13 +37,14 @@ import { betterAuth, type BetterAuthOptions } from 'better-auth/minimal'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { APIError, createAuthMiddleware, getSessionFromCtx, isAPIError } from 'better-auth/api'
 import { username, USERNAME_ERROR_CODES } from 'better-auth/plugins'
-import { env } from 'cloudflare:workers'
-import { and, eq, ne } from 'drizzle-orm'
+import { env, waitUntil } from 'cloudflare:workers'
+import { and, eq, ne, sql } from 'drizzle-orm'
 import { Hono, type Context, type MiddlewareHandler } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { createMiddleware } from 'hono/factory'
-import { PASSWORD_MIN, PSEUDO } from '@/config/account'
+import { PASSWORD_MIN, PSEUDO, PSEUDO_LOCKED } from '@/config/account'
 import { isPseudo } from '@/lib/account'
+import { HOUR } from '@/lib/time'
 import type { AccountState } from '@/types'
 import { db } from './db'
 import {
@@ -200,7 +203,11 @@ export const auth = betterAuth({
   // compte par minute ; 100 requêtes pour le reste. Comptées dans la base (`rateLimit` de
   // `schema.ts`) : chaque exemplaire du Worker les voit. `enabled` dit la production : seul, Better
   // Auth lirait `NODE_ENV` à l'exécution, que le Worker en ligne n'a pas (coupées) ; celui-ci, Vite
-  // l'écrit au build. En développement et dans les tests, pas de limite.
+  // l'écrit au build. En développement et dans les tests, pas de limite. Better Auth purge la table
+  // de ses lignes de plus que sa plus longue fenêtre, une heure (pas moins, ou les refus par pseudo,
+  // `REFUSALS`, dans la même table, partiraient avant la fin de leur heure), mais seulement quand un
+  // visiteur revient sur une même action du compte, sa fenêtre finie (`deleteExpiredRows`) : sans
+  // durée maximale, des semaines peuvent passer sur un site calme (les mentions légales le disent).
   rateLimit: {
     enabled: process.env.NODE_ENV === 'production',
     storage: 'database',
@@ -215,6 +222,124 @@ export const auth = betterAuth({
     },
   },
 } satisfies BetterAuthOptions)
+
+/**
+ * Les mots de passe refusés sur un même pseudo (décision D-03) : 20 par heure, d'où qu'ils
+ * viennent (les limites de Better Auth, par visiteur, se contournent en changeant d'adresse), que
+ * le pseudo ait un compte ou non : la réponse n'en dit rien. Contrepartie : un tiers peut bloquer
+ * une heure la connexion à un pseudo, ce que dit le formulaire (`PSEUDO_LOCKED`). Pas coupée en
+ * développement ni dans les tests.
+ */
+const REFUSALS = { max: 20, window: HOUR }
+
+/**
+ * La clé d'un pseudo visé dans `rateLimit` (à côté de celles de Better Auth, `<ip>|<chemin>`) : son
+ * empreinte par la clé du site (HMAC), jamais le pseudo tapé, qui peut être un mot de passe tapé
+ * dans le mauvais champ.
+ */
+async function refusalKey(pseudo: string) {
+  const encoder = new TextEncoder()
+  const secret = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(env.BETTER_AUTH_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+  const mac = await crypto.subtle.sign('HMAC', secret, encoder.encode(pseudo))
+  return `pseudo|${btoa(String.fromCharCode(...new Uint8Array(mac)))}`
+}
+
+/**
+ * Réserve une place à un essai sur ce pseudo avant de le laisser à Better Auth, en une seule
+ * requête : refus et essais en cours ne dépassent jamais 20 dans l'heure, même simultanés. Rend le
+ * début de l'heure (`lastRequest`, que les essais suivants ne repoussent pas : le blocage tombe une
+ * heure après), ou rien quand l'heure est pleine : l'essai est bloqué, sans rien écrire. La ligne
+ * reste ensuite jusqu'à une purge de Better Auth (plus haut).
+ */
+function reserveAttempt(key: string) {
+  const now = Date.now()
+  const { count, lastRequest } = schema.rateLimit
+  const ended = sql`${lastRequest} <= ${now - REFUSALS.window}`
+  return db
+    .insert(schema.rateLimit)
+    .values({ id: crypto.randomUUID(), key, count: 1, lastRequest: now })
+    .onConflictDoUpdate({
+      target: schema.rateLimit.key,
+      set: {
+        count: sql`CASE WHEN ${ended} THEN 1 ELSE ${count} + 1 END`,
+        lastRequest: sql`CASE WHEN ${ended} THEN ${now} ELSE ${lastRequest} END`,
+      },
+      setWhere: sql`${ended} OR ${count} < ${REFUSALS.max}`,
+    })
+    .returning({ since: lastRequest })
+    .get()
+}
+
+/**
+ * Rend sa place à un essai qui n'était pas un refus, dans son heure seulement (`since`) : une
+ * heure neuve ne la reprend pas, et le compteur ne passe jamais sous zéro. Plus rien de compté :
+ * l'heure se referme (`lastRequest` à 0), un essai qui n'était pas un refus ne l'ouvre donc pas, et
+ * `Retry-After` ne dit rien de lui (une connexion réussie, par exemple).
+ */
+function releaseAttempt(key: string, since: number) {
+  const { count, lastRequest } = schema.rateLimit
+  return db
+    .update(schema.rateLimit)
+    .set({
+      count: sql`${count} - 1`,
+      lastRequest: sql`CASE WHEN ${count} = 1 THEN 0 ELSE ${lastRequest} END`,
+    })
+    .where(and(eq(schema.rateLimit.key, key), eq(lastRequest, since)))
+    .run()
+}
+
+/**
+ * Une connexion, sous la limite des refus de son pseudo. Seul un refus (401 : pseudo ou mot de
+ * passe faux) garde sa place : une connexion réussie, une requête mal formée, la limite de Better
+ * Auth ou une panne la rendent, sans quoi un seul visiteur bloquerait un pseudo en quelques
+ * secondes. Au repos, le compteur vaut donc les refus de l'heure ; pendant une rafale, les essais
+ * en cours y comptent aussi : un vrai essai peut recevoir 429 le temps qu'elle passe, pas après.
+ * Heure pleine : 429 sans même lire le mot de passe, jamais en cache, avec le temps à attendre.
+ */
+async function countedSignIn(request: Request, pseudo: string) {
+  const key = await refusalKey(pseudo)
+  const reserved = await reserveAttempt(key)
+  if (!reserved) {
+    const row = await db
+      .select({ since: schema.rateLimit.lastRequest })
+      .from(schema.rateLimit)
+      .where(eq(schema.rateLimit.key, key))
+      .get()
+    const wait = Math.ceil(((row?.since ?? 0) + REFUSALS.window - Date.now()) / 1000)
+    return Response.json(
+      { code: PSEUDO_LOCKED, message: 'Trop de mots de passe refusés pour ce pseudo' },
+      {
+        status: 429,
+        headers: { 'Cache-Control': 'no-store', 'Retry-After': String(Math.max(wait, 1)) },
+      },
+    )
+  }
+  let response: Response | undefined
+  try {
+    response = await auth.handler(request)
+    return response
+  } finally {
+    // Une panne de la base en rendant la place ne change pas la réponse (une connexion réussie le
+    // reste) : la place reste comptée, comme un refus, jusqu'à la fin de l'heure, et le journal le
+    // dit.
+    if (response?.status !== 401) {
+      await releaseAttempt(key, reserved.since).catch((error: unknown) =>
+        journalOnce('Place non rendue', {
+          topic: 'serveur',
+          level: 'error',
+          message: 'Essai de connexion non rendu',
+          details: { cause: reasonOf(error) },
+        }),
+      )
+    }
+  }
+}
 
 /** Le pseudo tapé dans une requête (une copie), pour le journal (jamais le mot de passe). */
 async function typedPseudo(request: Request) {
@@ -360,7 +485,16 @@ export const accountRoutes = new Hono()
       ? undefined
       : (await auth.api.getSession({ headers: request.headers }))?.user
     const pseudo = user?.username ?? undefined
-    const response = await auth.handler(request)
+    // Un pseudo invalide n'est pas compté (rien d'écrit) : Better Auth le refuse (422) sans
+    // comparer de mot de passe. Une connexion comptée va jusqu'au bout même si le client coupe
+    // (`waitUntil`, 30 s au plus) : sa place est toujours rendue ou gardée.
+    const counted =
+      typed !== undefined && isPseudo(typed) && path.endsWith('/sign-in/username')
+        ? countedSignIn(request, typed)
+        : undefined
+    // Son échec, `await` le rend déjà (500, `index.ts`) : pas une seconde fois au journal du runtime.
+    if (counted) waitUntil(counted.catch(() => {}))
+    const response = await (counted ?? auth.handler(request))
     journalAuth(path, request, response, pseudo, typed)
     return response
   })

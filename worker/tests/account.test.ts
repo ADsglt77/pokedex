@@ -3,8 +3,13 @@
  * une adresse du site, unique sans tenir compte des majuscules), sans e-mail (le Worker en donne
  * une sans boîte) ; une seule session par compte ; supprimé seulement avec son mot de passe ; un
  * pseudo quitté jamais repris par un autre compte (la base le refuse elle-même), seuls les 3
- * derniers réservés. D'un autre site, une modification est refusée partout (403, avant la lecture
- * de son corps), une lecture jamais. Un corps de plus de 16 Ko, refusé (413) avant Better Auth,
+ * derniers réservés. 20 mots de passe refusés par heure sur un pseudo, d'où qu'ils viennent :
+ * au-delà, 429, même avec le bon, la même réponse qu'il ait un compte ou non. Un essai qui n'est pas
+ * un refus (réussi, mal formé, en panne, en rafale) ne garde pas sa place ni n'ouvre l'heure ; un
+ * pseudo invalide n'écrit rien ; des essais simultanés, ou en cours au changement d'heure, ne
+ * passent pas la limite ; le blocage tombe une heure après le premier refus, sans que les essais
+ * bloqués le prolongent. D'un autre site, une modification est refusée partout (403, avant la
+ * lecture de son corps), une lecture jamais. Un corps de plus de 16 Ko, refusé (413) avant Better Auth,
  * que sa taille soit annoncée ou non. Les données de référence partent au Worker des données, sous
  * `/v1`, jamais avec le cookie de la session (`worker/data.ts`). Le Worker entier, dans le
  * moteur de Cloudflare, sur une base D1 neuve pour le fichier : chaque test crée ses comptes, sous
@@ -13,7 +18,12 @@
 
 import { env } from 'cloudflare:workers'
 import { describe, expect, test, vi } from 'vitest'
+import { PSEUDO_LOCKED } from '@/config/account'
+import { HOUR, MINUTE } from '@/lib/time'
 import type { AccountState } from '@/types'
+import { auth } from '../auth'
+import { db } from '../db'
+import * as schema from '../schema'
 import { authCall, call, cookieOf, createAccount, ORIGIN, PASSWORD, sleep } from './helpers'
 
 const FOREIGN = 'https://autre.exemple'
@@ -167,6 +177,197 @@ describe('d’un autre site : une modification refusée partout, une lecture jam
       expect(await response.json()).toEqual({ user: null })
     }
   })
+})
+
+describe('les mots de passe refusés sur un pseudo : 20 par heure, d’où qu’ils viennent', () => {
+  /** Un essai de connexion, depuis l'adresse `198.51.100.<visitor>`. */
+  const signInFrom = (visitor: number, username: string, password: string) =>
+    call('/api/auth/sign-in/username', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: ORIGIN,
+        'CF-Connecting-IP': `198.51.100.${visitor}`,
+      },
+      body: JSON.stringify({ username, password }),
+    })
+
+  /** 20 mots de passe refusés sur ce pseudo, chacun d'une autre adresse : 401 chaque fois. */
+  async function refuse(pseudo: string) {
+    for (let visitor = 1; visitor <= 20; visitor++) {
+      expect((await signInFrom(visitor, pseudo, 'mauvais-mot-de-passe')).status).toBe(401)
+    }
+  }
+
+  /** Le pseudo est bloqué : 429, jamais en cache, avec le code que dit le formulaire. */
+  async function expectLocked(response: Response) {
+    expect(response.status).toBe(429)
+    expect(response.headers.get('cache-control')).toBe('no-store')
+    expect(await codeOf(response.clone())).toBe(PSEUDO_LOCKED)
+    return response
+  }
+
+  /** Recule d'autant l'heure de chaque compteur de la base, comme si le temps avait passé. */
+  const elapse = (ms: number) =>
+    env.DB.prepare('UPDATE rateLimit SET lastRequest = lastRequest - ?').bind(ms).run()
+
+  test('le 21e essai, après 20 refus depuis 20 adresses : 429, même avec le bon mot de passe ; un autre compte se connecte toujours de là', async () => {
+    await createAccount('Visee')
+    await createAccount('Voisine')
+    for (let visitor = 1; visitor <= 20; visitor++) {
+      // Le même pseudo, quelle que soit son écriture.
+      const typed = visitor % 2 ? 'Visee' : 'VISEE'
+      expect((await signInFrom(visitor, typed, 'mauvais-mot-de-passe')).status).toBe(401)
+    }
+    const locked = await expectLocked(await signInFrom(21, 'visee', PASSWORD))
+    // Jusqu'à une heure après le premier refus.
+    expect(Number(locked.headers.get('retry-after'))).toBeGreaterThan(3500)
+    expect(Number(locked.headers.get('retry-after'))).toBeLessThanOrEqual(3600)
+    expect(locked.headers.getSetCookie()).toEqual([])
+    expect((await signInFrom(21, 'Voisine', PASSWORD)).status).toBe(200)
+  }, 30_000)
+
+  test('un pseudo sans compte se bloque de même, avec la même réponse : rien ne dit s’il existe', async () => {
+    await createAccount('Connue')
+    await refuse('Connue')
+    await refuse('Inconnue')
+    const known = await expectLocked(await signInFrom(21, 'Connue', 'mauvais-mot-de-passe'))
+    const unknown = await expectLocked(await signInFrom(21, 'Inconnue', 'mauvais-mot-de-passe'))
+    expect(await unknown.text()).toBe(await known.text())
+    expect([...unknown.headers.keys()]).toEqual([...known.headers.keys()])
+  }, 30_000)
+
+  test('ni une connexion réussie ni un essai mal formé ne comptent parmi les refus', async () => {
+    await createAccount('Patiente')
+    expect((await signInFrom(1, 'Patiente', PASSWORD)).status).toBe(200)
+    // Refusé avant d'être comparé : un mot de passe de plus de 128 caractères.
+    expect((await signInFrom(1, 'Patiente', 'x'.repeat(200))).status).toBe(400)
+    await refuse('Patiente')
+    await expectLocked(await signInFrom(21, 'Patiente', PASSWORD))
+  }, 30_000)
+
+  test('40 essais mal formés simultanés d’un seul visiteur : aucun blocage durable, seuls les refus restent comptés', async () => {
+    await createAccount('Assiegee')
+    // Refusés avant toute comparaison, comme ceux que bloque la limite par visiteur de Better Auth.
+    await Promise.all(Array.from({ length: 40 }, () => signInFrom(50, 'Assiegee', 'x'.repeat(200))))
+    expect((await signInFrom(51, 'Assiegee', PASSWORD)).status).toBe(200)
+    await refuse('Assiegee')
+    await expectLocked(await signInFrom(21, 'Assiegee', PASSWORD))
+  }, 30_000)
+
+  test('un pseudo invalide n’est pas compté : rien n’est écrit dans la base', async () => {
+    const rows = async () =>
+      (await env.DB.prepare('SELECT count(*) AS n FROM rateLimit').first<{ n: number }>())!.n
+    const before = await rows()
+    // Trop court, trop long, une espace, une adresse du site : Better Auth les refuse (422).
+    for (const pseudo of ['a', 'x'.repeat(21), 'pas valide', 'connexion']) {
+      expect((await signInFrom(1, pseudo, 'mauvais-mot-de-passe')).status).toBe(422)
+    }
+    expect(await rows()).toBe(before)
+  })
+
+  test('des essais simultanés ne passent pas la limite : sur 30 à la fois, 20 refus et 10 blocages', async () => {
+    const statuses = await Promise.all(
+      Array.from(
+        { length: 30 },
+        async (_, visitor) =>
+          (await signInFrom(visitor + 1, 'Rafale', 'mauvais-mot-de-passe')).status,
+      ),
+    )
+    expect(statuses.filter((status) => status === 401)).toHaveLength(20)
+    expect(statuses.filter((status) => status === 429)).toHaveLength(10)
+  }, 30_000)
+
+  test('le blocage tombe une heure après le premier refus, sans que les essais bloqués le prolongent', async () => {
+    await createAccount('Attente')
+    await refuse('Attente')
+    await elapse(30 * MINUTE)
+    await expectLocked(await signInFrom(21, 'Attente', PASSWORD))
+    // Une minute avant la fin de l'heure (le temps des refus compris) : toujours bloqué.
+    await elapse(29 * MINUTE)
+    await expectLocked(await signInFrom(21, 'Attente', PASSWORD))
+    await elapse(MINUTE + 1000)
+    expect((await signInFrom(21, 'Attente', PASSWORD)).status).toBe(200)
+    // Une heure neuve : ce refus est le premier.
+    expect((await signInFrom(22, 'Attente', 'mauvais-mot-de-passe')).status).toBe(401)
+  }, 30_000)
+
+  test('au changement d’heure, un essai encore en cours ne rend pas sa place dans l’heure neuve : 20 refus au plus', async () => {
+    const handler = auth.handler.bind(auth)
+    let release = () => {}
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    const hold = vi.spyOn(auth, 'handler').mockImplementation(async (request) => {
+      await gate
+      return handler(request)
+    })
+    // Cinq essais mal formés, comptés dans cette heure, encore en cours quand elle finit.
+    const held = Promise.all(
+      Array.from({ length: 5 }, () => signInFrom(60, 'Bascule', 'x'.repeat(200))),
+    )
+    while (hold.mock.calls.length < 5) await sleep(10)
+    hold.mockRestore()
+    await elapse(HOUR + 1000)
+    expect((await signInFrom(1, 'Bascule', 'mauvais-mot-de-passe')).status).toBe(401)
+    release()
+    await held
+    let refused = 1
+    for (let visitor = 2; visitor <= 30; visitor++) {
+      const { status } = await signInFrom(visitor, 'Bascule', 'mauvais-mot-de-passe')
+      if (status !== 401) {
+        expect(status).toBe(429)
+        break
+      }
+      refused++
+    }
+    expect(refused).toBe(20)
+  }, 30_000)
+
+  test('un essai qui n’est pas un refus n’ouvre pas l’heure : `Retry-After` ne dit rien d’une connexion réussie', async () => {
+    await createAccount('Discrete')
+    expect((await signInFrom(1, 'Discrete', PASSWORD)).status).toBe(200)
+    await elapse(30 * MINUTE)
+    await refuse('Discrete')
+    const locked = await expectLocked(await signInFrom(21, 'Discrete', PASSWORD))
+    // L'heure part du premier refus, pas de la connexion d'il y a 30 minutes.
+    expect(Number(locked.headers.get('retry-after'))).toBeGreaterThan(3500)
+  }, 30_000)
+
+  test('une connexion interrompue par une panne rend son essai : 25 d’affilée ne bloquent pas', async () => {
+    await createAccount('Panne')
+    const broken = vi.spyOn(auth, 'handler').mockRejectedValue(new Error('panne simulée'))
+    try {
+      for (let visitor = 1; visitor <= 25; visitor++) {
+        expect((await signInFrom(visitor, 'Panne', PASSWORD)).status).toBe(500)
+      }
+    } finally {
+      broken.mockRestore()
+    }
+    expect((await signInFrom(26, 'Panne', PASSWORD)).status).toBe(200)
+  }, 30_000)
+
+  test('une place qui ne peut pas être rendue (panne de la base) ne change pas la réponse : la connexion réussie reste ouverte', async () => {
+    await createAccount('Fragile')
+    const update = db.update.bind(db)
+    const broken = vi.spyOn(db, 'update').mockImplementation(((table: never) =>
+      table === schema.rateLimit
+        ? {
+            set: () => ({
+              where: () => ({ run: () => Promise.reject(new Error('panne simulée de la base')) }),
+            }),
+          }
+        : update(table)) as never)
+    const log = vi.spyOn(console, 'log')
+    log.mockClear()
+    try {
+      const response = await signInFrom(1, 'Fragile', PASSWORD)
+      expect(response.status).toBe(200)
+      expect((await accountOf(cookieOf(response)))?.name).toBe('Fragile')
+      // Le journal le dit.
+      expect(log.mock.calls.flat().some((line) => String(line).includes('non rendu'))).toBe(true)
+    } finally {
+      broken.mockRestore()
+    }
+  }, 30_000)
 })
 
 describe('un corps de plus de 16 Ko : refusé avant Better Auth', () => {

@@ -187,7 +187,30 @@ l'API des données).*
   documentée (D-02).
 - **Effort** : S.
 
-**L03 — Tentatives de connexion par pseudo, et mentions légales (site)**
+**L03 — Tentatives de connexion par pseudo, et mentions légales (site)** — *fait le 10 novembre
+2026. D-03 validée : 20 refus (401) par heure et par pseudo, d'où qu'ils viennent, dans la table
+`rateLimit` (sans migration). Chaque essai réserve sa place avant Better Auth, en une seule
+requête : refus et essais en cours ne dépassent jamais 20 dans l'heure, même simultanés, et un
+essai bloqué n'écrit rien. Pour éviter les blocages abusifs, seul un refus garde sa place : une
+connexion réussie, une requête mal formée, la limite de Better Auth ou une panne la rendent, dans
+son heure seulement. Un pseudo invalide n'est pas compté, et une connexion coupée par le client va
+jusqu'au bout (`waitUntil`). Le blocage tombe une heure après le premier refus, sans que les
+essais bloqués le prolongent. Pour ne rien laisser fuir : un pseudo sans compte se bloque de même,
+avec la même réponse ; la clé est une empreinte HMAC du pseudo, jamais le texte tapé ; et un essai
+qui n'est pas un refus n'ouvre pas l'heure, si bien que `Retry-After` ne dit rien d'une connexion
+réussie. La réponse porte `Retry-After` et le code `PSEUDO_LOCKED`, que dit le formulaire. Les
+mentions légales disent les compteurs, leur adresse IP et leur rétention réelle : une heure au
+moins, sans durée maximale garantie. Contrairement à ce que supposait ce plan, Better Auth ne
+purge pas la table toutes les heures, mais quand un visiteur revient sur une même action du
+compte. Trois contre-reviews ont relevé onze anomalies ; neuf sont corrigées avec leurs tests : le
+blocage par une rafale d'essais mal formés, la rétention annoncée deux fois, les écritures pour un
+pseudo invalide et les deux écritures d'un essai bloqué, la place rendue dans l'heure suivante (plus de 20 refus, compteur négatif),
+`Retry-After` qui trahissait une connexion récente, une place non rendue (panne de la base) qui
+changeait une connexion réussie en erreur 500, et un rejet signalé deux fois au journal du runtime
+(`waitUntil`). Accepté, et documenté : après 19 refus dans l'heure, un tiers peut voir qu'une
+connexion à ce pseudo est en cours, le prix de la limite stricte. Non corrigé (sans enjeu) : un
+pseudo qui commence par le signe kelvin (U+212A), refusé par Better Auth, écrit encore une ligne à
+zéro.*
 - **Constats** : B-SEC-02, B-SEC-04.
 - **Fichiers** :
   - `worker/auth.ts` (`accountRoutes`, `:351-366` ; le pseudo tapé est déjà lu, `:358`) ;
@@ -529,7 +552,7 @@ l'API des données).*
 |---|---|---|
 | D-01 | En `expired`, garder les modifications, ou les bloquer ? (L01) | Les garder, avec une bannière, la version locale gardée et exportable si elle est remplacée. Les bloquer toucherait chaque action de l'app. |
 | D-02 | Limiter `/api/status` et `/api/health` ? (L02) | Oui, dans `DATA_LIMIT` (400 par 10 s) : loin d'une surveillance normale. **Validée** le 10 novembre 2026. |
-| D-03 | Le seuil des refus par pseudo (L03) | 20 par heure. Contrepartie : un tiers peut bloquer une heure la connexion à un pseudo, et le message le dit. |
+| D-03 | Le seuil des refus par pseudo (L03) | 20 par heure. Contrepartie : un tiers peut bloquer une heure la connexion à un pseudo, et le message le dit. **Validée** le 10 novembre 2026. |
 | D-04 | « Ajouter comme » (L06) | Un `Switch` « Je la possède déjà », éteint par défaut. |
 | D-05 | DEC-12 : la clé des limites des données (L08) | Le /64, et les routes lourdes comptées par client. |
 | D-06 | `/donnees` devient `/reglages` (L12) | Oui, avec une redirection. |

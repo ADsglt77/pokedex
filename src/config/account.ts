@@ -39,6 +39,12 @@ export const RESERVED_PSEUDOS = [
 /** Ce que dit un formulaire sous le champ du pseudo. */
 export const PSEUDO_HINT = `${PSEUDO.min} à ${PSEUDO.max} caractères\u00a0: lettres sans accent, chiffres, - ou _.`
 
+/**
+ * Le code du refus d'une connexion à un pseudo bloqué, après trop de mots de passe refusés
+ * (`worker/auth.ts`) : le formulaire de connexion le dit (`refusalMessage`, `lib/account.ts`).
+ */
+export const PSEUDO_LOCKED = 'PSEUDO_LOCKED'
+
 /** La longueur minimale d'un mot de passe, la même pour le serveur (`worker/auth.ts`). */
 export const PASSWORD_MIN = 8
 

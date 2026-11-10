@@ -66,8 +66,43 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   40 requêtes par 10 s et par visiteur (son réseau /64 en IPv6, `worker/limits.ts` ; testé).
   `GET /api/account` (qui est connecté) et le journal (`POST /api/journal`), qui lisent la session
   dans D1, partagent la limite de la collection (plus bas) : 40 requêtes par 10 s pour les trois
-  routes, loin d'une visite (un compte au démarrage, un envoi de la collection toutes les 500 ms au plus,
-  le journal à l'export et à l'import).
+  routes, loin d'une visite (un compte au démarrage, un envoi de la collection toutes les 500 ms
+  au plus, le journal à l'export et à l'import).
+- **Les mots de passe refusés sur un pseudo** (décision D-03, novembre 2026 : `REFUSALS`,
+  `worker/auth.ts` ; testé) : les limites par visiteur se contournent en changeant d'adresse, et
+  les pseudos sont publics. Le Worker compte donc aussi les refus de connexion (401) sur chaque
+  pseudo, d'où qu'ils viennent : 20 par heure. Au-delà, toute connexion à ce pseudo reçoit 429
+  jusqu'à la fin de l'heure partie de son premier refus (`Retry-After`), même avec le bon mot de
+  passe, et sans que les essais bloqués la prolongent. Le formulaire dit qu'un autre a pu le
+  bloquer (`PSEUDO_LOCKED`, `refusalMessage` de `lib/account.ts`) : la contrepartie acceptée, un
+  tiers peut bloquer une heure la connexion à un pseudo. Un pseudo sans compte se bloque de même,
+  avec la même réponse : rien ne dit s'il existe. Chaque essai réserve sa place avant Better Auth,
+  en une seule requête (`reserveAttempt`) : refus et essais en cours ne dépassent jamais 20 dans
+  l'heure, même simultanés ; heure pleine, l'essai est bloqué sans rien écrire (une lecture, pour
+  `Retry-After`). Seul un refus garde sa place : une connexion réussie, une requête mal formée, la
+  limite de Better Auth ou une panne la rendent (`releaseAttempt`), dans son heure seulement (une
+  heure neuve ne la reprend pas, le compteur ne passe jamais sous zéro), sans quoi un seul
+  visiteur bloquerait un pseudo en quelques secondes. Plus rien de compté, l'heure se referme : un
+  essai qui n'était pas un refus ne l'ouvre pas, et `Retry-After` ne dit rien d'une connexion
+  réussie, sauf si un autre essai la chevauche. Une place qui ne peut pas être rendue (une panne
+  de la base) ne change pas la réponse : la connexion réussie le reste, la place reste comptée
+  jusqu'à la fin de l'heure, et le journal le dit (« Essai de connexion non rendu »). Une
+  connexion comptée va jusqu'au bout même si le client coupe (`waitUntil`, 30 s au plus) ; vérifié
+  sur le site local : 25 connexions coupées à 40 ms ne bloquent rien. Pendant une rafale, les
+  essais en cours comptent aussi : un vrai essai peut recevoir 429 le temps qu'elle passe, pas
+  après. C'est le prix de la limite stricte, accepté : après 19 refus dans l'heure, un tiers peut
+  voir qu'une connexion à ce pseudo est en cours (sa sonde reçoit 429 le temps qu'elle dure).
+  Toutes ces limites sont testées, et les contre-reviews les ont rejouées. Un
+  pseudo invalide n'est pas compté, rien n'est écrit : Better Auth le refuse (422) sans rien
+  comparer. Sinon, un essai écrit une ligne, deux s'il n'est pas un refus (sous la limite de 40
+  requêtes par 10 s et par visiteur). Le tout dans la table de Better Auth (`rateLimit`, sans
+  migration), sous une empreinte du pseudo (HMAC par `BETTER_AUTH_SECRET`), jamais le texte tapé,
+  qui peut être un mot de passe tapé dans le mauvais champ. Better Auth efface les lignes de plus
+  que sa plus longue fenêtre, une heure (à ne pas raccourcir), mais seulement quand un visiteur
+  revient sur une même action du compte, sa fenêtre finie (`deleteExpiredRows`) : sans durée
+  maximale, des semaines peuvent passer sur un site calme, ce que disent les mentions légales
+  (`LegalPage`), avec l'historique de 30 jours de la base. Pas coupé en développement ni dans
+  les tests.
 - **L'app ne s'ouvre que connecté** (décision de l'utilisateur, octobre 2026) : le compte connecté
   du store (`account` : son id et son pseudo ; `null` : personne, `store/account.ts`), fixé au
   démarrage avant le routeur (`loadAccount` lit `GET /api/account?demarrage`, qui dit qui est
