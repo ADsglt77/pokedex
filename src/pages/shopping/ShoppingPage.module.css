@@ -7,8 +7,11 @@
   margin-top: var(--space-block);
 }
 
-/* Les onglets défilent de côté quand ils manquent de place, sans barre de défilement. */
+/* Les onglets défilent de côté quand ils manquent de place, sans barre de défilement. Positionnée :
+   le mot caché d'un badge (`.badgeWords`, en position absolue) reste dans la zone qui défile, sans
+   élargir la page sur téléphone (167 px de trop à 320 px). */
 .tabList {
+  position: relative;
   overflow-x: auto;
   scrollbar-width: none;
 }

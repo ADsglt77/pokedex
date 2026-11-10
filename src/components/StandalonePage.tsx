@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { Logo } from '@/components/Logo'
 import { SiteDisclaimer } from '@/components/SiteDisclaimer'
+import { useFocusOnEntry } from '@/hooks/useFocusOnEntry'
 import { cx } from '@/lib/cx'
 import styles from './StandalonePage.module.css'
 
@@ -18,13 +19,18 @@ export function StandalonePage({
   className?: string
   children: ReactNode
 }) {
+  // Venue d'une autre page (un lien vers les mentions légales) : le focus au contenu.
+  const main = useRef<HTMLElement>(null)
+  useFocusOnEntry(main)
   return (
     <div className={cx('container', styles.page)}>
       <header className={styles.header}>
         <Logo />
         {actions}
       </header>
-      <main className={cx(styles.main, className)}>{children}</main>
+      <main ref={main} tabIndex={-1} className={cx(styles.main, className)}>
+        {children}
+      </main>
       <footer className={styles.footer}>
         <SiteDisclaimer />
       </footer>

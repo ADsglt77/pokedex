@@ -149,7 +149,8 @@ export function PokedexToolbar({
               key={value}
               size="sm"
               pressed={filters.possession === value}
-              onChange={() => setFilters({ possession: value })}
+              // Un second appui relâche le filtre : « Tous » de nouveau.
+              onChange={(pressed) => setFilters({ possession: pressed ? value : 'all' })}
               className={styles.chip}
             >
               {label}

@@ -1,4 +1,4 @@
-import { Table, type SortState } from '@camply/ui'
+import { Select, Table, type SelectOption, type SortState } from '@camply/ui'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { useGrowingList } from '@/hooks/useGrowingList'
@@ -10,6 +10,7 @@ import { pokedexUrl } from '@/lib/filters'
 import { seriesOf } from '@/lib/series'
 import { formatEuro, formatEuroChange, statusLabel } from '@/lib/format'
 import type { CompletionCost, TrackedCard } from '@/lib/prices'
+import { sortChoice, sortOf } from '@/lib/table-sort'
 import { useCollectionStore } from '@/store/collection'
 import { type Generation, generationLabel } from '@/config/pokedex'
 import type { CardStatus, PokemonCard } from '@/types'
@@ -54,6 +55,21 @@ function sortCards(rows: CardRow[], sort: SortState | null) {
 /** Les lignes dessinées d'un coup : plus qu'un grand écran n'en montre. */
 const ROWS_STEP = 60
 
+/** Les tris de l'en-tête, en liste (`.stack-sort`) : chaque colonne, dans un sens puis l'autre. */
+const SORTS: SelectOption[] = [
+  { value: 'value:desc', label: 'Valeur, de la plus haute à la plus basse' },
+  { value: 'value:asc', label: 'Valeur, de la plus basse à la plus haute' },
+  { value: 'gain:desc', label: 'Écart, du plus grand gain à la plus grande perte' },
+  { value: 'gain:asc', label: 'Écart, de la plus grande perte au plus grand gain' },
+  { value: 'paid:desc', label: 'Payé, du plus cher au moins cher' },
+  { value: 'paid:asc', label: 'Payé, du moins cher au plus cher' },
+  { value: 'name:asc', label: 'Carte, de A à Z' },
+  { value: 'name:desc', label: 'Carte, de Z à A' },
+  { value: 'status:asc', label: 'Statut, les possédées d’abord' },
+  { value: 'status:desc', label: 'Statut, les commandées d’abord' },
+  { value: '', label: 'Sans tri' },
+]
+
 /**
  * Les cartes suivies : ce qu'elles ont coûté et ce qu'elles valent, la plus chère d'abord. Jusqu'à
  * un millier de lignes : triées ici (le tri du tableau, contrôlé), dessinées au fur et à mesure du
@@ -80,7 +96,16 @@ export function CardsTable({ cards }: { cards: TrackedCard[] }) {
   const { limit, end } = useGrowingList(rows.length, ROWS_STEP, 0, 'valeur-cartes')
 
   return (
-    <div className="growing">
+    <div className="growing stack-sort">
+      <div className="stack-sort-choice">
+        <Select
+          label="Trier par"
+          size="sm"
+          options={SORTS}
+          value={sortChoice(sort)}
+          onChange={(choice) => setSort(sortOf(choice))}
+        />
+      </div>
       <Table
         bordered={false}
         className={cx('stack-table', styles.cardsTable)}

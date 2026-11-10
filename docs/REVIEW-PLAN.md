@@ -262,7 +262,46 @@ fois le réseau revenu (le routeur garde l'échec), ce que dit la page d'erreur.
 - **Comportement** : non, sauf le refus d'un import trop gros.
 - **Effort** : S.
 
-**L05 — Téléphone et clavier (site)**
+**L05 — Téléphone et clavier (site)** — *fait le 10 novembre 2026. Le
+Catalogue ne déborde plus de côté (`minmax(0, 1fr)` sur `.tools`). « Mes cartes » (Valeur) et les
+commandes, rangées en liste, gardent leur tri : un `Select` « Trier par » de camply, branché sur
+le tri contrôlé (les commandes y passent). Il paraît exactement quand l'en-tête disparaît, par un
+seul conteneur `table` (`.stack-sort`, `lib/table-sort.ts`), plutôt que par `usePhone()` comme le
+proposait le plan : il suit ainsi la vraie largeur du tableau. Sur téléphone, l'accueil montre la
+liste des régions (des liens de 44 px) au lieu de la réglette ; ce choix, déjà fait par le Pokédex
+public, est factorisé dans `RegionProgress`. Le focus va au `<main>` d'une page qui en remplace
+une autre (`useFocusOnEntry` : la coquille, `AuthCard`, `StandalonePage`, `ErrorPage`), sauf à la
+première page du document. Un filtre rapide se relâche au second appui, et les raccourcis sont
+bloqués sous un `[role=menu]`. Pas de test (interface), mais tout est rejoué avec Playwright sur le
+site local, avec l'API des données locale et un compte de test :
+- **débordement à 320 et 390 px** : aucun sur les treize pages parcourues (accueil, Pokédex,
+  fiche, Collections, Catalogue, Valeur, les quatre onglets d'Achats, Réglages, Pokédex public,
+  mentions légales) ;
+- **le tri** : à chaque largeur entre 570 et 585 px, un seul du choix ou de l'en-tête paraît ; il
+  se choisit au clavier ;
+- **les régions** : 9 liens de 44 px sur téléphone, la réglette au-delà ;
+- **le focus** : il reste sur `body` à la première page, puis va au contenu à l'inscription, au
+  retour, après la connexion, vers et depuis les mentions légales, après la déconnexion, et au
+  retour de la page d'erreur ;
+- **le filtre rapide** relâché au second appui ;
+- **sous le menu du compte**, → et « / » sans effet, et → mène à Raichu sans le menu.
+
+Contre-review : NO-GO, puis corrigé. La coquille se redessinait à chaque frappe d'une recherche :
+la clé de page est maintenant lue dans `history.state`, et non par `useLocation`. Le choix du tri
+manquait sur 2 px pour un tableau bordé : le conteneur du tableau est retiré dans `.stack-sort`.
+S'y ajoutent la factorisation des régions et le focus au retour de la page d'erreur. Deux
+débordements trouvés en vérifiant, d'avant L05, sont corrigés aussi :
+- **Achats**, 167 px à 320 px (97 à 390), sur tous ses onglets : le mot caché d'un badge
+  d'onglet, en `position: absolute`, sortait de la rangée d'onglets qui défile, désormais
+  positionnée (`ShoppingPage.module.css`) ;
+- **l'en-tête des pages seules**, 5 px à 320 px : « Revenir à l'accueil » passe sous la marque
+  (`StandalonePage.module.css`).
+
+Seconde contre-review, du diff complet : GO. Corrigés aussi, à sa demande, le retrait du choix
+« Trier par » dans un bloc bord à bord (« Mes cartes ») et trois commentaires inexacts.
+
+Reste, hors du lot : les mentions légales disent « Mise à jour le 29 octobre 2026 »
+(`LegalPage.tsx:32`), alors que L03 a changé leur texte le 10 novembre.*
 - **Constats** : F-MOB-01, F-MOB-03, F-MOB-04, F-A11Y-03, F-A11Y-04, F-A11Y-05.
 - **Fichiers** :
   - `src/pages/catalog/CatalogPage.module.css:43` ;

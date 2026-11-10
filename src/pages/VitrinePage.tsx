@@ -5,15 +5,13 @@ import { Link, useParams } from 'react-router'
 import { ChartPeriodControl } from '@/components/ChartParts'
 import { Panel } from '@/components/Panel'
 import { PokedexGrid } from '@/components/PokedexGrid'
-import { ProgressRuler } from '@/components/ProgressRuler'
-import { RegionList } from '@/components/RegionList'
+import { RegionProgress } from '@/components/RegionProgress'
 import { SeriesGrid } from '@/components/SeriesGrid'
 import { SeriesLine } from '@/components/SeriesLine'
 import { StandalonePage } from '@/components/StandalonePage'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { Unavailable } from '@/components/Unavailable'
 import { UnlockedChart } from '@/components/UnlockedChart'
-import { usePhone } from '@/hooks/useMediaQuery'
 import { usePokedexGrid } from '@/hooks/usePokedexGrid'
 import { isPseudo } from '@/lib/account'
 import { requestFailed } from '@/lib/api'
@@ -161,8 +159,6 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
   const unlocks = useMemo(() => unlockEvents(collection), [collection])
   const [period, setPeriod] = useState<ChartPeriod>('month')
   const [shown, setShown] = useState<Shown>('all')
-  // Sur téléphone, la réglette n'est qu'une image : la liste des régions la remplace.
-  const narrow = usePhone()
   const wanted = entries.filter(isWanted).length
   const visible = useMemo(
     () =>
@@ -235,11 +231,7 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
       </div>
 
       <Panel title="Par région">
-        {narrow ? (
-          <RegionList generations={generations} />
-        ) : (
-          <ProgressRuler generations={generations} linked={false} />
-        )}
+        <RegionProgress generations={generations} linked={false} />
       </Panel>
 
       <Panel

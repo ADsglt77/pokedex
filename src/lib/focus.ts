@@ -81,8 +81,9 @@ export function focusFirstError(fields: RefObject<HTMLElement | null>, show: () 
 
 /**
  * Un raccourci clavier de la page ne s'applique pas : on tape dans un champ (ou une liste de
- * choix), une fenêtre est ouverte, un réglage s'est déjà servi de la touche, ou Ctrl, ⌘ ou Alt est
- * tenu (Maj non : « / » la demande sur certains claviers).
+ * choix), une fenêtre ou un menu est ouvert (celui du compte : ses flèches sont les siennes), un
+ * réglage s'est déjà servi de la touche, ou Ctrl, ⌘ ou Alt est tenu (Maj non : « / » la demande
+ * sur certains claviers).
  */
 export const shortcutBlocked = (event: KeyboardEvent) =>
   (event.target instanceof HTMLElement &&
@@ -91,4 +92,4 @@ export const shortcutBlocked = (event: KeyboardEvent) =>
   event.ctrlKey ||
   event.metaKey ||
   event.altKey ||
-  document.querySelector('[role=dialog]') !== null
+  document.querySelector('[role=dialog], [role=menu]') !== null

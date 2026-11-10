@@ -1,9 +1,10 @@
 import { Button, Stack } from '@camply/ui'
-import { useSyncExternalStore } from 'react'
+import { useRef, useSyncExternalStore } from 'react'
 import { isRouteErrorResponse, Link, useNavigate, useRouteError } from 'react-router'
 import { Logo } from '@/components/Logo'
 import { PageHeader } from '@/components/PageHeader'
 import { PokedexUnavailable } from '@/components/PokedexUnavailable'
+import { useFocusOnEntry } from '@/hooks/useFocusOnEntry'
 import { cx } from '@/lib/cx'
 import { pageTitle } from '@/lib/format'
 import styles from './ErrorPage.module.css'
@@ -31,10 +32,13 @@ export function ErrorPage() {
   const error = useRouteError()
   const navigate = useNavigate()
   const online = useSyncExternalStore(subscribeOnline, () => navigator.onLine)
+  // Elle remplace la coquille : le focus à son contenu (et, au retour, à celui de la coquille).
+  const main = useRef<HTMLElement>(null)
+  useFocusOnEntry(main)
   if (isRouteErrorResponse(error) && error.status === 503) return <PokedexUnavailable />
   const message = error instanceof Error ? error.message : String(error ?? '')
   return (
-    <main className={cx('container', styles.page)}>
+    <main ref={main} tabIndex={-1} className={cx('container', styles.page)}>
       <title>{pageTitle(online ? 'Erreur' : 'Pas de connexion')}</title>
       <div className={styles.brand}>
         <Logo />

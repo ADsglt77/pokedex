@@ -1,9 +1,10 @@
 import { Alert, Button, Card, CardDescription, CardHeader, CardTitle, Stack } from '@camply/ui'
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Logo } from '@/components/Logo'
 import { PendingChangesNotice } from '@/components/SaveBanner'
 import { SiteDisclaimer } from '@/components/SiteDisclaimer'
+import { useFocusOnEntry } from '@/hooks/useFocusOnEntry'
 import { pageTitle } from '@/lib/format'
 import styles from './AuthCard.module.css'
 
@@ -33,6 +34,9 @@ export function AuthCard({
 }) {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // Venue d'une autre page (la déconnexion, l'autre page du compte) : le focus au contenu.
+  const main = useRef<HTMLElement>(null)
+  useFocusOnEntry(main)
 
   const send = async (event: FormEvent) => {
     event.preventDefault()
@@ -44,7 +48,7 @@ export function AuthCard({
   }
 
   return (
-    <main className={styles.page}>
+    <main ref={main} tabIndex={-1} className={styles.page}>
       <title>{pageTitle(title)}</title>
       <Logo />
       <Card padding="lg" className={styles.card}>

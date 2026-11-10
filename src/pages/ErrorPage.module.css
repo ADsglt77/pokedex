@@ -1,6 +1,8 @@
 /* La page d'erreur remplace toute la coquille : sa propre marge, en haut et en bas. */
 .page {
   padding-block: 2.5rem 4rem;
+  /* Le focus y vient en arrivant d'une autre page (`useFocusOnEntry`) : pas de contour. */
+  outline: none;
 }
 
 /* La marque, en tête : la coquille et son logo ne sont plus là. */

@@ -229,6 +229,33 @@ img {
   display: none;
 }
 
+/* Rangé en liste, le tableau perd son en-tête, et ses boutons de tri : un choix « Trier par »
+   (`.stack-sort-choice`, `lib/table-sort.ts`) les remplace. `.stack-sort` l'enveloppe avec le
+   tableau et devient le seul conteneur `table` (celui du tableau, plus étroit de son bord, est
+   retiré) : l'en-tête, les fiches et le choix se règlent sur la même largeur, et le choix paraît
+   exactement quand l'en-tête disparaît (sur un téléphone, ou dans un bloc étroit). */
+.stack-sort {
+  container: table / inline-size;
+}
+
+.stack-sort .stack-table {
+  container: none;
+}
+
+.stack-sort-choice {
+  display: none;
+}
+
+@container table (max-width: 36rem) {
+  /* En retrait comme les fiches dans un bloc bord à bord (`Panel` `flush`, qui en règle la
+     variable de camply) ; ailleurs, aligné sur le cadre du tableau. */
+  .stack-sort-choice {
+    display: block;
+    margin-bottom: var(--camply-space-3);
+    padding-inline: var(--camply-table-edge-padding, 0);
+  }
+}
+
 @container table (max-width: 36rem) {
   .stack-table .camply-table__table,
   .stack-table tbody {

@@ -1,7 +1,7 @@
 import { RadialProgress } from '@camply/ui'
 import { Link } from 'react-router'
 import { Panel } from '@/components/Panel'
-import { ProgressRuler } from '@/components/ProgressRuler'
+import { RegionProgress } from '@/components/RegionProgress'
 import { SeriesLine } from '@/components/SeriesLine'
 import { usePokedex } from '@/hooks/usePokedex'
 import { cardLanguage } from '@/lib/collection'
@@ -33,8 +33,9 @@ function progressSentence(progress: Progress) {
 }
 
 /**
- * La progression : l'anneau, la phrase et la réglette compacte des générations ; dessous, celle de
- * chaque collection d'extension (rien sans collection).
+ * La progression : l'anneau, la phrase et la réglette compacte des générations (sur téléphone, la
+ * liste des régions, des liens : `RegionProgress`) ; dessous, celle de chaque collection
+ * d'extension (rien sans collection).
  */
 export function ProgressPanel() {
   const { progress, generations } = usePokedex()
@@ -67,7 +68,7 @@ export function ProgressPanel() {
         </div>
       </div>
       <div className={styles.ruler}>
-        <ProgressRuler generations={generations} />
+        <RegionProgress generations={generations} linked />
       </div>
       {collection.series.length > 0 && (
         <div className={styles.collections}>

@@ -1,4 +1,15 @@
-import { Badge, Button, EmptyState, IconButton, Stack, Table, type Column } from '@camply/ui'
+import {
+  Badge,
+  Button,
+  EmptyState,
+  IconButton,
+  Select,
+  Stack,
+  Table,
+  type Column,
+  type SelectOption,
+  type SortState,
+} from '@camply/ui'
 import { Eye, PackageCheck, Pencil, Plus, Receipt, Trash2 } from '@camply/ui/icons'
 import { useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
@@ -16,12 +27,32 @@ import {
   orderSpent,
   supplierLabel,
 } from '@/lib/orders'
+import { sortChoice, sortOf } from '@/lib/table-sort'
 import { useShoppingStore } from '@/store/shopping'
 import type { Order } from '@/types'
 import { LateOrdersAlert, OrderDetail, OrderStateBadge } from './OrderDetail'
 import { OrderForm } from './OrderForm'
 import page from './ShoppingPage.module.css'
 import styles from './OrdersPanel.module.css'
+
+/**
+ * Les tris de l'en-tête, en liste (`.stack-sort`) : chaque colonne, dans un sens puis l'autre ;
+ * sans tri, l'ordre du registre (par date à chaque enregistrement, `sortOrders` ; tel quel après un
+ * import).
+ */
+const SORTS: SelectOption[] = [
+  { value: '', label: 'Sans tri, dans l’ordre du registre' },
+  { value: 'date:desc', label: 'Date, la plus récente d’abord' },
+  { value: 'date:asc', label: 'Date, la plus ancienne d’abord' },
+  { value: 'total:desc', label: 'Total, la plus chère d’abord' },
+  { value: 'total:asc', label: 'Total, la moins chère d’abord' },
+  { value: 'cards:desc', label: 'Cartes, le plus de cartes d’abord' },
+  { value: 'cards:asc', label: 'Cartes, le moins de cartes d’abord' },
+  { value: 'state:asc', label: 'État : annulées, en cours, puis reçues' },
+  { value: 'state:desc', label: 'État : reçues, en cours, puis annulées' },
+  { value: 'supplier:asc', label: 'Fournisseur, de A à Z' },
+  { value: 'supplier:desc', label: 'Fournisseur, de Z à A' },
+]
 
 /**
  * Le registre des commandes : en ajouter, en ouvrir une pour voir ses cartes, les corriger, les
@@ -33,6 +64,8 @@ export function OrdersPanel() {
   const [openId, setOpenId] = useState<string | null>(null)
   const [editing, setEditing] = useState<Order | null>(null)
   const [deleting, setDeleting] = useState<Order | null>(null)
+  // Le tri, contrôlé : l'en-tête du tableau, ou le choix « Trier par » qui le remplace en liste.
+  const [sort, setSort] = useState<SortState | null>(null)
   const newButton = useRef<HTMLButtonElement>(null)
   // Suivie par son id : ouverte, elle reflète ce qu'on y change (« Marquer reçue »).
   const opened = orders.find((order) => order.id === openId)
@@ -90,17 +123,30 @@ export function OrdersPanel() {
           description="Après avoir commandé, enregistrez la commande avec les prix payés : vos cartes passent en « commandée », puis en « possédée » à la réception. Les commandes passées s’enregistrent de la même façon, directement « reçues »."
         />
       ) : (
-        <Table
-          className={cx('stack-table', styles.orders)}
-          data={orders}
-          rowKey={(order) => order.id}
-          columns={orderColumns(late, {
-            onReceive: receive,
-            onView: (order) => setOpenId(order.id),
-            onEdit: setEditing,
-            onDelete: setDeleting,
-          })}
-        />
+        <div className="stack-sort">
+          <div className="stack-sort-choice">
+            <Select
+              label="Trier par"
+              size="sm"
+              options={SORTS}
+              value={sortChoice(sort)}
+              onChange={(choice) => setSort(sortOf(choice))}
+            />
+          </div>
+          <Table
+            className={cx('stack-table', styles.orders)}
+            data={orders}
+            rowKey={(order) => order.id}
+            sort={sort}
+            onSortChange={setSort}
+            columns={orderColumns(late, {
+              onReceive: receive,
+              onView: (order) => setOpenId(order.id),
+              onEdit: setEditing,
+              onDelete: setDeleting,
+            })}
+          />
+        </div>
       )}
 
       {opened && (

@@ -8,8 +8,11 @@
   padding-block: var(--space-panel) var(--space-block);
 }
 
+/* La marque et ses actions ; sur un petit téléphone, les actions passent dessous plutôt que de
+   faire déborder la page (« Revenir à l'accueil » : 5 px de trop à 320 px). */
 .header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
@@ -17,6 +20,8 @@
 
 .main {
   flex: 1;
+  /* Le focus y vient en arrivant d'une autre page (`useFocusOnEntry`) : pas de contour. */
+  outline: none;
 }
 
 .footer {

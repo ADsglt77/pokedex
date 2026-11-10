@@ -36,6 +36,7 @@ import { shoppingUrl } from '@/lib/filters'
 import { AccountMenu } from '@/components/AccountMenu'
 import { AppSearch } from '@/components/AppSearch'
 import { SaveBanner } from '@/components/SaveBanner'
+import { useFocusOnEntry } from '@/hooks/useFocusOnEntry'
 import { returnedLink } from '@/hooks/useFollowLinks'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { usePokedex } from '@/hooks/usePokedex'
@@ -142,6 +143,8 @@ const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pok
   const [searching, setSearching] = useCommandPalette()
   // Le menu du compte n'existe qu'une fois : dans la barre latérale ou dans la barre du haut.
   const wide = useMediaQuery('(min-width: 64rem)')
+  // En y entrant (connexion, retour des mentions légales) : le focus au contenu.
+  useFocusOnEntry(main)
 
   // À chaque nouvelle page, le focus va au contenu (lecteurs d'écran, navigation au clavier) ; de
   // retour sur la page d'un lien suivi (une pochette du Pokédex), à ce lien. Sauf s'il est déjà

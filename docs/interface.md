@@ -38,7 +38,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   le titre de l'accueil, le bouton du Pokédex public pour qui est connecté. Le logo est une Poké
   Ball plate (`Logo`, `AppShell` ; couleurs `--brand-*`, les mêmes dans les deux thèmes), la même
   que l'icône de l'onglet (`public/favicon.svg`).
-- Filtres du Pokédex dans l'adresse : `q` (raccourci « / », sauf depuis un champ ou une fenêtre :
+- Filtres du Pokédex dans l'adresse : `q` (raccourci « / », sauf depuis un champ, une fenêtre ou
+  un menu ouvert, celui du compte compris, comme ← et → de la fiche : `shortcutBlocked`) :
   d'une seule touche et sans moyen de le couper, il s'écarte sciemment de WCAG 2.1.4, niveau A,
   choix de l'utilisateur de novembre 2026 ; la recherche de l'app, Ctrl/⌘ K, reste l'autre accès ;
   pas d'interrupteur, le navigateur ne garde aucun réglage sauf le thème), `generation`, `type`,
@@ -89,7 +90,12 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   devient une liste de fiches quand il est étroit (`.stack-table`, `@container table` ; la page
   place les cellules par `grid-area`, une valeur y montre son libellé, `.stack-label`, `TableCount`
   pour « 4 cartes », et un « — » s'efface, `.stack-hidden`) : commandes, budget, « Mes cartes »,
-  « Pour compléter ». Navigation (`AppShell`) : à partir de 64rem, une
+  « Pour compléter ». Rangé en liste, un tableau triable perd son en-tête et ses boutons de tri :
+  un choix « Trier par » (`Select` de camply) les remplace, chaque colonne dans un sens puis
+  l'autre, branché sur le même tri contrôlé (« Mes cartes », commandes ; `.stack-sort`,
+  `lib/table-sort.ts`). Il paraît exactement quand l'en-tête disparaît, sur un téléphone ou dans un
+  bloc étroit : un seul conteneur `table`, l'enveloppe, les règle (celui du tableau, plus étroit de
+  son bord, y est retiré). Navigation (`AppShell`) : à partir de 64rem, une
   barre latérale collée (Collection : Accueil, Collections, Catalogue ; Achats et valeur : Achats,
   Valeur ; la progression ; Réglages et le compte en pied ; Collections est la page ouverte aussi
   sur le Pokédex et les fiches, qui s'ouvrent depuis elle) ; en dessous, une barre en haut (nom,
@@ -114,8 +120,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   « poké »). L'accueil est un
   tableau de bord (dès qu'il y a une carte ou une commande) : un seul appel principal vers le
   Pokédex, progression (anneau, réglette compacte des
-  régions ; dessous, une ligne par collection d'extension, rien sans collection : son nom et le
-  drapeau de sa langue, « 87 / 230 » et la barre, tout entière un lien vers sa page ; `SeriesLine`,
+  régions ; sur téléphone, la liste des régions à sa place, chacune un lien de 44 px de haut vers
+  le Pokédex filtré sur elle, `RegionProgress` `linked`, que reprend sans lien le Pokédex public :
+  la réglette y laissait des segments de 16 px, sans nom lisible ; dessous, une ligne par
+  collection d'extension, rien sans collection : son nom et le drapeau de sa langue,
+  « 87 / 230 » et la barre, tout entière un lien vers sa page ; `SeriesLine`,
   `components/`, que reprend le Pokédex public), « À faire » (commandes en retard ; Pokémon sans
   carte, comptés en Pokémon ; cartes à compléter, sans image, sans id Cardmarket, possédées sans prix payé, comptées en cartes
   distinctes parmi toutes celles du Pokédex, pas seulement les favorites, une TAG TEAM une fois ;
@@ -187,9 +196,13 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   `started`). Le Pokédex : recherche, filtres rapides de
   possession avec leur nombre (les autres filtres appliqués), les autres filtres dans un panneau
   (génération, type, carte), chacun rappelé en étiquette retirable ; quand tout ne tient pas sur
-  une ligne, les filtres rapides passent dessous (sur téléphone, ils défilent de côté). Achats :
+  une ligne, les filtres rapides passent dessous (sur téléphone, ils défilent de côté) ; un second
+  appui sur un filtre rapide le relâche (« Tous » de nouveau). Le Catalogue : sa recherche et ses
+  rangées de filtres (rareté, type) tiennent dans une colonne de la largeur de la page
+  (`minmax(0, 1fr)`) : les rangées défilent seules, la page ne glisse plus de côté. Achats :
   sur téléphone, les filtres de la liste dans un panneau « Filtres », l'onglet ouvert amené dans
-  la rangée d'onglets qui défile ; page étroite, les badges des onglets se resserrent. Le
+  la rangée d'onglets qui défile (positionnée : le mot caché d'un badge, « en cours », y reste et
+  ne fait plus déborder la page) ; page étroite, les badges des onglets se resserrent. Le
   catalogue : en tête de page l'interrupteur de langue (deux drapeaux SVG dans un
   `SegmentedControl`, `LanguageSwitch`, à droite du titre, dessous sur téléphone), puis un panneau
   (le logo de l'extension, son nom, sa sortie, son nombre de cartes et son bloc, « Changer
@@ -401,7 +414,14 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   `lib/focus.ts` : la fenêtre le rendrait sinon au document ; la grille a dessiné d'emblée les
   tuiles jusqu'à la sienne, `useGrowingList`). Une page qui ouvre une fenêtre
   d'emblée la garde : la coquille ne mène pas le focus au contenu, derrière elle, quand il est
-  déjà dans une fenêtre. Une saisie refusée s'affiche sous son champ (camply : `aria-invalid`,
+  déjà dans une fenêtre. Une page qui en remplace une autre au lieu de s'y ajouter (la coquille
+  après la connexion, au retour des mentions légales ou de la page d'erreur, la connexion après la
+  déconnexion, l'inscription, une page seule, la page d'erreur) mène le focus à son
+  `<main tabIndex={-1}>` : le bouton ou le lien suivi a disparu, il tomberait sur `body`
+  (`useFocusOnEntry`). Sauf la toute première page du document, où le navigateur le laisse en
+  haut (dans la coquille, le lien d'évitement d'abord), et sauf s'il est déjà
+  ailleurs (un champ, une fenêtre ouverte d'emblée). Une saisie refusée s'affiche sous son champ
+  (camply : `aria-invalid`,
   `aria-describedby`) : un formulaire refusé (Mon compte, une carte, une commande) y mène le focus,
   où elle est lue s'il y arrive d'ailleurs. L'erreur d'un champ de camply n'est pas annoncée :
   `FieldAlert` (`role="alert"` caché, remonté à chaque refus) la dit quand le focus est déjà au

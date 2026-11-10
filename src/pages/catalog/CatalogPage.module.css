@@ -39,9 +39,12 @@
   gap: var(--camply-space-2);
 }
 
-/* La recherche, puis les filtres de rareté et de type. */
+/* La recherche, puis les filtres de rareté et de type. Une colonne de la largeur de la page : sans
+   elle, la colonne prendrait celle des rangées de filtres, qui défilent, et la page entière
+   glisserait de côté sur un téléphone. */
 .tools {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--camply-space-3);
 }
 

@@ -62,7 +62,11 @@ Textarea, Timeline, Toast (ToastProvider, `useToast`), Toggle, Tooltip, Tree.
 - **Table on a phone**: `.stack-table` (global.css) turns a `Table` into a list of cards under
   `@container table (max-width: 36rem)` (hides `thead`, makes each `tr` a grid; the page places
   the cells with `grid-area` by `nth-child`). It relies on `.camply-table__table` / `__td`: recheck
-  after a camply update.
+  after a camply update. Hiding `thead` hides the sort buttons too: a sortable table is wrapped in
+  `.stack-sort` with a `Select` « Trier par » in `.stack-sort-choice`, shown exactly when the list
+  mode starts: `.stack-sort` becomes the only `table` container (the table's own, narrower by its
+  border, is removed there), on the same controlled `sort` (`lib/table-sort.ts`). Drop
+  it when camply's `Table` keeps a sort control in that mode.
 - **`Combobox` as an « add » field**: pass `value=""` (controlled and empty) so the field clears
   after each pick without remounting (a `key` would lose the focus).
 - **No chart component**: `src/components/PriceChart.tsx` is a small SVG line chart on camply
