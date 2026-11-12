@@ -9,7 +9,7 @@ import { cx } from '@/lib/cx'
 import { pokedexUrl } from '@/lib/filters'
 import { seriesOf } from '@/lib/series'
 import { formatEuro, formatEuroChange, statusLabel } from '@/lib/format'
-import type { CompletionCost, TrackedCard } from '@/lib/prices'
+import { unpricedCompletion, type CompletionCost, type TrackedCard } from '@/lib/prices'
 import { sortChoice, sortOf } from '@/lib/table-sort'
 import { useCollectionStore } from '@/store/collection'
 import { type Generation, generationLabel } from '@/config/pokedex'
@@ -241,7 +241,7 @@ export function CompletionTable({
           key: 'cost',
           header: 'Coût estimé',
           align: 'right',
-          cell: ({ cost }) => (priced ? formatEuro(cost.value) : '—'),
+          cell: ({ cost }) => (priced && !unpricedCompletion(cost) ? formatEuro(cost.value) : '—'),
         },
       ]}
     />

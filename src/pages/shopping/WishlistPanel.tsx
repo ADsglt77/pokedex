@@ -32,6 +32,23 @@ const SORT_LABELS: Record<WishlistSort, string> = {
 const CARDS_STEP = 40
 
 /**
+ * Où choisir des cartes à acheter, quand il n'y en a aucune : le catalogue, les Pokémon à
+ * débloquer (la liste d'achats, la prochaine commande).
+ */
+export function ChooseCards() {
+  return (
+    <>
+      <Button asChild>
+        <Link to="/catalogue">Choisir dans le catalogue</Link>
+      </Button>
+      <Button asChild variant="ghost">
+        <Link to={pokedexUrl({ possession: 'missing' })}>Voir les Pokémon à débloquer</Link>
+      </Button>
+    </>
+  )
+}
+
+/**
  * La liste d'achats (`rows`, celle de la page : `useWishlist`) : les cartes voulues pour vos
  * Pokémon et vos collections d'extensions, ni possédées ni commandées, chacune une fois ;
  * chercher, filtrer (une carte sans Pokémon n'a pas de génération), trier. Ses filtres sont dans
@@ -65,16 +82,7 @@ export function WishlistPanel({
         icon={<ListChecks size={22} />}
         title="Rien à acheter pour l’instant"
         description="Les cartes de vos Pokémon et de vos collections d’extensions que vous n’avez pas encore arrivent ici : choisissez-les dans le catalogue ou sur la fiche d’un Pokémon, ou commencez la collection d’une extension."
-        actions={
-          <>
-            <Button asChild>
-              <Link to="/catalogue">Choisir dans le catalogue</Link>
-            </Button>
-            <Button asChild variant="ghost">
-              <Link to={pokedexUrl({ possession: 'missing' })}>Voir les Pokémon à débloquer</Link>
-            </Button>
-          </>
-        }
+        actions={<ChooseCards />}
       />
     )
   }

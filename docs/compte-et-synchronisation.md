@@ -108,7 +108,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   démarrage avant le routeur (`loadAccount` lit `GET /api/account?demarrage`, qui dit qui est
   connecté ; `index.html` le précharge, sans attendre le script ; et `main.tsx` lit alors sa
   collection, `signIn` ; sans réponse du serveur en 15 s, « Le Pokédex ne peut pas s'afficher »,
-  `PokedexUnavailable`), puis à la connexion et à la création du compte (`signIn`, d'après la
+  `PokedexUnavailable`, dont « Réessayer » recharge la page), puis à la connexion et à la création
+  du compte (`signIn`, d'après la
   réponse de Better Auth : la page attend la collection avant d'ouvrir l'app) et à la
   déconnexion. Les espèces (l'API des données) ne sont attendues que par la coquille et le Pokédex
   public (`needSpecies`, le chargement de leur route, `router.tsx` ; sans elles, « Le Pokédex ne
@@ -132,7 +133,9 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   page de premier niveau s'y ajoute ; un compte qui porterait déjà son nom n'y a jamais son
   Pokédex : le serveur ne cherche qu'un pseudo possible, `isPseudo`, testé). Ce qui n'est pas un
   pseudo (`/achat`, `/a.b`) y est une page introuvable, comme un pseudo qui n'est à personne (404
-  du serveur : « Rien à cette adresse »). En tête, « Se connecter » et « Créer un compte », ou « Mon
+  du serveur) : la page introuvable de la coquille (`NotFound`, « Cette page n’est pas dans le
+  classeur »). Sans réponse du serveur, « Réessayer » (`useRetry`). En tête, « Se connecter » et
+  « Créer un compte », ou « Mon
   Pokédex » une fois connecté ; son titre : « Le Pokédex de … » (`pokedexTitle`), le pseudo du
   compte (`GET /api/vitrine/<pseudo>`, sans tenir compte des majuscules :
   `{ owner, collection, prices }`, `VitrineData`). `prices` : les prix du jour de ses seules cartes

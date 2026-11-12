@@ -3,6 +3,7 @@ import { LogIn } from '@camply/ui/icons'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { AuthCard } from '@/components/AuthCard'
+import { PSEUDO_TYPING } from '@/config/account'
 import { useOtherAccountGuard } from '@/hooks/useOtherAccountGuard'
 import { authCall, authClient } from '@/lib/auth'
 import { openSession } from '@/store/account'
@@ -49,6 +50,7 @@ export function LoginPage() {
       other={{ to: '/inscription', label: 'Pas encore de compte\u202f? En créer un' }}
     >
       <Input
+        {...PSEUDO_TYPING}
         label="Pseudo"
         autoComplete="username"
         required

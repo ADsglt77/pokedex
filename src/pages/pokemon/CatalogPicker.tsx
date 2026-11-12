@@ -3,11 +3,14 @@ import { use, useMemo } from 'react'
 import { Link } from 'react-router'
 import { CardFilters } from '@/components/CardFilters'
 import { CatalogGrid, CatalogTile } from '@/components/CatalogTile'
+import { Unavailable } from '@/components/Unavailable'
+import { useRetry } from '@/hooks/useRetry'
 import {
   cardCode,
   loadSpeciesCards,
   NO_FILTER,
   passesFilter,
+  speciesCardsUrl,
   type CatalogCard,
   type CatalogFilter,
 } from '@/lib/card-catalog'
@@ -56,6 +59,7 @@ export function CatalogPicker({
   onView: (view: PickerView) => void
 }) {
   const { language, order, set, pricedOnly, filter } = view
+  const retry = useRetry(speciesCardsUrl(species.id, language))
   const listed = use(loadSpeciesCards(species.id, language))
   const ids = useMemo(() => cardmarketIds(listed ?? []), [listed])
   const prices = usePrices(ids)
@@ -63,13 +67,9 @@ export function CatalogPicker({
   const change = (next: Partial<PickerView>) => onView({ ...view, ...next })
 
   const adjective = language === 'fr' ? 'française' : 'japonaise'
+  // L'onglet voisin, « Saisie à la main », reste possible.
   if (!listed) {
-    return (
-      <p className="muted">
-        Le catalogue n’est pas disponible pour le moment : réessayez dans quelques minutes, ou
-        saisissez la carte à la main.
-      </p>
-    )
+    return <Unavailable headingLevel={3} title="Le catalogue n’est pas disponible" retry={retry} />
   }
   if (listed.length === 0) {
     return (

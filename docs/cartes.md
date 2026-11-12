@@ -159,7 +159,8 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   énergie · 45 secrètes » ; une secrète est numérotée au-delà du nombre imprimé, « 201/165 ») et ses
   cartes en tuiles serrées (`CatalogTile` : le numéro et le prix, puis la rareté et le nom). Un clic
   ouvre la fiche de la carte (`CardDetails`, pleine page) : son image en grand, l'extension et son
-  bloc, le numéro imprimé (« Secrète »), la rareté, le type ou la catégorie, ses Pokémon,
+  bloc, le numéro imprimé (« Secrète »), la rareté, le type ou la catégorie (leur icône décorative :
+  le nom n'est lu qu'une fois), ses Pokémon (chacun vers sa fiche, `SpeciesLinks`),
   l'illustrateur, ses versions, ses noms anglais et allemand, sa sortie (au Japon, ou en France), où
   elle en est dans la collection, et son prix Cardmarket avec sa courbe (`PricePanel`, comme la
   fiche d'un Pokémon) ; des flèches passent aux cartes voisines de la grille, dans l'ordre affiché.

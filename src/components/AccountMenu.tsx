@@ -22,12 +22,12 @@ const STATUS: Record<SaveStatus, { label: string; icon: typeof CloudCheck; text:
   saving: {
     label: 'Enregistrement…',
     icon: RefreshCw,
-    text: 'Envoi de votre dernière modification.',
+    text: 'Envoi de vos modifications.',
   },
   offline: {
     label: 'Hors ligne',
     icon: CloudOff,
-    text: 'Le serveur ne répond pas : votre dernière modification n’est pas encore enregistrée. Elle repartira à son retour ; d’ici là, ne fermez pas la page, ou exportez votre collection.',
+    text: 'Le serveur ne répond pas : vos modifications ne sont pas encore enregistrées. Elles repartiront à son retour ; d’ici là, ne fermez pas la page, ou exportez votre collection.',
   },
   expired: {
     label: 'Reconnectez-vous',

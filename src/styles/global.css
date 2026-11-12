@@ -12,6 +12,9 @@
 }
 
 :root {
+  /* La police des chiffres de camply (valeur d'un curseur, `Kbd`…) : celle des titres, JetBrains
+     Mono n'étant pas chargée (une variable publique de camply). */
+  --camply-font-mono: var(--camply-font-display);
   /* La marge latérale des pages ; la barre collante du Pokédex l'annule pour déborder. */
   --gutter: clamp(1rem, 0.4rem + 2.5vw, 2.5rem);
   /* La largeur des pages : tout l'écran jusqu'au très grand (2 560 px), où la page reste centrée. */

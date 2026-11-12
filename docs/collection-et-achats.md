@@ -133,7 +133,8 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
   **favorite**, seule chiffrée ; ses autres cartes ne comptent pas. Un Pokémon sans carte
   (`noCard`) n'est pas chiffré. Un Pokémon débloqué, par n'importe laquelle de ses cartes, ou dont
   une carte est commandée n'y est pas (il compte dans les commandes). Une même carte (TAG TEAM,
-  favorite de deux Pokémon) n'est comptée qu'une fois. Testé (`tests/prices.test.ts`).
+  favorite de deux Pokémon) n'est comptée qu'une fois. Testé (`tests/prices.test.ts`). Des Pokémon à
+  débloquer, aucun chiffré : « — », pas « 0,00 € », et « 1 025 Pokémon sans carte » (`ValuePage`).
 - Langue d'une carte (`PokemonCard.language`) : `'fr'` pour une carte française ; absente, elle est
   japonaise (`cardLanguage`, `lib/collection.ts`), si bien que les collections et les exports
   d'avant restent japonais, sans migration. Le japonais n'a qu'une écriture, l'absence :

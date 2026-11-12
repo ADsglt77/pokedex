@@ -74,7 +74,7 @@ loadAccount().then(async (account) => {
   root.render(
     <StrictMode>
       {loaded ? (
-        <ToastProvider position="bottom-left">
+        <ToastProvider position="bottom-right">
           <RouterProvider router={createRouter()} />
         </ToastProvider>
       ) : (

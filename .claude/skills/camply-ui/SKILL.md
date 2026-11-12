@@ -16,7 +16,9 @@ convenient; meanwhile the workarounds below are the only allowed ones.
 
 - `import '@camply/ui/styles.css'` once, in `src/main.tsx` (done), then the app's
   `src/styles/theme.css`. Components from the barrel (`@camply/ui`), icons from `@camply/ui/icons`
-  (never `lucide-react`). Fonts: Manrope and Space Grotesk through `@fontsource/*` in `src/main.tsx`.
+  (never `lucide-react`). Fonts: Manrope and Space Grotesk through `@fontsource/*` in
+  `src/main.tsx`;
+  `--camply-font-mono` points to the display font (`global.css`: JetBrains Mono is not loaded).
 - Light theme: `data-camply-theme="light"` on `<html>` (`src/store/theme.ts`, and `public/theme.js`
   before the first paint: a file, the content security policy allows no inline script).
 - Colours: the two themes are in `src/styles/theme.css` (its comments, and `docs/interface.md`);

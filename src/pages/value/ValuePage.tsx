@@ -8,9 +8,11 @@ import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
 import { PriceChart } from '@/components/PriceChart'
 import { PricedValue } from '@/components/PricedValue'
+import { NO_ANSWER, RetryButton, Unavailable } from '@/components/Unavailable'
 import { UnlockedChart } from '@/components/UnlockedChart'
 import { STATUS_ICONS } from '@/components/statusIcons'
 import { usePokedex } from '@/hooks/usePokedex'
+import { useRetry } from '@/hooks/useRetry'
 import { cx } from '@/lib/cx'
 import {
   details,
@@ -41,13 +43,20 @@ import {
   tallyByStatus,
   tallyHint,
   trackedCards,
+  unpricedCompletion,
   type TrackedCard,
 } from '@/lib/prices'
 import { unlockEvents } from '@/lib/pokedex'
 import { seriesOf } from '@/lib/series'
 import { useCollectionStore } from '@/store/collection'
 import { useShoppingStore } from '@/store/shopping'
-import { loadPriceHistories, usePrices, usePricesMissing } from '@/store/prices'
+import {
+  forgetFailedPrices,
+  loadPriceHistories,
+  usePrices,
+  usePricesMissing,
+  useRetryPrices,
+} from '@/store/prices'
 import type { CardPriceHistory, PokemonCard } from '@/types'
 import { CardsTable, CompletionTable } from './ValueTables'
 import styles from './ValuePage.module.css'
@@ -61,6 +70,7 @@ export function ValuePage() {
   const statSize = useStatSize()
   const prices = usePrices()
   const pricesMissing = usePricesMissing()
+  const retryPrices = useRetryPrices()
   const collection = useCollectionStore((state) => state.collection)
   const { entries } = usePokedex()
   const cards = useMemo(() => trackedCards(collection, prices), [collection, prices])
@@ -72,6 +82,11 @@ export function ValuePage() {
   const owned = cards.filter((card) => card.status === 'owned').map((card) => card.card)
   const priced = prices !== null
   const money = (value: number) => <PricedValue>{formatEuro(value)}</PricedValue>
+  // Des Pokémon à débloquer, aucun chiffré : « — » (`unpricedCompletion`) ; « Pokémon » sur chaque
+  // décompte quand « Pokémon chiffrés » manque (« 1 023 Pokémon sans carte »).
+  const someCompletionPriced = priced && toComplete.priced > 0
+  const nothingPriced = priced && unpricedCompletion(toComplete)
+  const pokemon = someCompletionPriced ? '' : ' Pokémon'
 
   return (
     <div className="container">
@@ -84,9 +99,11 @@ export function ValuePage() {
 
       <div className={styles.grid}>
         {pricesMissing && (
-          <Alert tone="info" title="Les prix ne sont pas disponibles pour le moment.">
-            Ils sont relus chaque jour par le serveur. Les prix payés que vous avez notés restent
-            visibles ci-dessous.
+          <Alert tone="info" title="Les prix ne sont pas disponibles.">
+            <Stack gap={3} align="start">
+              <p>{NO_ANSWER} Les prix payés que vous avez notés restent visibles ci-dessous.</p>
+              <RetryButton retry={retryPrices} size="sm" variant="secondary" />
+            </Stack>
           </Alert>
         )}
 
@@ -113,13 +130,14 @@ export function ValuePage() {
             size={statSize}
             label="Pour compléter le Pokédex"
             icon={<Flag size={18} />}
-            value={money(toComplete.value)}
+            value={nothingPriced ? '—' : money(toComplete.value)}
             hint={details(
-              priced && plural(toComplete.priced, 'Pokémon chiffré', 'Pokémon chiffrés'),
+              someCompletionPriced &&
+                plural(toComplete.priced, 'Pokémon chiffré', 'Pokémon chiffrés'),
               priced &&
                 toComplete.unpriced > 0 &&
-                `${formatInteger(toComplete.unpriced)} sans prix`,
-              toComplete.noCard > 0 && `${formatInteger(toComplete.noCard)} sans carte`,
+                `${formatInteger(toComplete.unpriced)}${pokemon} sans prix`,
+              toComplete.noCard > 0 && `${formatInteger(toComplete.noCard)}${pokemon} sans carte`,
             )}
           />
         </div>
@@ -207,15 +225,18 @@ function CollectionChart({ cards, period }: { cards: PokemonCard[]; period: Char
   // aucune, rien à demander). La même carte Cardmarket possédée pour deux Pokémon compte deux fois,
   // comme dans la valeur du jour ; son historique n'est demandé qu'une fois.
   const ids = cardmarketIds(cards).sort((a, b) => a - b)
+  const retry = useRetry(forgetFailedPrices)
   const histories = ids.length > 0 ? use(loadPriceHistories(ids)) : NO_HISTORIES
   // Calculée une fois par réponse (la même liste rend le même tableau) : ni la période ni les prix
   // du jour ne la changent, et des milliers d'historiques prennent plus de 100 ms.
   const series = useMemo(() => histories && collectionHistory(histories), [histories])
   if (!series) {
     return (
-      <p className="muted">
-        L’historique des prix n’est pas disponible pour le moment : réessayez dans quelques minutes.
-      </p>
+      <Unavailable
+        headingLevel={4}
+        title="L’historique des prix n’est pas disponible"
+        retry={retry}
+      />
     )
   }
   return <LevelChart series={series} period={period} label="Valeur de ma collection" />

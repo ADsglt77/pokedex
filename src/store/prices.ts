@@ -9,8 +9,17 @@
  * liste de souhaits Cardmarket (`/api/wants`), demandées par paquets comme les historiques.
  */
 
+import { useState } from 'react'
 import { create } from 'zustand'
-import { fetchFresh, forget, getJson, LARGE_TIMEOUT, markFailed, retryDue } from '@/lib/api'
+import {
+  fetchFresh,
+  forget,
+  getJson,
+  LARGE_TIMEOUT,
+  markFailed,
+  requestFailed,
+  retryDue,
+} from '@/lib/api'
 import { memo } from '@/lib/memo'
 import { cardmarketIds, historiesOf, loadInBatches, priceBatches } from '@/lib/prices'
 import { settled } from '@/lib/settled'
@@ -113,7 +122,8 @@ interface Answer {
  * Demande les prix de ces paquets, une demande chacun (une demande en cours ou en panne n'est pas
  * refaite : `getJson`), et ajoute leurs réponses aux autres en une fois : un rafraîchissement en a
  * des dizaines, et chaque montant affiché se redessinerait à chacune. Un paquet sans réponse en 15 s
- * (quelques Ko) est en panne : il ne retient pas les autres plus longtemps.
+ * (quelques Ko) est en panne : il ne retient pas les autres plus longtemps. La promesse se tient
+ * quand leurs réponses sont ajoutées.
  */
 function requestBatches(batches: readonly number[][]) {
   const answers = batches.flatMap((batch) => {
@@ -124,14 +134,44 @@ function requestBatches(batches: readonly number[][]) {
     followed.add(response)
     return [response.then((file): Answer => ({ url, batch, response, file }))]
   })
-  if (answers.length === 0) return
-  void Promise.all(answers).then((files) => {
+  if (answers.length === 0) return Promise.resolve()
+  return Promise.all(answers).then((files) => {
     answeredAt = Date.now()
     // Un 404 (des prix pas encore lus) ou une réponse d'une autre forme (un serveur pas encore à
     // jour) : une panne passagère, redemandée une minute après au plus tôt.
     for (const { url, response, file } of files) if (!file?.cards) markFailed(url, response)
     usePriceStore.setState((state) => withAnswers(state, files))
   })
+}
+
+/**
+ * Oublie les demandes en panne (prix du jour, historiques), pour que « Réessayer » les refasse
+ * aussitôt, et non une minute après (`getJson`). Les historiques de la collection : `useRetry`.
+ */
+export function forgetFailedPrices() {
+  for (const url of priceUrls) if (requestFailed(url)) forget(url)
+  if (lastHistories?.failedAt !== undefined) lastHistories = null
+}
+
+/**
+ * « Réessayer » les prix du jour de `ids` (sans `ids` : ceux de la collection), avec `Unavailable` :
+ * leurs demandes en panne refaites aussitôt. Les cartes restent en panne jusqu'aux réponses (le
+ * message et son bouton restent, en chargement).
+ */
+export function useRetryPrices(ids?: readonly number[]) {
+  const wanted = useWanted(ids)
+  const [retrying, setRetrying] = useState(false)
+  const onRetry = () => {
+    forgetFailedPrices()
+    requested.delete(wanted)
+    const { known } = usePriceStore.getState()
+    const batches = memo(batchesOf, wanted, () => priceBatches(wanted))
+    setRetrying(true)
+    void requestBatches(batches.filter((batch) => batch.some((id) => !known.has(id)))).finally(() =>
+      setRetrying(false),
+    )
+  }
+  return { retrying, onRetry }
 }
 
 /**
@@ -268,7 +308,13 @@ export function loadPriceHistories(cardmarkets: readonly number[]) {
       loadInBatches(unknown, (batch) => {
         const url = `/api/histories?ids=${batch.join()}`
         priceUrls.add(url)
-        return getJson<PriceHistories>(url, LARGE_TIMEOUT)
+        const response = getJson<PriceHistories>(url, LARGE_TIMEOUT)
+        // Un 404 (des prix pas encore lus, comme ceux du jour) : une panne passagère, que
+        // « Réessayer » redemande (`forgetFailedPrices`).
+        return response.then((answer) => {
+          if (!answer) markFailed(url, response)
+          return answer
+        })
       }).then((found) => {
         if (!found) {
           current.failedAt = Date.now()

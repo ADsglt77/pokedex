@@ -206,6 +206,13 @@ export function priceMovers(
   }
 }
 
+/**
+ * Des Pokémon à débloquer, aucun chiffré (sans carte, ou leur favorite sans prix) : le coût est
+ * « — », pas « 0,00 € » (Valeur, son tableau par génération).
+ */
+export const unpricedCompletion = (cost: CompletionCost) =>
+  cost.priced === 0 && cost.unpriced + cost.noCard > 0
+
 export interface CompletionCost {
   /** Somme des prix des cartes chiffrées. */
   value: number

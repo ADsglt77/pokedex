@@ -17,7 +17,7 @@ const GROUPS = [
   {
     id: 'compte-partage',
     label: 'Compte & partage',
-    description: 'Votre identité et la vitrine publique de votre collection.',
+    description: 'Votre identité et votre Pokédex public.',
     sections: (
       <>
         <AccountSection />

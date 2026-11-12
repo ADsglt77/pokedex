@@ -293,7 +293,10 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   et les mentions légales ne demandent pas les espèces (`docs/compte-et-synchronisation.md`). Les
   polices : seules les graisses que l'app emploie (`main.tsx` : Manrope 400 à 700, Space Grotesk 600
   et 700 ; une graisse absente prendrait la plus proche, sans le dire), et celles des premières
-  pages préchargées (`index.html` : Manrope 400 et 600, Space Grotesk 700). Le
+  pages préchargées (`index.html` : Manrope 400 et 600, Space Grotesk 700). La police « à chasse
+  fixe » de camply (`--camply-font-mono` : la valeur d'un curseur, `Kbd`) est celle des titres
+  (`global.css`) : JetBrains Mono n'est pas chargée ; le curseur du budget a des chiffres de même
+  largeur (`font-variant-numeric`). Le
   Pokédex affiche 1 025 pochettes. Seules celles à l'écran sont dessinées (`content-visibility`, de
   même pour la liste d'achats et les cartes du catalogue), et une génération hors de l'écran ne
   compte pas dans la mise en page (`content-visibility` sur la section, sa hauteur estimée d'après
@@ -437,5 +440,18 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   sans puces (`global.css`), Safari leur retire le rôle de liste, et VoiceOver ne dirait plus
   « liste, 24 éléments ». « Annuler » se lance aussi par Ctrl+Z (⌘Z) tant que son toast est affiché
   (`useNotify` ; pas dans un champ, ni avec une fenêtre ouverte) : au clavier, le toast, rendu à la
-  fin de la page, était hors d'atteinte en 12 s. « Catalogue indisponible » (la page,
-  la fenêtre des extensions) propose « Réessayer ».
+  fin de la page, était hors d'atteinte en 12 s. Les toasts s'affichent en bas à droite
+  (`main.tsx`) :
+  à gauche, ils couvraient le pied de la barre latérale (l'état de l'enregistrement).
+- États (décisions de l'utilisateur, novembre 2026) : le serveur qui ne répond pas, une seule
+  formule (« réessayez dans un instant », `NO_ANSWER`) et « Réessayer » partout (`Unavailable`,
+  avec `useRetry` ou, pour les prix du jour, `useRetryPrices` : le message reste, son bouton en
+  chargement, jusqu'à la réponse) : Catalogue, fenêtre des extensions, choix des cartes d'un
+  Pokémon, Pokédex public, prix d'une fiche, plan d'achat, historique de Valeur, et l'alerte des
+  prix de Valeur ; au démarrage, il recharge la page (`PokedexUnavailable`). Aucun résultat :
+  `NoMatch`, le même partout (Pokédex, liste d'achats, Catalogue, fenêtre des extensions), dont le
+  bouton efface la recherche et rend le focus au champ. Une seule page introuvable (`NotFound`),
+  dans la coquille et au Pokédex public. Rien à acheter ni à planifier : les mêmes liens vers le
+  catalogue et les Pokémon à débloquer (`ChooseCards`). Un lien vers un autre site
+  (`ExternalLink`) dit « (nouvel onglet) » aux lecteurs d'écran ; le pseudo se tape sans majuscule
+  ni correction automatiques (`PSEUDO_TYPING`, connexion, inscription, Réglages).

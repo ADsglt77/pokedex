@@ -12,14 +12,15 @@ import { useEffect, useRef, useState } from 'react'
 import { CardArt } from '@/components/CardArt'
 import { RarityIcon, TypeIcon } from '@/components/CatalogIcons'
 import { PricePanel } from '@/components/PricePanel'
+import { SpeciesLinks } from '@/components/SpeciesLinks'
 import { CARD_TYPES } from '@/config/catalog'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { usePokedex } from '@/hooks/usePokedex'
 import { useSeriesSlot } from '@/hooks/useSeriesSlot'
 import { cardFromCatalog, collectionCard, type SetCard } from '@/lib/card-catalog'
 import { languageField } from '@/lib/collection'
-import { details, formatDate, formatDexNumber, formatList, statusText } from '@/lib/format'
-import { getSpecies, speciesNames } from '@/lib/species'
+import { details, formatDate, statusText } from '@/lib/format'
+import { speciesNames } from '@/lib/species'
 import { addCard, useCollectionStore } from '@/store/collection'
 import styles from './CardDetails.module.css'
 
@@ -165,7 +166,7 @@ function facts(card: SetCard, place: CollectionPlace) {
       term: 'Rareté',
       description: (
         <span className={styles.inline}>
-          <RarityIcon rarity={card.rarity} />
+          <RarityIcon rarity={card.rarity} decorative />
           <span>{card.rarity.name}</span>
         </span>
       ),
@@ -174,17 +175,12 @@ function facts(card: SetCard, place: CollectionPlace) {
       term: pokemon ? 'Type' : 'Catégorie',
       description: (
         <span className={styles.inline}>
-          <TypeIcon type={card.type} />
+          <TypeIcon type={card.type} decorative />
           <span>{CARD_TYPES.get(card.type)}</span>
         </span>
       ),
     },
-    pokemon && {
-      term: 'Pokémon',
-      description: formatList(
-        card.dexIds.map((id) => `${getSpecies(id)!.names.fr} (${formatDexNumber(id)})`),
-      ),
-    },
+    pokemon && { term: 'Pokémon', description: <SpeciesLinks ids={card.dexIds} /> },
     card.illustrator && { term: 'Illustration', description: card.illustrator },
     card.versions.length > 0 && {
       term: 'Versions',

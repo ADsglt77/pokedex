@@ -1,10 +1,11 @@
-import { Button, Card, EmptyState, Input, Skeleton, Stack } from '@camply/ui'
-import { ArrowLeftRight, Funnel, Library, Plus, Search } from '@camply/ui/icons'
+import { Button, Card, Input, Skeleton, Stack } from '@camply/ui'
+import { ArrowLeftRight, Library, Plus, Search } from '@camply/ui/icons'
 import { Suspense, use, useCallback, useDeferredValue, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { CardFilters } from '@/components/CardFilters'
 import { CatalogGrid, CatalogGridSkeleton, CatalogTile } from '@/components/CatalogTile'
 import { LanguageSwitch } from '@/components/LanguageSwitch'
+import { NoMatch } from '@/components/NoMatch'
 import { PageHeader } from '@/components/PageHeader'
 import { SetLogo } from '@/components/SetLogo'
 import { SetPicker } from '@/components/SetPicker'
@@ -25,7 +26,7 @@ import {
   type SetSummary,
 } from '@/lib/card-catalog'
 import { catalogLanguage, catalogParams, catalogSet, searchForm, seriesPath } from '@/lib/filters'
-import { focusAfter, focusTileAfter } from '@/lib/focus'
+import { focusTileAfter } from '@/lib/focus'
 import { details, formatDate, formatInteger, formatList, pageTitle, plural } from '@/lib/format'
 import { cardmarketIds, priceText } from '@/lib/prices'
 import { findSeries } from '@/lib/series'
@@ -103,13 +104,7 @@ function CatalogContent({ lang }: { lang: CardLanguage }) {
 
 /** Les extensions, ou les cartes de l'une d'elles, sans réponse de l'API. */
 function CatalogUnavailable({ retry }: { retry: ReturnType<typeof useRetry> }) {
-  return (
-    <Unavailable
-      headingLevel={2}
-      title="Le catalogue n’est pas disponible pour le moment"
-      retry={retry}
-    />
-  )
+  return <Unavailable headingLevel={2} title="Le catalogue n’est pas disponible" retry={retry} />
 }
 
 function SetBrowser({ catalog }: { catalog: CatalogSets }) {
@@ -248,12 +243,6 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
   // La fiche fermée : le focus va à la tuile de la carte montrée en dernier (parcourue avec ← et
   // →), pas à celle ouverte au départ.
   const closeCard = () => focusTileAfter(() => setOpen(null), grid, index)
-  // Le message et son bouton disparaissent : le focus va à la recherche.
-  const clear = () =>
-    focusAfter(() => {
-      setQuery('')
-      setFilter(NO_FILTER)
-    }, searchField)
 
   return (
     <Stack gap={4}>
@@ -279,11 +268,15 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
           : details(plural(cards.length, 'carte', 'cartes'), composition(cards))}
       </p>
       {shown.length === 0 ? (
-        <EmptyState
-          icon={<Funnel size={22} />}
+        <NoMatch
+          headingLevel={3}
           title="Aucune carte ne correspond"
-          description="Cherchez autrement, ou choisissez d’autres raretés ou d’autres types."
-          actions={<Button onClick={clear}>Tout afficher</Button>}
+          resetLabel="Tout afficher"
+          onReset={() => {
+            setQuery('')
+            setFilter(NO_FILTER)
+          }}
+          search={searchField}
         />
       ) : (
         <CatalogGrid ref={grid}>

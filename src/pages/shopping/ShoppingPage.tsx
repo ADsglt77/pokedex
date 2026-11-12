@@ -9,7 +9,7 @@ import {
   type ShoppingView,
   type WishlistFilters,
 } from '@/lib/filters'
-import { pageTitle } from '@/lib/format'
+import { formatInteger, pageTitle } from '@/lib/format'
 import { pendingCount } from '@/lib/orders'
 import { useShoppingStore } from '@/store/shopping'
 import { BudgetOverview } from './BudgetOverview'
@@ -83,7 +83,7 @@ export function ShoppingPage() {
       >
         <TabList ref={tabList} aria-label="Achats" className={styles.tabList}>
           <Tab value="liste">
-            Liste d’achats <Badge size="sm">{rows.length}</Badge>
+            Liste d’achats <Badge size="sm">{formatInteger(rows.length)}</Badge>
           </Tab>
           <Tab value="prochaine-commande">Prochaine commande</Tab>
           <Tab ref={ordersTab} value="commandes">

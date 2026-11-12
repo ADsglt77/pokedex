@@ -6,11 +6,13 @@
   gap: var(--space-block);
 }
 
-/* Une Card de camply, qui reste visible pendant qu'on parcourt le plan. */
+/* Une Card de camply, qui reste visible pendant qu'on parcourt le plan ; des chiffres de même
+   largeur : la valeur du curseur ne bouge pas en le faisant glisser. */
 .plannerOptions {
   align-self: start;
   position: sticky;
   top: 1rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .planSummary {

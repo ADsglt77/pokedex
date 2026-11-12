@@ -44,7 +44,9 @@ export function SeriesGrid({
     series.cards.length,
     TILES_STEP,
     open === null ? 0 : series.cards.indexOf(open) + 1,
-    'collection',
+    // Une seule collection par page : sa longueur gardée. Le Pokédex public en montre plusieurs,
+    // qui la partageraient.
+    linked ? 'collection' : undefined,
   )
   const grid = useRef<HTMLUListElement>(null)
 

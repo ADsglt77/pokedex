@@ -41,13 +41,16 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   réponse, redemandée une minute après au plus tôt ; un 404 aussi (le guide pas encore lu : un
   premier déploiement, une base remise à zéro), et une réponse d'une autre forme (`markFailed`,
   `lib/api.ts`) ; un prix déjà reçu reste affiché. L'historique d'une carte se charge à la demande
-  (`/api/prices/<id>`, 404 sans historique) : la courbe de sa fiche, le nom affiché dans le
+  (`/api/prices/<id>`, 404 sans historique) : la courbe de sa fiche (dont le prix du jour est daté
+  quand il n'est pas d'aujourd'hui, « au 28 oct. » : un relevé en retard se voit, `PricePanel`), le
+  nom affiché dans le
   formulaire pour vérifier l'id saisi (au départ du champ). Le Pokédex public d'un compte reçoit
   les prix de ses seules cartes possédées avec sa réponse (`worker/vitrine.ts`, qui les demande à
   l'API des données par paquets de 1 000, `idBatches`, l'un après l'autre, 5 au plus :
   `docs/compte-et-synchronisation.md`). Sans API des données, ou base encore
   vide, l'app marche sans prix. Une réponse manquante (404) n'est pas redemandée (sauf les prix du
-  jour, plus haut) ; après une panne passagère (réseau, délai, réponse illisible), elle l'est la
+  jour, plus haut, et les historiques de la collection : un 404 tant que les prix n'ont jamais été
+  lus) ; après une panne passagère (réseau, délai, réponse illisible), elle l'est la
   fois suivante où elle sert, au plus une fois par minute (`getJson`, `retryDue`, `lib/api.ts` : la
   règle vaut pour les données de référence, catalogue et historiques compris, sauf l'état des
   tâches et les lignes de la liste de souhaits, demandés à chaque fois : `fetchFresh` ; le compte
@@ -55,7 +58,10 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   lecture du corps comprise (`AbortSignal.timeout` la coupe aussi) : une requête figée devient une
   panne passagère (« — » pour un prix), redemandée une minute après au plus tôt, au lieu d'attendre
   que le navigateur l'abandonne (de quelques dizaines de secondes à quelques minutes ; décision de
-  l'utilisateur, novembre 2026). 15 s pour un paquet de prix du jour (quelques Ko : un paquet figé
+  l'utilisateur, novembre 2026). « Réessayer » (`Unavailable`) la redemande aussitôt : les prix du
+  jour en panne (`useRetryPrices` ; la fiche d'une carte, le plan d'achat, l'alerte de Valeur) et
+  l'historique de la collection (`forgetFailedPrices`, par `useRetry`). 15 s pour un paquet de prix
+  du jour (quelques Ko : un paquet figé
   retenait tous ceux de sa liste), pour la liste des espèces (`loadSpecies`, `lib/species.ts`) et
   pour le catalogue (`CATALOG_TIMEOUT`, `lib/card-catalog.ts` : « Enregistrer » une carte, son
   image, et « Commencer la collection » l'attendent, et ne restent jamais bloqués), 10 s pour

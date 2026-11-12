@@ -1,5 +1,5 @@
 import { Button, EmptyState, RadialProgress, SegmentedControl, Skeleton, Stat } from '@camply/ui'
-import { Flag, House, Layers, Lock, LogIn, SearchX, UserPlus, Wallet } from '@camply/ui/icons'
+import { Flag, House, Layers, Lock, LogIn, UserPlus, Wallet } from '@camply/ui/icons'
 import { Suspense, use, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { ChartPeriodControl } from '@/components/ChartParts'
@@ -13,6 +13,8 @@ import { STATUS_ICONS } from '@/components/statusIcons'
 import { Unavailable } from '@/components/Unavailable'
 import { UnlockedChart } from '@/components/UnlockedChart'
 import { usePokedexGrid } from '@/hooks/usePokedexGrid'
+import { useRetry } from '@/hooks/useRetry'
+import { useStatSize } from '@/hooks/useStatSize'
 import { isPseudo } from '@/lib/account'
 import { requestFailed } from '@/lib/api'
 import type { ChartPeriod } from '@/lib/chart'
@@ -30,10 +32,10 @@ import {
 import { buildPokedex, unlockEvents, type PokedexEntry } from '@/lib/pokedex'
 import { tallyByStatus, trackedCards } from '@/lib/prices'
 import { seriesId, seriesProgress } from '@/lib/series'
+import { NotFound } from '@/pages/NotFoundPage'
 import { loadVitrine, useAccountStore } from '@/store/account'
 import type { CollectionData, PriceFile, SeriesCollection, VitrineData } from '@/types'
 import styles from './VitrinePage.module.css'
-import { useStatSize } from '@/hooks/useStatSize'
 
 /**
  * `/pseudo` : le Pokédex public d'un compte, toujours montré ; en lecture seule, hors de la
@@ -42,7 +44,8 @@ import { useStatSize } from '@/hooks/useStatSize'
  * cartes, `SeriesGrid`), d'après ce que le serveur montre (`worker/vitrine.ts`). En tête, « Se
  * connecter » et « Créer un compte », ou, connecté, « Mon Pokédex ». Toute adresse d'un seul
  * segment qui n'est pas une page du site y mène : un pseudo inconnu, ou ce qui n'en est pas un
- * (`/achat`), est une page introuvable. Pas proposé aux moteurs de recherche.
+ * (`/achat`), est la page introuvable (`NotFound`, celle de la coquille). Sans réponse du serveur,
+ * « Réessayer ». Pas proposé aux moteurs de recherche.
  */
 export function VitrinePage() {
   const signedIn = useAccountStore((state) => state.account !== null)
@@ -72,7 +75,7 @@ export function VitrinePage() {
           <VitrineContent key={pseudo} pseudo={pseudo} />
         </Suspense>
       ) : (
-        <Missing />
+        <NotFound pseudo />
       )}
     </StandalonePage>
   )
@@ -101,40 +104,16 @@ function VitrineSkeleton() {
   )
 }
 
-/**
- * Rien à cette adresse : ni une page du site, ni un pseudo à quelqu'un (ou plus : pseudo changé,
- * compte supprimé). camply n'offre pas de titre `h1` à `EmptyState` : celui de la page, pour les
- * lecteurs d'écran.
- */
-function Missing() {
-  return (
-    <>
-      <title>{pageTitle('Page introuvable')}</title>
-      <h1 className="visually-hidden">Page introuvable</h1>
-      <EmptyState
-        headingLevel={2}
-        icon={<SearchX size={22} />}
-        title="Rien à cette adresse"
-        description="Ni une page du site, ni le Pokédex d’un compte&nbsp;: vérifiez l’adresse (un pseudo a pu changer, ou un compte être supprimé)."
-        actions={
-          <Button asChild>
-            <Link to="/">Revenir à l’accueil</Link>
-          </Button>
-        }
-      />
-    </>
-  )
-}
-
 function VitrineContent({ pseudo }: { pseudo: string }) {
+  const retry = useRetry(vitrineUrl(pseudo))
   const shown = use(loadVitrine(pseudo))
   if (shown) return <Vitrine {...shown} />
-  if (!requestFailed(vitrineUrl(pseudo))) return <Missing />
+  if (!requestFailed(vitrineUrl(pseudo))) return <NotFound pseudo />
   return (
     <>
       <title>{pageTitle('Pokédex public')}</title>
       <h1 className="visually-hidden">Pokédex public</h1>
-      <Unavailable headingLevel={2} title="Le Pokédex ne peut pas s’afficher" />
+      <Unavailable headingLevel={2} title="Le Pokédex ne peut pas s’afficher" retry={retry} />
     </>
   )
 }
@@ -184,7 +163,7 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
           <span className={cx(styles.ring, 'numeric')}>{formatShare(progress.percent)}</span>
         </RadialProgress>
         <div className={styles.headline}>
-          <title>{heading}</title>
+          <title>{pageTitle(heading)}</title>
           <h1 className={styles.title}>{heading}</h1>
           <p className="muted">
             {unlockedOf(progress, 'Pokémon')}.{updated && ` Mis à jour le ${updated}.`}

@@ -1,7 +1,6 @@
 import {
   Badge,
   Button,
-  EmptyState,
   Input,
   Modal,
   SegmentedControl,
@@ -22,6 +21,7 @@ import {
   type RefObject,
 } from 'react'
 import { LanguageSwitch } from '@/components/LanguageSwitch'
+import { NoMatch } from '@/components/NoMatch'
 import { SetLogo } from '@/components/SetLogo'
 import { Unavailable } from '@/components/Unavailable'
 import { useGrowingList } from '@/hooks/useGrowingList'
@@ -165,7 +165,13 @@ function SetList({
         <p className="hint">{ORDER_HINTS[order]}</p>
       </div>
       <Suspense fallback={<SetsSkeleton />}>
-        <SetResults {...results} search={search} order={order} />
+        <SetResults
+          {...results}
+          search={search}
+          order={order}
+          field={field}
+          onClear={() => setQuery('')}
+        />
       </Suspense>
     </div>
   )
@@ -187,7 +193,10 @@ function SetsSkeleton() {
   )
 }
 
-/** Les extensions trouvées, par année ou par bloc ; « Réessayer » si elles manquent. */
+/**
+ * Les extensions trouvées, par année ou par bloc ; « Réessayer » si elles manquent ; aucune
+ * trouvée, « Effacer la recherche » (`onClear`, le focus à la recherche, `field`).
+ */
 function SetResults({
   language,
   current,
@@ -195,7 +204,14 @@ function SetResults({
   onPick,
   search,
   order,
-}: Omit<SetListProps, 'onLanguage'> & { search: string; order: SetOrder }) {
+  field,
+  onClear,
+}: Omit<SetListProps, 'onLanguage'> & {
+  search: string
+  order: SetOrder
+  field: RefObject<HTMLInputElement | null>
+  onClear: () => void
+}) {
   const retry = useRetry(catalogSetsUrl(language))
   const catalog = use(loadSets(language))
   const searchable = useMemo(
@@ -219,11 +235,7 @@ function SetResults({
 
   if (!catalog) {
     return (
-      <Unavailable
-        headingLevel={3}
-        title="Les extensions ne sont pas disponibles pour le moment"
-        retry={retry}
-      />
+      <Unavailable headingLevel={3} title="Les extensions ne sont pas disponibles" retry={retry} />
     )
   }
 
@@ -238,10 +250,13 @@ function SetResults({
         {plural(found.length, 'extension trouvée', 'extensions trouvées')}
       </p>
       {found.length === 0 ? (
-        <EmptyState
-          icon={<Search size={22} />}
+        <NoMatch
+          headingLevel={3}
           title="Aucune extension ne correspond"
           description={`Cherchez son code (${EXAMPLE_CODES[language]}) ou un mot de son nom (151).`}
+          resetLabel="Effacer la recherche"
+          onReset={onClear}
+          search={field}
         />
       ) : (
         <div className={styles.results}>

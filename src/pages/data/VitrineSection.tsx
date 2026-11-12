@@ -39,7 +39,7 @@ export function VitrineSection() {
           </Button>
           <Button asChild size="sm" variant="ghost" leftIcon={<ExternalIcon size={14} />}>
             <Link to={path} target="_blank">
-              Ouvrir
+              Ouvrir<span className="visually-hidden"> (nouvel onglet)</span>
             </Link>
           </Button>
         </Stack>

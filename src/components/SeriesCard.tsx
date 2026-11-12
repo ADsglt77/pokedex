@@ -1,14 +1,11 @@
 import { DescriptionList, Modal, Stack, type DescriptionItem } from '@camply/ui'
-import { Fragment } from 'react'
-import { Link } from 'react-router'
 import { CardArt } from '@/components/CardArt'
 import { CardStatusControls } from '@/components/CardStatusControls'
 import { CardReference } from '@/components/LanguageSwitch'
 import { PricePanel } from '@/components/PricePanel'
-import { speciesPath } from '@/lib/filters'
+import { SpeciesLinks } from '@/components/SpeciesLinks'
 import { statusCaption } from '@/lib/format'
 import type { CardView } from '@/lib/pokedex'
-import { getSpecies } from '@/lib/species'
 import type { SeriesCollection } from '@/types'
 import styles from './SeriesCard.module.css'
 
@@ -59,14 +56,4 @@ export function SeriesCard({
       </div>
     </Modal>
   )
-}
-
-/** Les Pokémon d'une carte, chacun vers sa fiche : « Pikachu et Zekrom ». */
-function SpeciesLinks({ ids }: { ids: number[] }) {
-  return ids.map((id, index) => (
-    <Fragment key={id}>
-      {index > 0 && (index === ids.length - 1 ? ' et ' : ', ')}
-      <Link to={speciesPath(id)}>{getSpecies(id)!.names.fr}</Link>
-    </Fragment>
-  ))
 }

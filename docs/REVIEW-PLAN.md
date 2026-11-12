@@ -538,7 +538,29 @@ testés : les nouveaux essais d'une étape et leur rejeu (le moteur des Workflow
 
 #### UX
 
-**L11 — États cohérents (site)**
+**L11 — États cohérents (site)** — *fait le 12 novembre 2026, l'interface seulement.
+Décisions validées : une seule formule « réessayez dans un instant » (`NO_ANSWER`) et
+« Réessayer » partout où le serveur ne répond pas (Pokédex public, choix des cartes d'un Pokémon,
+prix d'une fiche, plan d'achat, historique et alerte des prix de Valeur ; au démarrage, un
+rechargement) ; une seule page introuvable (`NotFound`, « Cette page n'est pas dans le
+classeur », « Revenir à l'accueil », reprise par le Pokédex public, qui seul parle de pseudo) ; le
+prix d'une fiche daté « au 28 oct. » quand il n'est pas du jour ; `--camply-font-mono` sur la
+police des titres, chiffres tabulaires sous le curseur du budget ; et les deux reports de L01 :
+les toasts en bas à droite, « vos modifications » dans le bandeau et le menu hors ligne.
+`useRetry` accepte aussi une fonction (les historiques, `forgetFailedPrices`) ;
+`useRetryPrices` refait aussitôt les prix du jour en panne ; un 404 des historiques compte comme
+une panne passagère, comme celui des prix. `NoMatch` (niveau de titre, piste, libellé du
+bouton) au Catalogue et dans la fenêtre des extensions ; « Rien à planifier » avec les liens de la
+liste (`ChooseCards`) ; « — » et « 1 025 Pokémon sans carte » quand rien n'est chiffré pour
+compléter, et dans le tableau par génération (`unpricedCompletion`) ; `SpeciesLinks` partagé
+(la fiche d'une carte du catalogue) ; rareté et type décoratifs sur cette fiche ; « (nouvel
+onglet) » masqué (`ExternalLink`, « Ouvrir » des Réglages) ; le pseudo sans majuscule ni
+correction (`PSEUDO_TYPING`) ; les grilles du Pokédex public sans longueur partagée ; libellés
+(Réglages, titre du Pokédex public, badge formaté). Vérifié dans Playwright, en local, chaque
+réponse coupée puis rétablie : chaque « Réessayer » rend la page, les deux pages introuvables, les
+textes, la police, la place des toasts. Contre-review GO, ses six constats corrigés (le 404 des
+historiques, le tableau par génération, le texte de la page introuvable, le lien des Réglages, un
+seul `RetryButton`, les titres sans « pour le moment »). Aucun test (interface).*
 - **Constats** : F-ETAT-01, F-ETAT-02, F-UI-01, F-UI-02, F-UX-03, F-UX-08, F-LIB-01, F-NAV-03,
   F-A11Y-06, F-A11Y-08, F-MOB-05, F-DS-01, F-PERF-02.
 - **Fichiers** :

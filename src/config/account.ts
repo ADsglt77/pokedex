@@ -48,8 +48,19 @@ export const PSEUDO_LOCKED = 'PSEUDO_LOCKED'
 /** La longueur minimale d'un mot de passe, la même pour le serveur (`worker/auth.ts`). */
 export const PASSWORD_MIN = 8
 
+/**
+ * Un pseudo se tape tel quel : ni majuscule ni correction automatiques (iPhone), ni correcteur
+ * (la connexion, et `PSEUDO_FIELD`).
+ */
+export const PSEUDO_TYPING = {
+  autoCapitalize: 'none',
+  autoCorrect: 'off',
+  spellCheck: false,
+}
+
 /** Le champ du pseudo (inscription, Réglages › Mon compte) : la règle de `PSEUDO`. */
 export const PSEUDO_FIELD = {
+  ...PSEUDO_TYPING,
   label: 'Pseudo',
   autoComplete: 'username',
   minLength: PSEUDO.min,

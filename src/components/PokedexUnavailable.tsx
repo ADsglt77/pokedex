@@ -1,4 +1,4 @@
-import { Button, EmptyState } from '@camply/ui'
+import { Unavailable } from '@/components/Unavailable'
 import { SITE_NAME } from '@/config/legal'
 
 /**
@@ -11,11 +11,10 @@ export function PokedexUnavailable() {
   return (
     <main className="container">
       <h1 className="visually-hidden">{SITE_NAME}</h1>
-      <EmptyState
-        title="Le Pokédex ne peut pas s’afficher"
-        description="Le serveur ne répond pas, ou ses données ne sont pas encore prêtes (premier démarrage). Réessayez dans un instant."
+      <Unavailable
         headingLevel={2}
-        actions={<Button onClick={() => location.reload()}>Réessayer</Button>}
+        title="Le Pokédex ne peut pas s’afficher"
+        retry={{ retrying: false, onRetry: () => location.reload() }}
       />
     </main>
   )

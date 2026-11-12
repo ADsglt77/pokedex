@@ -70,8 +70,8 @@ export function SaveBanner() {
           }
         >
           <p>
-            Hors ligne&nbsp;: votre dernière modification n’est pas encore enregistrée. Elle
-            repartira au retour du serveur&nbsp;; d’ici là, ne fermez pas la page, ou exportez votre
+            Hors ligne&nbsp;: vos modifications ne sont pas encore enregistrées. Elles repartiront
+            au retour du serveur&nbsp;; d’ici là, ne fermez pas la page, ou exportez votre
             collection pour la garder.
           </p>
         </SaveNotice>

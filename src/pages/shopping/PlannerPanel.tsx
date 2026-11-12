@@ -22,13 +22,14 @@ import { formatEuro, plural, today } from '@/lib/format'
 import { cents, newOrder } from '@/lib/orders'
 import { planPurchase, type Plan } from '@/lib/purchase-planner'
 import type { WishRow } from '@/lib/wishlist'
-import { usePrices, usePricesMissing } from '@/store/prices'
+import { usePrices, usePricesMissing, useRetryPrices } from '@/store/prices'
 import { useShoppingStore } from '@/store/shopping'
 import type { Order } from '@/types'
 import { BudgetField } from './BudgetField'
 import { CardLine } from './CardLine'
 import { OrderForm } from './OrderForm'
 import { WantsDialog } from './WantsDialog'
+import { ChooseCards } from './WishlistPanel'
 import page from './ShoppingPage.module.css'
 import styles from './PlannerPanel.module.css'
 
@@ -81,6 +82,7 @@ export function PlannerPanel({
   // Les prix des cartes de `rows` (`useWishlist`) : ceux de la collection.
   const prices = usePrices()
   const pricesMissing = usePricesMissing()
+  const retryPrices = useRetryPrices()
   const spent = spentThisMonth(orders)
   const {
     // Le reste du budget du mois, au pas du curseur.
@@ -130,17 +132,23 @@ export function PlannerPanel({
         icon={<Sparkles size={22} />}
         title="Rien à planifier pour l’instant"
         description="L’assistant choisit parmi les cartes de vos Pokémon et de vos collections d’extensions pas encore obtenues : choisissez-les dans le catalogue ou sur la fiche d’un Pokémon, ou commencez la collection d’une extension."
+        actions={<ChooseCards />}
       />
     )
   }
 
-  // Sans les prix (en chemin, ou en panne : redemandés d'eux-mêmes), chaque carte serait « sans
-  // prix » et le plan vide (`docs/prix.md` : jamais « Sans prix » pour une panne).
+  // Sans les prix (en chemin, ou en panne : redemandés d'eux-mêmes une minute après, ou aussitôt
+  // par « Réessayer »), chaque carte serait « sans prix » et le plan vide (`docs/prix.md` : jamais
+  // « Sans prix » pour une panne).
   if (!prices) {
     return (
       <div className={page.panel}>
         {pricesMissing ? (
-          <Unavailable headingLevel={2} title="Le plan attend les prix du jour" />
+          <Unavailable
+            headingLevel={2}
+            title="Le plan attend les prix du jour"
+            retry={retryPrices}
+          />
         ) : (
           <Skeleton height="16rem" />
         )}

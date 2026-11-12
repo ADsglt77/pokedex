@@ -145,15 +145,20 @@ function readSpeciesCards(file: CatalogFile, speciesId: number, lang: CardLangua
   )
 }
 
+/** L'adresse des cartes d'un Pokémon dans cette langue (« Réessayer » l'oublie : `useRetry`). */
+export const speciesCardsUrl = (speciesId: number, lang: CardLanguage) =>
+  `${catalogPath(lang)}/species/${speciesId}`
+
 /**
  * Les cartes d'un Pokémon dans cette langue, des plus récentes aux plus anciennes ; `null` si le
  * catalogue n'est pas disponible : serveur arrêté ou sans réponse en 15 s (redemandé une minute
- * après au plus tôt, `getJson`), ou base encore vide (404, gardé jusqu'au rechargement de la page).
- * Toujours la même promesse pour un Pokémon et une langue, lue par `use()`.
+ * après au plus tôt, `getJson`, ou aussitôt par « Réessayer »), ou base encore vide (404, gardé
+ * jusqu'au rechargement de la page ou à « Réessayer »). Toujours la même promesse pour un Pokémon
+ * et une langue, lue par `use()`.
  */
 export const loadSpeciesCards = (speciesId: number, lang: CardLanguage) =>
   derived<CatalogFile, CatalogCard[] | null>(
-    `${catalogPath(lang)}/species/${speciesId}`,
+    speciesCardsUrl(speciesId, lang),
     (file) => file && readSpeciesCards(file, speciesId, lang),
     CATALOG_TIMEOUT,
   )
