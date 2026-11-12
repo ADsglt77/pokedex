@@ -107,6 +107,12 @@ export function pokedexUrl(filters: Partial<PokedexFilters>): string {
 /** La fiche d'un Pokémon : `/pokemon/25`. */
 export const speciesPath = (id: number) => `/pokemon/${id}`
 
+/**
+ * Les Réglages : `/reglages` (`/donnees` jusqu'en novembre 2026, redirigée : `router.tsx`) ; `hash` :
+ * une de leurs sections (`#importer`, `#compte`).
+ */
+export const settingsPath = (hash = '') => `/reglages${hash}`
+
 /** Le Pokédex public d'un compte : `/sacha`, son pseudo en minuscules. */
 export const vitrinePath = (pseudo: string) => `/${pseudo.toLowerCase()}`
 
@@ -247,7 +253,7 @@ export function cardPath(card: PokemonCard, series: SeriesCollection | null): st
 }
 
 /** Sans casse, accent ni ligature : « Nœunœuf » → « noeunoeuf », « Éli » → « eli ». */
-const fold = (text: string) =>
+export const fold = (text: string) =>
   text
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')

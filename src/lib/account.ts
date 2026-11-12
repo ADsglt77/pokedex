@@ -6,7 +6,7 @@
  * (`auth.ts`).
  */
 
-import { PSEUDO, PSEUDO_LOCKED, RESERVED_PSEUDOS } from '@/config/account'
+import { PSEUDO, PSEUDO_HINT, PSEUDO_LOCKED, RESERVED_PSEUDOS } from '@/config/account'
 import type { AccountState, AccountUser } from '@/types'
 
 /** Trop de tentatives (`worker/auth.ts`) : la réponse 429 du serveur. */
@@ -30,10 +30,10 @@ export const refusalMessage = (
       : (messages[status] ?? (status === 429 ? TOO_MANY_ATTEMPTS : otherwise))
 
 /** Un pseudo réservé au site (le premier segment d'une de ses adresses : `RESERVED_PSEUDOS`) ? */
-export const reservedPseudo = (value: string) => RESERVED_PSEUDOS.includes(value.toLowerCase())
+const reservedPseudo = (value: string) => RESERVED_PSEUDOS.includes(value.toLowerCase())
 
 /** Ce que dit un formulaire d'un pseudo réservé. */
-export const PSEUDO_RESERVED = 'Ce pseudo est une adresse du site\u00a0: choisissez-en un autre.'
+const PSEUDO_RESERVED = 'Ce pseudo est une adresse du site\u00a0: choisissez-en un autre.'
 
 const PSEUDO_RULE = new RegExp(`^${PSEUDO.pattern}$`)
 
@@ -46,6 +46,16 @@ export const isPseudo = (value: string) =>
   value.length <= PSEUDO.max &&
   PSEUDO_RULE.test(value) &&
   !reservedPseudo(value)
+
+/** Ce que dit un formulaire d'un pseudo hors de la règle. */
+export const PSEUDO_REFUSED = `Pseudo refusé\u00a0: ${PSEUDO_HINT}`
+
+/**
+ * Ce qui refuse ce pseudo avant de l'envoyer (inscription, changement de pseudo) : une adresse du
+ * site, ou hors de la règle (`isPseudo`) ; `null` s'il convient.
+ */
+export const pseudoProblem = (value: string) =>
+  reservedPseudo(value) ? PSEUDO_RESERVED : isPseudo(value) ? null : PSEUDO_REFUSED
 
 /** La page de connexion, qui ramène ensuite à `back` (une page du site, filtres compris). */
 export const loginPath = (back: string) => `/connexion?retour=${encodeURIComponent(back)}`

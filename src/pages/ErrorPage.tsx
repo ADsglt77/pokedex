@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { PokedexUnavailable } from '@/components/PokedexUnavailable'
 import { useFocusOnEntry } from '@/hooks/useFocusOnEntry'
 import { cx } from '@/lib/cx'
+import { settingsPath } from '@/lib/filters'
 import { pageTitle } from '@/lib/format'
 import styles from './ErrorPage.module.css'
 
@@ -63,7 +64,7 @@ export function ErrorPage() {
                 Recharger la page
               </Button>
               <Button asChild variant="ghost">
-                <Link to="/donnees" reloadDocument>
+                <Link to={settingsPath()} reloadDocument>
                   Ouvrir les réglages
                 </Link>
               </Button>

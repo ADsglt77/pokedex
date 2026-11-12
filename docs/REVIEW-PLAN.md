@@ -591,7 +591,23 @@ seul `RetryButton`, les titres sans « pour le moment »). Aucun test (interface
 - **Comportement** : seulement l'interface.
 - **Effort** : M.
 
-**L12 — Navigation, compte et contraste élevé (site)**
+**L12 — Navigation, compte et contraste élevé (site)** — *fait le 12 novembre 2026, l'interface
+seulement. Décisions validées : D-06 (`/reglages`, `/donnees` redirigée, ancre comprise,
+`OldSettings` ; « reglages » réservé, vérifié en lecture seule en production : aucun compte ne le
+porte) ; le bouton du compte, un avatar aux initiales et une pastille d'état (son nom dit l'état en
+toutes lettres), son menu avec « Voir mon Pokédex public » et « Mon compte » ; « Supprimer la
+collection » en bas de sa page ; le remplissage des `Progress` en contraste élevé laissé à camply.
+S'y ajoutent : l'icône `Settings` ; Ctrl K, libellés de la navigation, mots-clés avec et sans
+accent,
+« Importer » et « Changer de thème » dans les actions ; la page d'une collection, fil d'Ariane et
+« Toutes / Possédées / Manquantes » (la dernière carte ouverte reste montrée jusqu'au choix
+suivant) ; « Afficher le mot de passe » (`usePasswordReveal`, connexion et inscription) ; le pseudo
+vérifié à l'envoi (`pseudoProblem`, inscription et Mon compte, sans `pattern` ni bulle du
+navigateur) ; en contraste élevé, un contour pointillé sur `aria-current`, `aria-pressed` et le
+segment choisi, l'anneau du focus par-dessus (les drapeaux gardent leurs couleurs). Vérifié dans
+Playwright, en local (contraste élevé émulé). Contre-review NO-GO puis GO : ses deux constats
+corrigés (le focus confondu avec l'état en contraste élevé ; une carte masquée sous sa fenêtre, le
+focus perdu), et ses mineurs. Aucun test (interface).*
 - **Constats** : F-NAV-02, F-UX-10, F-UX-06, F-UX-11, F-A11Y-01, F-A11Y-07.
 - **Fichiers** :
   - `src/components/AccountMenu.tsx`, `AppShell.tsx:75`, `:218`, `AppSearch.tsx:28-44` ;
@@ -718,7 +734,7 @@ seul `RetryButton`, les titres sans « pour le moment »). Aucun test (interface
 | D-03 | Le seuil des refus par pseudo (L03) | 20 par heure. Contrepartie : un tiers peut bloquer une heure la connexion à un pseudo, et le message le dit. **Validée** le 10 novembre 2026. |
 | D-04 | « Ajouter comme » (L06) | Un `Switch` « Je la possède déjà », éteint par défaut. **Validée** le 10 novembre 2026, avec le libellé « Non possédée » plutôt que le `Switch`. |
 | D-05 | DEC-12 : la clé des limites des données (L08) | Le /64, et les routes lourdes comptées par client. **Validée** le 12 novembre 2026 (5 demandes par 10 s et par client pour `/v1/wants`), sous réserve de l'usage normal : vérifié, sur 7 jours aucun appel de `/v1/wants` par l'entrée d'Internet ; le site passe par sa liaison, sans ces limites. |
-| D-06 | `/donnees` devient `/reglages` (L12) | Oui, avec une redirection. |
+| D-06 | `/donnees` devient `/reglages` (L12) | Oui, avec une redirection. **Validée** le 12 novembre 2026 (aucun compte ne porte « reglages »). |
 | D-07 | Direction visuelle (L17) | Les tuiles d'indicateurs seulement sur l'Accueil ; ailleurs, une ligne de résumé. |
 | D-08 | Synonymes des raretés (L17) | Une table côté site (`lib/card-catalog.ts`), sans toucher au contrat ni à R2. |
 | D-09 | ← et → sans empiler l'historique (L17) | `replace: true`. |

@@ -7,6 +7,7 @@ import { ExportCollectionButton, SetAsideExportButtons } from '@/components/Expo
 import { useExportSetAside } from '@/hooks/useExportCollection'
 import { loginPath } from '@/lib/account'
 import { cx } from '@/lib/cx'
+import { settingsPath } from '@/lib/filters'
 import { formatDateTime } from '@/lib/format'
 import {
   forgetSetAside,
@@ -19,7 +20,7 @@ import {
 import styles from './SaveBanner.module.css'
 
 /** Où l'import des Réglages reprend une version exportée. */
-const IMPORT = '/donnees#importer'
+const IMPORT = settingsPath('#importer')
 
 /**
  * Un bandeau de l'enregistrement : son texte, puis ses actions dessous (l'`action` du `Banner` de

@@ -8,7 +8,7 @@
 export const PSEUDO = {
   min: 2,
   max: 20,
-  /** Pour l'attribut `pattern` d'un champ (le `-` échappé : il le lit avec le drapeau `v`). */
+  /** Ses caractères (`isPseudo`, `lib/account.ts`). */
   pattern: '[A-Za-z0-9_\\-]+',
 }
 
@@ -29,6 +29,7 @@ export const RESERVED_PSEUDOS = [
   'valeur',
   'achats',
   'donnees',
+  'reglages',
   'catalogue',
   'api',
   'images',
@@ -58,14 +59,16 @@ export const PSEUDO_TYPING = {
   spellCheck: false,
 }
 
-/** Le champ du pseudo (inscription, Réglages › Mon compte) : la règle de `PSEUDO`. */
+/**
+ * Le champ du pseudo (inscription, Réglages › Mon compte) : sa longueur au plus ; le reste de la
+ * règle (`PSEUDO`) est vérifié à l'envoi (`pseudoProblem`), le refus dit sous le champ, en
+ * français, et non par la bulle du navigateur.
+ */
 export const PSEUDO_FIELD = {
   ...PSEUDO_TYPING,
   label: 'Pseudo',
   autoComplete: 'username',
-  minLength: PSEUDO.min,
   maxLength: PSEUDO.max,
-  pattern: PSEUDO.pattern,
   required: true,
 }
 

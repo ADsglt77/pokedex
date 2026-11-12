@@ -1,12 +1,12 @@
-import { Button, Card, Progress, Stat } from '@camply/ui'
-import { Trash2 } from '@camply/ui/icons'
+import { Breadcrumbs, Button, Card, EmptyState, Progress, SegmentedControl, Stat } from '@camply/ui'
+import { Check, Layers, Trash2 } from '@camply/ui/icons'
 import { useState } from 'react'
-import { Navigate, useLocation, useParams, useSearchParams } from 'react-router'
+import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { LanguageFlag } from '@/components/LanguageSwitch'
 import { PageHeader } from '@/components/PageHeader'
 import { PricedValue } from '@/components/PricedValue'
-import { SeriesGrid } from '@/components/SeriesGrid'
+import { SeriesGrid, type SeriesShown } from '@/components/SeriesGrid'
 import { SetLogo } from '@/components/SetLogo'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { useStatSize } from '@/hooks/useStatSize'
@@ -34,8 +34,10 @@ import styles from './SeriesPage.module.css'
  * La page d'une collection d'extension (`/collections/M6A`, `?langue=fr` pour une française,
  * `seriesPath`) : son nom et le drapeau de sa langue, son logo, ses cartes possédées sur toutes,
  * leur valeur, le coût pour la compléter (et combien de cartes à acheter n'ont pas de prix) ; puis
- * toutes ses cartes (`SeriesGrid`), chacune ouvrant sa fenêtre, celle de `?carte=` ouverte
- * d'emblée (`seriesCard` : le lien d'une carte, `cardPath`). Une collection inconnue : la page
+ * toutes ses cartes (`SeriesGrid`, ou les possédées, ou les manquantes), chacune ouvrant sa fenêtre,
+ * celle de `?carte=` ouverte d'emblée (`seriesCard` : le lien d'une carte, `cardPath`). En tête, le
+ * fil d'Ariane (Collections › la collection) ; en bas, « Supprimer la collection » (une action rare
+ * et destructrice, loin de l'en-tête). Une collection inconnue : la page
  * introuvable. Une collection qui disparaît sous la page (supprimée ici, son début annulé par
  * « Annuler », supprimée sur un autre appareil) ramène aux Collections ; de même un début annulé
  * avant que la page ne s'affiche (l'état de navigation `started`, `useStartCollection`).
@@ -61,6 +63,20 @@ export function SeriesPage() {
   return (
     <div key={key} className="container">
       <title>{pageTitle(series.name)}</title>
+      {/* Un lien du routeur dans le libellé : camply ferait un lien qui recharge la page. */}
+      <Breadcrumbs
+        className={styles.crumbs}
+        items={[
+          {
+            label: (
+              <Link to="/collections" className="quiet-link">
+                Collections
+              </Link>
+            ),
+          },
+          { label: series.name },
+        ]}
+      />
       <PageHeader
         title={
           <>
@@ -68,16 +84,69 @@ export function SeriesPage() {
             <LanguageFlag language={language} of="set" />
           </>
         }
-        actions={<RemoveSeries collection={collection} series={series} />}
       >
         {details(`Extension ${series.set}`, `commencée le ${formatDate(series.startedAt)}`)}
       </PageHeader>
       <SeriesSummary collection={collection} series={series} />
-      <section className={styles.cards}>
-        <h2 className={styles.heading}>Ses cartes</h2>
-        <SeriesGrid collection={collection} series={series} linked />
-      </section>
+      <SeriesCards collection={collection} series={series} />
+      <div className={styles.remove}>
+        <RemoveSeries collection={collection} series={series} />
+      </div>
     </div>
+  )
+}
+
+/**
+ * Les cartes de la collection, toutes, ou les possédées, ou les manquantes (pas encore possédées) :
+ * les autres sont masquées, la grille reste ; aucune à montrer, un message et « Voir toutes les
+ * cartes ».
+ */
+function SeriesCards({
+  collection,
+  series,
+}: {
+  collection: CollectionData
+  series: SeriesCollection
+}) {
+  const [shown, setShown] = useState<SeriesShown>('all')
+  const owned = series.cards.filter((id) => collection.cards[id]?.status === 'owned').length
+  const missing = series.cards.length - owned
+  const showAll = <Button onClick={() => setShown('all')}>Voir toutes les cartes</Button>
+  return (
+    <section className={styles.cards} aria-labelledby="ses-cartes">
+      <div className={styles.cardsHead}>
+        <h2 id="ses-cartes" className={styles.heading}>
+          Ses cartes
+        </h2>
+        <SegmentedControl
+          aria-label="Cartes montrées"
+          size="sm"
+          options={[
+            { value: 'all', label: 'Toutes' },
+            { value: 'owned', label: `Possédées (${formatInteger(owned)})` },
+            { value: 'missing', label: `Manquantes (${formatInteger(missing)})` },
+          ]}
+          value={shown}
+          onChange={setShown}
+        />
+      </div>
+      <SeriesGrid collection={collection} series={series} linked shown={shown} />
+      {shown === 'owned' && owned === 0 && (
+        <EmptyState
+          icon={<Layers size={22} />}
+          title="Aucune carte possédée pour l’instant"
+          description="Une carte possédée s’affiche en couleur ; les autres restent grisées."
+          actions={showAll}
+        />
+      )}
+      {shown === 'missing' && missing === 0 && (
+        <EmptyState
+          icon={<Check size={22} />}
+          title="Aucune carte manquante : la collection est complète"
+          actions={showAll}
+        />
+      )}
+    </section>
   )
 }
 

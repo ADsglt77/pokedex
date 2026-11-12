@@ -111,8 +111,13 @@ export const createRouter = () =>
               lazy: () => page(import('@/pages/shopping/ShoppingPage'), 'ShoppingPage'),
             },
             {
-              path: 'donnees',
+              path: 'reglages',
               lazy: () => page(import('@/pages/data/DataPage'), 'DataPage'),
+            },
+            // L'ancienne adresse des Réglages : un lien gardé y mène encore.
+            {
+              path: 'donnees',
+              lazy: () => page(import('@/pages/data/DataPage'), 'OldSettings'),
             },
             {
               path: 'catalogue',

@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router'
 import { AuthCard } from '@/components/AuthCard'
 import { PSEUDO_TYPING } from '@/config/account'
 import { useOtherAccountGuard } from '@/hooks/useOtherAccountGuard'
+import { usePasswordReveal } from '@/hooks/usePasswordReveal'
 import { authCall, authClient } from '@/lib/auth'
 import { openSession } from '@/store/account'
 
@@ -28,6 +29,7 @@ export function LoginPage() {
   const [pseudo, setPseudo] = useState('')
   const [password, setPassword] = useState('')
   const otherAccount = useOtherAccountGuard()
+  const reveal = usePasswordReveal()
 
   const submit = async () => {
     const warning = otherAccount(pseudo)
@@ -58,8 +60,8 @@ export function LoginPage() {
         onChange={(event) => setPseudo(event.target.value)}
       />
       <Input
+        {...reveal}
         label="Mot de passe"
-        type="password"
         autoComplete="current-password"
         required
         value={password}

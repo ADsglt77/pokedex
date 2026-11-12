@@ -1,5 +1,13 @@
-import { Button, DropdownMenu, MenuItem, MenuLabel, MenuSeparator } from '@camply/ui'
-import { CloudAlert, CloudCheck, CloudOff, LogIn, LogOut, RefreshCw } from '@camply/ui/icons'
+import {
+  Avatar,
+  Button,
+  DropdownMenu,
+  MenuItem,
+  MenuLabel,
+  MenuSeparator,
+  type AvatarProps,
+} from '@camply/ui'
+import { Globe, LogIn, LogOut, RefreshCw, UserRound } from '@camply/ui/icons'
 import { useEffect, useId, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -7,41 +15,49 @@ import { ExportCollectionButton, SetAsideExportButtons } from '@/components/Expo
 import { useNotify } from '@/hooks/useNotify'
 import { loginPath } from '@/lib/account'
 import { cx } from '@/lib/cx'
+import { settingsPath, vitrinePath } from '@/lib/filters'
 import { formatMegabytes } from '@/lib/format'
 import { hasChangesAtRisk, save, signOut, useAccountStore, type SaveStatus } from '@/store/account'
 import { MAX_DOCUMENT } from '@/types'
 import styles from './AccountMenu.module.css'
 
-/** Où en est l'enregistrement de la collection : le bouton du compte, et sa phrase dans le menu. */
-const STATUS: Record<SaveStatus, { label: string; icon: typeof CloudCheck; text: string }> = {
+/**
+ * Où en est l'enregistrement de la collection : son nom (lu avec le bouton du compte), la pastille
+ * de son avatar (vert : tout va bien ; jaune : en attente du serveur ; rouge : à regarder) et sa
+ * phrase dans le menu.
+ */
+const STATUS: Record<
+  SaveStatus,
+  { label: string; dot: NonNullable<AvatarProps['status']>; text: string }
+> = {
   saved: {
     label: 'Enregistrée',
-    icon: CloudCheck,
+    dot: 'online',
     text: 'Votre collection est enregistrée sur le serveur, la même sur tous vos appareils.',
   },
   saving: {
     label: 'Enregistrement…',
-    icon: RefreshCw,
+    dot: 'online',
     text: 'Envoi de vos modifications.',
   },
   offline: {
     label: 'Hors ligne',
-    icon: CloudOff,
+    dot: 'away',
     text: 'Le serveur ne répond pas : vos modifications ne sont pas encore enregistrées. Elles repartiront à son retour ; d’ici là, ne fermez pas la page, ou exportez votre collection.',
   },
   expired: {
     label: 'Reconnectez-vous',
-    icon: CloudAlert,
+    dot: 'busy',
     text: 'Vous êtes déconnecté : session expirée, connexion sur un autre appareil (un seul à la fois) ou à un autre compte dans un autre onglet. Vos modifications ne s’enregistrent plus ; reconnectez-vous à ce compte pour envoyer celles en attente (si la collection a changé ailleurs entre-temps, votre version sera mise de côté, à exporter).',
   },
   reloaded: {
     label: 'Rechargée',
-    icon: CloudAlert,
+    dot: 'busy',
     text: 'Votre collection avait changé ailleurs (un autre onglet, un autre appareil) : elle a été rechargée, et votre version d’ici est mise de côté, à exporter pour la garder (le bandeau en haut de la page).',
   },
   refused: {
     label: 'Envoi refusé',
-    icon: CloudAlert,
+    dot: 'busy',
     text: 'Le serveur refuse cette collection. Exportez-la depuis les Réglages pour la garder.',
   },
 }
@@ -61,12 +77,14 @@ const heavyText = (weight: number) =>
 let heavyWarned = false
 
 /**
- * Le compte connecté (la coquille ne s'ouvre que connecté) : où en est l'enregistrement de la
- * collection, et un menu : se reconnecter (session fermée) ou renvoyer, puis se déconnecter. En
- * bas de la barre latérale, de sa largeur ; `compact` (barre du haut), son icône seule (le texte
- * reste lu). Ce qui s'y voit mal sur un téléphone (rien que l'icône) a aussi son toast : la session
- * fermée, une collection rechargée ou refusée, et une collection qui approche du plafond du serveur
- * (80 %) ; le bandeau de l'enregistrement (`SaveBanner`) propose l'export au-dessus de chaque page.
+ * Le compte connecté (la coquille ne s'ouvre que connecté) : son avatar (les initiales du pseudo,
+ * la pastille de l'enregistrement) et son pseudo, l'état de l'enregistrement lu avec eux ; et un
+ * menu : son pseudo, « Voir mon Pokédex public », « Mon compte » (Réglages), la phrase d'état, se
+ * reconnecter (session fermée) ou renvoyer, puis se déconnecter. En bas de la barre latérale, de sa
+ * largeur ; `compact` (barre du haut), l'avatar seul (le texte reste lu). Ce qui s'y voit mal sur
+ * un téléphone (rien que l'avatar et sa pastille) a aussi son toast : la session fermée, une
+ * collection rechargée ou refusée, et une collection qui approche du plafond du serveur (80 %) ; le
+ * bandeau de l'enregistrement (`SaveBanner`) propose l'export au-dessus de chaque page.
  */
 export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const account = useAccountStore((state) => state.account)
@@ -84,7 +102,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   useSaveStatusToasts(notify)
   if (!account) return null
 
-  const { label, icon: Icon } = STATUS[status]
+  const { label, dot } = STATUS[status]
   const text = status === 'refused' && refusal ? refusalText(refusal) : STATUS[status].text
   const login = () => navigate(loginPath(location.pathname + location.search))
   const leave = async () => {
@@ -106,25 +124,33 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
         placement={compact ? 'bottom-end' : 'top-start'}
         aria-describedby={statusId}
         trigger={
+          // Son nom : le pseudo (écrit dans le bouton, sauf `compact`), puis l'état, que la
+          // pastille ne dit qu'en couleur.
           <Button
             size="sm"
             variant="ghost"
-            leftIcon={<Icon size={16} />}
+            leftIcon={<Avatar name={account.name} size={22} status={dot} aria-hidden />}
             loading={leaving}
+            aria-label={`${account.name}, ${leaving ? 'déconnexion…' : label}`}
             className={cx(
               !compact && styles.wide,
               status !== 'saved' && status !== 'saving' && styles.alert,
             )}
           >
-            <span className={cx(compact && 'visually-hidden')}>
-              {leaving ? 'Déconnexion…' : label}
-            </span>
+            {!compact && <span className={styles.pseudo}>{account.name}</span>}
           </Button>
         }
       >
         <MenuLabel uppercase={false} className={styles.name}>
           {account.name}
         </MenuLabel>
+        <MenuItem icon={<Globe size={16} />} onSelect={() => navigate(vitrinePath(account.name))}>
+          Voir mon Pokédex public
+        </MenuItem>
+        <MenuItem icon={<UserRound size={16} />} onSelect={() => navigate(settingsPath('#compte'))}>
+          Mon compte
+        </MenuItem>
+        <MenuSeparator />
         <MenuLabel id={statusId} uppercase={false} className={styles.text}>
           {text}
         </MenuLabel>

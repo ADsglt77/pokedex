@@ -318,3 +318,25 @@ img {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Contraste élevé (Windows) : le navigateur retire fonds et ombres. Le lien de la page ouverte
+   (`aria-current`) et ce qui est choisi (`aria-pressed` : un filtre, une région de la réglette, la
+   carte montrée ou choisie ; le segment choisi d'un `SegmentedControl`, `role="radio"`) gardent un
+   contour pointillé aux couleurs du système ; avec le focus, il redevient l'anneau du focus, plus
+   épais, pour que le focus se voie encore. Le dernier pas du fil d'Ariane, un `span`, n'en a pas.
+   Les drapeaux, eux, gardent leurs couleurs (vérifié). */
+@media (forced-colors: active) {
+  :is(a, button)[aria-current='page'],
+  [aria-pressed='true'],
+  [role='radio'][aria-checked='true'] {
+    outline: 2px dashed CanvasText;
+    outline-offset: 1px;
+  }
+
+  :is(a, button)[aria-current='page']:focus-visible,
+  [aria-pressed='true']:focus-visible,
+  [role='radio'][aria-checked='true']:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+}

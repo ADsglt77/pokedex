@@ -97,9 +97,12 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   bloc étroit : un seul conteneur `table`, l'enveloppe, les règle (celui du tableau, plus étroit de
   son bord, y est retiré). Navigation (`AppShell`) : à partir de 64rem, une
   barre latérale collée (Collection : Accueil, Collections, Catalogue ; Achats et valeur : Achats,
-  Valeur ; la progression ; Réglages et le compte en pied ; Collections est la page ouverte aussi
+  Valeur ; la progression ; Réglages (`/reglages`, l'icône `Settings` ; `/donnees`, leur adresse
+  jusqu'en novembre 2026, y mène encore, `OldSettings`) et le compte en pied ; Collections est la
+  page ouverte aussi
   sur le Pokédex et les fiches, qui s'ouvrent depuis elle) ; en dessous, une barre en haut (nom,
-  recherche, Réglages, thème, compte en icône) et cinq onglets en bas ; le bouton du thème est aussi
+  recherche, Réglages, thème, compte en avatar) et cinq onglets en bas ; le bouton du thème est
+  aussi
   en pied de la barre latérale. En haut de `main`, au-dessus de chaque page, le bandeau de
   l'enregistrement (`SaveBanner`, `docs/compte-et-synchronisation.md`) : hors ligne, session
   fermée, version mise de côté, rien quand tout va bien. Le `Banner` de camply y est employé sans
@@ -153,8 +156,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   autre, clé par extension : elle reste commencée et annoncée, sans l'arracher à sa page) ; sans
   ses cartes (l'API ne répond pas) : un message, rien de commencé, et un nouvel essai les
   redemande. La page d'une collection
-  (`SeriesPage`, `/collections/M6A`, `?langue=fr`) : en tête son nom et le drapeau de sa langue, son
-  code et le jour où elle a été commencée, « Supprimer la collection » ; puis son logo (au-dessus
+  (`SeriesPage`, `/collections/M6A`, `?langue=fr`) : en tête le fil d'Ariane (Collections › son
+  nom), son nom et le drapeau de sa langue, son code et le jour où elle a été commencée ; puis son
+  logo (au-dessus
   de ses chiffres quand la page a moins de 56rem) et ses chiffres (`seriesProgress` : cartes
   possédées sur toutes, leur part et la barre ; leur valeur au prix du jour ; le coût pour la
   compléter, ses cartes ni possédées ni commandées, « Sans compter 2 cartes sans prix ») ; puis
@@ -165,7 +169,12 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   dessinées au fur et à mesure (`useGrowingList`, 60 à la fois ; d'emblée jusqu'à celle de
   `?carte=`, arrondi au palier, souvent une case loin dans l'extension), seules celles à l'écran
   le sont (`content-visibility`), et mémoïsées : une carte qui change de statut ne redessine
-  qu'elle.
+  qu'elle. Au-dessus, « Toutes / Possédées / Manquantes » (avec leur nombre) masque les autres
+  (`hidden`, comme le Pokédex public) ; la dernière carte ouverte reste montrée jusqu'au
+  prochain choix (son statut changé dans sa fenêtre ne la masque pas sous les yeux, et elle reprend
+  le focus) ; aucune à montrer, un message et « Voir toutes les cartes ». « Supprimer la
+  collection » est en bas de la page, loin de l'en-tête (décision de
+  l'utilisateur, novembre 2026).
   Une carte ouvre sa fenêtre (`SeriesCard`, pleine page et mise en page comme la fiche d'une carte
   du catalogue : `CardLayout`, que les deux reprennent par `composes … from` ; à la construction,
   Vite écrit pour cela un avertissement PostCSS (`from`), attendu et sans effet tant que le
@@ -320,7 +329,13 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   mais toute la grille une demi-seconde plus tard).
   Les marques de possession sont des icônes CSS (masques, pas de SVG :
   plus de 1 000 sinon ; en contraste élevé, `forced-colors`, les couleurs du système, sans quoi le
-  glyphe disparaîtrait), et rien de ce qui défile n'a de `backdrop-filter` (flou recalculé à chaque
+  glyphe disparaîtrait). En contraste élevé encore, le lien de la page ouverte (`aria-current`),
+  ce qui est choisi (`aria-pressed` : un filtre, une région de la réglette, une carte) et le
+  segment choisi d'un `SegmentedControl` gardent un contour pointillé (`global.css`), qui
+  redevient l'anneau du focus, plus épais, quand ils l'ont ; les drapeaux gardent
+  leurs couleurs ; le remplissage des barres (`Progress`) est à demander à camply (décision de
+  l'utilisateur, novembre 2026 : pas de classe interne). Et rien de ce qui défile n'a de
+  `backdrop-filter` (flou recalculé à chaque
   image). Les pochettes, comme les cartes de la liste d'achats, sont de simples liens (`<a>`, pas
   un `Link` de react-router, qui lit l'adresse : des centaines se redessineraient à chaque frappe
   d'une recherche gardée dans l'adresse) ; la liste lit le clic une fois pour toutes
@@ -329,7 +344,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   changeant de page (`Shell`, mémoïsée sur le chemin ; le menu du compte lit l'adresse au clic) :
   une frappe dans la recherche du Pokédex coûte 10 à 20 ms au lieu de 80 à 140. La recherche
   Ctrl K n'est montée qu'à sa première ouverture (ses plus de 1 000 commandes coûtaient une
-  soixantaine de millisecondes au démarrage), puis mémoïsée ; la palette n'en rend que les 50
+  soixantaine de millisecondes au démarrage), puis mémoïsée ; ses pages ont les libellés de la
+  navigation et des mots-clés sans accent (« reglages », « mot de passe », « theme »), ses actions
+  « Exporter », « Importer » et « Changer de thème » ; la palette n'en rend que les 50
   premières qui correspondent (`limit` de camply), une ligne dit combien d'autres. `buildPokedex`
   reprend les entrées inchangées du Pokédex précédent (la même favorite, les mêmes cartes aux mêmes
   statuts) : après

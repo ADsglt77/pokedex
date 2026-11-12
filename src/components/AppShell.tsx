@@ -1,12 +1,12 @@
 import { Badge, IconButton, Kbd, Progress, useCommandPalette } from '@camply/ui'
 import {
   ChartLine,
-  Database,
   House,
   Layers,
   Library,
   Moon,
   Search,
+  Settings,
   ShoppingCart,
   Sun,
   type IconProps,
@@ -32,7 +32,7 @@ import {
 import { Logo } from '@/components/Logo'
 import { SITE_NAME } from '@/config/legal'
 import { SiteDisclaimer } from '@/components/SiteDisclaimer'
-import { shoppingUrl } from '@/lib/filters'
+import { settingsPath, shoppingUrl } from '@/lib/filters'
 import { AccountMenu } from '@/components/AccountMenu'
 import { AppSearch } from '@/components/AppSearch'
 import { SaveBanner } from '@/components/SaveBanner'
@@ -74,7 +74,7 @@ const GROUPS: { label: string; places: Place[] }[] = [
     ],
   },
 ]
-const DATA: Place = { to: '/donnees', label: 'Réglages', icon: Database }
+const DATA: Place = { to: settingsPath(), label: 'Réglages', icon: Settings }
 /** La barre d'onglets du téléphone : cinq au plus, Réglages passe dans la barre du haut. */
 const TABS = GROUPS.flatMap((group) => group.places)
 
@@ -219,7 +219,7 @@ const Shell = memo(function Shell({ pathname, pokedex }: { pathname: string; pok
               variant={isCurrent(DATA.to, pathname) ? 'soft' : 'ghost'}
             >
               <Link to={DATA.to} aria-current={isCurrent(DATA.to, pathname) ? 'page' : undefined}>
-                <Database size={18} />
+                <Settings size={18} />
               </Link>
             </IconButton>
             <ThemeButton compact />

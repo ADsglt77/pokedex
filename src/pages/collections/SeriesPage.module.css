@@ -49,3 +49,29 @@
     height: 5rem;
   }
 }
+
+.crumbs {
+  margin-bottom: var(--camply-space-4);
+  font-size: var(--text-md);
+}
+
+/* Le titre des cartes et le choix de celles montrées, sur une rangée tant qu'ils tiennent. */
+.cardsHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--camply-space-3);
+  margin-bottom: var(--camply-space-5);
+}
+
+.cardsHead .heading {
+  margin-bottom: 0;
+}
+
+/* « Supprimer la collection », en bas de la page, séparée des cartes. */
+.remove {
+  margin-top: var(--space-block);
+  padding-top: var(--camply-space-5);
+  border-top: 1px solid var(--camply-border);
+}

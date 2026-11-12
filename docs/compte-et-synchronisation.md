@@ -15,7 +15,11 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   un autre compte (le sien peut le reprendre), les adresses du site refusées, la suppression du
   compte avec sa collection. `/inscription` (`SignUpPage`, hors de la coquille) : un pseudo
   (`PSEUDO` : 2 à 20 caractères, lettres sans accent, chiffres, `-` et `_`, de quoi tenir dans une
-  adresse) et un mot de passe (8 caractères au moins). Pas de mot de passe oublié : le mot de passe
+  adresse) et un mot de passe (8 caractères au moins), qu'on peut afficher pour le relire
+  (`usePasswordReveal`, connexion et inscription). Le pseudo est vérifié à l'envoi
+  (`pseudoProblem`, `lib/account.ts`, à l'inscription comme dans Mon compte) : un refus s'affiche
+  sous le champ, en français, et non dans la bulle du navigateur ; l'adresse du Pokédex public
+  n'est montrée que pour un pseudo qui convient. Pas de mot de passe oublié : le mot de passe
   perdu, le compte l'est aussi (l'inscription et Mon compte le disent). Les mentions légales et la
   confidentialité (`/mentions-legales`, `LegalPage`, liées du pied de chaque page,
   `SiteDisclaimer`) disent ce que le site garde, pourquoi et sur quelle base légale (le service
@@ -130,7 +134,8 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   une page du site y mène (la route `:pseudo`, `isPseudo`, `lib/account.ts`) : les premiers
   segments des adresses du site sont des pseudos réservés (`RESERVED_PSEUDOS`,
   `config/account.ts` : refusés à l'inscription et au changement de pseudo, testé ; une nouvelle
-  page de premier niveau s'y ajoute ; un compte qui porterait déjà son nom n'y a jamais son
+  page de premier niveau s'y ajoute, après avoir vérifié qu'aucun compte ne le porte : « reglages »
+  le 12 novembre 2026, aucun ; un compte qui porterait déjà son nom n'y a jamais son
   Pokédex : le serveur ne cherche qu'un pseudo possible, `isPseudo`, testé). Ce qui n'est pas un
   pseudo (`/achat`, `/a.b`) y est une page introuvable, comme un pseudo qui n'est à personne (404
   du serveur) : la page introuvable de la coquille (`NotFound`, « Cette page n’est pas dans le
@@ -336,8 +341,11 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   (`journalOnce` : un compte qui l'appellerait sans fin noierait le journal ; testé) ; plus de
   1 Ko, 413 (`maxBody`, après la session : sans elle, 401 ; testé).
   « Annuler », l'import, « Effacer » sont des modifications comme les autres. Le compte
-  (`AccountMenu`, en pied de la barre latérale, ou en icône dans la barre du haut sur petit écran ;
-  seulement connecté) montre son pseudo et l'état : enregistrée, enregistrement, hors ligne
+  (`AccountMenu`, en pied de la barre latérale, ou dans la barre du haut sur petit écran, l'avatar
+  seul ; seulement connecté) est un avatar aux initiales du pseudo, dont la pastille dit l'état en
+  couleur (vert : enregistrée ; jaune : hors ligne ; rouge : à regarder), et le pseudo ; son nom
+  dit l'état en toutes lettres. Son menu montre le pseudo, « Voir mon Pokédex public », « Mon
+  compte » (Réglages), puis l'état : enregistrée, enregistrement, hors ligne
   (« Réessayer maintenant »), reconnectez-vous (« Se reconnecter »), rechargée, envoi refusé
   (avec sa raison), et le poids passé 80 % ; puis « Se déconnecter » (la phrase d'état décrit le
   menu, `aria-describedby` : au clavier, seules ses entrées sont parcourues) ; une modification

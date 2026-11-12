@@ -61,6 +61,11 @@ Textarea, Timeline, Toast (ToastProvider, `useToast`), Toggle, Tooltip, Tree.
 - **Internal classes are not an API**: the last override of one carries the comment « Classe
   interne de camply (pas une API) : à revérifier après une mise à jour ». After a camply update,
   list them with `grep -rn '\.camply-[a-z]*__' src` and recheck each one.
+- **Password reveal**: `Input` has none. `usePasswordReveal` (`src/hooks/usePasswordReveal.tsx`)
+  gives a password field its `type` and an `IconButton` (`rightIcon`, `aria-pressed`): login
+  and sign-up. Drop it when camply has one.
+- **`Progress` in forced colors**: its fill disappears (Windows high contrast). Not fixed in the
+  app (it would take an internal class): to ask camply.
 - **Table on a phone**: `.stack-table` (global.css) turns a `Table` into a list of cards under
   `@container table (max-width: 36rem)` (hides `thead`, makes each `tr` a grid; the page places
   the cells with `grid-area` by `nth-child`). It relies on `.camply-table__table` / `__td`: recheck

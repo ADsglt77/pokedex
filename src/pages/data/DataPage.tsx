@@ -1,4 +1,6 @@
+import { Navigate, useLocation } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
+import { settingsPath } from '@/lib/filters'
 import { pageTitle } from '@/lib/format'
 import { AccountSection } from './AccountSection'
 import { CollectionSection } from './CollectionSection'
@@ -84,4 +86,13 @@ export function DataPage() {
       </div>
     </div>
   )
+}
+
+/**
+ * `/donnees`, l'adresse des Réglages jusqu'en novembre 2026 (un lien gardé y mène encore) : vers
+ * `/reglages`, sa section comprise (`#importer`), sans laisser l'ancienne dans l'historique.
+ */
+export function OldSettings() {
+  const { search, hash } = useLocation()
+  return <Navigate to={settingsPath(search + hash)} replace />
 }

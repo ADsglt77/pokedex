@@ -9,7 +9,7 @@ import { FieldAlert } from '@/components/FieldAlert'
 import { NEW_PASSWORD_FIELD, PSEUDO_FIELD, PSEUDO_HINT } from '@/config/account'
 import { useNotify } from '@/hooks/useNotify'
 import { authCall, authClient } from '@/lib/auth'
-import { PSEUDO_RESERVED, refusalMessage, reservedPseudo } from '@/lib/account'
+import { PSEUDO_REFUSED, pseudoProblem, refusalMessage } from '@/lib/account'
 import { vitrinePath } from '@/lib/filters'
 import { pokedexTitle } from '@/lib/format'
 import { accountDeleted, markExpired, renameAccount, useAccountStore } from '@/store/account'
@@ -78,18 +78,13 @@ function NameForm({ current }: { current: string }) {
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     setError(null)
-    if (reservedPseudo(name)) return refuse(PSEUDO_RESERVED)
+    const problem = pseudoProblem(name)
+    if (problem) return refuse(problem)
     setBusy(true)
     const { error: refused } = await authCall(() => authClient.updateUser({ name, username: name }))
     setBusy(false)
     if (refused) {
-      return refuse(
-        failure(
-          refused,
-          `Pseudo refusé : ${PSEUDO_HINT}`,
-          'Pseudo inchangé : réessayez plus tard.',
-        ),
-      )
+      return refuse(failure(refused, PSEUDO_REFUSED, 'Pseudo inchangé : réessayez plus tard.'))
     }
     renameAccount(name)
     notify(

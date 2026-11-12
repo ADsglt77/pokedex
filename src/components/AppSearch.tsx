@@ -1,7 +1,6 @@
 import { CommandPalette, type Command } from '@camply/ui'
 import {
   ChartLine,
-  Database,
   Download,
   Grid3x3,
   House,
@@ -9,39 +8,63 @@ import {
   Library,
   ListChecks,
   Lock,
+  Moon,
   Receipt,
-  Upload,
+  Settings,
   Sparkles,
+  Upload,
+  UserRound,
   Wallet,
 } from '@camply/ui/icons'
 import { memo, useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import { useExportCollection } from '@/hooks/useExportCollection'
-import { pokedexUrl, searchForm, shoppingUrl, speciesPath } from '@/lib/filters'
+import { fold, pokedexUrl, searchForm, settingsPath, shoppingUrl, speciesPath } from '@/lib/filters'
 import { formatDexNumber } from '@/lib/format'
 import { SPECIES } from '@/lib/species'
+import { toggleTheme } from '@/store/theme'
 
 const ICON = 16
 
-/** Les pages et les vues qu'on ouvre depuis la recherche, dans l'ordre de la navigation. */
+/**
+ * Les pages et les vues qu'on ouvre depuis la recherche, dans l'ordre de la navigation et sous ses
+ * libellés ; `keywords` : ce qu'on y cherche aussi (« compte », « mot de passe »). La palette ne
+ * retire pas les accents de ce qu'on tape : libellé et mots-clés y sont avec et sans.
+ */
 const PLACES = [
-  { label: 'Accueil', to: '/', icon: House },
-  { label: 'Collections', to: '/collections', icon: Library },
-  { label: 'Pokédex', to: '/pokedex', icon: Grid3x3 },
-  { label: 'Pokémon à débloquer', to: pokedexUrl({ possession: 'missing' }), icon: Lock },
+  { label: 'Accueil', to: '/', icon: House, keywords: 'tableau de bord' },
+  { label: 'Collections', to: '/collections', icon: Library, keywords: 'extensions séries' },
+  { label: 'Pokédex', to: '/pokedex', icon: Grid3x3, keywords: 'classeur' },
+  {
+    label: 'Pokémon à débloquer',
+    to: pokedexUrl({ possession: 'missing' }),
+    icon: Lock,
+    keywords: 'manquants',
+  },
   { label: 'Pokémon sans carte', to: pokedexUrl({ card: 'without' }), icon: Grid3x3 },
-  { label: 'Catalogue par extension', to: '/catalogue', icon: Layers },
-  { label: 'Liste d’achats', to: shoppingUrl(), icon: ListChecks },
+  { label: 'Catalogue', to: '/catalogue', icon: Layers, keywords: 'extensions cartes séries' },
+  { label: 'Liste d’achats', to: shoppingUrl(), icon: ListChecks, keywords: 'souhaits' },
   {
     label: 'Prochaine commande',
     to: shoppingUrl({ view: 'prochaine-commande' }),
     icon: Sparkles,
+    keywords: 'plan assistant achats',
   },
-  { label: 'Commandes', to: shoppingUrl({ view: 'commandes' }), icon: Receipt },
-  { label: 'Budget', to: shoppingUrl({ view: 'budget' }), icon: Wallet },
-  { label: 'Valeur de la collection', to: '/valeur', icon: ChartLine },
-  { label: 'Réglages', to: '/donnees', icon: Database },
-  { label: 'Importer une collection', to: '/donnees#importer', icon: Upload },
+  { label: 'Commandes', to: shoppingUrl({ view: 'commandes' }), icon: Receipt, keywords: 'achats' },
+  { label: 'Budget', to: shoppingUrl({ view: 'budget' }), icon: Wallet, keywords: 'plafond mois' },
+  { label: 'Valeur', to: '/valeur', icon: ChartLine, keywords: 'prix cardmarket évolution' },
+  {
+    label: 'Réglages',
+    to: settingsPath(),
+    icon: Settings,
+    keywords: 'paramètres données pokédex public partage',
+  },
+  {
+    label: 'Mon compte',
+    to: settingsPath('#compte'),
+    icon: UserRound,
+    keywords: 'pseudo mot de passe réglages supprimer',
+  },
 ]
 
 /**
@@ -62,9 +85,10 @@ export const AppSearch = memo(function AppSearch({
 
   const commands = useMemo<Command[]>(
     () => [
-      ...PLACES.map(({ label, to, icon: Icon }) => ({
+      ...PLACES.map(({ label, to, icon: Icon, keywords = '' }) => ({
         id: `page:${to}`,
         label,
+        keywords: `${fold(label)} ${keywords} ${fold(keywords)}`,
         group: 'Pages',
         icon: <Icon size={ICON} />,
         onRun: () => navigate(to),
@@ -76,6 +100,22 @@ export const AppSearch = memo(function AppSearch({
         group: 'Actions',
         icon: <Download size={ICON} />,
         onRun: exportCollection,
+      },
+      {
+        id: 'action:import',
+        label: 'Importer une collection',
+        keywords: 'sauvegarde fichier json restaurer reglages',
+        group: 'Actions',
+        icon: <Upload size={ICON} />,
+        onRun: () => navigate(settingsPath('#importer')),
+      },
+      {
+        id: 'action:theme',
+        label: 'Changer de thème',
+        keywords: 'thème theme sombre clair nuit jour couleurs',
+        group: 'Actions',
+        icon: <Moon size={ICON} />,
+        onRun: toggleTheme,
       },
       ...SPECIES.map(({ id, names }) => ({
         id: `pokemon:${id}`,
