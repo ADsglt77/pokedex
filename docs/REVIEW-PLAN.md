@@ -632,7 +632,25 @@ focus perdu), et ses mineurs. Aucun test (interface).*
 
 #### Optimisation
 
-**L13 — Logos sans métadonnées (données)**
+**L13 — Logos sans métadonnées (données)** — *fait le 12 novembre 2026 (`03232e2`). Décisions
+validées : seuls les blocs `XMP ` et `EXIF` sont retirés (le profil `ICCP`, l'image, sa
+transparence et une animation restent) ; seulement un WebP, tout autre fichier copié tel quel ;
+seuls les deux logos lourds (fr SVP, fr MEP, en leurs deux tailles : quatre fichiers) seront
+recopiés (A-03), les 436 autres gardent leurs métadonnées, légères ; la recopie est faite par
+l'utilisateur. `withoutMetadata`
+(`worker/ingest/webp.ts`), appelé par `mirror` : les blocs retirés, leurs drapeaux effacés du
+`VP8X`, la taille RIFF réécrite ; un WebP mal formé (un bloc qui déborde, des octets en trop) est
+rendu tel quel. Tests (`webp.test.ts`) : un WebP réel fait par Chrome (`VP8X`, `ICCP`,
+`ALPH`, `VP8 `, décodé dans Chrome : 6 × 3 px, transparence gardée) auquel on ajoute un
+`EXIF` de taille impaire et un `XMP ` de 11 Ko en ressort octet pour octet ; sans métadonnées
+ou pas un WebP, rendu tel quel ; mal formé, rendu tel quel ; `mirror` écrit dans R2 le WebP sans
+elles, son type gardé ; les drapeaux effacés seulement dans le `VP8X` (le filtre de la
+transparence d'`ALPH`, aux mêmes bits, gardé). Chaque garde vérifiée par une mutation (drapeaux,
+bourrage, taille RIFF, fin des blocs, EXIF, signature, le seul `VP8X`) : toutes vues.
+Contre-review GO, ses deux constats corrigés (ce dernier test ; A-03, quatre fichiers et non
+deux) ; elle a passé `withoutMetadata` sur les 71 775 WebP du R2 local : 6 308 allégés (23 Mo),
+aucun refusé, les 11 décodés par Chrome identiques au pixel près (`MEP-hd` : 1 541 612 →
+12 404 octets). Aucune ingestion, rien d'écrit dans R2.*
 - **Constats** : D-PERF-01.
 - **Fichiers** : `../pokedex-data/worker/ingest/images.ts` (`mirror`, `:93`).
 - **Changement** : retirer les blocs RIFF `XMP ` et `EXIF` avant d'écrire dans R2, effacer leurs
@@ -770,8 +788,10 @@ focus perdu), et ses mineurs. Aucun test (interface).*
 - **A-01 (P1)** : Bun 1.4.4 sur le poste, puis `bun install --frozen-lockfile` dans les deux dépôts.
 - **A-02** : relancer `bun run dev` dans `pokedex-data`. Il migre la D1 locale (0002, 0003) et
   arrête le 301 en boucle.
-- **A-03 (après L13)** : supprimer les deux logos (fr SVP, fr MEP) de R2, remettre `sets.logo` à
-  `NULL`, puis lancer `bun run ingest images`.
+- **A-03 (après L13, son déploiement)** : supprimer de R2 les quatre fichiers des deux logos
+  (`images/sets/fr/SVP-md.webp`, `SVP-hd.webp`, `MEP-md.webp`, `MEP-hd.webp`), remettre
+  `sets.logo` à `NULL` pour (fr, SVP) et (fr, MEP), puis lancer `bun run ingest images` ; chacun
+  doit ensuite peser moins de 20 Ko.
 - **A-04** : dans le tableau de bord, vérifier que la normalisation d'URL de la zone est active
   (D-SEC-08).
 - **A-05** : sur un iPhone réel :
