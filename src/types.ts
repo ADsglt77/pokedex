@@ -29,6 +29,12 @@ export type PokemonTypeId =
 
 export type GenerationId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
+/**
+ * Le nombre d'espèces du Pokédex national, celles des générations de `GenerationId` : une
+ * génération ajoutée change les deux ensemble (le site d'abord : `docs/deploiement.md`).
+ */
+export type TotalSpecies = 1025
+
 export interface PokemonSpecies {
   /** Numéro du Pokédex national. */
   id: number
@@ -319,6 +325,27 @@ export interface CatalogSetFile {
   cards: CatalogSetRow[]
   rarities: CatalogFile['rarities']
 }
+
+/*
+ * Les chemins des images (servies par le site sous `/images/…`, venues de l'API des données), sans
+ * nom de source. Celui du scan d'une carte est gardé tel quel dans les collections des comptes (un
+ * gabarit changé, et chaque carte enregistrée montrerait la carte de substitution) ; les autres se
+ * recalculent à l'affichage. Le dossier d'une langue : aucun pour le japonais, `fr/` pour le
+ * français.
+ */
+
+/** La taille d'un scan ou d'un logo : `md` pour les grilles et les listes, `hd` en grand. */
+export type ImageSize = 'md' | 'hd'
+/** Le scan d'une carte : le code de sa série, son rang (celui du catalogue), sa taille. */
+export type CardScanPath = `/images/cards/${'' | 'fr/'}${string}/${number}-${ImageSize}.webp`
+/** Le logo d'une série. */
+export type SetLogoPath = `/images/sets/${'' | 'fr/'}${string}-${ImageSize}.webp`
+/** L'icône d'un type de carte, d'une rareté. */
+export type TypeIconPath = `/images/types/${number}.webp`
+export type RarityIconPath = `/images/rarities/${number}.webp`
+/** Le sprite et l'illustration officielle d'un Pokémon. */
+export type SpritePath = `/images/species/${number}.png`
+export type ArtworkPath = `/images/species/artwork/${number}.png`
 
 /* L'état des tâches d'ingestion de l'API des données : `/api/status` */
 

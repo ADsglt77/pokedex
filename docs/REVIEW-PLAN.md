@@ -418,7 +418,23 @@ n'est écartée par `wellFormed`.*
 - **Comportement** : oui, à la marge. Décision D-11 : le seuil de la garde des séries.
 - **Effort** : S.
 
-**L09 — Avant tout changement de forme : le contrat (les deux dépôts, le site d'abord)**
+**L09 — Avant tout changement de forme : le contrat (les deux dépôts, le site d'abord)** — *fait
+le 12 novembre 2026 (non commité). Le contrat a `TotalSpecies = 1025` et les gabarits des chemins
+d'images (`ImageSize`, `CardScanPath`, `SetLogoPath`, `TypeIconPath`, `RarityIconPath`,
+`SpritePath`, `ArtworkPath`), copiés dans `src/types.ts` et vérifiés par `Equal`. `TOTAL_SPECIES:
+TotalSpecies` des deux côtés. Les générations viennent, des deux côtés, d'un objet `satisfies
+Record<GenerationId, …>` (`GENERATION_NAMES` du site, `GENERATION_RANGES` des données) : une
+génération du contrat sans sa ligne, et `tsc` échoue. Les
+fonctions des chemins rendent ces types, des deux côtés. `bun run lint` des données lance le
+contrôle du contrat quand le site est à côté (`scripts/contracts.ts`), et passe sans lui (la
+construction de Cloudflare). Les faux de `DATA` : `satisfies PriceFile`. L'en-tête « même règle
+que » sur les copies : `card-images.ts` ↔ `image-paths.ts`, `CARD_TYPES`, `numberKey`. Vérifié
+par des mutations : une taille ajoutée d'un seul côté, une génération oubliée d'un côté ou de
+l'autre, un gabarit changé côté données, chacune fait échouer `tsc`. Contre-review GO, ses
+constats corrigés. À l'exécution, rien ne change (les mêmes
+générations, 1025, les mêmes chemins) : les deux dépôts peuvent partir dans n'importe quel ordre.
+La règle « élargir puis restreindre », la forme gardée dans R2 en trois temps, l'ordre d'une
+génération et la version du format (B-SYNC-04, la règle seulement) : `docs/deploiement.md`.*
 - **Constats** : D-INTEG-01, D-INTEG-02, D-INTEG-03, D-INTEG-04, et la règle seulement de
   B-SYNC-04.
 - **Fichiers** :

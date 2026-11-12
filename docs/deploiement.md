@@ -154,8 +154,44 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
   nouveau code. Un contrôle en échec, un fichier pas au format compris : rien n'est déployé, la
   version d'avant continue. Le résultat s'affiche sur le commit dans GitHub et dans le tableau de
   bord.
-- **Les deux dépôts se déploient chacun de leur côté** : un changement de l'API que le site attend
-  (le contrat : `bun run contracts`) se pousse d'abord dans `pokedex-data`.
+- **Les deux dépôts se déploient chacun de leur côté**, sans ordre garanti : deux constructions
+  indépendantes (l'une peut échouer et l'autre partir), et des onglets restent ouverts des jours sur
+  l'ancien site. Le contrat (`../pokedex-data/src/contract.ts`, sa copie `src/types.ts`) est
+  vérifié par `bun run contracts` : lancé par `bun lint` ici, et par `bun run lint` des données
+  quand ce dépôt est à côté. Il compare les deux copies de travail, pas ce qui est en ligne. D'où la
+  règle de toute forme partagée, **élargir puis restreindre** :
+  - un champ s'ajoute d'abord facultatif (`?`), le site sachant faire sans ; il ne devient
+    obligatoire qu'une fois partout en ligne. Un champ se retire dans l'autre sens : le site cesse
+    de le lire, puis l'API de le donner ;
+  - tout tuple (`CatalogRow`, `sets` et `rarities` de `CatalogFile`, les séries de
+    `CatalogSetsFile`, `CardPriceRow`), que le site lit par position, ne s'allonge qu'à la fin,
+    jamais réordonné ;
+  - les gabarits des chemins d'images (`CardScanPath`… du contrat) : celui des scans est gardé dans
+    les collections, changé, l'API sert l'ancien chemin et le nouveau ; les autres (logos, icônes,
+    sprites, illustrations : les illustrations en WebP) se recalculent à l'affichage, l'API sert le
+    nouveau avant que le site ne le demande ;
+  - un changement de l'API que le site attend se pousse d'abord dans `pokedex-data` (élargie, elle
+    sert encore le site d'avant), sauf une génération (ci-dessous).
+- **Une forme gardée dans R2** (espèces et catalogue, `snapshots/…`, servis tels qu'écrits :
+  `FORMAT` ne vaut que pour les réponses tirées des prix et les historiques, `serveTagged`) change
+  en trois temps, le site sachant lire les deux formes d'abord (inutile pour un champ facultatif
+  ajouté en fin) : les données écrivent la nouvelle forme ; la tâche relancée récrit R2
+  (`bun run ingest catalog --remote` dans `pokedex-data` : elle recalcule toutes les réponses du
+  catalogue ; `species` de même) ; puis le site cesse de lire l'ancienne.
+- **Une génération ajoutée** (`GenerationId` et `TotalSpecies` du contrat) : **le site d'abord**
+  (sa ligne dans `GENERATION_NAMES`, `src/config/pokedex.ts` : `tsc` la réclame), puis les
+  données (`GENERATION_RANGES` de `config/pokedex.ts`, que `tsc` réclame aussi), puis la tâche
+  `species`, puis `cards` (le catalogue et les images, dont les sprites des nouveaux Pokémon), à
+  la main : `bun run ingest species --remote`, puis `bun run ingest cards --remote`. Dans l'ordre
+  inverse, la grille du Pokédex tomberait (une génération sans nom) et chaque envoi d'une
+  collection avec une carte d'un nouveau Pokémon serait refusé. Dans celui-ci, d'ici la fin des
+  tâches, les cartes d'un nouveau Pokémon répondent 404 (jusqu'au rechargement de la page), et ses
+  sprites aussi.
+- **La version du format de la collection** (à faire avant le premier champ ajouté au document) :
+  un onglet resté sur l'ancien code relit la collection sans les champs qu'il ne connaît pas
+  (`readCollection`), et son envoi suivant les effacerait partout. Avant ce champ, le client
+  enverra la version de son format, et le serveur refusera un format plus ancien (426, « Rechargez
+  la page »), avec son test.
 - **Le journal** : tableau de bord › le Worker › Logs (7 jours), ou en direct :
 
   ```bash

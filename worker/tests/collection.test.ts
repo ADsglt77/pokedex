@@ -31,6 +31,7 @@ import {
   type CollectionDocument,
   type CollectionResponse,
   type CollectionSaved,
+  type PriceFile,
   type VitrineData,
 } from '@/types'
 import { card, collectionWith, NOW, order, ownership, withCards } from '../../tests/fixtures'
@@ -609,7 +610,7 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
       return Response.json({
         date: '2026-10-19',
         cards: Object.fromEntries(ids.map((id) => [id, [6.87, 5, 7.2]])),
-      })
+      } satisfies PriceFile)
     })
     try {
       expect((await visit()).prices).toEqual({
@@ -658,7 +659,7 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
       return Response.json({
         date: '2026-10-19',
         cards: Object.fromEntries(ids.map((id) => [id, [1, null, null]])),
-      })
+      } satisfies PriceFile)
     })
     api.stop = () => dataApi.mockReset()
     return api

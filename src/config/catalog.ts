@@ -1,6 +1,7 @@
 /**
  * Les types et les raretés des cartes du catalogue, tels que Pokécardex les numérote (`cards.type`,
- * `cards.rarity`) : configuration, pas de logique.
+ * `cards.rarity`) : configuration, pas de logique. Les ids de `CARD_TYPES` : les mêmes que
+ * `CARD_TYPES` de `../pokedex-data/src/config/catalog.ts` (l'une change, l'autre aussi).
  */
 
 /**

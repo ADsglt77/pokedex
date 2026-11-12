@@ -32,7 +32,10 @@ export function referenceCode(reference: string): CardCode | null {
 export const referenceName = (reference: string) =>
   reference.replace(/\s*\([^()]*\)\s*$/, '') || reference
 
-/** Un numéro comparable : `017` et `17` sont la même carte, `tg01` et `TG01` aussi. */
+/**
+ * Un numéro comparable : `017` et `17` sont la même carte, `tg01` et `TG01` aussi. Même règle que
+ * `numberKey` de `../pokedex-data/worker/ingest/catalog.ts` (l'une change, l'autre aussi).
+ */
 export const numberKey = (number: string) =>
   /^\d+$/.test(number) ? String(Number(number)) : number.toUpperCase()
 
