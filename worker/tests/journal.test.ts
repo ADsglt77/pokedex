@@ -31,6 +31,14 @@ describe('adresse du visiteur derrière Cloudflare', () => {
     })
 
     expect(visitorOf(request)).toBe('2001:db8:1234:5678::/64')
+    // `::` développé, au début du réseau ou à la fin de l'adresse : le même /64 (même règle que
+    // `networkOf` des données).
+    for (const ip of ['2001:db8::1', '2001:db8:0:0:1::']) {
+      const compressed = new Request('https://pokecodex.fr', {
+        headers: { 'cf-connecting-ip': ip },
+      })
+      expect(visitorOf(compressed)).toBe('2001:db8:0:0::/64')
+    }
   })
 
   test('reste vide sans adresse', () => {

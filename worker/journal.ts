@@ -184,7 +184,8 @@ export function journal(
 
 /**
  * Le visiteur d'une requête, pour compter ses actions : son adresse, ramenée à son réseau /64 pour
- * une IPv6 (un fournisseur en donne des milliards à chacun) ; `''` sans adresse.
+ * une IPv6 (un fournisseur en donne des milliards à chacun) ; `''` sans adresse. Même règle que
+ * `networkOf` des données (`../pokedex-data/worker/limits.ts`) : l'une change, l'autre aussi.
  */
 export function visitorOf(request: Request) {
   const ip = requestIp(request) ?? ''

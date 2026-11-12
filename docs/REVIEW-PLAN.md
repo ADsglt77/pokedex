@@ -370,22 +370,25 @@ hors lot : les détails corrigés d'une carte déjà dans la collection sont ign
 
 #### Bug
 
-**L07 — Garde-fous de l'ingestion (données)** — *fait le 10 novembre 2026 (pas encore en ligne).
-D-11 validée : 3 séries, ou une série de plus de 20 cartes. `streamArray` refuse un document
-sans la fin de son tableau ; chaque essai d'une étape a 30 min (10 par défaut) ; `isDue` mesure
-une réussite depuis le début du passage (un échec depuis sa fin), moins 10 min (`CRON_MARGIN`) :
-`prices` toutes les 6 h, et non plus 7, quelle que soit la durée du passage. Un prix plausible
-(`plausiblePrice`, `src/lib/history.ts`, commun aux prix du jour et à l'historique repris) : au
-centime, plus de 0 et moins de 100 000 €. L'historique repris : au plus 200 jours avant le
-dernier relevé ; une carte dont aucun jour n'est dans ces bornes compte comme sans historique
-(la garde « format changé »). Au-delà du seuil de D-11, `saveBlocks` ne retire aucune série :
-le reste du passage est enregistré, réponses comprises, puis la tâche échoue, le journal nomme
-les séries. `saveSeries` écarte une carte dont l'id ou le rang (1 à 9 999) ne sont pas des
-entiers positifs (comptée au journal ; cette lecture ne retire alors aucune carte de la série) ;
-un id Cardmarket mal formé compte pour aucun (en texte, il est lu). Tests : `prices`, `history`,
-`history-run`, `runs`, `catalog`, `catalog-run` (seuils exacts : 20 cartes et 3 séries passent, 21
-et 4 non ; 5 h 51 due, 5 h 49 non ; 200 jours repris, 201 non). Contre-review indépendante : ses
-constats corrigés. Aucune ingestion lancée.*
+**L07 — Garde-fous de l'ingestion (données)** — *fait le 10 novembre 2026, en ligne le 12
+(`45b7067`), clos. D-11 validée : 3 séries, ou une série de plus de 20 cartes. `streamArray`
+refuse un document sans la fin de son tableau ; chaque essai d'une étape a 30 min (10 par défaut) ;
+`isDue` mesure une réussite depuis le début du passage (un échec depuis sa fin), moins 10 min
+(`CRON_MARGIN`) : `prices` toutes les 6 h, et non plus 7, quelle que soit la durée du passage. Un
+prix plausible (`plausiblePrice`, `src/lib/history.ts`, commun aux prix du jour et à l'historique
+repris) : au centime, plus de 0 et moins de 100 000 €. L'historique repris : au plus 200 jours avant
+le dernier relevé ; une carte dont aucun jour n'est dans ces bornes compte comme sans historique (la
+garde « format changé »). Au-delà du seuil de D-11, `saveBlocks` ne retire aucune série : le reste
+du passage est enregistré, réponses comprises, puis la tâche échoue, le journal nomme les séries.
+`saveSeries` écarte une carte dont l'id ou le rang (1 à 9 999) ne sont pas des entiers positifs
+(comptée au journal ; cette lecture ne retire alors aucune carte de la série) ; un id Cardmarket mal
+formé compte pour aucun (en texte, il est lu). Tests : `prices`, `history`, `history-run`, `runs`,
+`catalog`, `catalog-run` (seuils exacts : 20 cartes et 3 séries passent, 21 et 4 non ; 5 h 51 due, 5
+h 49 non ; 200 jours repris, 201 non). Contre-review indépendante : ses constats corrigés. Aucune
+ingestion lancée. En ligne, vérifié : le Cron de 8 h (UTC) a fait un seul passage `prices`, réussi,
+sur le guide du 12 novembre lu en entier ; les 4 « plus bas » aberrants (100 000 à 1 000 000 €) sont
+vides, aucun prix hors bornes ; le suivant est dû à 14 h, et non plus 15 h. Aucune des 54 129 cartes
+n'est écartée par `wellFormed`.*
 - **Constats** :
   - D-FIA-01 et D-FIA-02, à faire en premier ;
   - D-FIA-05 ;
@@ -446,7 +449,22 @@ constats corrigés. Aucune ingestion lancée.*
 
 #### Sécurité
 
-**L08 — Limites de l'entrée d'Internet de l'API des données (données)**
+**L08 — Limites de l'entrée d'Internet de l'API des données (données)** — *fait le 12 novembre
+2026. D-05 validée (l'usage normal vérifié : aucun client à token n'appelle `/v1/wants`). La limite
+de toutes les demandes compte le réseau (`networkOf`, l'IPv6 ramenée à son /64, même règle que
+`visitorOf` du site, qui renvoie à elle). Après le token, `guard` rend le nom du client : les routes
+coûteuses sont comptées par client (`limitedHeavy`), `/v1/histories` à 20 par 10 s, `/v1/wants` à 5
+(une nouvelle limite, `WANTS_LIMIT`, `namespace_id` 1003, notée dans les deux `wrangler.jsonc`).
+`getPath` de Hono partout (limites et token) : `/v1/%77ants` est limité. En http, un token reçoit
+403 sans redirection, et le journal nomme son client (« à changer »). Mais en ligne, la zone
+redirige le http avant le Worker (« Always Use HTTPS », vérifié : son 301 n'a pas les en-têtes du
+Worker) : ce 403 ne joue que si ce réglage change (A-08). Les compteurs sont tenus par lieu de
+Cloudflare : un token qui a fui, servi par plusieurs lieux, a la limite de chacun. Tests
+(`api.test.ts`) : deux IPv6 du même /64 (`::` développé compris, testé aussi pour `visitorOf` du
+site), une IPv4 entière ; la même limite pour un client de deux adresses, une autre pour l'autre
+client, aucune sans token ; `/v1/%77ants` limité ; http avec token, 403, et sa ligne au journal.
+Rejoués sur l'ancien code : les quatre échouent ; et sans `getPath` seul, `/v1/%77ants` passe.
+Aucune ingestion.*
 - **Constats** : D-SEC-04 (DEC-12), D-SEC-08, D-SEC-11.
 - **Fichiers** :
   - `../pokedex-data/worker/limits.ts:14-22` ;
@@ -646,7 +664,7 @@ constats corrigés. Aucune ingestion lancée.*
 | D-02 | Limiter `/api/status` et `/api/health` ? (L02) | Oui, dans `DATA_LIMIT` (400 par 10 s) : loin d'une surveillance normale. **Validée** le 10 novembre 2026. |
 | D-03 | Le seuil des refus par pseudo (L03) | 20 par heure. Contrepartie : un tiers peut bloquer une heure la connexion à un pseudo, et le message le dit. **Validée** le 10 novembre 2026. |
 | D-04 | « Ajouter comme » (L06) | Un `Switch` « Je la possède déjà », éteint par défaut. **Validée** le 10 novembre 2026, avec le libellé « Non possédée » plutôt que le `Switch`. |
-| D-05 | DEC-12 : la clé des limites des données (L08) | Le /64, et les routes lourdes comptées par client. |
+| D-05 | DEC-12 : la clé des limites des données (L08) | Le /64, et les routes lourdes comptées par client. **Validée** le 12 novembre 2026 (5 demandes par 10 s et par client pour `/v1/wants`), sous réserve de l'usage normal : vérifié, sur 7 jours aucun appel de `/v1/wants` par l'entrée d'Internet ; le site passe par sa liaison, sans ces limites. |
 | D-06 | `/donnees` devient `/reglages` (L12) | Oui, avec une redirection. |
 | D-07 | Direction visuelle (L17) | Les tuiles d'indicateurs seulement sur l'Accueil ; ailleurs, une ligne de résumé. |
 | D-08 | Synonymes des raretés (L17) | Une table côté site (`lib/card-catalog.ts`), sans toucher au contrat ni à R2. |
@@ -697,6 +715,14 @@ constats corrigés. Aucune ingestion lancée.*
   - durées des étapes du Workflow : `npx wrangler workflows instances describe ingest <id>`,
     pour D-FIA-02 ;
   - poids des logos servis.
+- **A-08 (écartée le 12 novembre 2026 : « Always Use HTTPS » reste actif)** : pour que le
+  Worker des données réponde 403 à un token envoyé en http (le script échoue, et le journal nomme le
+  client dont le token est à changer : D-SEC-11), couper « Always Use HTTPS » (SSL/TLS › Edge
+  Certificates). Ce réglage vaut pour toute la zone, aucune Configuration Rule ne le change par
+  hôte ; les deux Workers redirigent eux-mêmes le http (le site par `canonicalHost`, avec
+  `run_worker_first` ; les données dans `worker/index.ts`). Si un autre hôte de la zone en dépend :
+  une Redirect Rule (`not ssl and http.host ne "api.pokecodex.fr"` vers https). Sans cela, la zone
+  répond 301, et le token, déjà passé en clair, n'est signalé nulle part.
 
 ## 7. Index par catégorie
 

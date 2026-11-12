@@ -13,7 +13,7 @@ chaque push sur `main`.
 
 | Worker | Dépôt | Adresse | Ce qu'il a |
 |---|---|---|---|
-| `pokedex-data` | `pokedex-data` | `api.pokecodex.fr` | D1 `pokedex-data` (catalogue, prix, historique, état des tâches), R2 `pokedex-data` (images, grosses réponses), le Workflow `ingest` et son Cron horaire, ses limites par adresse |
+| `pokedex-data` | `pokedex-data` | `api.pokecodex.fr` | D1 `pokedex-data` (catalogue, prix, historique, état des tâches), R2 `pokedex-data` (images, grosses réponses), le Workflow `ingest` et son Cron horaire, ses limites (par réseau, puis par client) |
 | `pokedex` | `pokedex` | `pokecodex.fr` (et `www.`, qui y mène) | D1 `pokecodex` (comptes, collections : **dans l'Union européenne**), les fichiers de l'app (`ASSETS`), le Worker des données par sa liaison de service (`DATA`), ses limites par visiteur |
 
 Le site joint l'API par sa liaison de service, sans réseau ni token : **le Worker des données doit
@@ -24,12 +24,12 @@ Qui fait quoi (le détail est dans l'en-tête de chaque fichier) :
 
 | Fichier | Rôle |
 |---|---|
-| `wrangler.jsonc` (chaque dépôt) | Le Worker : ses liaisons, ses domaines (`routes`), ses limites (`ratelimits` : leurs `namespace_id` sont partagés par tout le compte Cloudflare, le site a 2001 à 2006, les données 1001 et 1002 ; une nouvelle limite part avec le déploiement, sans rien régler dans le tableau de bord) |
+| `wrangler.jsonc` (chaque dépôt) | Le Worker : ses liaisons, ses domaines (`routes`), ses limites (`ratelimits` : leurs `namespace_id` sont partagés par tout le compte Cloudflare, le site a 2001 à 2006, les données 1001 à 1003 ; une nouvelle limite part avec le déploiement, sans rien régler dans le tableau de bord) |
 | `package.json` : `ci`, `deploy` (chaque dépôt) | Ce que lance Workers Builds : les contrôles et la construction, puis les migrations de la base et le déploiement |
 | `package.json` : `packageManager` (les deux dépôts) | La version de Bun, la même sur le poste et pour Workers Builds, qui la lit ici : `bun@1.4.4` (Cloudflare demande au moins la 1.4.4 depuis le 23 octobre 2026 : les plus anciennes font confiance à des certificats compromis). Pour en changer : `bun upgrade` sur le poste, ce champ, puis vérifier que `bun install --frozen-lockfile` ne réécrit pas `bun.lock` |
 | `package.json` : `overrides` (site) | Une seule copie de zod et de Wrangler, undici sans ses avis. `@cloudflare/vite-plugin` 1.65.0 épingle Wrangler 4.152.0 et une miniflare qui tire undici 7.29.1 : retirer `wrangler` et `undici` quand vite-plugin, `@cloudflare/vitest-plugin` et `wrangler` épingleront les mêmes versions (vite-plugin 1.66.0 : voir aussi « En développement ») |
 | `worker/headers.ts`, `worker/limits.ts` (site) | En-têtes de sécurité, cache, moteurs de recherche, `http://` et `www` vers `https://pokecodex.fr`, limites par visiteur |
-| `worker/index.ts` (données) | Son entrée d'Internet : lecture seule, en-têtes d'une API, limites, token |
+| `worker/index.ts` (données) | Son entrée d'Internet : https (un token en http : 403), lecture seule, en-têtes d'une API, limites, token |
 | `knip.ci.json`, `bun run lint:ci` (site) | Le lint sans `../pokedex-data`, que la construction de Cloudflare n'a pas |
 
 ## Pourquoi l'offre payante

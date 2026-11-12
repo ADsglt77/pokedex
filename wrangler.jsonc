@@ -37,7 +37,7 @@
   // visite (la collection : un envoi toutes les 0,5 s par onglet au plus ; les prix d'une collection
   // de 5 000 cartes : 25 demandes à la première page ; le Pokédex : 1 025 pochettes ; les lignes de
   // la liste de souhaits : une demande par 1 000 cartes, à l'ouverture de leur fenêtre). Leurs
-  // `namespace_id` ne doivent pas reprendre ceux du Worker des données (1001, 1002) : ils sont
+  // `namespace_id` ne doivent pas reprendre ceux du Worker des données (1001 à 1003) : ils sont
   // partagés par tout le compte Cloudflare.
   "ratelimits": [
     { "name": "COLLECTION_LIMIT", "namespace_id": "2001", "simple": { "limit": 40, "period": 10 } },
