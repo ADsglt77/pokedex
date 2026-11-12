@@ -1,24 +1,25 @@
 /**
  * La garde du Worker contre l'écrasement (`worker/collection.ts`) : un appareil qui envoie une
  * collection partie d'une version dépassée (un autre onglet, un autre appareil l'a changée), ou en
- * avance, est refusé (409), et la version du serveur reste telle quelle ; sans session rien ne
- * passe, ni d'un autre site (une modification : 403) ; un document abîmé est refusé (400). Une
- * erreur ici écraserait les commandes d'un autre appareil. La lecture dit à quel compte est la
- * collection, et seulement sa version quand l'appareil a déjà celle-là (`?version=`) ; un envoi
- * compressé (`gzip`, celui du site) est enregistré, mais refusé (413) au-delà de 1 900 000 octets
- * décompressés, sans jamais décompresser plus (une bombe de 100 Mo suivie d'octets illisibles : lue
- * jusqu'au bout, elle ferait un 400), et au-delà de 1 990 000 une fois relu (un document de 2,1 Mo,
- * que D1 refuserait) ; un export juste à la limite, accepté par l'import si et seulement si le
- * serveur enregistre l'envoi qui suivrait (`readImport`, `sentText`) ; sans session, 401 sans rien décompresser (le cookie
- * renouvelé d'une session repart toujours) ; une panne en lisant la session, 500 (pas le 400 d'un
- * document refusé) ; un envoi renvoyé tel quel après une réponse perdue est reconnu (200, la même
- * version), un autre parti de la même version reste refusé (409). Chaque compte ne touche qu'à sa
- * collection, et la sienne part avec lui. Le journal : ce qu'un compte peut répéter à volonté (un
- * export signalé, un envoi refusé) n'y écrit qu'une ligne par minute ; un signalement de plus de
- * 1 Ko, refusé (413 ; sans session, 401). Et ce que montre le Pokédex
- * public d'un compte (`/api/vitrine/<pseudo>`, l'aperçu d'un lien partagé) : ce qu'il laisserait
- * passer serait public. Le Worker entier, sur une base D1 neuve pour le fichier, avec un compte
- * créé comme à l'inscription et un premier envoi ; chaque test part de la version du moment.
+ * avance, est refusé (409), et la version du serveur reste telle quelle (cinq envois simultanés de
+ * la même version : un seul enregistré, quatre 409) ; sans session rien ne passe, ni d'un autre
+ * site (une modification : 403) ; un document abîmé est refusé (400). Une erreur ici écraserait les
+ * commandes d'un autre appareil. La lecture dit à quel compte est la collection, et seulement sa
+ * version quand l'appareil a déjà celle-là (`?version=`) ; un envoi compressé (`gzip`, celui du
+ * site) est enregistré, mais refusé (413) au-delà de 1 900 000 octets décompressés, sans jamais
+ * décompresser plus (une bombe de 100 Mo suivie d'octets illisibles : lue jusqu'au bout, elle
+ * ferait un 400), et au-delà de 1 990 000 une fois relu (un document de 2,1 Mo, que D1
+ * refuserait) ; un export juste à la limite, accepté par l'import si et seulement si le serveur
+ * enregistre l'envoi qui suivrait (`readImport`, `sentText`) ; sans session, 401 sans rien
+ * décompresser (le cookie renouvelé d'une session repart toujours) ; une panne en lisant la
+ * session, 500 (pas le 400 d'un document refusé) ; un envoi renvoyé tel quel après une réponse
+ * perdue est reconnu (200, la même version), un autre parti de la même version reste refusé (409).
+ * Chaque compte ne touche qu'à sa collection, et la sienne part avec lui. Le journal : ce qu'un
+ * compte peut répéter à volonté (un export signalé, un envoi refusé) n'y écrit qu'une ligne par
+ * minute ; un signalement de plus de 1 Ko, refusé (413 ; sans session, 401). Et ce que montre le
+ * Pokédex public d'un compte (`/api/vitrine/<pseudo>`, l'aperçu d'un lien partagé) : ce qu'il
+ * laisserait passer serait public. Le Worker entier, sur une base D1 neuve pour le fichier, avec un
+ * compte créé comme à l'inscription et un premier envoi ; chaque test part de la version du moment.
  */
 
 import { env } from 'cloudflare:workers'
@@ -157,6 +158,28 @@ describe('/api/collection : jamais une version écrasée', () => {
     })
     expect(stale.status).toBe(409)
     expect(await stored()).toEqual(after)
+  })
+
+  test('cinq envois simultanés partis de la même version : un seul enregistré, quatre 409, la version avance d’un cran', async () => {
+    // L'écriture ne passe que si la version est encore celle lue (`setWhere`, d'un seul tenant) :
+    // sans elle, les cinq liraient la même version et écriraient tous, le dernier gagnant.
+    const before = await stored()
+    const documents = Array.from({ length: 5 }, (_, index): CollectionDocument => ({
+      collection: withCards(collectionWith(), card(`simultane-${index}`, [25])),
+      shopping: emptyShopping(),
+    }))
+    const responses = await Promise.all(
+      documents.map((document) =>
+        collection('PUT', { account: sacha, baseVersion: before.version, ...document }),
+      ),
+    )
+    const statuses = responses.map(({ status }) => status)
+    expect([...statuses].sort()).toEqual([200, 409, 409, 409, 409])
+    expect(await stored()).toEqual({
+      version: before.version + 1,
+      account: sacha,
+      ...documents[statuses.indexOf(200)]!,
+    })
   })
 
   test('une version en avance sur le serveur : 409', async () => {

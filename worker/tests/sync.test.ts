@@ -1,28 +1,30 @@
 /**
  * L'enregistrement de la collection, du navigateur au serveur : `store/account.ts` tel quel, contre
- * le Worker entier (`worker.request`). Une erreur ici perdrait des modifications
- * sans un mot, ou écraserait la collection d'un compte avec celle d'un autre. Couvert : une
- * collection refusée (« Envoi refusé ») reste à enregistrer, jamais relue ni renvoyée telle quelle ;
- * « Se reconnecter » au même compte envoie ce qui attendait, et rien ne part tant que la session est
+ * le Worker entier (`worker.request`). Une erreur ici perdrait des modifications sans un mot, ou
+ * écraserait la collection d'un compte avec celle d'un autre. Couvert : une collection refusée
+ * (« Envoi refusé ») reste à enregistrer, jamais relue ni renvoyée telle quelle ; « Se
+ * reconnecter » au même compte envoie ce qui attendait, et rien ne part tant que la session est
  * fermée ; au retour sur la page, une collection inchangée n'est pas remplacée (« Annuler » garde
- * ses références), changée ailleurs elle est relue ; celle d'un autre compte (connecté dans un autre
- * onglet) n'est jamais prise ; un envoi dont la réponse s'est perdue est reconnu, et la
- * modification suivante part, même si ce renvoi est refusé ; trop d'envois d'affilée (429) font réessayer, jamais « Envoi refusé » ; une modification faite pendant la
- * compression d'un envoi part aussi ; les envois partent compressés, ou tels quels sans
- * `CompressionStream` ; la page passée en arrière-plan envoie aussitôt ce qui attend ; un autre
- * onglet qui enregistre fait relire la collection ; une modification faite pendant cette relecture
- * n'affiche jamais « Enregistrée » tant qu'elle attend. Une version d'ici remplacée par celle du
- * serveur (409) alors que des modifications attendaient est mise de côté, telle qu'au moment du
- * remplacement (deux appareils, deux onglets, deux conflits d'affilée, une modification faite
- * pendant l'envoi refusé ou pendant la relecture) : reconnecté au même compte, elle reste ; pas
- * exportée, quitter la page le demande ; oubliée ou un autre compte connecté, elle disparaît, et
- * aucune n'est gardée à tort. Le navigateur est simulé (`window`,
- * `document`, `BroadcastChannel`, `fetch` vers le Worker) ; ni interface, ni DOM. On attend l'état voulu (`until`), jamais une
- * durée fixe, sauf pour vérifier que rien ne se passe (`quietly` : trop court, le test passerait à
- * tort, il n'échouerait jamais à tort).
+ * ses références), changée ailleurs elle est relue ; celle d'un autre compte (connecté dans un
+ * autre onglet) n'est jamais prise ; un envoi dont la réponse s'est perdue est reconnu, et la
+ * modification suivante part, même si ce renvoi est refusé, ou si un autre compte se connecte
+ * entre-temps (jamais « Session expirée ») ; une réponse 200 coupée laisse l'envoi à renvoyer tel
+ * quel (jamais « Rechargée ») ; trop d'envois d'affilée (429) font réessayer, jamais « Envoi
+ * refusé » ; une modification faite pendant la compression d'un envoi part aussi ; les envois
+ * partent compressés, ou tels quels sans `CompressionStream` ; la page passée en arrière-plan
+ * envoie aussitôt ce qui attend ; un autre onglet qui enregistre fait relire la collection ; une
+ * modification faite pendant cette relecture n'affiche jamais « Enregistrée » tant qu'elle attend.
+ * Une version d'ici remplacée par celle du serveur (409) alors que des modifications attendaient
+ * est mise de côté, telle qu'au moment du remplacement (deux appareils, deux onglets, deux conflits
+ * d'affilée, une modification faite pendant l'envoi refusé ou pendant la relecture) : reconnecté au
+ * même compte, elle reste ; pas exportée, quitter la page le demande ; oubliée ou un autre compte
+ * connecté, elle disparaît, et aucune n'est gardée à tort. Le navigateur est simulé (`window`,
+ * `document`, `BroadcastChannel`, `fetch` vers le Worker) ; ni interface, ni DOM. On attend l'état
+ * voulu (`until`), jamais une durée fixe, sauf pour vérifier que rien ne se passe (`quietly` : trop
+ * court, le test passerait à tort, il n'échouerait jamais à tort).
  */
 
-import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest'
 import type { CollectionData, CollectionResponse } from '@/types'
 import { card } from '../../tests/fixtures'
 import worker from '../index'
@@ -77,7 +79,8 @@ const leavingWarns = () => {
 
 /**
  * Le navigateur : sa session (`cookie`) ; `loseNextAnswer` : le prochain envoi arrive au serveur,
- * mais sa réponse se perd (délai dépassé, réseau coupé) ; `failNextPut` : le prochain envoi
+ * mais sa réponse se perd (délai dépassé, réseau coupé) ; `cutNextAnswer` : il arrive, le serveur
+ * répond 200, mais le corps de la réponse est coupé (illisible) ; `failNextPut` : le prochain envoi
  * n'arrive pas au serveur, et reçoit ce statut (502 d'un relais, 400) ; `duringNextGet` : ce qui
  * se passe dans la page pendant la prochaine lecture. `exchanges` : chaque échange avec
  * `/api/collection`, dans l'ordre (« GET ?version=3 », « PUT gzip »).
@@ -85,6 +88,7 @@ const leavingWarns = () => {
 const browser = {
   cookie: '',
   loseNextAnswer: false,
+  cutNextAnswer: false,
   failNextPut: 0,
   duringNextGet: null as (() => void) | null,
   exchanges: [] as string[],
@@ -108,6 +112,7 @@ interface AccountStore {
       refusal: string | null
       setAside: { id: number; document: { collection: CollectionData }; exported: boolean }[]
     }
+    subscribe: (listener: (state: { status: string }) => void) => () => void
   }
 }
 const ACCOUNT_STORE: string = '@/store/account'
@@ -142,6 +147,10 @@ beforeAll(async () => {
       browser.loseNextAnswer = false
       throw new TypeError('Réponse perdue')
     }
+    if (init?.method === 'PUT' && browser.cutNextAnswer) {
+      browser.cutNextAnswer = false
+      return new Response((await response.text()).slice(0, 5), response)
+    }
     if (init?.method === 'GET' && browser.duringNextGet) {
       const during = browser.duringNextGet
       browser.duringNextGet = null
@@ -151,6 +160,20 @@ beforeAll(async () => {
   }) as typeof fetch)
   store = (await import(ACCOUNT_STORE)) as AccountStore
   collectionStore = await import('@/store/collection')
+})
+
+// Chaque test part d'un navigateur sans doublure en attente ni page cachée : un test qui échoue
+// avant d'avoir consommé la sienne ne fait pas échouer le suivant à tort. La session (`cookie`)
+// reste : chaque test se connecte lui-même (`signedIn`).
+beforeEach(() => {
+  Object.assign(browser, {
+    loseNextAnswer: false,
+    cutNextAnswer: false,
+    failNextPut: 0,
+    duringNextGet: null,
+    exchanges: [],
+  })
+  page.visibilityState = 'visible'
 })
 
 afterAll(async () => {
@@ -175,6 +198,14 @@ const quietly = () => sleep(150)
 const status = () => store.useAccountStore.getState().status
 const inMemory = () => collectionStore.useCollectionStore.getState().collection
 const cardsInMemory = () => Object.keys(inMemory().customCards).sort()
+/** Chaque état pris par le menu, à partir de maintenant ; `stop` cesse de les noter. */
+function statuses() {
+  const seen: string[] = []
+  const stop = store.useAccountStore.subscribe(({ status }) => {
+    if (seen.at(-1) !== status) seen.push(status)
+  })
+  return { seen, stop }
+}
 /** Tout est enregistré : rien n'attend, et le menu le dit. */
 const isSaved = () => status() === 'saved' && !store.hasUnsavedChanges()
 /** Les cartes de chaque version mise de côté, de la plus ancienne à la plus récente. */
@@ -370,6 +401,48 @@ describe('store/account.ts : rien de perdu sans un mot, rien d’écrasé', () =
     const puts = browser.exchanges.filter((exchange) => exchange.startsWith('PUT'))
     expect(puts.length).toBeGreaterThan(0)
     expect(puts.every((exchange) => exchange === 'PUT gzip')).toBe(true)
+  })
+
+  test('une réponse perdue, puis un autre compte connecté : son envoi part, jamais « Session expirée »', async () => {
+    const first = await signedIn('Perduea')
+    change('a')
+    await until(isSaved)
+    // « b » est enregistré, mais sa réponse se perd : un envoi reste sans réponse.
+    browser.loseNextAnswer = true
+    change('b')
+    await until(() => status() === 'offline')
+    // Un autre compte se connecte : l'envoi d'avant, celui du premier compte, ne repart pas.
+    const states = statuses()
+    const { cookie } = await signedIn('Perdueb')
+    change('x')
+    await until(isSaved)
+    states.stop()
+    expect(states.seen).not.toContain('expired')
+    expect((await onServer(cookie)).cards).toEqual(['x'])
+    expect((await onServer(first.cookie)).cards).toEqual(['a', 'b'])
+  })
+
+  test('une réponse 200 coupée : « Hors ligne », l’envoi renvoyé tel quel et reconnu, jamais « Rechargée »', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const { cookie } = await signedIn('Coupee')
+      change('a')
+      await until(isSaved)
+      // « b » est enregistré, mais la réponse arrive coupée : illisible, l'envoi reste à renvoyer.
+      browser.cutNextAnswer = true
+      const states = statuses()
+      change('b')
+      await until(() => status() === 'offline')
+      expect((await onServer(cookie)).cards).toEqual(['a', 'b'])
+      change('c')
+      await until(isSaved)
+      states.stop()
+      expect(states.seen).not.toContain('reloaded')
+      expect((await onServer(cookie)).cards).toEqual(['a', 'b', 'c'])
+      expect(cardsInMemory()).toEqual(['a', 'b', 'c'])
+    } finally {
+      errors.mockRestore()
+    }
   })
 
   test('un envoi resté sans réponse, renvoyé et refusé : la modification suivante part quand même', async () => {

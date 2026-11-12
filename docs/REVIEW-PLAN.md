@@ -501,7 +501,22 @@ Aucune ingestion.*
 
 #### Tests (sans changement de comportement)
 
-**L10 — Les gardes qui tiennent sans test**
+**L10 — Les gardes qui tiennent sans test** — *fait le 12 novembre 2026, des tests seulement, aucun
+changement de comportement. Site : cinq PUT simultanés de la même version, un seul enregistré et
+quatre 409 (`collection.test.ts`) ; dans `sync.test.ts`, un `beforeEach` qui remet à zéro les
+doublures du navigateur et la page, une réponse perdue puis un autre compte connecté (jamais
+« Session expirée »), une réponse 200 coupée (« Hors ligne », jamais « Rechargée »). Données :
+`workflow.test.ts` (nouveau) fait tourner `Ingest.run` (une tâche en échec avec sa raison, une qui
+réussit, le signe de vie au début de chaque étape puis une minute après, une tâche en cours passée
+sans arrêter les suivantes) ; `history.test.ts`, un prix du jour écrit pendant une reprise (l'année
+relue et refaite, les deux restent ; changée à chaque essai, une erreur après cinq) ;
+`prices.test.ts`, le prix d'il y a 30 jours lu dans l'année d'avant, en janvier. Chaque test vérifié
+par une mutation du code qu'il garde (`setWhere` retiré, `unanswered` gardé par `leave` ou vidé
+avant la lecture de la réponse, `beat` retiré ou redit avant la minute, l'échec non noté, `continue`
+en `break`, `unwritten` ignoré, l'année d'avant oubliée, ou sa semaine d'avant, le signe de vie
+compté depuis le début de l'étape) : toutes vues. Contre-review GO, ses constats corrigés. Pas
+testés : les nouveaux essais d'une étape et leur rejeu (le moteur des Workflows,
+`introspectWorkflow`, n'est pas employé).*
 - **Constats** :
   - côté site : B-SYNC-02, B-SYNC-05, et les tests 3 et 4 de B ;
   - côté données : D-FIA-03, D-FIA-04, et le test du passage de l'année.
