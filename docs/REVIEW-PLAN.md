@@ -370,7 +370,22 @@ hors lot : les détails corrigés d'une carte déjà dans la collection sont ign
 
 #### Bug
 
-**L07 — Garde-fous de l'ingestion (données)**
+**L07 — Garde-fous de l'ingestion (données)** — *fait le 10 novembre 2026 (pas encore en ligne).
+D-11 validée : 3 séries, ou une série de plus de 20 cartes. `streamArray` refuse un document
+sans la fin de son tableau ; chaque essai d'une étape a 30 min (10 par défaut) ; `isDue` mesure
+une réussite depuis le début du passage (un échec depuis sa fin), moins 10 min (`CRON_MARGIN`) :
+`prices` toutes les 6 h, et non plus 7, quelle que soit la durée du passage. Un prix plausible
+(`plausiblePrice`, `src/lib/history.ts`, commun aux prix du jour et à l'historique repris) : au
+centime, plus de 0 et moins de 100 000 €. L'historique repris : au plus 200 jours avant le
+dernier relevé ; une carte dont aucun jour n'est dans ces bornes compte comme sans historique
+(la garde « format changé »). Au-delà du seuil de D-11, `saveBlocks` ne retire aucune série :
+le reste du passage est enregistré, réponses comprises, puis la tâche échoue, le journal nomme
+les séries. `saveSeries` écarte une carte dont l'id ou le rang (1 à 9 999) ne sont pas des
+entiers positifs (comptée au journal ; cette lecture ne retire alors aucune carte de la série) ;
+un id Cardmarket mal formé compte pour aucun (en texte, il est lu). Tests : `prices`, `history`,
+`history-run`, `runs`, `catalog`, `catalog-run` (seuils exacts : 20 cartes et 3 séries passent, 21
+et 4 non ; 5 h 51 due, 5 h 49 non ; 200 jours repris, 201 non). Contre-review indépendante : ses
+constats corrigés. Aucune ingestion lancée.*
 - **Constats** :
   - D-FIA-01 et D-FIA-02, à faire en premier ;
   - D-FIA-05 ;
@@ -637,7 +652,7 @@ hors lot : les détails corrigés d'une carte déjà dans la collection sont ign
 | D-08 | Synonymes des raretés (L17) | Une table côté site (`lib/card-catalog.ts`), sans toucher au contrat ni à R2. |
 | D-09 | ← et → sans empiler l'historique (L17) | `replace: true`. |
 | D-10 | Illustrations en WebP (L19) | Oui, après L09. |
-| D-11 | Seuil de la garde des séries retirées (L07) | Refuser au-delà de 3 séries, ou d'une série de plus de 20 cartes. |
+| D-11 | Seuil de la garde des séries retirées (L07) | Refuser au-delà de 3 séries, ou d'une série de plus de 20 cartes. **Validée** le 10 novembre 2026. |
 | D-12 | Migration `runs.instance` (L16, DEC-21) | Plus tard, avec la prochaine migration des données. |
 | D-13 | Champs à 16 px avant camply : relais par classe interne ? (L18) | Attendre camply, sauf gêne réelle sur iPhone (A-05). |
 
