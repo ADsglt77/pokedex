@@ -23,39 +23,6 @@
   margin-bottom: var(--camply-space-2);
 }
 
-/* Le dessin du Pokédex : trois de ses cartes en éventail (ou trois Pokémon de départ). */
-.fan {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-}
-
-.fanCard {
-  width: auto;
-  height: 100%;
-  margin-inline: -0.45rem;
-}
-
-/* Les cartes du bord s'inclinent (une seule reste droite) ; celle du milieu passe devant. */
-.fanCard:first-child:not(:only-child) {
-  transform: rotate(-9deg) translateY(0.15rem);
-}
-
-.fanCard:last-child:not(:only-child) {
-  transform: rotate(9deg) translateY(0.15rem);
-}
-
-.fanCard:nth-child(2):not(:last-child) {
-  z-index: 1;
-}
-
-.starter {
-  width: auto;
-  height: 100%;
-  margin-inline: -0.35rem;
-}
-
 .logo {
   composes: logo from './LogoFrame.module.css';
 }

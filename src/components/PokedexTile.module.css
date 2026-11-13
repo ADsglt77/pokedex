@@ -27,6 +27,22 @@
   margin-bottom: 0.5rem;
 }
 
+/* Un Pokémon sans carte (F-UX-09) : une pochette compacte, carrée (deux classes : elle l'emporte
+   sur les proportions d'une carte, `CardArt`). Une rangée qui n'a que de ces pochettes est moins
+   haute ; dans une rangée mêlée, le numéro et le nom descendent au bas de la pochette, alignés
+   sur ceux de ses voisines. Sa hauteur estimée tant qu'elle n'est pas dessinée suit. */
+.art.compactArt {
+  aspect-ratio: 1;
+}
+
+.compact {
+  contain-intrinsic-block-size: auto 12.5rem;
+}
+
+.compact .number {
+  margin-top: auto;
+}
+
 /* Seulement un lien ou un bouton (pas une image du Pokédex public) se soulève au survol. */
 :is(a, button).tile:hover .art,
 .tile:focus-visible .art {

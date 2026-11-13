@@ -10,6 +10,7 @@ import { TableCount } from '@/components/TableCount'
 import { BudgetLevelBadge } from '@/components/BudgetMeter'
 import { cx } from '@/lib/cx'
 import { BudgetField } from './BudgetField'
+import { BudgetOverview } from './BudgetOverview'
 import page from './ShoppingPage.module.css'
 import styles from './BudgetPanel.module.css'
 import { SUMMARY_STAT } from '@/hooks/useStatSize'
@@ -44,6 +45,8 @@ export function BudgetPanel() {
 
   return (
     <Stack gap={6} className={page.panel}>
+      {/* Le mois en cours d'abord (D-07 : la page s'ouvre sur la liste, sans lui). */}
+      <BudgetOverview />
       <Panel title="Réglages" description="Enregistrés en quittant le champ ; vide vaut 0.">
         <div className={page.formGrid3}>
           <BudgetField field="monthly" />

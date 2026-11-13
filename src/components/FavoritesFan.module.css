@@ -1,0 +1,38 @@
+/* Le dessin du Pokédex : trois de ses cartes en éventail (ou trois Pokémon de départ). */
+.fan {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.fanCard {
+  width: auto;
+  height: 100%;
+  margin-inline: -0.45rem;
+}
+
+/* Les cartes du bord s'inclinent (une seule reste droite) ; celle du milieu passe devant. */
+.fanCard:first-child:not(:only-child) {
+  transform: rotate(-9deg) translateY(0.15rem);
+}
+
+.fanCard:last-child:not(:only-child) {
+  transform: rotate(9deg) translateY(0.15rem);
+}
+
+.fanCard:nth-child(2):not(:last-child) {
+  z-index: 1;
+}
+
+/* Carrés, et réduits sans se déformer quand leur boîte est plus étroite qu'eux (le Pokédex public
+   sur un petit téléphone). */
+.starter {
+  flex: 0 1 auto;
+  min-width: 0;
+  width: auto;
+  height: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  margin-inline: -0.35rem;
+}

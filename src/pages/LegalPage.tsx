@@ -29,7 +29,7 @@ export function LegalPage() {
     >
       <title>{pageTitle('Mentions légales et confidentialité')}</title>
       <PageHeader title="Mentions légales et confidentialité">
-        Mise à jour le 29 octobre 2026.
+        Mise à jour le 10 novembre 2026.
       </PageHeader>
 
       <section className={styles.section} aria-labelledby="editeur">

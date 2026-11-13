@@ -12,7 +12,7 @@
   gap: var(--space-block);
 }
 
-/* L'anneau de la progression, puis le titre et la phrase ; l'un sous l'autre sur téléphone. */
+/* L'éventail des favorites, puis le titre et la phrase ; l'un sous l'autre sur téléphone. */
 .intro {
   display: flex;
   flex-wrap: wrap;
@@ -20,7 +20,7 @@
   gap: var(--camply-space-5);
 }
 
-/* Le titre et la phrase prennent la place qui reste à côté de l'anneau, et passent dessous quand
+/* Le titre et la phrase prennent la place qui reste à côté de l'éventail, et passent dessous quand
    elle manque (pas un bloc serré à la largeur d'un mot sur tablette). */
 .headline {
   flex: 1 1 18rem;
@@ -52,11 +52,23 @@
   }
 }
 
-.ring {
-  color: var(--camply-text-strong);
-  font-family: var(--camply-font-display);
-  font-size: var(--title-sm);
-  font-weight: 700;
+/* Ses favorites en éventail (`FavoritesFan`), à la hauteur du titre et de sa phrase : aussi large
+   que son contenu (trois cartes, ou les trois Pokémon de départ, plus larges), la marge pour les
+   coins des cartes inclinées comprise, jamais plus que la page. */
+.fan {
+  flex: none;
+  max-width: 100%;
+  height: 7rem;
+  padding-inline: 1rem;
+}
+
+/* Son ébauche : à la largeur de trois cartes et de leur marge, le cas d'un Pokédex qui a des
+   favorites. */
+.fanSkeleton {
+  flex: none;
+  width: 14.5rem;
+  max-width: 100%;
+  height: 7rem;
 }
 
 .binder {

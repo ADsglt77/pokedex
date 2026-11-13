@@ -64,7 +64,9 @@ export function CardForm({
   // déjà (celle d'un autre de ses Pokémon : ils s'y ajoutent). Sa référence corrigée : une saisie.
   const collection = useCollectionStore((state) => state.collection)
   const target = catalogTarget(collection, entryById, species.id, listed)
-  const { duplicate, existing } = target
+  // `kept` : la carte reprise telle quelle (l'existante, ou une case d'extension) ; ses détails ne
+  // se corrigent pas ici, rien n'en serait gardé (H-02).
+  const { duplicate, existing, kept } = target
   // Corrigée, une case d'une collection d'extension le reste : la fenêtre le dit.
   const series = useCollectionStore((state) => card && seriesOf(state.collection, card.id))
   // Corrigée, la carte garde ses Pokémon.
@@ -230,17 +232,19 @@ export function CardForm({
               {existing && (
                 <Alert
                   tone="info"
-                  title={`${speciesNames(existing.dexIds)} ${existing.dexIds.length > 1 ? 'ont' : 'a'} déjà cette carte : elle devient aussi celle de ${speciesNames(receivers)}, avec son statut et son prix payé.`}
+                  title={`${speciesNames(existing.dexIds)} ${existing.dexIds.length > 1 ? 'ont' : 'a'} déjà cette carte : elle devient aussi celle de ${speciesNames(receivers)}, telle qu’elle est, avec son statut et son prix payé.`}
                 />
               )}
               {slot && (
                 <Alert
                   tone="info"
-                  title={`Cette carte fait partie de votre collection ${slot.series.name} : elle devient aussi celle de ${speciesNames(slot.card.dexIds)}, avec son statut.`}
+                  title={`Cette carte fait partie de votre collection ${slot.series.name} : elle devient aussi celle de ${speciesNames(slot.card.dexIds)}, telle qu’elle est, avec son statut.`}
                 />
               )}
               {/* Choisie au catalogue : un résumé, « Ajouter comme », puis les champs repliés
-                  (le cas rare d'une correction). Saisie à la main : le formulaire complet.
+                  (le cas rare d'une correction), sauf pour une carte reprise telle quelle : rien
+                  de ce qu'on y corrigerait ne serait gardé (H-02). Saisie à la main : le
+                  formulaire complet.
                   Toujours au même endroit, les champs ne se remontent pas quand on corrige la
                   référence. */}
               {picked ? (
@@ -249,13 +253,21 @@ export function CardForm({
                     draft={draft}
                     speciesId={species.id}
                     cardmarket={draft.checkedId ?? undefined}
+                    kept={kept}
                   />
                   {addAsChoice}
-                  <Accordion value={details} onChange={setDetails}>
-                    <AccordionItem value="details" title="Modifier les détails">
-                      <CardFields ref={form} draft={draft} speciesId={species.id} preview={false} />
-                    </AccordionItem>
-                  </Accordion>
+                  {!kept && (
+                    <Accordion value={details} onChange={setDetails}>
+                      <AccordionItem value="details" title="Modifier les détails">
+                        <CardFields
+                          ref={form}
+                          draft={draft}
+                          speciesId={species.id}
+                          preview={false}
+                        />
+                      </AccordionItem>
+                    </Accordion>
+                  )}
                 </>
               ) : (
                 <>

@@ -353,7 +353,11 @@ export function collectionCard(
  *   achetée une fois), sauf ceux qui l'ont déjà ;
  * - `existing` : déjà dans la collection, celle d'un autre de ses Pokémon (une TAG TEAM ajoutée
  *   avant à certains seulement) : une carte n'existe qu'une fois, ceux qui la reçoivent s'ajoutent
- *   à elle (même id : son statut, son prix payé et ses commandes la suivent).
+ *   à elle (même id : son statut, son prix payé et ses commandes la suivent) ;
+ * - `kept` : la carte de la collection reprise telle quelle, `existing` ou une case pas encore
+ *   obtenue d'une de ses collections d'extension (`unobtainedSlot`) : ses détails ne se corrigent
+ *   pas dans la fenêtre d'ajout, rien n'en serait gardé (H-02) ; `null` pour une nouvelle carte,
+ *   un doublon ou une saisie.
  */
 export function catalogTarget(
   data: CollectionData,
@@ -361,14 +365,16 @@ export function catalogTarget(
   speciesId: number,
   listed: CatalogCard | null,
 ) {
-  if (!listed) return { duplicate: false, receivers: [speciesId], existing: undefined }
+  if (!listed) return { duplicate: false, receivers: [speciesId], existing: undefined, kept: null }
   const isListed = catalogMatch(data, listed)
   const holds = (id: number) => entryById.get(id)!.cards.some((view) => isListed(view.card))
   const duplicate = holds(speciesId)
+  const existing = duplicate ? undefined : collectionCard(data, entryById, listed)?.card
   return {
     duplicate,
     receivers: listed.dexIds.filter((id) => !holds(id)),
-    existing: duplicate ? undefined : collectionCard(data, entryById, listed)?.card,
+    existing,
+    kept: duplicate ? null : (existing ?? unobtainedSlot(data, listed)),
   }
 }
 

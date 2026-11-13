@@ -347,7 +347,8 @@ Contre-review : GO, sous réserve de trois défauts mineurs, corrigés :
 
 À 320×568, le chapeau de la fenêtre laissait « Ajouter comme » 14 px sous le pied. Il est
 raccourci (ce que dit chaque champ est dans son aide) : le choix tient avec 29 px de marge. Noté
-hors lot : les détails corrigés d'une carte déjà dans la collection sont ignorés (H-02, § 8).*
+hors lot : les détails corrigés d'une carte déjà dans la collection sont ignorés (H-02, § 8 :
+fait en local le 13 novembre 2026).*
 - **Constats** : F-UX-01, F-UX-02.
 - **Fichiers** : `src/pages/pokemon/CardForm.tsx` (`:220`), `CardFields.tsx`,
   `src/config/shopping.ts:10`.
@@ -664,7 +665,8 @@ aucun refusé, les 11 décodés par Chrome identiques au pixel près (`MEP-hd` :
 
 #### Sécurité et coût
 
-**L14 — Journal et Pokédex public (site, Worker)**
+**L14 — Journal et Pokédex public (site, Worker)** — *fait (`33d2e09`, poussé), option A pour
+l'ETag.*
 - **Constats** : B-SEC-03, B-VIT-01.
 - **Fichiers** : `worker/collection.ts:213-215`, `worker/journal.ts:237-266`,
   `worker/vitrine.ts:231-232`.
@@ -677,7 +679,8 @@ aucun refusé, les 11 décodés par Chrome identiques au pixel près (`MEP-hd` :
   `DATA`).
 - **Effort** : S.
 
-**L16 — Durcissements à décider (données et site)**
+**L16 — Durcissements à décider (données et site)** — *fait (`pokedex-data` `ee04ed0`, `pokedex`
+`48f029d`, poussés), sauf `runs.instance`, reporté (D-12).*
 - **Constats** : D-SEC-12, D-FIA-06 ; et, en information dans B, le relais de toute méthode HTTP.
 - **Fichiers** :
   - `../pokedex-data/worker/ingest/pokecardex.ts`, `net.ts`, `images.ts`, `json-stream.ts` ;
@@ -696,7 +699,7 @@ aucun refusé, les 11 décodés par Chrome identiques au pixel près (`MEP-hd` :
 
 #### Optimisation
 
-**L15 — API et tâches des données**
+**L15 — API et tâches des données** — *fait (`pokedex-data` `176dd54`, poussé).*
 - **Constats** : D-PERF-03, D-PERF-04, D-PERF-05, D-PERF-06.
 - **Fichiers** :
   - `../pokedex-data/worker/history.ts:21-42` ;
@@ -726,26 +729,32 @@ R2 (la source du WebP) et l'API sert encore leur chemin `.png` : son retrait est
 
 #### UX
 
-**L17 — À décider avec vous (site)** — *appliqué le 13 novembre 2026, sauf les reports ci-dessous
-(décisions D-07, D-08, D-09 retenues). Appliqués : D-07, les tuiles seulement sur l'Accueil,
-ailleurs une ligne de résumé (Achats et son onglet Budget, Valeur, Pokédex public) ; D-08 et
-F-UX-04, les synonymes des raretés côté site (`lib/card-catalog.ts`), rien sous une carte « Sans
-rareté », une bulle sur chaque filtre en icône ; D-09 et F-NAV-04, ← → et les voisins avec
-`replace` ; F-NAV-06, la règle notée en tête de `lib/filters.ts` ; F-UX-05, un seul appel
-principal sur l'accueil vide ; F-UX-07, le seuil des deux panneaux à 46rem ; F-UX-09, le sprite à
-une échelle entière ; F-DS-02, une icône par notion ; F-SIMP-01, `isFiltering` ; F-SIMP-02,
-`VitrineBinder`.*
-- **Reportés, non faits** :
-  - F-NAV-05 (l'état du Catalogue dans l'adresse) : *traité localement le 13 novembre 2026, pas
-    encore commité ni en ligne* : `recherche`, `raretes`, `types`, `carte` dans l'adresse
-    (`lib/filters.ts`, testés), vérifié dans un navigateur sur les serveurs locaux (frappe et
-    curseur, filtres, fiche et ses flèches, focus de retour, lien direct loin dans la liste,
-    « Précédent » et « Suivant », changement de langue) ;
-  - F-UX-07, le titre « Ma carte » : non retenu, le titre garde la référence de la carte (il reçoit
-    le focus quand la carte montrée change) ;
-  - F-UX-09, la pochette compacte d'un Pokémon sans carte (la hauteur du Pokédex) : à décider ;
-  - D-07, le réordre complet des pages (Achats sur la liste, Valeur sur la courbe, le Pokédex public
-    sur ses favorites) : non fait.
+**L17 — À décider avec vous (site)** — *appliqué le 13 novembre 2026 (`bd92a9f`, poussé),
+complété le même jour en local (décisions D-07, D-08, D-09 retenues). Appliqués : D-07, les tuiles
+seulement sur l'Accueil, ailleurs une ligne de résumé (Achats et son onglet Budget, Valeur, Pokédex
+public) ; D-08 et F-UX-04, les synonymes des raretés côté site (`lib/card-catalog.ts`), rien sous
+une carte « Sans rareté », une bulle sur chaque filtre en icône ; D-09 et F-NAV-04, ← → et les
+voisins avec `replace` ; F-NAV-06, la règle notée en tête de `lib/filters.ts` ; F-UX-05, un seul
+appel principal sur l'accueil vide ; F-UX-07, le seuil des deux panneaux à 46rem ; F-UX-09, le
+sprite à une échelle entière ; F-DS-02, une icône par notion ; F-SIMP-01, `isFiltering` ;
+F-SIMP-02, `VitrineBinder`.*
+- **Les reports, clos** :
+  - F-NAV-05 (l'état du Catalogue dans l'adresse) : *fait, commité en local (`4f850c3`), pas
+    encore poussé* : `recherche`, `raretes`, `types`, `carte` dans l'adresse (`lib/filters.ts`,
+    testés), vérifié dans un navigateur sur les serveurs locaux (frappe et curseur, filtres, fiche
+    et ses flèches, focus de retour, lien direct loin dans la liste, « Précédent » et « Suivant »,
+    changement de langue) ;
+  - F-UX-07, le titre « Ma carte » : *décision finale, non retenu* : le titre garde la référence
+    de la carte (il reçoit le focus quand la carte montrée change, et la nomme) ;
+  - F-UX-09, la pochette compacte d'un Pokémon sans carte : *fait en local, non commité* : carrée,
+    le sprite à sa taille, le numéro et le nom au bas d'une rangée mêlée, environ quatre
+    cinquièmes d'une pochette dans la hauteur estimée (`PokedexTile`, `PokedexGrid`). Un Pokédex sans cartes, à
+    1 036 px de large : 55 665 → 44 982 px (−19 %) ; pas davantage sans réduire le sprite (96 px) ;
+  - D-07, le réordre ciblé restant : *fait en local, non commité*, sans refonte : Achats s'ouvre
+    sur la liste (la ligne du mois en tête de l'onglet Budget) ; Valeur montre la courbe et « Ce
+    qui bouge » avant sa ligne de résumé ; le Pokédex public montre ses favorites en éventail
+    (`FavoritesFan`, tiré de la tuile du Pokédex des Collections, chargées d'emblée, dans une
+    boîte à leur largeur) à la place de l'anneau, le pourcentage dans sa phrase.
 - **Constats** :
   - la direction visuelle (D-07) ;
   - F-UX-04, les raretés (D-08) ;
@@ -792,7 +801,8 @@ une échelle entière ; F-DS-02, une icône par notion ; F-SIMP-01, `isFiltering
   version locale à exporter.
 - **Pas de hors-ligne ni de sauvegarde** (décisions d'octobre 2026). Pas de blocage de toutes les
   actions en `expired`, sauf si D-01 le décide.
-- **Pas de refonte visuelle d'ensemble** : la direction visuelle reste une proposition (D-07).
+- **Pas de refonte visuelle d'ensemble** : D-07 s'en tient aux tuiles de l'Accueil, aux lignes de
+  résumé et au réordre ciblé de trois pages (L17).
 - **Rien de réécrit sans besoin** :
   - `.stack-table` ;
   - le Pokédex public (F-SIMP-02, seulement si l'on y touche) ;
@@ -898,5 +908,26 @@ Trouvés en faisant les lots, hors de leur périmètre : à placer dans un lot, 
 
 | Id | Constat | Où | Effet | Proposition |
 |---|---|---|---|---|
-| H-01 | Les mentions légales disent « Mise à jour le 29 octobre 2026 », alors que L03 a changé leur texte le 10 novembre (compteurs de tentatives, adresses IP, rétention). | `src/pages/LegalPage.tsx:32` | La date annonce une version plus ancienne que le texte. | La date du jour de la prochaine modification, et la tenir à chaque changement du texte. |
-| H-02 | Une carte choisie au catalogue qui est déjà dans la collection (`existing` : celle d'un autre de ses Pokémon ; `slot` : une case pas encore obtenue d'une collection d'extension) est enregistrée telle quelle. Ce qu'on corrige sous « Modifier les détails » (image, id Cardmarket, page, langue) est ignoré sans le dire ; le résumé montre pourtant la saisie. Le défaut existait avant L06. | `src/pages/pokemon/CardForm.tsx` (`attach`, `slot.adopt`) | Une correction faite dans la fenêtre se perd sans message. | Dans ces deux cas, ne pas offrir « Modifier les détails » (la fenêtre dit déjà que la carte est reprise telle quelle), ou enregistrer la correction sur la carte reprise : un choix à faire. |
+| H-01 | Les mentions légales disent « Mise à jour le 29 octobre 2026 », alors que L03 a changé leur texte le 10 novembre (compteurs de tentatives, adresses IP, rétention). | `src/pages/LegalPage.tsx:32` | La date annonce une version plus ancienne que le texte. | *Fait en local le 13 novembre 2026* : la date est celle du dernier changement du texte, « 10 novembre 2026 » ; à tenir à chaque changement. |
+| H-02 | Une carte choisie au catalogue qui est déjà dans la collection (`existing` : celle d'un autre de ses Pokémon ; `slot` : une case pas encore obtenue d'une collection d'extension) est enregistrée telle quelle. Ce qu'on corrige sous « Modifier les détails » (image, id Cardmarket, page, langue) est ignoré sans le dire ; le résumé montre pourtant la saisie. Le défaut existait avant L06. | `src/pages/pokemon/CardForm.tsx` (`attach`, `slot.adopt`) | Une correction faite dans la fenêtre se perd sans message. | *Décidé et fait en local le 13 novembre 2026* : dans ces deux cas, plus de « Modifier les détails » (`kept` de `catalogTarget`, testé) ; l'alerte dit « telle qu'elle est », et le résumé montre la carte gardée (son image, sa référence, le prix de son id), pas celle du catalogue. Une fois reprise, la carte se corrige par « Modifier la carte », sur sa fiche. |
+
+## 9. État de clôture (13 novembre 2026)
+
+Côté code, la revue est close : chaque lot est fait, ou son reste est décidé ou hors de ces dépôts.
+
+- **Fait et poussé** (Workers Builds déploie `main`) : L01 à L16, L17 (`bd92a9f`) et L19 (L13,
+  L15, L16 et L19 aussi dans `pokedex-data`) ; les actions A-03 et A-09.
+- **Fait, commité en local, pas encore poussé** : la documentation d'A-09 (`1b3a623`), F-NAV-05
+  (`4f850c3`).
+- **Fait en local, non commité** : H-02 (la carte reprise telle quelle), F-UX-09 (la pochette
+  compacte), le réordre ciblé de D-07 (Achats, Valeur, Pokédex public), H-01 (la date des
+  mentions légales).
+- **Décidé, rien à coder** : F-UX-07 (le titre garde la référence), F-PERF-01 (§ 5), A-08
+  (écartée), les refontes évitées (§ 5).
+- **Reporté, par décision** : `runs.instance` et sa migration (D-12 : avec la prochaine migration
+  des données) ; le retrait du chemin `.png` servi par l'API (L19, un lot futur).
+- **Hors de ces dépôts, ou à l'utilisateur** :
+  - L18, dans camply (`../Camply-UI`) ; D-13 attend camply ;
+  - le contenu du R2 de production, retiré volontairement après A-09 : son rétablissement est
+    géré par l'utilisateur ;
+  - les actions A-01, A-02, A-04 à A-07, si elles ne sont pas encore faites (§ 6).

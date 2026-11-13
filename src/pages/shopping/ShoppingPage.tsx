@@ -12,7 +12,6 @@ import {
 import { formatInteger, pageTitle } from '@/lib/format'
 import { pendingCount } from '@/lib/orders'
 import { useShoppingStore } from '@/store/shopping'
-import { BudgetOverview } from './BudgetOverview'
 import { BudgetPanel } from './BudgetPanel'
 import { OrdersPanel } from './OrdersPanel'
 import { PlannerPanel, type PlannerSettings } from './PlannerPanel'
@@ -73,8 +72,7 @@ export function ShoppingPage() {
         offre de vendeur.
       </PageHeader>
 
-      <BudgetOverview />
-
+      {/* La page s'ouvre sur la liste (D-07) : le résumé du mois est dans l'onglet Budget. */}
       <Tabs
         value={view}
         onChange={(next) => openView(next as ShoppingView)}

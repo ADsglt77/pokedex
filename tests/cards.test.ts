@@ -1,7 +1,9 @@
 /**
  * Ajouter une carte du catalogue à un Pokémon (`catalogTarget`) : jamais un doublon, une carte
  * TAG TEAM qu'un autre de ses Pokémon a déjà n'est pas recopiée, il s'ajoute à elle, et deux
- * cartes de même id Cardmarket restent deux cartes, chacune trouvée par son code. Retirer la
+ * cartes de même id Cardmarket restent deux cartes, chacune trouvée par son code ; une carte
+ * reprise telle quelle (déjà là, ou case d'une collection d'extension) est celle que montre la
+ * fenêtre, sans détails à corriger : rien n'en serait gardé (`kept`, H-02). Retirer la
  * carte d'un Pokémon : une carte TAG TEAM, achetée une fois, reste aux autres. La carte
  * favorite d'un Pokémon (la première d'office, ensuite son choix) : elle suit les cartes qu'on
  * ajoute, qu'on retire ou qu'on corrige, un Pokémon qui a des cartes en ayant toujours une, jamais
@@ -123,12 +125,14 @@ describe('ajouter une carte du catalogue', () => {
       duplicate: false,
       receivers: [644],
       existing: pikachuOnly,
+      kept: pikachuOnly,
     })
     // Qu'aucun n'a : une nouvelle carte, pour tous ses Pokémon.
     expect(targetIn([], 644, tagTeam)).toEqual({
       duplicate: false,
       receivers: [25, 644],
       existing: undefined,
+      kept: null,
     })
   })
 
@@ -140,6 +144,7 @@ describe('ajouter une carte du catalogue', () => {
       duplicate: false,
       receivers: [25],
       existing: undefined,
+      kept: null,
     })
   })
 
@@ -150,12 +155,14 @@ describe('ajouter une carte du catalogue', () => {
     expect(unobtainedSlot(data, arceus('AR7'))?.id).toBe('ar-AR7')
     expect(unobtainedSlot(data, arceus('94'))?.id).toBe('ar-94')
     // AR7 devenue une carte d'Arceus : AR 94 n'est ni un doublon ni elle, sa case reste à prendre.
-    const obtained = [arceusCard('94'), arceusCard('AR7', false)]
+    const ar94 = arceusCard('94')
+    const obtained = [ar94, arceusCard('AR7', false)]
     const withAr7 = withCards(collectionWith(), ...obtained)
     expect(targetIn(obtained, 25, arceus('94'))).toEqual({
       duplicate: false,
       receivers: [25],
       existing: undefined,
+      kept: ar94,
     })
     expect(collectionCard(withAr7, buildPokedex(withAr7).entryById, arceus('94'))).toBeNull()
     expect(unobtainedSlot(withAr7, arceus('94'))?.id).toBe('ar-94')
@@ -169,6 +176,20 @@ describe('ajouter une carte du catalogue', () => {
       cardmarket: 278966,
     })
     expect(targetIn([noted], 25, arceus('94')).duplicate).toBe(true)
+  })
+
+  test('reprise telle quelle (H-02) : la carte de la collection, avec ses données, pas celles du catalogue', () => {
+    // La TAG TEAM déjà carte de Pikachu, ajoutée à Zekrom : la sienne, telle qu'elle est.
+    expect(targetIn([pikachuOnly], 644, tagTeam).kept).toBe(pikachuOnly)
+    // Une case pas encore obtenue d'une collection d'extension : la case, avec son id Cardmarket
+    // même s'il diffère de celui du catalogue.
+    const slot = { ...arceusCard('94'), cardmarket: 1 }
+    expect(targetIn([slot], 25, arceus('94')).kept).toBe(slot)
+    // Une carte nouvelle, un doublon (refusé) ou une saisie : rien de repris, ses détails se
+    // corrigent.
+    expect(targetIn([], 644, tagTeam).kept).toBeNull()
+    expect(targetIn([pikachuOnly], 25, tagTeam).kept).toBeNull()
+    expect(targetIn([pikachuOnly], 644, null).kept).toBeNull()
   })
 })
 

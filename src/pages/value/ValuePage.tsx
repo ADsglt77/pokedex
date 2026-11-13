@@ -104,6 +104,11 @@ export function ValuePage() {
           </Alert>
         )}
 
+        <Evolution owned={owned} />
+
+        <Movers cards={cards} />
+
+        {/* Après la courbe et les cartes qui bougent (D-07) : les chiffres, en une ligne. */}
         <div className="stat-line">
           <CollectionValueStat label="Ma collection" summary />
           <Stat
@@ -135,10 +140,6 @@ export function ValuePage() {
             )}
           />
         </div>
-
-        <Evolution owned={owned} />
-
-        <Movers cards={cards} />
 
         <Panel
           flush

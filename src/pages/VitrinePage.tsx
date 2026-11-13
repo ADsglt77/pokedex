@@ -1,8 +1,9 @@
-import { Button, EmptyState, RadialProgress, SegmentedControl, Skeleton, Stat } from '@camply/ui'
+import { Button, EmptyState, SegmentedControl, Skeleton, Stat } from '@camply/ui'
 import { CircleDashed, House, Lock, LogIn, UserPlus } from '@camply/ui/icons'
 import { Suspense, use, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { ChartPeriodControl } from '@/components/ChartParts'
+import { FavoritesFan } from '@/components/FavoritesFan'
 import { Panel } from '@/components/Panel'
 import { PokedexGrid } from '@/components/PokedexGrid'
 import { RegionProgress } from '@/components/RegionProgress'
@@ -17,7 +18,6 @@ import { SUMMARY_STAT } from '@/hooks/useStatSize'
 import { isPseudo } from '@/lib/account'
 import { requestFailed } from '@/lib/api'
 import type { ChartPeriod } from '@/lib/chart'
-import { cx } from '@/lib/cx'
 import { vitrineUrl } from '@/lib/filters'
 import {
   formatDate,
@@ -91,7 +91,7 @@ function VitrineSkeleton() {
     <div className={styles.layout}>
       <p className="visually-hidden">Chargement du Pokédex…</p>
       <div className={styles.intro}>
-        <Skeleton variant="circle" width={112} height={112} />
+        <Skeleton variant="rect" className={styles.fanSkeleton} />
         <div className={styles.headline}>
           <Skeleton className={styles.titleSkeleton} />
           <Skeleton width="min(26rem, 100%)" />
@@ -142,20 +142,17 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
   return (
     <div className={styles.layout}>
       <div className={styles.intro}>
-        <RadialProgress
-          value={progress.percent}
-          size={112}
-          thickness={9}
-          label="Pokémon débloqués"
-          aria-valuetext={unlockedOf(progress)}
-        >
-          <span className={cx(styles.ring, 'numeric')}>{formatShare(progress.percent)}</span>
-        </RadialProgress>
+        {/* Ses favorites en éventail plutôt qu'un anneau de pourcentage (D-07) : le sujet, ce sont
+            les cartes ; le pourcentage est dans la phrase. */}
+        <div className={styles.fan}>
+          <FavoritesFan entries={entries} eager />
+        </div>
         <div className={styles.headline}>
           <title>{pageTitle(heading)}</title>
           <h1 className={styles.title}>{heading}</h1>
           <p className="muted">
-            {unlockedOf(progress, 'Pokémon')}.{updated && ` Mis à jour le ${updated}.`}
+            {unlockedOf(progress, 'Pokémon')} ({formatShare(progress.percent)}).
+            {updated && ` Mis à jour le ${updated}.`}
             {collection.series.length > 0 && (
               // Le classeur compte plus de 1 000 pochettes : les collections sont loin sous lui.
               <>

@@ -22,7 +22,9 @@ const SPECIES_LABELS: Record<CardStatus | 'none', string> = {
  * react-router : celui-ci lit l'adresse, et les 1 025 pochettes se redessineraient à chaque frappe
  * de la recherche ; la page du classeur fait suivre ses liens par le routeur (`PokedexPage`).
  * Mémoïsée : quand la recherche ou un filtre change la grille, les pochettes restées ne se
- * redessinent pas (leur entrée est la même tant que la collection ne change pas).
+ * redessinent pas (leur entrée est la même tant que la collection ne change pas). Sans carte, une
+ * pochette compacte (F-UX-09) : carrée, le sprite à sa taille ; un Pokédex sans cartes perd un
+ * cinquième de sa hauteur.
  */
 export const PokedexTile = memo(function PokedexTile({
   entry,
@@ -43,7 +45,7 @@ export const PokedexTile = memo(function PokedexTile({
         alt=""
         locked={!entry.unlocked}
         eager={eager}
-        className={styles.art}
+        className={cx(styles.art, !card && styles.compactArt)}
       >
         <PossessionMark status={status} />
       </CardArt>
@@ -53,11 +55,19 @@ export const PokedexTile = memo(function PokedexTile({
   )
 
   return linked ? (
-    <a href={speciesPath(species.id)} className={cx(styles.tile, styles.pocket)} aria-label={label}>
+    <a
+      href={speciesPath(species.id)}
+      className={cx(styles.tile, styles.pocket, !card && styles.compact)}
+      aria-label={label}
+    >
       {content}
     </a>
   ) : (
-    <div className={cx(styles.tile, styles.pocket)} role="img" aria-label={label}>
+    <div
+      className={cx(styles.tile, styles.pocket, !card && styles.compact)}
+      role="img"
+      aria-label={label}
+    >
       {content}
     </div>
   )

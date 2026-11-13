@@ -77,7 +77,13 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   téléphone, `Stat size="sm"` par `useStatSize` ; le téléphone, 40rem de large au plus :
   `usePhone` en JS, la même borne que les feuilles CSS) ; ailleurs (Achats, son onglet Budget,
   Valeur, le Pokédex public), une ligne de résumé : des `Stat` à plat et compactes, sans cadre ni
-  icône (`SUMMARY_STAT`, `.stat-line` ; `summary` des statistiques que partage l'Accueil). Une
+  icône (`SUMMARY_STAT`, `.stat-line` ; `summary` des statistiques que partage l'Accueil). Elle
+  vient après le contenu principal (D-07, novembre 2026) : Achats s'ouvre sur la liste, la ligne
+  du mois en tête de l'onglet Budget ; Valeur la montre après la courbe et « Ce qui bouge » ; le
+  Pokédex public, sous son titre (le pourcentage est dans sa phrase, et ses favorites en éventail,
+  `FavoritesFan`, comme la tuile du Pokédex des Collections, remplacent l'anneau : chargées
+  d'emblée, dans une boîte à leur largeur, les Pokémon de départ réduits sur un petit téléphone).
+  Une
   icône par notion (DS-02) : `Layers` est le Catalogue, une pochette vide (`SquareDashed`) un
   Pokémon sans carte, un cercle pointillé (`CircleDashed`) un Pokémon à obtenir ou une
   carte pas encore possédée. Une page
@@ -333,7 +339,11 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   même pour la liste d'achats et les cartes du catalogue), et une génération hors de l'écran ne
   compte pas dans la mise en page (`content-visibility` sur la section, sa hauteur estimée d'après
   son nombre de pochettes, `--tiles`, puis retenue : 30 à 75 ms de mise en page par filtre ou
-  frappe → 11 à 16). Un filtre masque les pochettes (`hidden`) au lieu de les démonter : la grille
+  frappe → 11 à 16). Un Pokémon sans carte a une pochette compacte (F-UX-09, novembre 2026 :
+  carrée, son sprite à sa taille, le numéro et le nom alignés au bas d'une rangée mêlée ; elle
+  compte pour quatre cinquièmes dans `--tiles`, une estimation) : un Pokédex sans cartes, à
+  1 036 px de large, passe de
+  55 665 à 44 982 px de haut (−19 %). Un filtre masque les pochettes (`hidden`) au lieu de les démonter : la grille
   les garde toutes, dans l'ordre choisi. La coquille garde le classeur en vie, caché, pendant la
   visite des autres pages (`<Activity>` de React, `AppShell` ; ses filtres restent ceux de sa
   dernière adresse, `usePokedexFilters`) : le retour depuis une fiche le montre aussitôt, à la même
@@ -439,7 +449,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   tuiles, mémoïsées, ne se redessinent pas à chaque sélection ; et les prix d'autres cartes que
   celles de la collection (`usePrices(ids)`) ne suivent pas la collection. Une carte choisie y est
   résumée, « Ajouter comme » d'abord, ses champs repliés sous « Modifier les détails » (`Accordion`
-  de camply ; `docs/cartes.md`) : le geste principal ne passe plus par un écran de saisie.
+  de camply ; `docs/cartes.md`) : le geste principal ne passe plus par un écran de saisie. Une
+  carte reprise telle quelle (déjà à un autre Pokémon, ou case d'une série : `kept`) n'a que son
+  résumé, celui de la carte gardée, et l'alerte qui le dit (H-02).
 - Focus et annonces : une action qui retire ou désactive son propre bouton (« Réinitialiser » les
   filtres ou un filtre retiré dans le Pokédex, « Tout afficher » du catalogue, « Retirer les
   filtres » de raretés et de types, l'aperçu d'un import, « Effacer », « Chercher les images »

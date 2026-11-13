@@ -52,14 +52,19 @@ export const PokedexGrid = memo(function PokedexGrid({
 
   return groups.map(({ generation, entries: groupEntries }) => {
     const progress = generations.find((row) => row.generation.id === generation.id)!
-    const tiles = groupEntries.filter(isShown).length
+    const shownEntries = groupEntries.filter(isShown)
+    const tiles = shownEntries.length
+    // Sa hauteur estimée, une estimation seulement : une pochette compacte (un Pokémon sans carte,
+    // `PokedexTile`) compte pour les quatre cinquièmes d'une autre (mesuré : 0,81 pour un Pokédex
+    // sans cartes ; une rangée mêlée garde la hauteur d'une carte).
+    const weight = shownEntries.reduce((sum, entry) => sum + (entry.card ? 1 : 0.8), 0)
     return (
       <section
         key={generation.id}
         className={styles.group}
         hidden={tiles === 0}
         // Sa hauteur estimée tant qu'elle n'a pas été montrée (`PokedexGrid.module.css`).
-        style={{ '--tiles': tiles } as CSSProperties}
+        style={{ '--tiles': weight } as CSSProperties}
       >
         {headings && (
           <div className={styles.heading}>

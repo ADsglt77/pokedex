@@ -97,7 +97,12 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   enfin, repliés sous « Modifier les détails » (`Accordion` de camply, pour le cas rare d'une
   correction ; repliés à chaque carte choisie, ouverts d'eux-mêmes tant qu'un champ est illisible,
   même pas encore signalé : un refus les trouve ouverts, et le champ reçoit le focus, à l'écran).
-  Ils
+  Une carte reprise telle quelle (une carte qu'un autre Pokémon a déjà, ou la case d'une série :
+  `kept` de `catalogTarget`, testé) n'a ni ces champs ni « Ajouter comme » : ses corrections
+  seraient ignorées, l'alerte le dit (« … telle qu'elle est, avec son statut », H-02, novembre
+  2026), et le résumé montre la carte de la collection, son image, sa référence et le prix de son
+  id, pas ceux du catalogue. Une fois reprise, elle se corrige par « Modifier la carte », sur sa
+  fiche. Les champs
   restent au même endroit : corriger la référence ne les remonte pas sous la frappe. Sur un
   téléphone, l'aperçu du résumé est une vignette, et « Ajouter comme » tient à l'écran sans
   défiler. « Saisie à la main » garde le formulaire complet, « Ajouter comme » à la fin ; on
