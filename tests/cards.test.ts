@@ -12,12 +12,23 @@
  * collection garde, ceux que sert l'API des données (ses tests les figent de son côté), et le
  * numéro comparable d'une carte, sa règle aussi ; et une image de chez la source, que son accord
  * interdit d'afficher : refusée, ses domaines reconnus par leur empreinte, pas leurs voisins, et
- * jamais affichée, la petite comme la grande.
+ * jamais affichée, la petite comme la grande. Et ce qu'on regarde au Catalogue, gardé dans son
+ * adresse (NAV-05) : relu tel qu'écrit, rien de mal écrit n'en sort, la langue et l'extension
+ * restent, et une autre recherche ou d'autres filtres ferment la fiche ouverte ; ses filtres
+ * ramenés à l'extension (une rareté synonyme, un id qu'elle n'a pas) et sa carte retrouvée par
+ * son numéro (`25` est `025`).
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test'
 import { artworkUrl, spriteUrl } from '@/config/pokedex'
-import { catalogTarget, collectionCard, unobtainedSlot, type CatalogCard } from '@/lib/card-catalog'
+import {
+  availableFilter,
+  catalogCardIndex,
+  catalogTarget,
+  collectionCard,
+  unobtainedSlot,
+  type CatalogCard,
+} from '@/lib/card-catalog'
 import { numberKey } from '@/lib/card-code'
 import {
   catalogImage,
@@ -37,6 +48,12 @@ import {
   setFavorite,
   setPaidPrice,
 } from '@/lib/collection'
+import {
+  catalogViewParams,
+  changeCatalogView,
+  parseCatalogView,
+  type CatalogView,
+} from '@/lib/filters'
 import { applyOrder } from '@/lib/orders'
 import { buildPokedex } from '@/lib/pokedex'
 import { removeSeries, startSeries } from '@/lib/series'
@@ -320,5 +337,96 @@ describe('les images', () => {
     expect(showsImage({ ...catalogImage('ja', 'SVP', 1), small: source[3]! })).toBe(false)
     expect(showsImage({ ...catalogImage('ja', 'SVP', 1), large: source[3]! })).toBe(false)
     expect(showsImage(null)).toBe(false)
+  })
+})
+
+describe('l’adresse du Catalogue : la recherche, les filtres et la fiche ouverte', () => {
+  const view: CatalogView = {
+    search: 'pika chu',
+    filter: { rarities: [1, 8], types: [4] },
+    card: '025',
+  }
+
+  test('écrite puis relue, la même vue ; la langue et l’extension restent', () => {
+    const params = catalogViewParams(new URLSearchParams('langue=fr&set=MEG'), view)
+    expect(params.toString()).toBe(
+      'langue=fr&set=MEG&recherche=pika+chu&raretes=1%2C8&types=4&carte=025',
+    )
+    expect(parseCatalogView(params)).toEqual(view)
+  })
+
+  test('une vue vide n’ajoute rien : l’adresse d’avant NAV-05', () => {
+    const empty = { search: '', filter: { rarities: [], types: [] }, card: null }
+    expect(
+      catalogViewParams(new URLSearchParams('set=SV2A&recherche=x&carte=1'), empty).toString(),
+    ).toBe('set=SV2A')
+    expect(parseCatalogView(new URLSearchParams('set=SV2A'))).toEqual(empty)
+  })
+
+  test('des ids mal écrits ou répétés : seulement des nombres, chacun une fois', () => {
+    const parsed = parseCatalogView(
+      new URLSearchParams('raretes=1,,abc,8,1,-2,99999&types=4;5&carte='),
+    )
+    expect(parsed.filter).toEqual({ rarities: [1, 8], types: [] })
+    expect(parsed.card).toBeNull()
+  })
+
+  test('une autre recherche ou d’autres filtres ferment la fiche ; changer de carte la garde ouverte', () => {
+    expect(changeCatalogView(view, { search: 'raichu' })).toEqual({
+      ...view,
+      search: 'raichu',
+      card: null,
+    })
+    expect(changeCatalogView(view, { filter: { rarities: [], types: [] } }).card).toBeNull()
+    expect(changeCatalogView(view, { card: '026' })).toEqual({ ...view, card: '026' })
+    expect(changeCatalogView(view, { card: null })).toEqual({ ...view, card: null })
+    // Rien n'est modifié de la vue reçue.
+    expect(view.card).toBe('025')
+  })
+})
+
+describe('l’adresse du Catalogue ramenée à l’extension', () => {
+  /** Une carte d'une extension : son numéro, sa rareté (son id) et son type. */
+  const listed = (number: string, rarity: number | null, type: number | null): CatalogCard => ({
+    ...tagTeam,
+    key: `SM9 ${number}`,
+    number,
+    rarity: rarity === null ? null : { id: rarity, name: String(rarity), rank: rarity },
+    type,
+  })
+  // Une extension ancienne (« Commune », 1 ; « Promo », 7) et une récente (« C », 8 ; « PR », 20).
+  const old = [listed('001', 1, 3), listed('002', 7, 4), listed('TG01', null, null)]
+  const recent = [listed('001', 8, 3), listed('002', 20, 4)]
+
+  test('une rareté synonyme devient celle que portent les cartes de l’extension', () => {
+    expect(availableFilter({ rarities: [8, 19], types: [] }, old)).toEqual({
+      rarities: [1, 7],
+      types: [],
+    })
+    expect(availableFilter({ rarities: [1, 7], types: [] }, recent)).toEqual({
+      rarities: [8, 20],
+      types: [],
+    })
+    // Le même id, gardé tel quel ; deux synonymes d'une même rareté, une fois.
+    expect(availableFilter({ rarities: [1, 8, 1], types: [] }, old)).toEqual({
+      rarities: [1],
+      types: [],
+    })
+  })
+
+  test('une rareté ou un type qu’aucune carte n’a : oublié', () => {
+    expect(availableFilter({ rarities: [99, 1], types: [3, 11, 3] }, old)).toEqual({
+      rarities: [1],
+      types: [3],
+    })
+    expect(availableFilter({ rarities: [2], types: [] }, old)).toEqual({ rarities: [], types: [] })
+  })
+
+  test('la carte de l’adresse retrouvée par son numéro : `25` est `025`, `tg01` est `TG01`', () => {
+    expect(catalogCardIndex(old, '001')).toBe(0)
+    expect(catalogCardIndex(old, '1')).toBe(0)
+    expect(catalogCardIndex(old, 'tg01')).toBe(2)
+    expect(catalogCardIndex(old, '3')).toBe(-1)
+    expect(catalogCardIndex(old, null)).toBe(-1)
   })
 })

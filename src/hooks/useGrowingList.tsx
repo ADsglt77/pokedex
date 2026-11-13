@@ -14,9 +14,10 @@ const grownTo = (name: string) => (history.state as GrownState | null)?.grown?.[
  * en bas de la liste (`null` une fois toute dessinée), haut d'un écran (classe `growing-sentinel`,
  * dans un parent `position: relative`) : il paraît un écran avant la fin. Moins d'éléments dans la
  * page : elle s'ouvre, se ferme et défile vite, même pour des centaines de cartes. Une autre liste
- * (une autre extension) repart de `step` en remontant le composant (`key`). `atLeast` (lu au
- * premier rendu seulement) : les éléments à dessiner d'emblée, arrondis au palier (la carte ouverte
- * d'emblée d'une collection, dont la tuile reprend le focus à la fermeture de sa fenêtre). `name` :
+ * (une autre extension) repart de `step` en remontant le composant (`key`). `atLeast` : les
+ * éléments à dessiner, arrondis au palier, d'emblée puis chaque fois qu'il dépasse ce qui l'est (la
+ * carte d'une fenêtre ouverte d'emblée, ou passée par ses flèches au-delà des tuiles dessinées : sa
+ * tuile reprend le focus à la fermeture). `name` :
  * la liste d'une page qu'on quitte par ses liens (la liste d'achats…) ; sa longueur est gardée dans
  * l'entrée de l'historique (son état, comme sa clé : `main.tsx`), et « Précédent » ou un
  * rechargement la redessine aussi longue : la position de défilement (`ScrollRestoration`) et le
@@ -27,6 +28,8 @@ export function useGrowingList(total: number, step: number, atLeast = 0, name?: 
     const wanted = Math.max(atLeast, name ? grownTo(name) : 0)
     return Math.max(step, Math.ceil(wanted / step) * step)
   })
+  // Plus loin que dessiné : la liste grandit jusque-là (un état ajusté au rendu, sans effet).
+  if (atLeast > limit) setLimit(Math.ceil(atLeast / step) * step)
   const sentinel = useRef<HTMLSpanElement>(null)
   useEffect(() => {
     const target = sentinel.current

@@ -77,19 +77,23 @@ const TILES_STEP = 60
  * plusieurs extensions, dont le code (« SV2A 166 ») et le prix tiennent sur une ligne. Une
  * extension, un Pokémon comptent jusqu'à des centaines de cartes : elles sont dessinées au fur et
  * à mesure du défilement (`useGrowingList`) ; une grille montée de nouveau (`key`, une autre
- * extension) repart des premières.
+ * extension) repart des premières. `atLeast` : les tuiles à dessiner au moins (jusqu'à celle de la
+ * fiche ouverte, par l'adresse ou passée par ses flèches au-delà : elle reprend le focus à la
+ * fermeture).
  */
 export function CatalogGrid({
   children,
   wide = false,
+  atLeast = 0,
   ref,
 }: {
   children: ReactNode
   wide?: boolean
+  atLeast?: number
   ref?: Ref<HTMLUListElement>
 }) {
   const tiles = Children.toArray(children)
-  const { limit, end } = useGrowingList(tiles.length, TILES_STEP)
+  const { limit, end } = useGrowingList(tiles.length, TILES_STEP, atLeast)
   return (
     <div className="growing">
       <ul ref={ref} role="list" className={cx(styles.grid, wide && styles.wide)}>

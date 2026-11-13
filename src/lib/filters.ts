@@ -4,7 +4,8 @@
  * fiche d'un Pokémon (`speciesPath`), les onglets des Achats et les filtres de leur liste
  * d'achats (`parseShopping`, `shoppingUrl`), le Pokédex public d'un compte et son API
  * (`vitrinePath`, `vitrineUrl`), la langue et l'extension du Catalogue (`catalogLanguage`,
- * `catalogSet`, `catalogParams`), la page d'une collection d'extension et la carte dont elle ouvre
+ * `catalogSet`, `catalogParams`) et ce qu'on y regarde (`parseCatalogView`, `catalogViewParams`),
+ * la page d'une collection d'extension et la carte dont elle ouvre
  * la fenêtre (`seriesPath`, `seriesCard`), où mène le lien d'une carte (`cardPath`) ; et la façon
  * d'y changer les filtres (`filterUpdate`).
  * Les paramètres d'adresse sont mi-anglais (`generation`, `possession`, `card`, `order`),
@@ -14,7 +15,7 @@
 
 import type { NavigateOptions } from 'react-router'
 import { generationById, POKEMON_TYPES, type Generation } from '@/config/pokedex'
-import type { CatalogSets } from '@/lib/card-catalog'
+import type { CatalogFilter, CatalogSets } from '@/lib/card-catalog'
 import { cardLanguage } from '@/lib/collection'
 import { SPECIES } from '@/lib/species'
 import type { CardView, PokedexEntry } from '@/lib/pokedex'
@@ -225,6 +226,60 @@ export function catalogParams(lang: CardLanguage, set?: string): URLSearchParams
   if (lang === 'fr') params.set('langue', 'fr')
   if (set) params.set('set', set)
   return params
+}
+
+/**
+ * Ce qu'on regarde dans l'extension du Catalogue, gardé dans son adresse (NAV-05 : une vue se
+ * partage, et se retrouve au retour d'une fiche de Pokémon) : la recherche (`recherche`), les
+ * raretés et les types choisis (`raretes`, `types` : leurs ids, séparés par des virgules) et la
+ * carte dont la fiche est ouverte (`carte` : son numéro, unique dans l'extension et sa langue).
+ */
+export interface CatalogView {
+  search: string
+  filter: CatalogFilter
+  card: string | null
+}
+
+/** Des ids lus dans l'adresse (`1,8,33`) : seulement des nombres, chacun une fois. */
+const idList = (value: string | null) => [
+  ...new Set(
+    (value ?? '')
+      .split(',')
+      .filter((id) => /^\d{1,4}$/.test(id))
+      .map(Number),
+  ),
+]
+
+/** L'adresse du Catalogue → ce qu'on y regarde (`CatalogView`) ; rien de mal écrit n'en sort. */
+export function parseCatalogView(params: URLSearchParams): CatalogView {
+  return {
+    search: params.get('recherche') ?? '',
+    filter: { rarities: idList(params.get('raretes')), types: idList(params.get('types')) },
+    card: params.get('carte') || null,
+  }
+}
+
+/**
+ * La vue changée de `patch`. Une autre recherche ou d'autres filtres ferment la fiche (`carte`) :
+ * ouverte, elle couvre la page ; une adresse qui l'oublierait la rouvrirait d'un coup, quand un
+ * filtre ramène sa carte.
+ */
+export function changeCatalogView(view: CatalogView, patch: Partial<CatalogView>): CatalogView {
+  const filtering = 'search' in patch || 'filter' in patch
+  return { ...view, ...(filtering && { card: null }), ...patch }
+}
+
+/**
+ * L'adresse du Catalogue (`params` : sa langue et son extension, gardées) avec la vue `view` ; une
+ * vue vide n'y ajoute rien (`?langue=fr&set=MEG&recherche=pika&raretes=1,8&carte=025`).
+ */
+export function catalogViewParams(params: URLSearchParams, view: CatalogView): URLSearchParams {
+  const next = catalogParams(catalogLanguage(params), params.get('set') ?? undefined)
+  if (view.search) next.set('recherche', view.search)
+  if (view.filter.rarities.length) next.set('raretes', view.filter.rarities.join())
+  if (view.filter.types.length) next.set('types', view.filter.types.join())
+  if (view.card) next.set('carte', view.card)
+  return next
 }
 
 /**

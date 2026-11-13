@@ -1,7 +1,7 @@
 import { Button, Card, Input, Skeleton, Stack } from '@camply/ui'
 import { ArrowLeftRight, Library, Plus, Search } from '@camply/ui/icons'
-import { Suspense, use, useCallback, useDeferredValue, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Suspense, use, useCallback, useDeferredValue, useMemo, useRef } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { CardFilters } from '@/components/CardFilters'
 import { CatalogGrid, CatalogGridSkeleton, CatalogTile } from '@/components/CatalogTile'
 import { LanguageSwitch } from '@/components/LanguageSwitch'
@@ -19,13 +19,25 @@ import {
   loadSets,
   setCardsUrl,
   NO_FILTER,
+  availableFilter,
+  catalogCardIndex,
   passesFilter,
-  type CatalogFilter,
   type CatalogSets,
   type SetCard,
   type SetSummary,
 } from '@/lib/card-catalog'
-import { catalogLanguage, catalogParams, catalogSet, searchForm, seriesPath } from '@/lib/filters'
+import {
+  catalogLanguage,
+  catalogParams,
+  catalogSet,
+  catalogViewParams,
+  changeCatalogView,
+  filterUpdate,
+  parseCatalogView,
+  searchForm,
+  seriesPath,
+  type CatalogView,
+} from '@/lib/filters'
 import { focusTileAfter } from '@/lib/focus'
 import { details, formatDate, formatInteger, formatList, pageTitle, plural } from '@/lib/format'
 import { cardmarketIds, priceText } from '@/lib/prices'
@@ -43,7 +55,9 @@ import styles from './CatalogPage.module.css'
  * logo (`SetPicker`), et la collection de celle montrée s'y commence (`SeriesAction`) ; leurs
  * cartes se cherchent (nom, numéro, illustrateur) et se filtrent par rareté et par type. Une carte
  * ouvre sa fiche (`CardDetails`) : tout ce qu'on en sait, son prix, et pour une carte Pokémon,
- * « Ajouter à la collection ».
+ * « Ajouter à la collection ». La recherche, les filtres et la fiche ouverte sont dans l'adresse
+ * (`parseCatalogView` : `recherche`, `raretes`, `types`, `carte`) : une vue se partage, et se
+ * retrouve au retour d'une page qu'elle a ouverte ; une autre extension ou langue en repart vide.
  */
 export function CatalogPage() {
   const [params, setParams] = useSearchParams()
@@ -204,16 +218,40 @@ function composition(cards: SetCard[]) {
   )
 }
 
+/**
+ * L'adresse du Catalogue, sa vue changée de `patch`, partie de l'adresse du moment
+ * (`window.location`) plutôt que de celle d'un rendu : la fonction qui l'appelle reste stable. Cela
+ * tient parce que chaque changement de vue est appliqué aussitôt, historique compris
+ * (`filterUpdate(true)` : `flushSync`, sans chargement de la route) ; passé en transition, ou avec
+ * un chargement, l'historique suivrait en retard et deux changements rapprochés partiraient de la
+ * même adresse, le second effaçant le premier.
+ */
+function viewSearch(patch: Partial<CatalogView>) {
+  const current = new URLSearchParams(window.location.search)
+  return `?${catalogViewParams(current, changeCatalogView(parseCatalogView(current), patch))}`
+}
+
 function CardBrowser({ cards }: { cards: SetCard[] }) {
   const ids = useMemo(() => cardmarketIds(cards), [cards])
   const prices = usePrices(ids)
   const missing = usePricesMissing(ids)
-  const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<CatalogFilter>(NO_FILTER)
-  // La carte dont la fiche est ouverte (sa clé) ; `null` : aucune.
-  const [open, setOpen] = useState<string | null>(null)
+  // La vue est dans l'adresse (pas un état à part, recopié) : « Précédent », un lien partagé ou
+  // un rechargement la retrouvent. Chaque changement remplace l'entrée de l'historique
+  // (`filterUpdate`, comme au Pokédex), hors de la transition du routeur (`flushSync`) : le champ
+  // suit la frappe, et la fiche fermée a disparu quand le focus va à la tuile (`focusTileAfter`),
+  // sans quoi elle le rendrait ensuite à celle de son ouverture.
+  const [params] = useSearchParams()
+  const view = useMemo(() => parseCatalogView(params), [params])
+  const { search: query, card: openNumber } = view
+  // Les filtres de l'adresse ramenés à l'extension (un synonyme de rareté, un id qu'elle n'a pas).
+  const filter = useMemo(() => availableFilter(view.filter, cards), [view.filter, cards])
+  const navigate = useNavigate()
+  const changeView = useCallback(
+    (patch: Partial<CatalogView>) => navigate(viewSearch(patch), filterUpdate(true)),
+    [navigate],
+  )
   // Une fonction stable : les tuiles, mémoïsées, ne se redessinent pas à l'ouverture d'une fiche.
-  const openCard = useCallback((card: SetCard) => setOpen(card.key), [])
+  const openCard = useCallback((card: SetCard) => changeView({ card: card.number }), [changeView])
   // La grille suit la frappe sans la ralentir : jusqu'à des centaines de cartes à refaire.
   const search = searchForm(useDeferredValue(query))
 
@@ -237,12 +275,13 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
   )
   const shown = useMemo(() => found.filter((card) => passesFilter(card, filter)), [found, filter])
   const isFiltered = shown.length < cards.length
-  const index = open === null ? -1 : shown.findIndex((card) => card.key === open)
+  // La carte de l'adresse, si la grille la montre (une carte inconnue, ou filtrée : aucune fiche).
+  const index = catalogCardIndex(shown, openNumber)
   const searchField = useRef<HTMLInputElement>(null)
   const grid = useRef<HTMLUListElement>(null)
   // La fiche fermée : le focus va à la tuile de la carte montrée en dernier (parcourue avec ← et
   // →), pas à celle ouverte au départ.
-  const closeCard = () => focusTileAfter(() => setOpen(null), grid, index)
+  const closeCard = () => focusTileAfter(() => changeView({ card: null }), grid, index)
 
   return (
     <Stack gap={4}>
@@ -254,12 +293,16 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
           placeholder="Nom, numéro ou illustrateur"
           leftIcon={<Search size={16} />}
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => changeView({ search: event.target.value })}
           spellCheck={false}
           autoComplete="off"
           className={styles.search}
         />
-        <CardFilters cards={found} value={filter} onChange={setFilter} />
+        <CardFilters
+          cards={found}
+          value={filter}
+          onChange={(next) => changeView({ filter: next })}
+        />
       </div>
 
       <p className="muted" aria-live="polite">
@@ -272,14 +315,13 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
           headingLevel={3}
           title="Aucune carte ne correspond"
           resetLabel="Tout afficher"
-          onReset={() => {
-            setQuery('')
-            setFilter(NO_FILTER)
-          }}
+          onReset={() => changeView({ search: '', filter: NO_FILTER })}
           search={searchField}
         />
       ) : (
-        <CatalogGrid ref={grid}>
+        // Une fiche ouverte d'emblée (par l'adresse) : les tuiles jusqu'à la sienne sont dessinées,
+        // pour lui rendre le focus à la fermeture.
+        <CatalogGrid ref={grid} atLeast={index + 1}>
           {shown.map((card) => (
             <li key={card.key}>
               <CatalogTile
@@ -299,7 +341,7 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
         <CardDetails
           cards={shown}
           index={index}
-          onIndex={(to) => setOpen(shown[to]!.key)}
+          onIndex={(to) => changeView({ card: shown[to]!.number })}
           onClose={closeCard}
         />
       )}

@@ -407,6 +407,38 @@ export const passesFilter = (card: CatalogCard, { rarities, types }: CatalogFilt
   (!rarities.length || (card.rarity !== null && rarities.includes(card.rarity.id))) &&
   (!types.length || (card.type !== null && types.includes(card.type)))
 
+/** Les ids d'une même rareté : l'id principal, puis ses synonymes (`RARITY_SYNONYMS`). */
+function rarityGroup(id: number) {
+  const main = RARITY_SYNONYMS.get(id) ?? id
+  return [main, ...[...RARITY_SYNONYMS].filter(([, to]) => to === main).map(([from]) => from)]
+}
+
+/**
+ * Un filtre venu de l'adresse ramené à ces cartes (celles d'une extension) : une rareté synonyme
+ * devient celle que portent ses cartes (« C » ou « Commune », selon la réponse, `readRarities`),
+ * une rareté ou un type qu'aucune n'a est oublié, chacun une fois. Calculé au rendu, sans réécrire
+ * l'adresse (aucune navigation, aucune boucle) : la prochaine adresse écrite part de lui.
+ */
+export function availableFilter(filter: CatalogFilter, cards: CatalogCard[]): CatalogFilter {
+  const rarities = new Set(cards.flatMap(({ rarity }) => (rarity ? [rarity.id] : [])))
+  const types = new Set(cards.flatMap(({ type }) => (type === null ? [] : [type])))
+  const kept = filter.rarities.flatMap((id) => {
+    const same = rarities.has(id) ? id : rarityGroup(id).find((other) => rarities.has(other))
+    return same === undefined ? [] : [same]
+  })
+  return {
+    rarities: [...new Set(kept)],
+    types: [...new Set(filter.types.filter((type) => types.has(type)))],
+  }
+}
+
+/**
+ * La place de la carte de numéro `number` parmi `cards` (lu dans l'adresse : `25` est `025`,
+ * `tg01` est `TG01`, `numberKey`) ; -1 sans numéro, ou si aucune ne l'a.
+ */
+export const catalogCardIndex = (cards: CatalogCard[], number: string | null) =>
+  number === null ? -1 : cards.findIndex((card) => numberKey(card.number) === numberKey(number))
+
 const found = new Map<string, Promise<CardImage | null>>()
 /** Les références restées sans image : `retry` les cherche de nouveau. */
 const missing = new Set<string>()

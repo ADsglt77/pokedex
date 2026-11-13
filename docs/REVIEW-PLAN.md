@@ -736,8 +736,11 @@ principal sur l'accueil vide ; F-UX-07, le seuil des deux panneaux à 46rem ; F-
 une échelle entière ; F-DS-02, une icône par notion ; F-SIMP-01, `isFiltering` ; F-SIMP-02,
 `VitrineBinder`.*
 - **Reportés, non faits** :
-  - F-NAV-05 (l'état du Catalogue dans l'adresse) : dans un lot à part, vérifié dans le
-    navigateur (focus de retour, recherche différée) ;
+  - F-NAV-05 (l'état du Catalogue dans l'adresse) : *traité localement le 13 novembre 2026, pas
+    encore commité ni en ligne* : `recherche`, `raretes`, `types`, `carte` dans l'adresse
+    (`lib/filters.ts`, testés), vérifié dans un navigateur sur les serveurs locaux (frappe et
+    curseur, filtres, fiche et ses flèches, focus de retour, lien direct loin dans la liste,
+    « Précédent » et « Suivant », changement de langue) ;
   - F-UX-07, le titre « Ma carte » : non retenu, le titre garde la référence de la carte (il reçoit
     le focus quand la carte montrée change) ;
   - F-UX-09, la pochette compacte d'un Pokémon sans carte (la hauteur du Pokédex) : à décider ;

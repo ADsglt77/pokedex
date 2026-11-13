@@ -229,7 +229,21 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   en tuiles serrées (10 colonnes sur un écran de 1440 px, 3 sur téléphone) ; la fiche d'une carte,
   pleine page : l'image à gauche, qui reste à l'écran quand le reste défile, ce qu'on sait de la
   carte et son prix à droite (l'une sous l'autre sous 48rem) ; dans le pied, les flèches des
-  cartes voisines et l'ajout, qui passe dessous s'il ne tient pas. Réglages : un sommaire (collé à
+  cartes voisines et l'ajout, qui passe dessous s'il ne tient pas. La recherche, les filtres et la
+  fiche ouverte sont dans l'adresse (NAV-05, novembre 2026 : écrite
+  `?recherche=pika&raretes=1%2C8&types=4&carte=025`, la virgule encodée, et relue aussi avec une
+  virgule simple ; en français, NAV-06 ; `parseCatalogView`, `catalogViewParams`,
+  `lib/filters.ts`, testés), seule source de la vue (pas d'état recopié) : une vue se partage, et « Précédent »
+  depuis une page qu'elle a ouverte (la fiche d'un Pokémon) la retrouve, fiche comprise. Chaque
+  changement remplace l'entrée de l'historique (`filterUpdate`, comme au Pokédex), hors de la
+  transition du routeur : le champ suit la frappe, la grille en différé. Une autre recherche ou
+  d'autres filtres ferment la fiche (`changeCatalogView` : une carte de l'adresse que la grille
+  ne montre pas n'ouvre rien, et ne se rouvre pas quand un filtre la ramène) ; une autre extension
+  ou langue repart d'une vue vide. Relue, la vue est ramenée à l'extension (`availableFilter`,
+  `catalogCardIndex`, `lib/card-catalog.ts`, testés) : une rareté synonyme devient celle de ses
+  cartes (`raretes=8`, « C », est « Commune » quand l'extension la nomme ainsi), une rareté ou un
+  type qu'elle n'a pas est oublié, et `carte=25` ouvre la carte 025 (`numberKey`) ; sans réécrire
+  l'adresse (aucune navigation de plus) : la suivante, écrite à un autre choix, est canonique. Réglages : un sommaire (collé à
   gauche sur grand écran) vers trois groupes — Compte & partage, Sauvegarde, Avancé — dont les
   panneaux passent sur deux colonnes sur très grand écran. Le serveur n'y apparaît qu'en cas de
   problème ; l'effacement garde son fond teinté de rouge. Valeur : ses panneaux l'un sous
@@ -439,8 +453,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   la coquille) : celui-là même, par son rang parmi les liens de son adresse que le focus peut
   prendre (deux cartes d'un même Pokémon), jamais une pochette du Pokédex gardé caché ni une
   vignette qui double le lien du titre (au lien du titre si la vignette a été suivie) ; la fiche d'une carte du catalogue fermée, il va à la tuile de la carte montrée en
-  dernier (parcourue avec ← et →), pas à celle ouverte au départ (une tuile pas encore dessinée,
-  loin dans la liste : la fenêtre décide) ; la fenêtre d'une carte d'une collection fermée, à sa
+  dernier (parcourue avec ses flèches), pas à celle ouverte au départ, même ouverte par l'adresse
+  (`?carte=`) ou passée par ses flèches au-delà des tuiles déjà dessinées : la grille grandit
+  jusqu'à la carte montrée (`CatalogGrid` `atLeast`, suivi par `useGrowingList`) ; la fenêtre d'une carte d'une collection fermée, à sa
   tuile, mise sous les yeux, même ouverte d'emblée par `?carte=` (`focusTileAfter`,
   `lib/focus.ts` : la fenêtre le rendrait sinon au document ; la grille a dessiné d'emblée les
   tuiles jusqu'à la sienne, `useGrowingList`). Une page qui ouvre une fenêtre
