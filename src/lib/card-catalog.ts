@@ -91,14 +91,45 @@ export interface CatalogCard {
  */
 export const cardCode = (card: CatalogCard) => `${card.set.id} ${card.number}`
 
-/** Les raretés d'une réponse, par numéro. */
-const readRarities = (rarities: CatalogFile['rarities']) =>
-  new Map(
+/**
+ * Les raretés que la source nomme deux fois (décision D-08, une table côté site, sans toucher au
+ * contrat ni aux réponses) : le sigle des cartes récentes, et le nom des anciennes, le même dans
+ * les deux langues. « C » (8) est « Commune » (1), « U » (9) « Unco » (2), « R » (10) « Rare » (3),
+ * « PROMO » (19) et « PR » (20) « Promo » (7). Sinon, les filtres d'un Pokémon proposaient
+ * « Commune » et « C » côte à côte.
+ */
+const RARITY_SYNONYMS = new Map([
+  [8, 1],
+  [9, 2],
+  [10, 3],
+  [19, 7],
+  [20, 7],
+])
+
+/**
+ * « Sans rareté » (21) : une carte qui n'en imprime pas. Rien n'est montré sous sa tuile (son
+ * icône, une barre oblique, se lisait comme « modifier ») ; elle reste un filtre.
+ */
+export const NO_RARITY = 21
+
+/**
+ * Les raretés d'une réponse, par numéro ; un synonyme (`RARITY_SYNONYMS`) mène à la rareté qu'il
+ * double, quand la réponse la connaît (les raretés d'une réponse sont celles de ses cartes : sans
+ * elle, le synonyme reste tel quel).
+ */
+function readRarities(rarities: CatalogFile['rarities']) {
+  const read = new Map(
     Object.entries(rarities).map(([id, [name, rank]]) => [
       Number(id),
       { id: Number(id), name, rank },
     ]),
   )
+  for (const [synonym, rarity] of RARITY_SYNONYMS) {
+    const same = read.get(rarity)
+    if (same && read.has(synonym)) read.set(synonym, same)
+  }
+  return read
+}
 
 /** Le nom d'une carte ; sans nom connu, ses Pokémon : « Pikachu & Zekrom ». */
 const cardName = (name: string, dexIds: number[]) => name || speciesTitle(dexIds)

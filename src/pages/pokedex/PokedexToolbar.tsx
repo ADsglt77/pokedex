@@ -12,7 +12,12 @@ import {
 import { usePageShortcut } from '@/hooks/usePageShortcut'
 import { cx } from '@/lib/cx'
 import { focusAfter } from '@/lib/focus'
-import type { CardFilter, PokedexFilters, PossessionFilter } from '@/lib/filters'
+import {
+  DEFAULT_FILTERS,
+  type CardFilter,
+  type PokedexFilters,
+  type PossessionFilter,
+} from '@/lib/filters'
 import { formatInteger, plural, toOptions } from '@/lib/format'
 import type { GenerationProgress } from '@/lib/pokedex'
 import type { GenerationId, PokemonTypeId } from '@/types'
@@ -54,7 +59,6 @@ interface PokedexToolbarProps {
   counts: Record<PossessionFilter, number>
   /** Nombre de résultats, `null` quand rien ne filtre. */
   resultCount: number | null
-  onReset: () => void
   /** Le champ de recherche (la page y mène aussi le focus, `PokedexPage`). */
   search: RefObject<HTMLInputElement | null>
 }
@@ -70,7 +74,6 @@ export function PokedexToolbar({
   generations,
   counts,
   resultCount,
-  onReset,
   search,
 }: PokedexToolbarProps) {
   // « / » place le curseur dans la recherche, sauf quand on tape déjà dans un champ.
@@ -229,7 +232,11 @@ export function PokedexToolbar({
             {resultCount !== null && `${formatInteger(resultCount)} Pokémon`}
           </span>
           {resultCount !== null && (
-            <Button size="sm" variant="ghost" onClick={() => focusAfter(onReset, search)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => focusAfter(() => setFilters(DEFAULT_FILTERS), search)}
+            >
               Réinitialiser
             </Button>
           )}

@@ -65,7 +65,13 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   (une carte d'avant les catégories), 14 Supporter, 15 Objet, 41 Outil (`TRAINER_TYPES`), et
   16 Énergie (`ENERGY_TYPE`)). Les raretés gardent les noms de la source : « C », « SAR »… pour les
   cartes récentes, « Commune », « Unco », « Rare », « Holographique » pour les anciennes, « Sans
-  rareté » pour celles qui n'en impriment pas. Sans API des données, ou tant qu'aucune carte n'a
+  rareté » pour celles qui n'en impriment pas. Celles que la source nomme deux fois sont réunies côté
+  site (décision D-08, novembre 2026 : `RARITY_SYNONYMS`, `lib/card-catalog.ts`, sans toucher au
+  contrat ni aux réponses) : « C » est « Commune », « U » « Unco », « R » « Rare », « PROMO » et
+  « PR » « Promo », quand la réponse a les deux (les raretés d'une réponse sont celles de ses
+  cartes). « Sans rareté » (`NO_RARITY`) n'est rien sous une tuile (sa barre oblique se lisait
+  comme « modifier ») ; elle reste un filtre. Chaque filtre en icône a son nom dans une bulle
+  (`Tooltip` de camply). Sans API des données, ou tant qu'aucune carte n'a
   été lue (404), la fenêtre d'ajout et la page Catalogue le disent (« pas disponible pour le
   moment »). La référence d'une carte : « Dracaufeu ex (SV2A 006) », son nom puis le code de
   sa série et son numéro. Un clic à côté de la fenêtre d'une carte (ajout ou modification) ne la

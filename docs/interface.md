@@ -72,9 +72,15 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   le décompte d'une collection dans Réglages, `SummaryLedger`, les totaux d'une commande). Une page : `PageHeader`
   (titre, phrase, actions à droite), puis ses blocs en `Panel` (une `Card` de camply : titre `h2`, phrase, actions, contenu ; `flush`
   pour un tableau bord à bord, `Table bordered={false}` ; pas une région nommée : trop de points de
-  repère) ; statistiques par deux, par quatre quand la page a 50rem (`.stat-grid` ; compactes sur
+  repère) ; les tuiles d'indicateurs seulement sur l'Accueil, le tableau de bord (décision D-07,
+  novembre 2026) : par deux, par quatre quand la page a 50rem (`.stat-grid` ; compactes sur
   téléphone, `Stat size="sm"` par `useStatSize` ; le téléphone, 40rem de large au plus :
-  `usePhone` en JS, la même borne que les feuilles CSS). Une page
+  `usePhone` en JS, la même borne que les feuilles CSS) ; ailleurs (Achats, son onglet Budget,
+  Valeur, le Pokédex public), une ligne de résumé : des `Stat` à plat et compactes, sans cadre ni
+  icône (`SUMMARY_STAT`, `.stat-line` ; `summary` des statistiques que partage l'Accueil). Une
+  icône par notion (DS-02) : `Layers` est le Catalogue, une pochette vide (`SquareDashed`) un
+  Pokémon sans carte, un cercle pointillé (`CircleDashed`) un Pokémon à obtenir ou une
+  carte pas encore possédée. Une page
   découpée en composants (l'accueil, `pages/home/` ; Achats) : les classes d'un seul composant dans
   son propre module CSS, celles qu'en partagent plusieurs dans celui de la page, importé sous le
   nom `page`. Un bloc que reprennent deux feuilles est un module à part, auquel chacune renvoie par
@@ -122,7 +128,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   « Espèces » : la palette cherche aussi dans le nom du groupe, « Pokémon » ferait tout trouver à
   « poké »). L'accueil est un
   tableau de bord (dès qu'il y a une carte ou une commande) : un seul appel principal vers le
-  Pokédex, progression (anneau, réglette compacte des
+  Pokédex (tant que rien n'est commencé, « Ouvrir le Pokédex » est secondaire : l'appel principal
+  est « Choisir dans le catalogue » de « Pour commencer »), progression (anneau, réglette compacte des
   régions ; sur téléphone, la liste des régions à sa place, chacune un lien de 44 px de haut vers
   le Pokédex filtré sur elle, `RegionProgress` `linked`, que reprend sans lien le Pokédex public :
   la réglette y laissait des segments de 16 px, sans nom lisible ; dessous, une ligne par
@@ -227,7 +234,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   panneaux passent sur deux colonnes sur très grand écran. Le serveur n'y apparaît qu'en cas de
   problème ; l'effacement garde son fond teinté de rouge. Valeur : ses panneaux l'un sous
   l'autre. La fiche d'un Pokémon :
-  fil d'Ariane (Pokédex › région › nom) et Pokémon voisins ; sous son nom, la phrase de possession
+  fil d'Ariane (Pokédex › région › nom) et Pokémon voisins (liens et ← →, qui remplacent l'entrée de
+  l'historique, décision D-09 : trente fiches parcourues ne demandent pas trente « Précédent ») ; sous son nom, la phrase de possession
   puis, dès une carte, toutes ses cartes (`CardList` : dans l'ordre d'ajout, un bouton par carte,
   sa petite image ou le dessin de l'espèce, sa référence et son drapeau, la favorite marquée
   « ★ Favorite » ; puis « Ajouter une carte », qui en ajoute une sans rien remplacer). La carte
@@ -236,8 +244,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   montrée qui disparaît laisse la place à la favorite ; rien ne passe d'une fiche à l'autre
   (`AppShell` remonte la page à chaque adresse). Puis la carte montrée, collée à l'écran (sa
   largeur suit la page : `cqi`), et ses panneaux (statut et prix payé, favorite, prix Cardmarket,
-  « Dans le Pokédex ») : sur deux colonnes dès que la fiche a la place (la carte et ses statuts à
-  gauche, son prix à droite) ; le titre de la carte dit « ★ Favorite » quand c'est la favorite du
+  « Dans le Pokédex ») : sur deux colonnes dès que la fiche a la place, 46rem (la carte et ses
+  statuts à gauche, son prix à droite ; à 38rem, chaque panneau n'avait que 290 px sur un écran de
+  1 280 px) ; le titre de la carte dit « ★ Favorite » quand c'est la favorite du
   Pokémon, ses actions « Mettre en favorite » sinon ; retirer la favorite d'un Pokémon qui garde
   d'autres cartes demande toujours une confirmation, où l'on coche la nouvelle favorite parmi
   elles (rien de coché au départ, confirmer est impossible avant ; possédée, elle dit aussi ce qui

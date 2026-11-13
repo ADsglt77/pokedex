@@ -1,4 +1,4 @@
-import { Button, Toggle } from '@camply/ui'
+import { Button, Toggle, Tooltip } from '@camply/ui'
 import { useRef, type ReactNode, type RefObject } from 'react'
 import { CARD_TYPES } from '@/config/catalog'
 import {
@@ -118,20 +118,21 @@ function ChipGroup({
       <legend className={styles.legend}>{legend}</legend>
       {chips.map(({ id, name, count, icon }, index) => {
         const label = `${name} : ${plural(count, 'carte', 'cartes')}`
+        // Une icône seule : son nom dans une bulle de camply, au survol comme au clavier.
         return (
-          <Toggle
-            key={id}
-            ref={index === 0 ? first : undefined}
-            size="sm"
-            className={styles.chip}
-            pressed={selected.includes(id)}
-            onChange={(on) => onSelect(toggled(selected, id, on))}
-            aria-label={label}
-            title={label}
-          >
-            {icon}
-            <span className="numeric">{formatInteger(count)}</span>
-          </Toggle>
+          <Tooltip key={id} content={label}>
+            <Toggle
+              ref={index === 0 ? first : undefined}
+              size="sm"
+              className={styles.chip}
+              pressed={selected.includes(id)}
+              onChange={(on) => onSelect(toggled(selected, id, on))}
+              aria-label={label}
+            >
+              {icon}
+              <span className="numeric">{formatInteger(count)}</span>
+            </Toggle>
+          </Tooltip>
         )
       })}
     </fieldset>

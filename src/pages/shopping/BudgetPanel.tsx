@@ -1,5 +1,4 @@
 import { type Column, Stack, Stat, Table } from '@camply/ui'
-import { Calculator, Receipt, Truck, Wallet } from '@camply/ui/icons'
 import { costPerSpecies, spendingByMonth, spendingBySupplier, spentOn } from '@/lib/budget'
 import { pendingCount } from '@/lib/orders'
 import { findCard } from '@/lib/collection'
@@ -13,7 +12,7 @@ import { cx } from '@/lib/cx'
 import { BudgetField } from './BudgetField'
 import page from './ShoppingPage.module.css'
 import styles from './BudgetPanel.module.css'
-import { useStatSize } from '@/hooks/useStatSize'
+import { SUMMARY_STAT } from '@/hooks/useStatSize'
 
 type Row = ReturnType<typeof spendingByMonth>[number]
 
@@ -35,7 +34,6 @@ const COUNT_COLUMNS: Column<Row>[] = [
 
 /** Le budget : ses réglages, et ce que disent les commandes, par mois et par fournisseur. */
 export function BudgetPanel() {
-  const statSize = useStatSize()
   const { orders, budget } = useShoppingStore((state) => state.shopping)
   const collection = useCollectionStore((state) => state.collection)
   const months = spendingByMonth(orders)
@@ -54,11 +52,10 @@ export function BudgetPanel() {
         </div>
       </Panel>
 
-      <div className="stat-grid">
+      <div className="stat-line">
         <Stat
-          size={statSize}
+          {...SUMMARY_STAT}
           label="Dépensé en tout"
-          icon={<Wallet size={18} />}
           value={formatEuro(total.spent)}
           hint={details(
             plural(total.orders, 'commande', 'commandes'),
@@ -66,23 +63,20 @@ export function BudgetPanel() {
           )}
         />
         <Stat
-          size={statSize}
+          {...SUMMARY_STAT}
           label="Port et frais"
-          icon={<Truck size={18} />}
           value={formatEuro(total.shipping)}
           hint="Cumulés, toutes commandes comprises."
         />
         <Stat
-          size={statSize}
+          {...SUMMARY_STAT}
           label="Coût moyen d’un Pokémon"
-          icon={<Calculator size={18} />}
           value={perSpecies.average === null ? '—' : formatEuro(perSpecies.average)}
           hint={`Pour ${plural(perSpecies.species, 'Pokémon acheté', 'Pokémon achetés')}, port compris.`}
         />
         <Stat
-          size={statSize}
+          {...SUMMARY_STAT}
           label="Commandes"
-          icon={<Receipt size={18} />}
           value={formatInteger(orders.length)}
           // Les annulées comptées à part : « Dépensé en tout » ne compte pas les annulées.
           hint={details(

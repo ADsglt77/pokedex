@@ -1,5 +1,4 @@
 import { Alert, Skeleton, SkeletonText, Stack, Stat } from '@camply/ui'
-import { Flag, Wallet } from '@camply/ui/icons'
 import { Suspense, use, useMemo, useState } from 'react'
 import { CardPageLink } from '@/components/CardPageLink'
 import { ChartPeriodControl, ChartStats, LevelChart } from '@/components/ChartParts'
@@ -10,7 +9,6 @@ import { PriceChart } from '@/components/PriceChart'
 import { PricedValue } from '@/components/PricedValue'
 import { NO_ANSWER, RetryButton, Unavailable } from '@/components/Unavailable'
 import { UnlockedChart } from '@/components/UnlockedChart'
-import { STATUS_ICONS } from '@/components/statusIcons'
 import { usePokedex } from '@/hooks/usePokedex'
 import { useRetry } from '@/hooks/useRetry'
 import { cx } from '@/lib/cx'
@@ -60,14 +58,13 @@ import {
 import type { CardPriceHistory, PokemonCard } from '@/types'
 import { CardsTable, CompletionTable } from './ValueTables'
 import styles from './ValuePage.module.css'
-import { useStatSize } from '@/hooks/useStatSize'
+import { SUMMARY_STAT } from '@/hooks/useStatSize'
 
 /**
  * Valeur : ce que vaut la collection au prix Cardmarket du jour, ce qu'elle a coûté, ce que
  * coûterait de la compléter, et son évolution.
  */
 export function ValuePage() {
-  const statSize = useStatSize()
   const prices = usePrices()
   const pricesMissing = usePricesMissing()
   const retryPrices = useRetryPrices()
@@ -107,19 +104,17 @@ export function ValuePage() {
           </Alert>
         )}
 
-        <div className="stat-grid">
-          <CollectionValueStat label="Ma collection" />
+        <div className="stat-line">
+          <CollectionValueStat label="Ma collection" summary />
           <Stat
-            size={statSize}
+            {...SUMMARY_STAT}
             label="Commandées"
-            icon={<STATUS_ICONS.ordered size={18} />}
             value={money(tallies.ordered.value)}
             hint={tallyHint(tallies.ordered, priced)}
           />
           <Stat
-            size={statSize}
+            {...SUMMARY_STAT}
             label="Dépensé en tout"
-            icon={<Wallet size={18} />}
             value={formatEuro(spent.spent)}
             hint={details(
               plural(spent.orders, 'commande', 'commandes'),
@@ -127,9 +122,8 @@ export function ValuePage() {
             )}
           />
           <Stat
-            size={statSize}
+            {...SUMMARY_STAT}
             label="Pour compléter le Pokédex"
-            icon={<Flag size={18} />}
             value={nothingPriced ? '—' : money(toComplete.value)}
             hint={details(
               someCompletionPriced &&

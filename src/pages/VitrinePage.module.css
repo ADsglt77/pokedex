@@ -41,13 +41,14 @@
   margin-bottom: var(--camply-space-3);
 }
 
+/* La ligne de résumé (`stat-line`) : une rangée, deux sur téléphone. */
 .statSkeleton {
-  height: 9.25rem;
+  height: 4.5rem;
 }
 
 @media (max-width: 40rem) {
   .statSkeleton {
-    height: 6.75rem;
+    height: 10rem;
   }
 }
 

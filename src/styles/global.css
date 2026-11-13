@@ -193,6 +193,14 @@ img {
   }
 }
 
+/* Les chiffres d'une page autre que l'Accueil (décision D-07 : les tuiles seulement au tableau de
+   bord) : une ligne de résumé, à plat (`SUMMARY_STAT`), à la ligne quand la place manque. */
+.stat-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--camply-space-4) var(--camply-space-8);
+}
+
 .muted {
   color: var(--camply-text-muted);
 }

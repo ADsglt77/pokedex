@@ -1,5 +1,5 @@
 import { Button, EmptyState, RadialProgress, SegmentedControl, Skeleton, Stat } from '@camply/ui'
-import { Flag, House, Layers, Lock, LogIn, UserPlus, Wallet } from '@camply/ui/icons'
+import { CircleDashed, House, Lock, LogIn, UserPlus } from '@camply/ui/icons'
 import { Suspense, use, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { ChartPeriodControl } from '@/components/ChartParts'
@@ -9,12 +9,11 @@ import { RegionProgress } from '@/components/RegionProgress'
 import { SeriesGrid } from '@/components/SeriesGrid'
 import { SeriesLine } from '@/components/SeriesLine'
 import { StandalonePage } from '@/components/StandalonePage'
-import { STATUS_ICONS } from '@/components/statusIcons'
 import { Unavailable } from '@/components/Unavailable'
 import { UnlockedChart } from '@/components/UnlockedChart'
 import { usePokedexGrid } from '@/hooks/usePokedexGrid'
 import { useRetry } from '@/hooks/useRetry'
-import { useStatSize } from '@/hooks/useStatSize'
+import { SUMMARY_STAT } from '@/hooks/useStatSize'
 import { isPseudo } from '@/lib/account'
 import { requestFailed } from '@/lib/api'
 import type { ChartPeriod } from '@/lib/chart'
@@ -29,7 +28,12 @@ import {
   pokedexTitle,
   unlockedOf,
 } from '@/lib/format'
-import { buildPokedex, unlockEvents, type PokedexEntry } from '@/lib/pokedex'
+import {
+  buildPokedex,
+  unlockEvents,
+  type GenerationProgress,
+  type PokedexEntry,
+} from '@/lib/pokedex'
 import { tallyByStatus, trackedCards } from '@/lib/prices'
 import { seriesId, seriesProgress } from '@/lib/series'
 import { NotFound } from '@/pages/NotFoundPage'
@@ -93,11 +97,7 @@ function VitrineSkeleton() {
           <Skeleton width="min(26rem, 100%)" />
         </div>
       </div>
-      <div className="stat-grid">
-        {['unlocked', 'value', 'wanted', 'regions'].map((stat) => (
-          <Skeleton key={stat} variant="rect" className={styles.statSkeleton} />
-        ))}
-      </div>
+      <Skeleton variant="rect" className={styles.statSkeleton} />
       <Skeleton variant="rect" height="9rem" />
       <Skeleton variant="rect" height="20rem" />
     </div>
@@ -128,7 +128,6 @@ const isWanted = (entry: PokedexEntry) => entry.card !== null && !entry.unlocked
  * possédées, envoyés avec elles (sans prix, la valeur est « — »).
  */
 function Vitrine({ owner, collection, prices }: VitrineData) {
-  const statSize = useStatSize()
   const heading = pokedexTitle(owner)
   const { entries, progress, generations } = useMemo(() => buildPokedex(collection), [collection])
   const owned = useMemo(
@@ -137,17 +136,7 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
   )
   const unlocks = useMemo(() => unlockEvents(collection), [collection])
   const [period, setPeriod] = useState<ChartPeriod>('month')
-  const [shown, setShown] = useState<Shown>('all')
   const wanted = entries.filter(isWanted).length
-  const visible = useMemo(
-    () =>
-      shown === 'all'
-        ? entries
-        : entries.filter(shown === 'unlocked' ? (entry) => entry.unlocked : isWanted),
-    [entries, shown],
-  )
-  // Toutes les pochettes ; le choix des Pokémon montrés masque les autres.
-  const grid = usePokedexGrid(entries, visible)
   const updated = formatDate(collection.updatedAt)
 
   return (
@@ -178,32 +167,28 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
         </div>
       </div>
 
-      <div className="stat-grid">
+      <div className="stat-line">
         <Stat
-          size={statSize}
+          {...SUMMARY_STAT}
           label="Pokémon débloqués"
-          icon={<STATUS_ICONS.owned size={18} />}
           value={formatInteger(progress.unlocked)}
           hint={`sur ${formatInteger(progress.total)}`}
         />
         <Stat
-          size={statSize}
+          {...SUMMARY_STAT}
           label="Valeur de la collection"
-          icon={<Wallet size={18} />}
           value={prices ? formatEuro(owned.value) : '—'}
           hint="au prix Cardmarket du jour"
         />
         <Stat
-          size={statSize}
+          {...SUMMARY_STAT}
           label="Pokémon à obtenir"
-          icon={<Layers size={18} />}
           value={formatInteger(wanted)}
           hint="une carte choisie, aucune obtenue"
         />
         <Stat
-          size={statSize}
+          {...SUMMARY_STAT}
           label="Régions complètes"
-          icon={<Flag size={18} />}
           value={formatInteger(generations.filter((row) => row.missing === 0).length)}
           hint={`sur ${formatInteger(generations.length)}`}
         />
@@ -222,40 +207,12 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
         <UnlockedChart events={unlocks} period={period} />
       </Panel>
 
-      <section className={styles.binder} aria-labelledby="classeur">
-        <div className={styles.binderHead}>
-          <h2 id="classeur">Le classeur</h2>
-          <SegmentedControl
-            aria-label="Pokémon montrés"
-            size="sm"
-            options={[
-              { value: 'all', label: 'Tous' },
-              { value: 'unlocked', label: `Débloqués (${formatInteger(progress.unlocked)})` },
-              { value: 'wanted', label: `À obtenir (${formatInteger(wanted)})` },
-            ]}
-            value={shown}
-            onChange={setShown}
-          />
-        </div>
-        {/* Rien de montré : chaque génération est masquée, la grille reste. */}
-        <PokedexGrid {...grid} generations={generations} linked={false} headingLevel={3} />
-        {visible.length === 0 &&
-          (shown === 'unlocked' ? (
-            <EmptyState
-              icon={<Lock size={22} />}
-              title="Aucun Pokémon débloqué pour l’instant"
-              description="Un Pokémon est débloqué dès qu’une de ses cartes est possédée."
-              actions={<Button onClick={() => setShown('all')}>Voir tous les Pokémon</Button>}
-            />
-          ) : (
-            <EmptyState
-              icon={<Layers size={22} />}
-              title="Aucun Pokémon à obtenir"
-              description="Les Pokémon dont une carte est choisie, aucune obtenue, apparaissent ici."
-              actions={<Button onClick={() => setShown('all')}>Voir tous les Pokémon</Button>}
-            />
-          ))}
-      </section>
+      <VitrineBinder
+        entries={entries}
+        generations={generations}
+        unlocked={progress.unlocked}
+        wanted={wanted}
+      />
 
       {collection.series.length > 0 && (
         <section className={styles.binder} aria-labelledby="collections">
@@ -273,6 +230,70 @@ function Vitrine({ owner, collection, prices }: VitrineData) {
         </section>
       )}
     </div>
+  )
+}
+
+/**
+ * Le classeur du Pokédex public : tous ses Pokémon, ou seulement les débloqués ou ceux à obtenir
+ * (`shown`). Un composant à part : ce choix ne redessine que lui, pas les statistiques, la courbe
+ * ni les collections.
+ */
+function VitrineBinder({
+  entries,
+  generations,
+  unlocked,
+  wanted,
+}: {
+  entries: PokedexEntry[]
+  generations: GenerationProgress[]
+  unlocked: number
+  wanted: number
+}) {
+  const [shown, setShown] = useState<Shown>('all')
+  const visible = useMemo(
+    () =>
+      shown === 'all'
+        ? entries
+        : entries.filter(shown === 'unlocked' ? (entry) => entry.unlocked : isWanted),
+    [entries, shown],
+  )
+  // Toutes les pochettes ; le choix des Pokémon montrés masque les autres.
+  const grid = usePokedexGrid(entries, visible)
+  return (
+    <section className={styles.binder} aria-labelledby="classeur">
+      <div className={styles.binderHead}>
+        <h2 id="classeur">Le classeur</h2>
+        <SegmentedControl
+          aria-label="Pokémon montrés"
+          size="sm"
+          options={[
+            { value: 'all', label: 'Tous' },
+            { value: 'unlocked', label: `Débloqués (${formatInteger(unlocked)})` },
+            { value: 'wanted', label: `À obtenir (${formatInteger(wanted)})` },
+          ]}
+          value={shown}
+          onChange={setShown}
+        />
+      </div>
+      {/* Rien de montré : chaque génération est masquée, la grille reste. */}
+      <PokedexGrid {...grid} generations={generations} linked={false} headingLevel={3} />
+      {visible.length === 0 &&
+        (shown === 'unlocked' ? (
+          <EmptyState
+            icon={<Lock size={22} />}
+            title="Aucun Pokémon débloqué pour l’instant"
+            description="Un Pokémon est débloqué dès qu’une de ses cartes est possédée."
+            actions={<Button onClick={() => setShown('all')}>Voir tous les Pokémon</Button>}
+          />
+        ) : (
+          <EmptyState
+            icon={<CircleDashed size={22} />}
+            title="Aucun Pokémon à obtenir"
+            description="Les Pokémon dont une carte est choisie, aucune obtenue, apparaissent ici."
+            actions={<Button onClick={() => setShown('all')}>Voir tous les Pokémon</Button>}
+          />
+        ))}
+    </section>
   )
 }
 

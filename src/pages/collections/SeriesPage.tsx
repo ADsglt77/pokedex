@@ -1,5 +1,5 @@
 import { Breadcrumbs, Button, Card, EmptyState, Progress, SegmentedControl, Stat } from '@camply/ui'
-import { Check, Layers, Trash2 } from '@camply/ui/icons'
+import { Check, CircleDashed, Trash2 } from '@camply/ui/icons'
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -133,7 +133,7 @@ function SeriesCards({
       <SeriesGrid collection={collection} series={series} linked shown={shown} />
       {shown === 'owned' && owned === 0 && (
         <EmptyState
-          icon={<Layers size={22} />}
+          icon={<CircleDashed size={22} />}
           title="Aucune carte possédée pour l’instant"
           description="Une carte possédée s’affiche en couleur ; les autres restent grisées."
           actions={showAll}

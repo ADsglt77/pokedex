@@ -8,7 +8,13 @@ import { useFollowLinks } from '@/hooks/useFollowLinks'
 import { usePokedex } from '@/hooks/usePokedex'
 import { usePokedexFilters } from '@/hooks/usePokedexFilters'
 import { usePokedexGrid } from '@/hooks/usePokedexGrid'
-import { DEFAULT_FILTERS, filterEntries, POSSESSIONS, type PossessionFilter } from '@/lib/filters'
+import {
+  DEFAULT_FILTERS,
+  filterEntries,
+  isFiltering,
+  POSSESSIONS,
+  type PossessionFilter,
+} from '@/lib/filters'
 import { formatInteger, pageTitle, plural } from '@/lib/format'
 import { PokedexGrid } from '@/components/PokedexGrid'
 import { PokedexToolbar } from './PokedexToolbar'
@@ -77,12 +83,6 @@ export function PokedexPage() {
       ) as Record<PossessionFilter, number>,
     [pokedex.entries, shownFilters],
   )
-  const filtering =
-    filters.search.trim() !== '' ||
-    filters.possession !== 'all' ||
-    filters.generation !== null ||
-    filters.card !== null ||
-    filters.type !== null
   const search = useRef<HTMLInputElement>(null)
   const resetFilters = () => setFilters(DEFAULT_FILTERS)
   // Les pochettes sont de simples liens (`PokedexTile`), suivis par le routeur.
@@ -109,8 +109,7 @@ export function PokedexPage() {
         setFilters={setFilters}
         generations={pokedex.generations}
         counts={counts}
-        resultCount={filtering ? visible.length : null}
-        onReset={resetFilters}
+        resultCount={isFiltering(filters) ? visible.length : null}
         search={search}
       />
 

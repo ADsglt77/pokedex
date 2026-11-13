@@ -18,8 +18,10 @@
 }
 
 /* Une fiche assez large : la carte et ses statuts à gauche, son prix à droite, plutôt qu'une
-   longue colonne à moitié vide. La largeur est celle du corps de la fiche (`.body`). */
-@container (min-width: 38rem) {
+   longue colonne à moitié vide. La largeur est celle du corps de la fiche (`.body`). À 38rem,
+   sur un écran de 1 280 px, chaque panneau n'avait que 290 px : le titre coupé, « Marquer comme
+   commandée » sur deux lignes ; d'où 46rem. */
+@container (min-width: 46rem) {
   .sheet {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;

@@ -722,7 +722,23 @@ aucun refusé, les 11 décodés par Chrome identiques au pixel près (`MEP-hd` :
 
 #### UX
 
-**L17 — À décider avec vous (site)**
+**L17 — À décider avec vous (site)** — *appliqué le 13 novembre 2026, sauf les reports ci-dessous
+(décisions D-07, D-08, D-09 retenues). Appliqués : D-07, les tuiles seulement sur l'Accueil,
+ailleurs une ligne de résumé (Achats et son onglet Budget, Valeur, Pokédex public) ; D-08 et
+F-UX-04, les synonymes des raretés côté site (`lib/card-catalog.ts`), rien sous une carte « Sans
+rareté », une bulle sur chaque filtre en icône ; D-09 et F-NAV-04, ← → et les voisins avec
+`replace` ; F-NAV-06, la règle notée en tête de `lib/filters.ts` ; F-UX-05, un seul appel
+principal sur l'accueil vide ; F-UX-07, le seuil des deux panneaux à 46rem ; F-UX-09, le sprite à
+une échelle entière ; F-DS-02, une icône par notion ; F-SIMP-01, `isFiltering` ; F-SIMP-02,
+`VitrineBinder`.*
+- **Reportés, non faits** :
+  - F-NAV-05 (l'état du Catalogue dans l'adresse) : dans un lot à part, vérifié dans le
+    navigateur (focus de retour, recherche différée) ;
+  - F-UX-07, le titre « Ma carte » : non retenu, le titre garde la référence de la carte (il reçoit
+    le focus quand la carte montrée change) ;
+  - F-UX-09, la pochette compacte d'un Pokémon sans carte (la hauteur du Pokédex) : à décider ;
+  - D-07, le réordre complet des pages (Achats sur la liste, Valeur sur la courbe, le Pokédex public
+    sur ses favorites) : non fait.
 - **Constats** :
   - la direction visuelle (D-07) ;
   - F-UX-04, les raretés (D-08) ;

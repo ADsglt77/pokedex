@@ -2,8 +2,8 @@ import {
   ChevronRight,
   Clock,
   ImageOff,
-  Layers,
   Receipt,
+  SquareDashed,
   Unlink,
   type IconProps,
 } from '@camply/ui/icons'
@@ -52,7 +52,8 @@ const TO_COMPLETE: {
     one: 'Pokémon sans carte',
     many: 'Pokémon sans carte',
     hint: ['Choisissez-lui une carte', 'Choisissez-leur une carte'],
-    icon: Layers,
+    // Une pochette vide : `Layers` est le Catalogue.
+    icon: SquareDashed,
   },
   {
     card: 'no-paid',

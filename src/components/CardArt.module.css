@@ -43,9 +43,12 @@
   text-align: center;
 }
 
+/* Le sprite (96 px) à sa taille, une échelle entière qui garde le pixel art net : à 60 % de la
+   pochette, il tombait à 71 px, brouillé. Plus petit seulement si la pochette ne le contient
+   pas. */
 .sprite {
-  width: 60%;
-  max-width: 96px;
+  width: 96px;
+  max-width: 100%;
   image-rendering: pixelated;
 }
 
@@ -57,7 +60,7 @@
 
 /* En grand (la fiche) : le sprite au double de sa taille, net (pixels entiers). */
 .large .sprite {
-  max-width: 192px;
+  width: 192px;
 }
 
 .large.empty .sprite {

@@ -36,7 +36,12 @@ export function HomePage() {
       <PageHeader
         title="Mon Pokédex"
         actions={
-          <Button asChild leftIcon={<Grid3x3 size={16} />}>
+          // Tant que rien n'est commencé, l'appel principal est celui de « Pour commencer ».
+          <Button
+            asChild
+            variant={started ? 'primary' : 'secondary'}
+            leftIcon={<Grid3x3 size={16} />}
+          >
             <Link to="/pokedex">Ouvrir le Pokédex</Link>
           </Button>
         }

@@ -7,6 +7,9 @@
  * `catalogSet`, `catalogParams`), la page d'une collection d'extension et la carte dont elle ouvre
  * la fenêtre (`seriesPath`, `seriesCard`), où mène le lien d'une carte (`cardPath`) ; et la façon
  * d'y changer les filtres (`filterUpdate`).
+ * Les paramètres d'adresse sont mi-anglais (`generation`, `possession`, `card`, `order`),
+ * mi-français (`vue`, `tri`, `langue`, `carte`) : les anciens restent tels quels (des liens gardés
+ * y mènent), les prochains sont nommés en français.
  */
 
 import type { NavigateOptions } from 'react-router'
@@ -98,6 +101,13 @@ export function serializeFilters(filters: PokedexFilters): URLSearchParams {
   if (filters.descending) params.set('order', 'desc')
   return params
 }
+
+/**
+ * Un filtre est-il appliqué ? Tout ce que l'adresse en dit, sauf l'ordre (qui ne retire aucun
+ * Pokémon) et une recherche faite d'espaces.
+ */
+export const isFiltering = (filters: PokedexFilters) =>
+  serializeFilters({ ...filters, search: filters.search.trim(), descending: false }).size > 0
 
 /** L'adresse du Pokédex filtré : `pokedexUrl({ generation: 5 })` → `/pokedex?generation=5`. */
 export function pokedexUrl(filters: Partial<PokedexFilters>): string {

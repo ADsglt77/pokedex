@@ -15,8 +15,10 @@ interface SpeciesNavProps {
 }
 
 /**
- * Où l'on est (Pokédex, filtres conservés › région › Pokémon) et les Pokémon voisins
- * (aussi au clavier, ← et →).
+ * Où l'on est (Pokédex, filtres conservés › région › Pokémon) et les Pokémon voisins (aussi au
+ * clavier, ← et →). Passer d'un Pokémon à son voisin remplace l'entrée de l'historique (`replace`,
+ * décision D-09) : trente fiches parcourues ne demandent pas trente « Précédent », et le fil
+ * d'Ariane garde le retour au Pokédex filtré.
  */
 export function SpeciesNav({ species, previous, next }: SpeciesNavProps) {
   const navigate = useNavigate()
@@ -28,7 +30,7 @@ export function SpeciesNav({ species, previous, next }: SpeciesNavProps) {
     const target = event.key === 'ArrowLeft' ? previous : event.key === 'ArrowRight' ? next : null
     if (!target) return
     event.preventDefault()
-    navigate(speciesPath(target.id))
+    navigate(speciesPath(target.id), { replace: true })
   })
 
   return (
@@ -76,6 +78,7 @@ function Neighbour({
   return (
     <Link
       to={speciesPath(species.id)}
+      replace
       rel={rel}
       className={styles.neighbour}
       aria-label={`${rel === 'prev' ? 'Pokémon précédent' : 'Pokémon suivant'} : ${species.names.fr}, ${formatDexNumber(species.id)}`}
