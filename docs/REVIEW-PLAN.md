@@ -730,7 +730,7 @@ R2 (la source du WebP) et l'API sert encore leur chemin `.png` : son retrait est
 #### UX
 
 **L17 — À décider avec vous (site)** — *appliqué le 13 novembre 2026 (`bd92a9f`, poussé),
-complété le même jour en local (décisions D-07, D-08, D-09 retenues). Appliqués : D-07, les tuiles
+complété le même jour en local (`4f850c3`, `c83c83b`, commités, pas encore poussés) (décisions D-07, D-08, D-09 retenues). Appliqués : D-07, les tuiles
 seulement sur l'Accueil, ailleurs une ligne de résumé (Achats et son onglet Budget, Valeur, Pokédex
 public) ; D-08 et F-UX-04, les synonymes des raretés côté site (`lib/card-catalog.ts`), rien sous
 une carte « Sans rareté », une bulle sur chaque filtre en icône ; D-09 et F-NAV-04, ← → et les
@@ -739,18 +739,19 @@ appel principal sur l'accueil vide ; F-UX-07, le seuil des deux panneaux à 46re
 sprite à une échelle entière ; F-DS-02, une icône par notion ; F-SIMP-01, `isFiltering` ;
 F-SIMP-02, `VitrineBinder`.*
 - **Les reports, clos** :
-  - F-NAV-05 (l'état du Catalogue dans l'adresse) : *fait, commité en local (`4f850c3`), pas
-    encore poussé* : `recherche`, `raretes`, `types`, `carte` dans l'adresse (`lib/filters.ts`,
+  - F-NAV-05 (l'état du Catalogue dans l'adresse) : *fait, commit local `4f850c3`, pas encore
+    poussé* : `recherche`, `raretes`, `types`, `carte` dans l'adresse (`lib/filters.ts`,
     testés), vérifié dans un navigateur sur les serveurs locaux (frappe et curseur, filtres, fiche
     et ses flèches, focus de retour, lien direct loin dans la liste, « Précédent » et « Suivant »,
     changement de langue) ;
   - F-UX-07, le titre « Ma carte » : *décision finale, non retenu* : le titre garde la référence
     de la carte (il reçoit le focus quand la carte montrée change, et la nomme) ;
-  - F-UX-09, la pochette compacte d'un Pokémon sans carte : *fait en local, non commité* : carrée,
-    le sprite à sa taille, le numéro et le nom au bas d'une rangée mêlée, environ quatre
-    cinquièmes d'une pochette dans la hauteur estimée (`PokedexTile`, `PokedexGrid`). Un Pokédex sans cartes, à
-    1 036 px de large : 55 665 → 44 982 px (−19 %) ; pas davantage sans réduire le sprite (96 px) ;
-  - D-07, le réordre ciblé restant : *fait en local, non commité*, sans refonte : Achats s'ouvre
+  - F-UX-09, la pochette compacte d'un Pokémon sans carte : *fait, commit local `c83c83b`* :
+    carrée, le sprite à sa taille, le numéro et le nom au bas d'une rangée mêlée, environ quatre
+    cinquièmes d'une pochette dans la hauteur estimée (`PokedexTile`, `PokedexGrid`). Un Pokédex
+    sans cartes, à 1 036 px de large : 55 665 → 44 982 px (−19 %) ; pas davantage sans réduire le
+    sprite (96 px) ;
+  - D-07, le réordre ciblé restant : *fait, commit local `c83c83b`*, sans refonte : Achats s'ouvre
     sur la liste (la ligne du mois en tête de l'onglet Budget) ; Valeur montre la courbe et « Ce
     qui bouge » avant sa ligne de résumé ; le Pokédex public montre ses favorites en éventail
     (`FavoritesFan`, tiré de la tuile du Pokédex des Collections, chargées d'emblée, dans une
@@ -763,7 +764,12 @@ F-SIMP-02, `VitrineBinder`.*
   - F-DS-02, F-SIMP-01, F-SIMP-02 (seulement si l'on retouche le Pokédex public).
 - **Effort** : de S à M, selon les décisions.
 
-**L18 — Dans camply (`../Camply-UI`), hors de ces dépôts**
+**L18 — Dans camply (`../Camply-UI`), hors de ces dépôts** — *dépendance externe : non réalisable
+dans ces deux dépôts (Camply-UI n'est pas sur le poste, aucun correctif n'y est écrit d'ici). Sa
+partie locale est faite (13 novembre 2026) : les deux cas `Radio` sont dans les « Known gaps » du
+skill `camply-ui`, le libellé en `ReactNode` (le cast de `CardActions`, en attendant) et le contour
+des radios (sans parade locale : elle demanderait une classe interne ou changerait tous les
+bords). D-13 reste décidée : attendre camply, sauf gêne réelle sur iPhone (A-05).*
 - **Constats** :
   - F-MOB-02 : champs à 16 px sur écran tactile ;
   - F-MOB-06 : la croix des étiquettes ;
@@ -772,10 +778,10 @@ F-SIMP-02, `VitrineBinder`.*
   - `Radio.label` en `ReactNode` (DEC-07, F-CAMPLY-01) ;
   - le contour des radios (A11Y-02 du 2 novembre).
 - **Ici, en attendant** :
-  - ajouter le cas `Radio` aux « Known gaps » du skill `camply-ui`
+  - *fait* : le cas `Radio` dans les « Known gaps » du skill `camply-ui`
     (`.claude/skills/camply-ui/SKILL.md`) ;
   - pour F-MOB-02, le relais par classe interne de camply : seulement si la décision D-13 le
-    retient.
+    retient (aujourd'hui non).
 
 ## 4. Décisions à prendre
 
@@ -832,7 +838,8 @@ F-SIMP-02, `VitrineBinder`.*
   d'environ 1,5 Mo chacun), en `image/webp`, sans XMP ni EXIF, pixels identiques aux anciens.
 - **A-04** : dans le tableau de bord, vérifier que la normalisation d'URL de la zone est active
   (D-SEC-08).
-- **A-05** : sur un iPhone réel :
+- **A-05** : sur un iPhone réel (une vérification sur l'appareil, pas un défaut qui retient la
+  clôture ; une gêne réelle rouvrirait D-13) :
   - le zoom à la saisie (F-MOB-02) ;
   - la barre d'onglets du site installé (F-MOB-07) ;
   - la palette Ctrl K avec le clavier ouvert (F-MOB-07).
@@ -917,17 +924,21 @@ Côté code, la revue est close : chaque lot est fait, ou son reste est décidé
 
 - **Fait et poussé** (Workers Builds déploie `main`) : L01 à L16, L17 (`bd92a9f`) et L19 (L13,
   L15, L16 et L19 aussi dans `pokedex-data`) ; les actions A-03 et A-09.
-- **Fait, commité en local, pas encore poussé** : la documentation d'A-09 (`1b3a623`), F-NAV-05
-  (`4f850c3`).
-- **Fait en local, non commité** : H-02 (la carte reprise telle quelle), F-UX-09 (la pochette
-  compacte), le réordre ciblé de D-07 (Achats, Valeur, Pokédex public), H-01 (la date des
-  mentions légales).
+- **Fait, commité en local, pas encore poussé** :
+  - la documentation d'A-09 (`1b3a623`) ;
+  - F-NAV-05 (`4f850c3`) ;
+  - H-02 (la carte reprise telle quelle), F-UX-09 (la pochette compacte), le réordre ciblé de D-07
+    (Achats, Valeur, Pokédex public), H-01 (la date des mentions légales) : `c83c83b` ;
+  - la partie locale de L18, le cas `Radio` dans le skill `camply-ui` (le commit qui suit
+    `c83c83b`).
 - **Décidé, rien à coder** : F-UX-07 (le titre garde la référence), F-PERF-01 (§ 5), A-08
-  (écartée), les refontes évitées (§ 5).
+  (écartée), D-13 (attendre camply, sauf gêne réelle sur iPhone), les refontes évitées (§ 5).
 - **Reporté, par décision** : `runs.instance` et sa migration (D-12 : avec la prochaine migration
   des données) ; le retrait du chemin `.png` servi par l'API (L19, un lot futur).
 - **Hors de ces dépôts, ou à l'utilisateur** :
-  - L18, dans camply (`../Camply-UI`) ; D-13 attend camply ;
+  - L18, dans camply (`../Camply-UI`, absent du poste) : une dépendance externe, non réalisable
+    dans ces deux dépôts ; sa partie locale est faite ;
+  - A-05, une vérification sur un iPhone réel, pas un défaut de clôture ;
   - le contenu du R2 de production, retiré volontairement après A-09 : son rétablissement est
     géré par l'utilisateur ;
-  - les actions A-01, A-02, A-04 à A-07, si elles ne sont pas encore faites (§ 6).
+  - les actions A-01, A-02, A-04, A-06 et A-07, si elles ne sont pas encore faites (§ 6).

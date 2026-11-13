@@ -57,6 +57,16 @@ Textarea, Timeline, Toast (ToastProvider, `useToast`), Toggle, Tooltip, Tree.
   `SegmentOption.label` is typed `string`, but camply writes it as is (`{label}`) and names the
   segment from its content. `segment()` in `LanguageSwitch` passes an SVG (`role="img"` +
   `aria-label`) through one cast; drop it when camply types `label` as `ReactNode`.
+- **`Radio` with a drawing in its label** (the new favourite's `RadioGroup` in `CardActions`: the
+  reference and its flag, a set code existing in both languages): `RadioProps.label` is typed
+  `string`, but camply writes it as is. `CardActions` passes `<CardReference>` through one cast
+  (`as unknown as string`), the same as `LanguageSwitch`; drop it when camply types `label` as
+  `ReactNode` (DEC-07, F-CAMPLY-01).
+- **Unchecked radios barely visible** (A11Y-02 of 2 November, DEC-07): their outline
+  (`--camply-border-strong`), like the thumb of an off `Switch`, is 1.2 to 1.7:1 in both themes,
+  under the 3:1 a control needs. No local workaround: raising `--camply-border-strong` would change
+  every border of the app, and targeting the control takes an internal class. To fix in camply (a
+  border token of at least 3:1 for unchecked radios and checkboxes).
 - A group of `Checkbox` / `Toggle` has no group label: `<fieldset>` + `<legend>` (CardFilters).
 - **Internal classes are not an API**: the last override of one carries the comment « Classe
   interne de camply (pas une API) : à revérifier après une mise à jour ». After a camply update,
