@@ -24,15 +24,17 @@
   font-size: var(--text-sm);
 }
 
-/* Un choix : l'icône et son nombre de cartes, serrés. */
+/* Un choix : son nom et son nombre de cartes, serrés, sur une ligne. */
 .chip {
   gap: 0.375rem;
   padding-inline: 0.5rem;
-  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.rarity {
-  height: 1rem;
+/* Le nombre de cartes, plus léger que le nom (la couleur de la pastille, choisie ou non). */
+.count {
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Sur un téléphone, chaque filtre tient sur une ligne qui défile du doigt : les cartes restent

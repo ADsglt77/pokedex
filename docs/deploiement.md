@@ -135,7 +135,8 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
    prix à l'heure suivante ; sans le catalogue, ce passage ne sait pas quelles séries sont
    récentes (leur prix est la tendance : `../pokedex-data/docs/donnees.md`), et un passage des
    prix du même jour, après le catalogue, corrige ce jour-là. Les tâches relisent tout elles-mêmes
-   (environ deux jours, au rythme convenu avec Pokécardex), dans `pokedex-data` :
+   (le catalogue et les images de TCGdex, que copie l'importateur `pokecodex-importer` :
+   `../pokedex-data/docs/donnees.md`), dans `pokedex-data` :
 
    ```bash
    bun run ingest setup --remote
@@ -172,11 +173,18 @@ vous. Les autres sont des commandes, à lancer dans le dossier du dépôt indiqu
     `CatalogSetsFile`, `CardPriceRow`), que le site lit par position, ne s'allonge qu'à la fin,
     jamais réordonné ;
   - les gabarits des chemins d'images (`CardScanPath`… du contrat) : celui des scans est gardé dans
-    les collections, changé, l'API sert l'ancien chemin et le nouveau ; les autres (logos, icônes,
-    sprites, illustrations : les illustrations en WebP) se recalculent à l'affichage, l'API sert le
+    les collections, changé, l'API sert l'ancien chemin et le nouveau ; les autres (logos, sprites,
+    illustrations : les illustrations en WebP) se recalculent à l'affichage, l'API sert le
     nouveau avant que le site ne le demande ;
   - un changement de l'API que le site attend se pousse d'abord dans `pokedex-data` (élargie, elle
     sert encore le site d'avant), sauf une génération (ci-dessous).
+
+  Une exception, le passage du catalogue à TCGdex (novembre 2026 : l'ancienne source abandonnée) :
+  ses réponses et ses chemins d'images ont changé d'un coup (clés d'images, raretés et types en
+  mots, plus de decks ni de noms anglais et allemands, plus d'icônes), sans transition ; les deux
+  dépôts partent ensemble, et les collections enregistrées se migrent une fois
+  (`scripts/migrer-tcgdex.ts`, `docs/cartes.md` : les anciens chemins des scans ne sont plus
+  servis).
 - **Une forme gardée dans R2** (espèces et catalogue, `snapshots/…`, servis tels qu'écrits :
   `FORMAT` ne vaut que pour les réponses tirées des prix et les historiques, `serveTagged`) change
   en trois temps, le site sachant lire les deux formes d'abord (inutile pour un champ facultatif

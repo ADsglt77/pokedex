@@ -42,11 +42,11 @@ type SetOrder = (typeof SET_ORDERS)[number]['value']
 
 const ORDER_HINTS: Record<SetOrder, string> = {
   recent: 'Des plus récentes aux plus anciennes, année par année.',
-  block: 'Bloc par bloc, des plus récents aux plus anciens : leurs extensions, puis leurs decks.',
+  block: 'Bloc par bloc, des plus récents aux plus anciens.',
 }
 
-/** Un code d'extension de chaque langue, pour l'exemple de la recherche. */
-const EXAMPLE_CODES: Record<CardLanguage, string> = { ja: 'SV2a', fr: 'MEG' }
+/** Un id d'extension de chaque langue, pour l'exemple de la recherche. */
+const EXAMPLE_CODES: Record<CardLanguage, string> = { ja: 'SV2a', fr: 'sv03.5' }
 
 /** Les extensions dessinées d'un coup : plus qu'un grand écran n'en montre. */
 const SETS_STEP = 40
@@ -65,8 +65,8 @@ interface SetListProps {
 }
 
 /**
- * La fenêtre du choix d'une extension : leurs logos, cherchées par code ou par nom (« sv2a » ou
- * « meg », « 151 »), rangées par année ou par bloc (l'ordre choisi reste d'une ouverture à
+ * La fenêtre du choix d'une extension : leurs logos, cherchées par id ou par nom (« sv2a » ou
+ * « sv03.5 », « 151 »), rangées par année ou par bloc (l'ordre choisi reste d'une ouverture à
  * l'autre), chacune avec son nombre de cartes, lues dans le catalogue de leur langue
  * (`loadSets` : déjà là pour le Catalogue). Pleine page : la recherche reste en haut quand la liste
  * défile. Le bouton qui l'ouvre est ici, avec son état (« Changer d'extension » au Catalogue,
@@ -218,15 +218,15 @@ function SetResults({
     () => new Map(catalog?.sets.map(({ id, name }) => [id, searchForm(`${id} ${name}`)])),
     [catalog],
   )
-  // Par bloc : dans l'ordre des blocs (ceux sans bloc à la fin), leurs extensions puis leurs
-  // decks, chacun des plus récents aux plus anciens (l'ordre reçu).
+  // Par bloc : dans l'ordre des blocs (ceux sans bloc à la fin), chacun des plus récents aux plus
+  // anciens (l'ordre reçu).
   const ordered = useMemo(() => {
     if (!catalog) return []
     const { sets, blocks } = catalog
     if (order === 'recent') return sets
     const rank = (set: SetSummary) =>
       set.block === null ? blocks.length : blocks.indexOf(set.block)
-    return [...sets].sort((a, b) => rank(a) - rank(b) || Number(a.deck) - Number(b.deck))
+    return [...sets].sort((a, b) => rank(a) - rank(b))
   }, [catalog, order])
   const found = search ? ordered.filter((set) => searchable.get(set.id)!.includes(search)) : ordered
   // Plus de 400 extensions : dessinées au fur et à mesure du défilement, la fenêtre s'ouvre et se
@@ -272,11 +272,11 @@ function SetResults({
                       aria-current={set.id === current || undefined}
                       onClick={() => onPick(set)}
                     >
-                      <SetLogo set={set} size="md" className={styles.logo} />
+                      <SetLogo set={set} className={styles.logo} />
                       <span className={styles.name}>{set.name}</span>
                       <span className={styles.meta}>{details(set.id, set.year)}</span>
                       <span className={styles.count}>
-                        {details(plural(set.count, 'carte', 'cartes'), set.deck && 'deck')}
+                        {plural(set.count, 'carte', 'cartes')}
                         {started?.has(set.id) && (
                           <Badge size="sm" tone="success">
                             Commencée

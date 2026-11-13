@@ -15,14 +15,13 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   changent dans `theme.css`, jamais dans un composant (le fond, `--camply-bg`, est aussi la couleur
   de la barre du navigateur, lue par `store/theme.ts` ; ses copies figées, `index.html`, manifeste,
   `public/theme.js`, y sont nommées) ; ce qui diffère d'un thème à l'autre hors camply y a aussi
-  son jeton (`--empty-sprite-opacity` : le sprite grisé d'un Pokémon sans carte ;
-  `--dark-icon-filter` : les icônes de rareté noires, inversées en sombre ; `--link` et
+  son jeton (`--empty-sprite-opacity` : le sprite grisé d'un Pokémon sans carte ; `--link` et
   `--chart-*` : en clair, liens et courbes à l'encre, liens soulignés de rouge, pour que le rouge
   reste la marque et l'action principale, pas une alerte ; le choix d'un `SegmentedControl` y est un
   bouton blanc en relief ; `--flag-*` : les couleurs des drapeaux de l'interrupteur des langues
   et de la langue d'une carte (`LanguageFlag`), les mêmes dans les deux thèmes, et leur liseré,
   qui détache le blanc d'un fond blanc ou jaune ; `--type-*` : la pastille du type d'un Pokémon,
-  `TypeChip`, des tons pastel, les mêmes dans les deux thèmes ; `config/pokedex.ts` n'a que leurs
+  `TypeChip`, et de l'énergie d'une carte du catalogue, `TypeLabel`, des tons pastel, les mêmes dans les deux thèmes ; `config/pokedex.ts` n'a que leurs
   noms). Contrastes : les contours du focus à 3:1 au moins dans les deux thèmes, celui d'un champ
   en erreur compris (`--camply-danger-ring`) ; le texte à 4,5:1 au moins, sauf des écarts connus du
   gris discret (`--camply-text-muted-2`) : en sombre, l'indice « Esc » de la palette, sur un fond à
@@ -154,7 +153,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   part ; pour image, trois de ses cartes favorites en éventail, celles des Pokémon débloqués
   d'abord, ou les trois Pokémon de départ tant qu'aucune n'a d'image), puis une tuile par
   collection d'extension, dans l'ordre où elles ont été commencées : son
-  logo (demandé à son chemin, sans le catalogue : son code s'il n'y en a pas), son nom et le
+  logo (demandé au chemin que donnent sa langue et son id, `setLogoKey`, sans le catalogue : son id
+  s'il n'y en a pas ; seules certaines extensions françaises en ont un), son nom et le
   drapeau de sa langue (`LanguageFlag of="set"`, « Extension japonaise »), son code, « 87 / 230 »
   et sa barre, sa valeur au prix du jour ; chaque tuile est tout entière le lien de son titre (vers
   `/pokedex`, ou la page de la collection, `seriesPath` : `/collections/M6A`, `?langue=fr` pour une
@@ -237,8 +237,9 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   carte et son prix à droite (l'une sous l'autre sous 48rem) ; dans le pied, les flèches des
   cartes voisines et l'ajout, qui passe dessous s'il ne tient pas. La recherche, les filtres et la
   fiche ouverte sont dans l'adresse (NAV-05, novembre 2026 : écrite
-  `?recherche=pika&raretes=1%2C8&types=4&carte=025`, la virgule encodée, et relue aussi avec une
-  virgule simple ; en français, NAV-06 ; `parseCatalogView`, `catalogViewParams`,
+  `?recherche=pika&raretes=Commune%2CDouble+rare&types=fire&carte=025` : les clés du catalogue, la
+  virgule encodée, et relue aussi avec une virgule simple ; un type inconnu de `CARD_TYPES` oublié
+  à la lecture ; en français, NAV-06 ; `parseCatalogView`, `catalogViewParams`,
   `lib/filters.ts`, testés), seule source de la vue (pas d'état recopié) : une vue se partage, et « Précédent »
   depuis une page qu'elle a ouverte (la fiche d'un Pokémon) la retrouve, fiche comprise. Chaque
   changement remplace l'entrée de l'historique (`filterUpdate`, comme au Pokédex), hors de la
@@ -246,9 +247,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   d'autres filtres ferment la fiche (`changeCatalogView` : une carte de l'adresse que la grille
   ne montre pas n'ouvre rien, et ne se rouvre pas quand un filtre la ramène) ; une autre extension
   ou langue repart d'une vue vide. Relue, la vue est ramenée à l'extension (`availableFilter`,
-  `catalogCardIndex`, `lib/card-catalog.ts`, testés) : une rareté synonyme devient celle de ses
-  cartes (`raretes=8`, « C », est « Commune » quand l'extension la nomme ainsi), une rareté ou un
-  type qu'elle n'a pas est oublié, et `carte=25` ouvre la carte 025 (`numberKey`) ; sans réécrire
+  `catalogCardIndex`, `lib/card-catalog.ts`, testés) : une rareté ou un type qu'elle n'a pas est
+  oublié, et `carte=25` ouvre la carte 025 (`numberKey`) ; sans réécrire
   l'adresse (aucune navigation de plus) : la suivante, écrite à un autre choix, est canonique. Réglages : un sommaire (collé à
   gauche sur grand écran) vers trois groupes — Compte & partage, Sauvegarde, Avancé — dont les
   panneaux passent sur deux colonnes sur très grand écran. Le serveur n'y apparaît qu'en cas de
@@ -290,8 +290,8 @@ Le système de design, la navigation, les pages, les courbes, les filtres et ce 
   et son rythme par semaine). Aucun point
   inventé : un jour sans prix n'en a pas ; un total (`fromZero`) part de zéro. Cardmarket ne publie
   que le guide du jour (aucune archive) : l'historique vient du relevé quotidien de l'API des
-  données, et, pour les 180 jours qui le précèdent, de Pokécardex (sa tâche `history`), au même
-  prix suivi. Les nombres formatés gardent une espace insécable visible (`spaced`, `lib/format.ts` :
+  données, et, pour les 180 jours qui le précèdent, de l'historique repris de Pokécardex (la tâche
+  `history` de l'API, avant l'abandon de ce site en novembre 2026), au même prix suivi. Les nombres formatés gardent une espace insécable visible (`spaced`, `lib/format.ts` :
   l'espace fine de `Intl` manque à certaines polices ; une part : `formatShare`, « 12,5 % »). Une
   carte sans Pokémon (un dresseur, une énergie : une case d'une collection d'extension) se montre
   partout comme les autres (accueil, Valeur, liste d'achats, prochaine commande, commandes), son

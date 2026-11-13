@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { CardArt } from '@/components/CardArt'
 import { artworkUrl } from '@/config/pokedex'
-import { showsImage } from '@/lib/card-images'
 import type { PokedexEntry } from '@/lib/pokedex'
 import type { PokemonCard } from '@/types'
 import styles from './FavoritesFan.module.css'
@@ -22,7 +21,7 @@ export function FavoritesFan({ entries, eager }: { entries: PokedexEntry[]; eage
     for (const unlocked of [true, false]) {
       for (const entry of entries) {
         const card = entry.card?.card
-        if (entry.unlocked === unlocked && card && showsImage(card.image)) {
+        if (entry.unlocked === unlocked && card?.image) {
           favorites.set(card.id, card)
         }
         if (favorites.size === 3) return [...favorites.values()]

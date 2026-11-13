@@ -1,7 +1,7 @@
 /**
- * Le catalogue des cartes japonaises et françaises, que l'API des données construit d'après
- * Pokécardex ; les mêmes réponses dans les deux langues, aux mêmes adresses pour le japonais, sous
- * `/api/catalog/fr/…` pour le français :
+ * Le catalogue des cartes japonaises et françaises, que l'API des données construit d'après TCGdex
+ * (copié par l'importateur `pokecodex-importer`) ; les mêmes réponses dans les deux langues, aux
+ * mêmes adresses pour le japonais, sous `/api/catalog/fr/…` pour le français :
  * - `/api/catalog/species/<n°>` : les cartes d'un Pokémon, des plus récentes aux plus anciennes,
  *   avec leur rareté, leur type et leurs séries (nom, date de sortie, logo) ; chargées par la
  *   fenêtre d'ajout, et préparées d'avance par la fiche d'un Pokémon sans carte (quand le
@@ -26,10 +26,12 @@ import { speciesTitle } from '@/lib/species'
 import type {
   CardImage,
   CardLanguage,
+  CardType,
   CatalogFile,
   CatalogSetFile,
   CatalogSetsFile,
   CollectionData,
+  ImageKey,
   PokemonCard,
 } from '@/types'
 
@@ -47,89 +49,56 @@ const CATALOG_TIMEOUT = 15_000
 export interface CatalogSet {
   /** Sa langue : celle de ses cartes. */
   language: CardLanguage
-  /** Son code chez Pokécardex : « SV2A » (le même code peut exister dans les deux langues). */
+  /** Son id chez TCGdex : « SV2a », « sv03.5 » (le même id peut exister dans les deux langues). */
   id: string
-  /** Son nom : « Pokémon Card 151 ». */
+  /** Son nom, dans sa langue : « Écarlate et Violet 151 ». */
   name: string
-  /** Son année de sortie ; `null` si Pokécardex ne la donne pas. */
+  /** Son année de sortie ; `null` si inconnue. */
   year: string | null
-  /** Son logo est chez nous (`setLogo`), ou pas encore cherché ; faux si aucun. */
-  logo: boolean
+  /** La clé de son logo (`setLogo`) ; '' : aucun. */
+  logo: ImageKey
 }
 
-/** Une rareté, telle que Pokécardex la nomme (« SAR », « Commune »…), et son rang. */
+/** Une rareté : sa clé dans la réponse (telle que TCGdex l'écrit), son nom en français, son rang. */
 export interface Rarity {
-  id: number
+  id: string
   name: string
   rank: number
 }
 
 /** Une carte du catalogue : de quoi la montrer et la reprendre dans la saisie. */
 export interface CatalogCard {
-  /** « SV2A 166 » : la série et le numéro, uniques ; « fr MEG 001 » pour une carte française. */
+  /** « SV2a 166 » : la série et le numéro, uniques ; « fr sv03.5 001 » pour une carte française. */
   key: string
   /** « 166 » : le numéro, sans la série. */
   number: string
   set: CatalogSet
   /** Ses Pokémon : un seul, sauf une carte TAG TEAM. */
   dexIds: number[]
-  /** L'id Cardmarket, pour le prix et le lien ; absent si Pokécardex ne le connaît pas. */
+  /** L'id Cardmarket, pour le prix et le lien ; absent s'il n'est pas connu. */
   cardmarket?: number
-  /** « Pikachu ex (SV8 033) », « Pikachu & Zekrom GX (SM9 031) » : son nom et son code. */
+  /**
+   * « Pikachu ex (SV8 033) », « Pikachu & Zekrom GX (SM9 031) » : son nom (en japonais pour une
+   * carte japonaise, tel que TCGdex le donne) et son code.
+   */
   reference: string
-  /** Son image ; `null` si la source ne l'a pas. */
+  /** Son image ; `null` si le catalogue n'en a pas. */
   image: CardImage | null
-  /** Sa rareté ; `null` tant que Pokécardex ne la donne pas. */
+  /** Sa rareté ; `null` si inconnue. */
   rarity: Rarity | null
   /** Son type (`CARD_TYPES`) ; `null` s'il n'en est pas un. */
-  type: number | null
+  type: CardType | null
 }
 
 /**
- * « SV2A 166 », « MEG 001 » : la série et le numéro, ce qu'on montre pour nommer une carte, dans les
- * deux langues. Jamais sa `key` : « fr MEG 001 » ne sert qu'à la retrouver.
+ * « SV2a 166 », « sv03.5 001 » : la série et le numéro, ce qu'on montre pour nommer une carte, dans
+ * les deux langues. Jamais sa `key` : « fr sv03.5 001 » ne sert qu'à la retrouver.
  */
 export const cardCode = (card: CatalogCard) => `${card.set.id} ${card.number}`
 
-/**
- * Les raretés que la source nomme deux fois (décision D-08, une table côté site, sans toucher au
- * contrat ni aux réponses) : le sigle des cartes récentes, et le nom des anciennes, le même dans
- * les deux langues. « C » (8) est « Commune » (1), « U » (9) « Unco » (2), « R » (10) « Rare » (3),
- * « PROMO » (19) et « PR » (20) « Promo » (7). Sinon, les filtres d'un Pokémon proposaient
- * « Commune » et « C » côte à côte.
- */
-const RARITY_SYNONYMS = new Map([
-  [8, 1],
-  [9, 2],
-  [10, 3],
-  [19, 7],
-  [20, 7],
-])
-
-/**
- * « Sans rareté » (21) : une carte qui n'en imprime pas. Rien n'est montré sous sa tuile (son
- * icône, une barre oblique, se lisait comme « modifier ») ; elle reste un filtre.
- */
-export const NO_RARITY = 21
-
-/**
- * Les raretés d'une réponse, par numéro ; un synonyme (`RARITY_SYNONYMS`) mène à la rareté qu'il
- * double, quand la réponse la connaît (les raretés d'une réponse sont celles de ses cartes : sans
- * elle, le synonyme reste tel quel).
- */
-function readRarities(rarities: CatalogFile['rarities']) {
-  const read = new Map(
-    Object.entries(rarities).map(([id, [name, rank]]) => [
-      Number(id),
-      { id: Number(id), name, rank },
-    ]),
-  )
-  for (const [synonym, rarity] of RARITY_SYNONYMS) {
-    const same = read.get(rarity)
-    if (same && read.has(synonym)) read.set(synonym, same)
-  }
-  return read
-}
+/** Les raretés d'une réponse, par clé. */
+const readRarities = (rarities: CatalogFile['rarities']) =>
+  new Map(Object.entries(rarities).map(([id, [name, rank]]) => [id, { id, name, rank }]))
 
 /** Le nom d'une carte ; sans nom connu, ses Pokémon : « Pikachu & Zekrom ». */
 const cardName = (name: string, dexIds: number[]) => name || speciesTitle(dexIds)
@@ -137,9 +106,9 @@ const cardName = (name: string, dexIds: number[]) => name || speciesTitle(dexIds
 /** Une carte, d'après ce qu'en disent les deux réponses du catalogue. */
 function toCard<S extends CatalogSet>(
   set: S,
-  row: { number: string; name: string; dexIds: number[]; cardmarket: number; image: number },
+  row: { number: string; name: string; dexIds: number[]; cardmarket: number; image: ImageKey },
   rarity: Rarity | null,
-  type: number,
+  type: CardType,
 ) {
   const { number, dexIds } = row
   const name = cardName(row.name, dexIds)
@@ -150,7 +119,7 @@ function toCard<S extends CatalogSet>(
     dexIds,
     cardmarket: row.cardmarket || undefined,
     reference: `${name} (${set.id} ${number})`,
-    image: row.image ? catalogImage(set.language, set.id, row.image) : null,
+    image: row.image ? catalogImage(row.image) : null,
     rarity,
     type: CARD_TYPES.has(type) ? type : null,
   }
@@ -161,7 +130,7 @@ function readSpeciesCards(file: CatalogFile, speciesId: number, lang: CardLangua
   const sets = new Map(
     Object.entries(file.sets).map(([id, [name, released, logo]]) => [
       id,
-      { language: lang, id, name, year: released.slice(0, 4) || null, logo: logo === 1 },
+      { language: lang, id, name, year: released.slice(0, 4) || null, logo },
     ]),
   )
   const rarities = readRarities(file.rarities)
@@ -200,10 +169,8 @@ export interface SetSummary extends CatalogSet {
   released: string | null
   /** Ses cartes au catalogue, dresseurs et énergies compris. */
   count: number
-  /** Son bloc (« Scarlet & Violet ») ; `null` si inconnu. */
+  /** Son bloc (une « série » de TCGdex : « Écarlate et Violet ») ; `null` si inconnu. */
   block: string | null
-  /** Un deck, pas une série en boosters. */
-  deck: boolean
 }
 
 /** Les séries de la page Catalogue, des plus récentes aux plus anciennes, et leurs blocs. */
@@ -223,16 +190,15 @@ export const loadSets = (lang: CardLanguage) =>
     (file) =>
       file && {
         blocks: file.blocks,
-        sets: file.sets.map(([id, name, released, logo, count, block, deck]) => ({
+        sets: file.sets.map(([id, name, released, logo, count, block]) => ({
           language: lang,
           id,
           name,
           year: released.slice(0, 4) || null,
           released: released || null,
-          logo: logo === 1,
+          logo,
           count,
           block: file.blocks[block] ?? null,
-          deck: deck === 1,
         })),
       },
     CATALOG_TIMEOUT,
@@ -241,17 +207,17 @@ export const loadSets = (lang: CardLanguage) =>
 /** Une carte de la page Catalogue : celle du catalogue, et tout ce qu'on en sait de plus. */
 export interface SetCard extends CatalogCard {
   set: SetSummary
-  /** Son nom français (anglais s'il manque) ; « Pikachu & Zekrom » s'il n'a ni l'un ni l'autre. */
+  /**
+   * Son nom, dans sa langue (en japonais pour une carte japonaise) ; « Pikachu & Zekrom » (ses
+   * Pokémon) s'il n'en a pas.
+   */
   name: string
-  /** Ses noms anglais et allemand ; `null` si inconnus. */
-  english: string | null
-  german: string | null
   /** Son numéro tel qu'imprimé : « 006/165 » ; `null` sans numéro. */
   printed: string | null
   /** Numérotée au-delà du nombre imprimé de cartes de sa série (« 166/165 ») : une « secrète ». */
   secret: boolean
   illustrator: string | null
-  /** « Standard », « Reverse »… */
+  /** « Normale », « Reverse », « Holo »… */
   versions: string[]
 }
 
@@ -268,8 +234,6 @@ function readSet(set: SetSummary, file: CatalogSetFile): SetCard[] {
     return {
       ...card,
       name: cardName(row.name, row.dexIds),
-      english: row.en || null,
-      german: row.de || null,
       printed: row.printed || null,
       secret: isSecret(row.printed),
       illustrator: row.illustrator || null,
@@ -294,8 +258,9 @@ export const loadSetCards = (set: SetSummary) =>
   )
 
 /**
- * La carte du catalogue d'une référence (« Herbizarre (OR1 2) ») dans cette langue, lue dans sa
- * série ; `null` si le catalogue ne l'a pas (ou n'est pas disponible).
+ * La carte du catalogue d'une référence (« Herbizarre (SV2a 2) ») dans cette langue, lue dans sa
+ * série (son id sans casse ni tiret, `setKey`) ; `null` si le catalogue ne l'a pas (ou n'est pas
+ * disponible).
  */
 async function catalogCard(reference: string, lang: CardLanguage): Promise<SetCard | null> {
   const code = referenceCode(reference)
@@ -400,10 +365,10 @@ export const seriesSlot = (card: CatalogCard): PokemonCard => ({
   seriesOnly: true,
 })
 
-/** Les raretés et les types choisis pour une grille de cartes ; aucun : tous. */
+/** Les raretés (leurs clés) et les types choisis pour une grille de cartes ; aucun : tous. */
 export interface CatalogFilter {
-  rarities: number[]
-  types: number[]
+  rarities: string[]
+  types: CardType[]
 }
 
 export const NO_FILTER: CatalogFilter = { rarities: [], types: [] }
@@ -413,28 +378,17 @@ export const passesFilter = (card: CatalogCard, { rarities, types }: CatalogFilt
   (!rarities.length || (card.rarity !== null && rarities.includes(card.rarity.id))) &&
   (!types.length || (card.type !== null && types.includes(card.type)))
 
-/** Les ids d'une même rareté : l'id principal, puis ses synonymes (`RARITY_SYNONYMS`). */
-function rarityGroup(id: number) {
-  const main = RARITY_SYNONYMS.get(id) ?? id
-  return [main, ...[...RARITY_SYNONYMS].filter(([, to]) => to === main).map(([from]) => from)]
-}
-
 /**
- * Un filtre venu de l'adresse ramené à ces cartes (celles d'une extension) : une rareté synonyme
- * devient celle que portent ses cartes (« C » ou « Commune », selon la réponse, `readRarities`),
- * une rareté ou un type qu'aucune n'a est oublié, chacun une fois. Calculé au rendu, sans réécrire
- * l'adresse (aucune navigation, aucune boucle) : la prochaine adresse écrite part de lui.
+ * Un filtre venu de l'adresse ramené à ces cartes (celles d'une extension) : une rareté ou un type
+ * qu'aucune n'a est oublié. Calculé au rendu, sans réécrire l'adresse (aucune navigation, aucune
+ * boucle) : la prochaine adresse écrite part de lui.
  */
 export function availableFilter(filter: CatalogFilter, cards: CatalogCard[]): CatalogFilter {
   const rarities = new Set(cards.flatMap(({ rarity }) => (rarity ? [rarity.id] : [])))
   const types = new Set(cards.flatMap(({ type }) => (type === null ? [] : [type])))
-  const kept = filter.rarities.flatMap((id) => {
-    const same = rarities.has(id) ? id : rarityGroup(id).find((other) => rarities.has(other))
-    return same === undefined ? [] : [same]
-  })
   return {
-    rarities: [...new Set(kept)],
-    types: [...new Set(filter.types.filter((type) => types.has(type)))],
+    rarities: filter.rarities.filter((rarity) => rarities.has(rarity)),
+    types: filter.types.filter((type) => types.has(type)),
   }
 }
 
@@ -451,12 +405,9 @@ const missing = new Set<string>()
 
 /**
  * L'image de la carte dans cette langue : celle que le catalogue donne à cette référence, telle
- * quelle, comme l'ajoute la page Catalogue (son chemin, série et rang, ne change pas d'ordinaire
- * d'image ; pas encore copiée par l'API des données, elle s'affiche dès qu'elle l'est). Une série
- * renumérotée par la source en change : la carte enregistrée garde son chemin, le rang d'avant, et
- * montre le scan de sa nouvelle occupante jusqu'à ce que son image soit choisie de nouveau
- * (`docs/cartes.md`). Hors du catalogue, ou sans image au catalogue : `null`, aucune image
- * retrouvée. La même promesse pour la même langue et la même référence (ce qu'attend `use`). Sans
+ * quelle, comme l'ajoute la page Catalogue (son chemin, la clé de la carte chez TCGdex, ne change
+ * pas d'image ; pas encore copiée par l'API des données, elle s'affiche dès qu'elle l'est). Hors du
+ * catalogue, ou sans image au catalogue : `null`, aucune image retrouvée. La même promesse pour la même langue et la même référence (ce qu'attend `use`). Sans
  * réponse du catalogue en 15 s (`CATALOG_TIMEOUT`, ses séries puis celle de la carte), elle compte
  * pour absente : l'enregistrement, qui l'attend, ne reste pas bloqué. `retry`, au moment
  * d'enregistrer, redemande une référence restée sans image : une panne passagère du catalogue ne

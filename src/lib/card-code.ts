@@ -1,6 +1,6 @@
 /**
- * Le code d'une carte : le code de la série et le numéro qui finissent sa référence
- * (« Bulbizarre (SV2A 166) ») ; et ce qui fait la même carte : même langue, et même code ou même
+ * Le code d'une carte : l'id de la série et le numéro qui finissent sa référence
+ * (« Bulbizarre (SV2a 166) ») ; et ce qui fait la même carte : même langue, et même code ou même
  * id Cardmarket (une carte n'existe qu'une fois), comparés (`isCardOf`) ou en clés
  * (`cardCodeKey`, `cardmarketKey`).
  */
@@ -39,10 +39,13 @@ export const referenceName = (reference: string) =>
 export const numberKey = (number: string) =>
   /^\d+$/.test(number) ? String(Number(number)) : number.toUpperCase()
 
-/** Une extension comparable : en majuscules et sans tiret (SV-P → SVP), comme chez Pokécardex. */
+/**
+ * Une extension comparable : sans casse ni tiret (« SV2a » et « SV2A », « SV-P » et « SVP ») : une
+ * référence tapée à la main, ou d'avant le catalogue de TCGdex, retrouve sa série.
+ */
 export const setKey = (set: string) => set.toUpperCase().replace(/-/g, '')
 
-/** La clé d'une carte, la même quelle que soit l'écriture de son code : « SV2A 166 », « E1 97 ». */
+/** La clé d'une carte, la même quelle que soit l'écriture de son code : « SV2A 166 », « SV03.5 6 ». */
 const codeKey = ({ set, number }: CardCode) => `${setKey(set)} ${numberKey(number)}`
 
 /**

@@ -12,6 +12,7 @@ import { SetPicker } from '@/components/SetPicker'
 import { usePokedex } from '@/hooks/usePokedex'
 import { useStartCollection } from '@/hooks/useStartCollection'
 import type { SetSummary } from '@/lib/card-catalog'
+import { setLogoKey } from '@/lib/card-images'
 import { cardLanguage } from '@/lib/collection'
 import { cx } from '@/lib/cx'
 import { catalogLanguage, catalogParams, seriesPath } from '@/lib/filters'
@@ -145,7 +146,10 @@ function SeriesTile({ series }: { series: SeriesCollection }) {
     <Tile
       to={seriesPath(series.set, language)}
       art={
-        <SetLogo set={{ language, id: series.set, logo: true }} size="md" className={styles.logo} />
+        <SetLogo
+          set={{ id: series.set, logo: setLogoKey(language, series.set) }}
+          className={styles.logo}
+        />
       }
       title={
         <>

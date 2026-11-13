@@ -1,4 +1,4 @@
-import { Button, Toggle, Tooltip } from '@camply/ui'
+import { Button, Toggle } from '@camply/ui'
 import { useRef, type ReactNode, type RefObject } from 'react'
 import { CARD_TYPES } from '@/config/catalog'
 import {
@@ -10,17 +10,19 @@ import {
 } from '@/lib/card-catalog'
 import { focusAfter } from '@/lib/focus'
 import { formatInteger, plural } from '@/lib/format'
-import { RarityIcon, TypeIcon } from './CatalogIcons'
+import type { CardType } from '@/types'
+import { TypeLabel } from './TypeLabel'
 import styles from './CardFilters.module.css'
 
 /** La liste avec `id`, ou sans. */
-const toggled = (ids: number[], id: number, on: boolean) =>
+const toggled = (ids: string[], id: string, on: boolean) =>
   on ? [...ids, id] : ids.filter((other) => other !== id)
 
 /**
  * Les filtres d'une grille de cartes du catalogue (page Catalogue, choix de la carte d'un
- * Pokémon) : leurs raretés et leurs types, chacun avec le nombre de cartes qu'il montrerait parmi
- * celles que garde l'autre filtre. Plusieurs raretés (ou types) s'ajoutent ; les deux filtres se
+ * Pokémon) : leurs raretés et leurs types, en toutes lettres (le type d'une énergie avec sa
+ * pastille, `TypeLabel`), chacun avec le nombre de cartes qu'il montrerait parmi celles que garde
+ * l'autre filtre. Plusieurs raretés (ou types) s'ajoutent ; les deux filtres se
  * combinent. Un filtre qui n'offrirait qu'un choix n'est pas montré. `cards` : les cartes avant ces
  * filtres.
  */
@@ -35,13 +37,13 @@ export function CardFilters({
 }) {
   // Le premier choix, où va le focus quand « Retirer les filtres » disparaît avec eux.
   const first = useRef<HTMLButtonElement>(null)
-  const rarityCounts = new Map<number, { rarity: Rarity; count: number }>()
+  const rarityCounts = new Map<string, { rarity: Rarity; count: number }>()
   for (const card of cards) {
     if (!card.rarity || !passesFilter(card, { ...value, rarities: [] })) continue
     const entry = rarityCounts.get(card.rarity.id) ?? { rarity: card.rarity, count: 0 }
     rarityCounts.set(card.rarity.id, { ...entry, count: entry.count + 1 })
   }
-  const typeCounts = new Map<number, number>()
+  const typeCounts = new Map<CardType, number>()
   for (const card of cards) {
     if (card.type === null || !passesFilter(card, { ...value, types: [] })) continue
     typeCounts.set(card.type, (typeCounts.get(card.type) ?? 0) + 1)
@@ -61,7 +63,7 @@ export function CardFilters({
             id: rarity.id,
             name: rarity.name,
             count,
-            icon: <RarityIcon rarity={rarity} className={styles.rarity} />,
+            label: rarity.name,
           }))}
           selected={value.rarities}
           onSelect={(rarities) => onChange({ ...value, rarities })}
@@ -75,7 +77,7 @@ export function CardFilters({
             id: type,
             name: CARD_TYPES.get(type)!,
             count: typeCounts.get(type)!,
-            icon: <TypeIcon type={type} />,
+            label: <TypeLabel type={type} />,
           }))}
           selected={value.types}
           onSelect={(types) => onChange({ ...value, types })}
@@ -96,7 +98,7 @@ export function CardFilters({
 }
 
 /**
- * Un filtre en pastilles : chacune son icône et son nombre de cartes, `selected` les choisies.
+ * Un filtre en pastilles : chacune son nom et son nombre de cartes, `selected` les choisies.
  * `first` va à la première. Au niveau du module : défini dans `CardFilters`, il serait recréé à
  * chaque rendu et ferait perdre le focus à la pastille cliquée.
  */
@@ -108,33 +110,28 @@ function ChipGroup({
   first,
 }: {
   legend: string
-  chips: { id: number; name: string; count: number; icon: ReactNode }[]
-  selected: number[]
-  onSelect: (selected: number[]) => void
+  chips: { id: string; name: string; count: number; label: ReactNode }[]
+  selected: string[]
+  onSelect: (selected: string[]) => void
   first?: RefObject<HTMLButtonElement | null>
 }) {
   return (
     <fieldset className={styles.group}>
       <legend className={styles.legend}>{legend}</legend>
-      {chips.map(({ id, name, count, icon }, index) => {
-        const label = `${name} : ${plural(count, 'carte', 'cartes')}`
-        // Une icône seule : son nom dans une bulle de camply, au survol comme au clavier.
-        return (
-          <Tooltip key={id} content={label}>
-            <Toggle
-              ref={index === 0 ? first : undefined}
-              size="sm"
-              className={styles.chip}
-              pressed={selected.includes(id)}
-              onChange={(on) => onSelect(toggled(selected, id, on))}
-              aria-label={label}
-            >
-              {icon}
-              <span className="numeric">{formatInteger(count)}</span>
-            </Toggle>
-          </Tooltip>
-        )
-      })}
+      {chips.map(({ id, name, count, label }, index) => (
+        <Toggle
+          key={id}
+          ref={index === 0 ? first : undefined}
+          size="sm"
+          className={styles.chip}
+          pressed={selected.includes(id)}
+          onChange={(on) => onSelect(toggled(selected, id, on))}
+          aria-label={`${name} : ${plural(count, 'carte', 'cartes')}`}
+        >
+          {label}
+          <span className={styles.count}>{formatInteger(count)}</span>
+        </Toggle>
+      ))}
     </fieldset>
   )
 }

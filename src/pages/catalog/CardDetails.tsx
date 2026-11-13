@@ -10,10 +10,10 @@ import {
 import { Check, ChevronLeft, ChevronRight, Plus } from '@camply/ui/icons'
 import { useEffect, useRef, useState } from 'react'
 import { CardArt } from '@/components/CardArt'
-import { RarityIcon, TypeIcon } from '@/components/CatalogIcons'
 import { PricePanel } from '@/components/PricePanel'
 import { SpeciesLinks } from '@/components/SpeciesLinks'
-import { CARD_TYPES } from '@/config/catalog'
+import { TypeLabel } from '@/components/TypeLabel'
+import { ENERGY_TYPES, TRAINER_TYPES } from '@/config/catalog'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { usePokedex } from '@/hooks/usePokedex'
 import { useSeriesSlot } from '@/hooks/useSeriesSlot'
@@ -44,7 +44,7 @@ type CollectionPlace = ReturnType<typeof useCollectionPlace>
 
 /**
  * La fiche d'une carte du catalogue, pleine page : son image en grand, tout ce qu'on en sait
- * (extension, numéro, rareté, type, Pokémon, illustrateur, versions, autres noms), son prix
+ * (extension, numéro, rareté, type, Pokémon, illustrateur, versions), son prix
  * Cardmarket et sa courbe. Les flèches du pied passent aux cartes voisines de la grille (`cards`,
  * dans l'ordre affiché) ; une carte Pokémon s'y ajoute à la collection (`AddToCollection`).
  */
@@ -150,7 +150,6 @@ function facts(card: SetCard, place: CollectionPlace) {
       description: details(
         `${card.set.name} (${card.set.id})`,
         card.set.block && `bloc ${card.set.block}`,
-        card.set.deck && 'deck',
       ),
     },
     {
@@ -162,23 +161,10 @@ function facts(card: SetCard, place: CollectionPlace) {
         </span>
       ),
     },
-    card.rarity && {
-      term: 'Rareté',
-      description: (
-        <span className={styles.inline}>
-          <RarityIcon rarity={card.rarity} decorative />
-          <span>{card.rarity.name}</span>
-        </span>
-      ),
-    },
+    card.rarity && { term: 'Rareté', description: card.rarity.name },
     card.type !== null && {
-      term: pokemon ? 'Type' : 'Catégorie',
-      description: (
-        <span className={styles.inline}>
-          <TypeIcon type={card.type} decorative />
-          <span>{CARD_TYPES.get(card.type)}</span>
-        </span>
-      ),
+      term: TRAINER_TYPES.has(card.type) || ENERGY_TYPES.has(card.type) ? 'Catégorie' : 'Type',
+      description: <TypeLabel type={card.type} />,
     },
     pokemon && { term: 'Pokémon', description: <SpeciesLinks ids={card.dexIds} /> },
     card.illustrator && { term: 'Illustration', description: card.illustrator },
@@ -192,8 +178,6 @@ function facts(card: SetCard, place: CollectionPlace) {
         </span>
       ),
     },
-    card.english && { term: 'Nom anglais', description: card.english },
-    card.german && { term: 'Nom allemand', description: card.german },
     card.set.released && {
       term: card.set.language === 'fr' ? 'Sortie en France' : 'Sortie au Japon',
       description: formatDate(card.set.released),

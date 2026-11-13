@@ -1,6 +1,6 @@
 {
-  // Les tests que lance Bun (`bun test`, qui importent du code de l'app), et les configurations de
-  // Vite, Vitest et Drizzle Kit (sous Node). Sans les types du navigateur (`DOM`) : un `document`
+  // Les tests que lance Bun (`bun test`, qui importent du code de l'app), le script ponctuel de la
+  // migration vers TCGdex, et les configurations de Vite, Vitest et Drizzle Kit (sous Node). Sans les types du navigateur (`DOM`) : un `document`
   // ou un `window` glissé dans le code qu'ils partagent avec l'app (`src/lib`) ne passerait pas.
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
@@ -8,5 +8,11 @@
     "lib": ["ES2023"],
     "types": ["bun"]
   },
-  "include": ["tests", "vite.config.ts", "vitest.config.ts", "drizzle.config.ts"]
+  "include": [
+    "tests",
+    "scripts/migrer-tcgdex.ts",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "drizzle.config.ts"
+  ]
 }

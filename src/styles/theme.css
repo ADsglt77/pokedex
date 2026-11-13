@@ -25,8 +25,9 @@
   --flag-fr-blue: #0055a4;
   --flag-fr-red: #ef4135;
   --flag-edge: rgb(0 0 0 / 0.35);
-  /* Les pastilles des types d'un Pokémon (`TypeChip`) : des tons pastel, les mêmes dans les deux
-     thèmes (cerclées, pour que les plus claires se voient sur le blanc). */
+  /* Les pastilles des types d'un Pokémon (`TypeChip`), et de l'énergie d'une carte du catalogue
+     (`TypeLabel`) : des tons pastel, les mêmes dans les deux thèmes (cerclées, pour que les plus
+     claires se voient sur le blanc). */
   --type-normal: #c9c7b6;
   --type-fire: #f0a987;
   --type-water: #9cc3ee;
@@ -48,8 +49,6 @@
   /* Le sprite grisé d'un Pokémon sans carte (`CardArt`) : sur fond sombre, il ressort de lui-même. */
   --empty-sprite-opacity: 0.35;
   --empty-sprite-opacity-large: 0.5;
-  /* Les icônes noires des raretés (●, « SAR » : `DARK_RARITY_ICONS`) : inversées sur fond sombre. */
-  --dark-icon-filter: invert(1);
   /* Les liens et les courbes : à l'accent en sombre (le jaune ne se lit pas comme une alerte). */
   --link: var(--camply-accent);
   --link-underline: color-mix(in srgb, var(--camply-accent) 45%, transparent);
@@ -136,7 +135,6 @@
   /* Sur le blanc, le sprite grisé s'effacerait : moins transparent. */
   --empty-sprite-opacity: 0.7;
   --empty-sprite-opacity-large: 0.8;
-  --dark-icon-filter: none;
   /* Le liseré des drapeaux, au brun des bordures du thème. */
   --flag-edge: rgba(60, 35, 28, 0.3);
   /* Le rouge est la marque et l'action principale, pas la couleur de tout : un lien rouge, une

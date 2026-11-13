@@ -16,7 +16,8 @@ Les prix Cardmarket, leur historique, les lignes de la liste de souhaits Cardmar
   jour ; 1 025 ids au plus ; 404 tant que le guide n'a jamais été lu ; avec le catalogue, l'état
   des tâches et la surveillance, 400 demandes par 10 s et par visiteur, `worker/limits.ts`). Le
   prix suivi est la règle de
-  Pokécardex (la tendance pour une série de moins de 31 jours, la moyenne sur 30 jours ensuite) ; « Ce qui bouge » (Valeur) et la fiche comparent au
+  l'API des données (`guidePrice` : la tendance pour une série de moins de 31 jours, la moyenne sur
+  30 jours ensuite ; reprise de Pokécardex, abandonné en novembre 2026, comme son historique) ; « Ce qui bouge » (Valeur) et la fiche comparent au
   prix d'il y a 30 jours (`priceChange`, `lib/prices.ts`). Côté navigateur (`store/prices.ts`), les
   réponses s'ajoutent : `usePrices()` rend les prix de la collection (toutes ses cartes, les cases
   de ses collections d'extensions comprises), `usePrices(ids)` ceux d'autres cartes, `null` tant

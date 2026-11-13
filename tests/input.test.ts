@@ -179,8 +179,14 @@ describe('draftCard : la carte saisie, son id Cardmarket corrigé', () => {
     'https://www.cardmarket.com/fr/Pokemon/Products/Singles/Pokemon-Card-151/Bulbasaur-V2-sv2a166'
   const newPage =
     'https://www.cardmarket.com/fr/Pokemon/Products/Singles/Pokemon-Card-151/Ivysaur-V1-sv2a167'
-  const kept = { small: '/images/cards/SV2A/166-md.webp', large: '/images/cards/SV2A/166-hd.webp' }
-  const found = { small: '/images/cards/SV2A/167-md.webp', large: '/images/cards/SV2A/167-hd.webp' }
+  const kept = {
+    small: '/images/cards/ja/SV2a/SV2a-166-md.webp',
+    large: '/images/cards/ja/SV2a/SV2a-166-hd.webp',
+  }
+  const found = {
+    small: '/images/cards/ja/SV2a/SV2a-167-md.webp',
+    large: '/images/cards/ja/SV2a/SV2a-167-hd.webp',
+  }
   /**
    * Une carte enregistrée sans référence notée (le nom de son id chez Cardmarket la remplaçait),
    * avec la page de cet id et son image ; son id corrigé de 719442 en 719603 ; et `change`.

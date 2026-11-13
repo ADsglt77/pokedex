@@ -43,13 +43,16 @@ Cloudflare avant de déployer (le format d'abord, `format:check` ; `lint:ci`, `k
   coûte : argent, règles de la collection, garde du serveur, Pokédex public, schéma ; l'en-tête de
   chaque fichier dit ce qu'il couvre. Pas de tests d'interface.
 - **L'utilisateur choisit les cartes** : aucune détection, sélection ni classement automatique,
-  seulement les aides demandées (`docs/cartes.md`). Cartes japonaises et françaises seulement,
-  **Pokécardex** seule source. Ne rien réintroduire sans demande.
+  seulement les aides demandées (`docs/cartes.md`). Cartes japonaises et françaises seulement (ni
+  TCG Pocket), **TCGdex** seule source depuis le 13 novembre 2026 (Pokécardex abandonné), copié par
+  l'importateur `pokecodex-importer` : noms dans la langue de la carte (japonais pour une
+  japonaise, montrés tels quels), ni icône de type ni de rareté. Ne rien réintroduire sans demande.
 - **Anonyme** : l'app ne cite aucune source ; rien de ce que voit le navigateur ne la nomme
-  (images hébergées chez nous, chemins neutres `/images/cards/SV2A/166-md.webp`, token jamais
-  côté navigateur).
+  (images hébergées chez nous, chemins neutres `/images/cards/ja/SV2a/SV2a-166-md.webp`, token
+  jamais côté navigateur).
 - **Sources** : lire un nouveau site ou contourner une protection, **toujours demander d'abord** ;
-  jamais de CAPTCHA ni de défi anti-robot. Toutes les lectures sont dans l'API des données.
+  jamais de CAPTCHA ni de défi anti-robot. Toutes les lectures sont dans l'API des données et
+  l'importateur (`pokecodex-importer`), jamais dans le site.
 - **Cardmarket** : fichiers publics seulement ; ni scraping, ni API, ni panier, ni ses images. Un
   seul lien construit (`cardmarketPage`). Liste de souhaits : des lignes que l'utilisateur copie et
   colle lui-même ; pas de CSV.

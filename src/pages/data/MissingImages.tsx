@@ -4,23 +4,18 @@ import { useState, type RefObject } from 'react'
 import { useCollectionAction, useNotify } from '@/hooks/useNotify'
 import { findCardImage } from '@/lib/card-catalog'
 import { referenceCode } from '@/lib/card-code'
-import { showsImage } from '@/lib/card-images'
 import { cardLanguage } from '@/lib/collection'
 import { focusAfter } from '@/lib/focus'
 import { plural } from '@/lib/format'
 import { useCollectionStore } from '@/store/collection'
 import type { CardImage, PokemonCard } from '@/types'
 
-/**
- * Une carte sans image à montrer : aucune, ou une adresse de chez la source (d'une version d'avant
- * les images copiées chez nous), jamais affichée (`showsImage`).
- */
-const lacksImage = (card: PokemonCard) => !showsImage(card.image)
+/** Une carte sans image. */
+const lacksImage = (card: PokemonCard) => card.image === null
 
 /**
- * Les cartes sans image à montrer dont la référence donne un code d'extension et un numéro :
- * chercher leurs images d'un coup (une image qui manquait à l'ajout de la carte, ou une adresse de
- * chez la source). `title` : le titre de la section, où va le focus quand toutes sont trouvées (le
+ * Les cartes sans image dont la référence donne un code d'extension et un numéro : chercher leurs
+ * images d'un coup (une image qui manquait à l'ajout de la carte). `title` : le titre de la section, où va le focus quand toutes sont trouvées (le
  * bouton disparaît).
  */
 export function MissingImages({ title }: { title: RefObject<HTMLElement | null> }) {

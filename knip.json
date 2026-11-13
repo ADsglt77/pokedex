@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["scripts/check-data-contracts.ts!"],
+  "entry": ["scripts/check-data-contracts.ts!", "scripts/migrer-tcgdex.ts"],
   // Les modules du moteur de Cloudflare (`cloudflare:workers`, `cloudflare:test`) : pas des paquets.
   "ignoreDependencies": ["cloudflare"]
 }

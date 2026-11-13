@@ -5,7 +5,6 @@
  * que celles de l'ancien id le suivent).
  */
 
-import { isSourceImage } from '@/lib/card-images'
 import { isCardmarketImage } from '@/lib/cardmarket'
 import { languageField } from '@/lib/collection'
 import type { CardImage, CardLanguage, PokemonCard } from '@/types'
@@ -33,9 +32,7 @@ export const draftErrors = ({
       ? 'Une adresse web : https://…'
       : isCardmarketImage(imageUrl)
         ? 'Cardmarket n’affiche ses images que sur son site : prenez-en une ailleurs.'
-        : isSourceImage(imageUrl.href)
-          ? 'Cette image ne s’affiche pas ici : laissez le champ vide, elle sera retrouvée.'
-          : undefined,
+        : undefined,
   cardmarket: cardmarket === undefined ? 'Un nombre : l’id du produit chez Cardmarket.' : undefined,
   page: page.trim() && !pageUrl ? 'Collez une adresse de www.cardmarket.com.' : undefined,
 })

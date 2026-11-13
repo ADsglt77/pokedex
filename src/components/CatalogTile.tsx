@@ -1,20 +1,19 @@
 import { Skeleton } from '@camply/ui'
 import { Children, memo, type ReactNode, type Ref } from 'react'
 import { CardArt } from '@/components/CardArt'
-import { RarityIcon } from '@/components/CatalogIcons'
 import { useGrowingList } from '@/hooks/useGrowingList'
-import { NO_RARITY, type CatalogCard } from '@/lib/card-catalog'
+import type { CatalogCard } from '@/lib/card-catalog'
 import { cx } from '@/lib/cx'
 import styles from './CatalogTile.module.css'
 
 type TileCard = Pick<CatalogCard, 'image' | 'reference' | 'rarity'>
 
 /**
- * Une carte du catalogue, serrée : son image ; sur une ligne `heading` (« SV2A 166 », ou « 166 »
+ * Une carte du catalogue, serrée : son image ; sur une ligne `heading` (« SV2a 166 », ou « 166 »
  * dans une seule extension) et son prix Cardmarket du jour (une ébauche tant que les prix
- * arrivent) ; sur la suivante, sa rareté (rien pour « Sans rareté », `NO_RARITY`) et ce qu'on veut
- * dire de plus (`children` : son nom, ses autres Pokémon…). Un bouton : `pressed` pour la carte
- * choisie.
+ * arrivent) ; sur la suivante, sa rareté en toutes lettres (« Double rare », coupée si elle ne
+ * tient pas) ; puis ce qu'on veut dire de plus (`children` : son nom, ses autres Pokémon…). Un
+ * bouton : `pressed` pour la carte choisie.
  */
 function Tile<C extends TileCard>({
   card,
@@ -39,7 +38,6 @@ function Tile<C extends TileCard>({
   onPick: (card: C) => void
   children?: ReactNode
 }) {
-  const rarity = card.rarity?.id === NO_RARITY ? null : card.rarity
   // Pas d'`aria-label` : le texte de la tuile la nomme, `children` compris.
   return (
     <button
@@ -53,12 +51,8 @@ function Tile<C extends TileCard>({
         <span className={styles.code}>{heading}</span>
         <span className={styles.price}>{price ?? <Skeleton variant="text" width="2.75rem" />}</span>
       </span>
-      {(rarity || children) && (
-        <span className={styles.line}>
-          {rarity && <RarityIcon rarity={rarity} />}
-          {children && <span className={styles.extra}>{children}</span>}
-        </span>
-      )}
+      {card.rarity && <span className={styles.rarity}>{card.rarity.name}</span>}
+      {children && <span className={styles.extra}>{children}</span>}
     </button>
   )
 }

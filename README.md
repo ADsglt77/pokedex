@@ -44,8 +44,8 @@ bun run format   # Prettier
 - **Catalogue** : un grand catalogue de toutes les cartes japonaises ou françaises (le même
   interrupteur 🇯🇵 / 🇫🇷, dans l'adresse), Pokémon, dresseurs et énergies, extension par extension
   (choisie sur son logo), en tuiles serrées, avec une recherche et des filtres de rareté et de
-  type ; chaque carte a sa fiche (image en grand, numéro, rareté, type, Pokémon, illustrateur, versions, noms anglais et allemand, prix Cardmarket et sa
-  courbe) et, pour une carte Pokémon, « Ajouter à la collection » (à acheter, sans remplacer les
+  type ; chaque carte a sa fiche (image en grand, numéro, rareté, type, Pokémon, illustrateur,
+  versions, prix Cardmarket et sa courbe ; le nom d'une carte japonaise en japonais) et, pour une carte Pokémon, « Ajouter à la collection » (à acheter, sans remplacer les
   cartes que le Pokémon a déjà, ni changer sa favorite) ; « Commencer la collection » de
   l'extension montrée (ou « Voir ma collection »).
 - **Valeur** : prix Cardmarket du jour, valeur de la collection (et gain par rapport au prix
@@ -75,10 +75,13 @@ bun run format   # Prettier
 
 Les données (espèces, catalogue des cartes japonaises et françaises, images, prix Cardmarket et
 leur historique) viennent de **l'API des données**, un dépôt à part (`pokedex-data`, un Worker
-Cloudflare lui aussi) : privée, sans token aucune donnée. Le navigateur ne parle qu'au site
+Cloudflare lui aussi) : privée, sans token aucune donnée. Le catalogue et ses images viennent de
+TCGdex (sans TCG Pocket), copiés par l'importateur `pokecodex-importer` : une image par carte, en
+deux tailles, aucune pour certaines ; les logos de certaines extensions françaises seulement ; ni
+icône de type ni icône de rareté (`docs/cartes.md`). Le navigateur ne parle qu'au site
 (`/api/…`, `/images/…`) : le Worker du site renvoie les adresses des données au Worker des
 données, par sa liaison de service (ni token ni réseau entre les deux). Aucune adresse de la source n'apparaît dans le navigateur :
-les images ont des chemins neutres (`/images/cards/SV2A/166-md.webp`). Le Worker du site
+les images ont des chemins neutres (`/images/cards/ja/SV2a/SV2a-166-md.webp`). Le Worker du site
 (`worker/`, Hono, Drizzle et D1, sur Cloudflare Workers) garde les comptes et les collections, et
 montre les Pokédex publics. Seule une image à l'adresse
 collée se charge ailleurs ; pas celles de Cardmarket, qui ne s'affichent que sur son site.

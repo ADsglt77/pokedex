@@ -406,11 +406,11 @@ describe('les données de référence : au Worker des données', () => {
     })
     const headers = { Cookie: 'better-auth.session_token=secret' }
     expect((await call('/api/species?langue=fr', { headers })).status).toBe(200)
-    expect((await call('/images/cards/SV2A/166-md.webp', { headers })).status).toBe(200)
+    expect((await call('/images/cards/ja/SV2a/SV2a-166-md.webp', { headers })).status).toBe(200)
     fetch.mockRestore()
     expect(seen.map((request) => request.url)).toEqual([
       'https://pokedex-data/v1/species?langue=fr',
-      'https://pokedex-data/v1/images/cards/SV2A/166-md.webp',
+      'https://pokedex-data/v1/images/cards/ja/SV2a/SV2a-166-md.webp',
     ])
     for (const request of seen) expect(request.headers.get('cookie')).toBeNull()
   })
@@ -420,7 +420,7 @@ describe('les données de référence : au Worker des données', () => {
     try {
       expect((await call('/api/prices?ids=1', { method: 'HEAD' })).status).toBe(200)
       for (const method of ['POST', 'PUT', 'DELETE', 'PATCH']) {
-        for (const path of ['/api/prices?ids=1', '/images/cards/SV2A/166-md.webp']) {
+        for (const path of ['/api/prices?ids=1', '/images/cards/ja/SV2a/SV2a-166-md.webp']) {
           // Du site lui-même : la garde des autres origines (403) ne s'en mêle pas.
           const response = await call(path, { method, headers: { Origin: ORIGIN } })
           expect([method, path, response.status]).toEqual([method, path, 405])

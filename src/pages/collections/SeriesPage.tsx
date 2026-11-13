@@ -10,6 +10,7 @@ import { SeriesGrid, type SeriesShown } from '@/components/SeriesGrid'
 import { SetLogo } from '@/components/SetLogo'
 import { useCollectionAction } from '@/hooks/useNotify'
 import { useStatSize } from '@/hooks/useStatSize'
+import { setLogoKey } from '@/lib/card-images'
 import { cardLanguage } from '@/lib/collection'
 import { catalogLanguage } from '@/lib/filters'
 import {
@@ -170,8 +171,7 @@ function SeriesSummary({
     <Card padding="none" className={styles.summary}>
       <div className={styles.art}>
         <SetLogo
-          set={{ language: cardLanguage(series), id: series.set, logo: true }}
-          size="hd"
+          set={{ id: series.set, logo: setLogoKey(cardLanguage(series), series.set) }}
           className={styles.logo}
         />
       </div>

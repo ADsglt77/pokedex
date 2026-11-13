@@ -1,0 +1,12 @@
+/* Le nom du type, et sa pastille devant, centrée sur la ligne. */
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* La pastille d'une énergie : celle des types d'un Pokémon. */
+.dot {
+  composes: dot from '../pages/pokemon/TypeChip.module.css';
+  flex: none;
+}

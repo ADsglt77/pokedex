@@ -145,11 +145,15 @@ function WantsContent({
           >
             À ajouter depuis leur page ({others.length})
           </h3>
+          {/* Aucune ligne du tout : aujourd'hui toujours (le catalogue ne donne pas le nom anglais
+              exact des extensions chez Cardmarket, `/api/wants`), dit tel quel plutôt qu'une
+              liste vide sans raison. */}
           <p>
-            Aucune ligne ne désignerait sûrement la bonne carte (une version ou une extension que
-            Cardmarket pourrait confondre) : ajoutez chacune depuis sa page Cardmarket, avec «
-            Ajouter à mes souhaits ». Le lien ouvre la page déjà réglée sur la langue de la carte,
-            Near Mint.
+            {blocks.length === 0
+              ? 'La copie en lignes n’est pas disponible pour le moment : le catalogue ne donne pas le nom exact des extensions chez Cardmarket, et une ligne sans lui pourrait ajouter une autre carte.'
+              : 'Aucune ligne ne désignerait sûrement ces cartes (une version ou une extension que Cardmarket pourrait confondre).'}{' '}
+            Ajoutez chacune depuis sa page Cardmarket, avec « Ajouter à mes souhaits ». Le lien
+            ouvre la page déjà réglée sur la langue de la carte, Near Mint.
           </p>
           <ul className={page.lines}>
             {others.map((row) => (

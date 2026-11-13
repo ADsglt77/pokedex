@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { SetLogo } from '@/components/SetLogo'
 import { SetPicker } from '@/components/SetPicker'
 import { Unavailable } from '@/components/Unavailable'
-import { ENERGY_TYPE, TRAINER_TYPES } from '@/config/catalog'
+import { ENERGY_TYPES, TRAINER_TYPES } from '@/config/catalog'
 import { useRetry } from '@/hooks/useRetry'
 import { useStartCollection } from '@/hooks/useStartCollection'
 import {
@@ -49,7 +49,7 @@ import { CardDetails } from './CardDetails'
 import styles from './CatalogPage.module.css'
 
 /**
- * Le catalogue (`/catalogue?langue=fr&set=MEG`) : toutes les cartes japonaises ou françaises
+ * Le catalogue (`/catalogue?langue=fr&set=sv03.5`) : toutes les cartes japonaises ou françaises
  * (l'interrupteur `LanguageSwitch`, dans l'adresse : `langue`, le japonais sans elle),
  * extension par extension, Pokémon, dresseurs et énergies. Les extensions se choisissent sur leur
  * logo (`SetPicker`), et la collection de celle montrée s'y commence (`SeriesAction`) ; leurs
@@ -129,7 +129,7 @@ function SetBrowser({ catalog }: { catalog: CatalogSets }) {
   return (
     <Stack gap={4}>
       <Card padding="none" className={styles.head}>
-        <SetLogo set={set} size="hd" className={styles.logo} />
+        <SetLogo set={set} className={styles.logo} />
         <div className={styles.titles}>
           <h2 className={styles.name}>{set.name}</h2>
           <p className={styles.meta}>
@@ -139,11 +139,7 @@ function SetBrowser({ catalog }: { catalog: CatalogSets }) {
               plural(set.count, 'carte', 'cartes'),
             )}
           </p>
-          {set.block && (
-            <p className={styles.meta}>
-              {set.deck ? `Deck du bloc ${set.block}` : `Bloc ${set.block}`}
-            </p>
-          )}
+          {set.block && <p className={styles.meta}>Bloc {set.block}</p>}
         </div>
         <div className={styles.actions}>
           <SetPicker
@@ -204,7 +200,7 @@ function SetCards({ set }: { set: SetSummary }) {
 /** « 168 Pokémon, 37 dresseurs et 5 énergies · 45 secrètes » : ce que compte l'extension. */
 function composition(cards: SetCard[]) {
   const trainers = cards.filter((card) => card.type !== null && TRAINER_TYPES.has(card.type))
-  const energies = cards.filter((card) => card.type === ENERGY_TYPE)
+  const energies = cards.filter((card) => card.type !== null && ENERGY_TYPES.has(card.type))
   const pokemon = cards.length - trainers.length - energies.length
   const secrets = cards.filter((card) => card.secret).length
   const kinds = [
@@ -243,7 +239,7 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
   const [params] = useSearchParams()
   const view = useMemo(() => parseCatalogView(params), [params])
   const { search: query, card: openNumber } = view
-  // Les filtres de l'adresse ramenés à l'extension (un synonyme de rareté, un id qu'elle n'a pas).
+  // Les filtres de l'adresse ramenés à l'extension (une rareté ou un type qu'elle n'a pas).
   const filter = useMemo(() => availableFilter(view.filter, cards), [view.filter, cards])
   const navigate = useNavigate()
   const changeView = useCallback(
@@ -261,9 +257,7 @@ function CardBrowser({ cards }: { cards: SetCard[] }) {
         cards.map((card) => [
           card.key,
           searchForm(
-            [card.name, card.english, card.german, card.number, card.printed, card.illustrator]
-              .filter(Boolean)
-              .join(' '),
+            [card.name, card.number, card.printed, card.illustrator].filter(Boolean).join(' '),
           ),
         ]),
       ),

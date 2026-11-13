@@ -14,6 +14,7 @@
  */
 
 import type { NavigateOptions } from 'react-router'
+import { CARD_TYPES } from '@/config/catalog'
 import { generationById, POKEMON_TYPES, type Generation } from '@/config/pokedex'
 import type { CatalogFilter, CatalogSets } from '@/lib/card-catalog'
 import { cardLanguage } from '@/lib/collection'
@@ -211,7 +212,7 @@ export const catalogLanguage = (params: URLSearchParams): CardLanguage =>
   params.get('langue') === 'fr' ? 'fr' : 'ja'
 
 /**
- * L'adresse du Catalogue → son extension (`?set=`) parmi ses séries ; `undefined` sans elle, ou si
+ * L'adresse du Catalogue → son extension (`?set=`, son id tel quel : `SV2a`) parmi ses séries ; `undefined` sans elle, ou si
  * elles ne l'ont pas (la page montre alors la plus récente, et sa route ne demande rien d'avance).
  */
 export const catalogSet = (params: URLSearchParams, catalog: CatalogSets) =>
@@ -219,7 +220,7 @@ export const catalogSet = (params: URLSearchParams, catalog: CatalogSets) =>
 
 /**
  * La langue et l'extension du Catalogue → l'adresse, sans la langue par défaut (le japonais) :
- * `?langue=fr&set=MEG`. Sans extension, la plus récente de la langue.
+ * `?langue=fr&set=sv03.5`. Sans extension, la plus récente de la langue.
  */
 export function catalogParams(lang: CardLanguage, set?: string): URLSearchParams {
   const params = new URLSearchParams()
@@ -231,8 +232,9 @@ export function catalogParams(lang: CardLanguage, set?: string): URLSearchParams
 /**
  * Ce qu'on regarde dans l'extension du Catalogue, gardé dans son adresse (NAV-05 : une vue se
  * partage, et se retrouve au retour d'une fiche de Pokémon) : la recherche (`recherche`), les
- * raretés et les types choisis (`raretes`, `types` : leurs ids, séparés par des virgules) et la
- * carte dont la fiche est ouverte (`carte` : son numéro, unique dans l'extension et sa langue).
+ * raretés et les types choisis (`raretes`, `types` : leurs clés, celles du catalogue, séparées par
+ * des virgules : `raretes=Commune,Double rare&types=fire`) et la carte dont la fiche est ouverte
+ * (`carte` : son numéro, unique dans l'extension et sa langue).
  */
 export interface CatalogView {
   search: string
@@ -240,21 +242,21 @@ export interface CatalogView {
   card: string | null
 }
 
-/** Des ids lus dans l'adresse (`1,8,33`) : seulement des nombres, chacun une fois. */
-const idList = (value: string | null) => [
-  ...new Set(
-    (value ?? '')
-      .split(',')
-      .filter((id) => /^\d{1,4}$/.test(id))
-      .map(Number),
-  ),
-]
+/** Des clés lues dans l'adresse (`Commune,Double rare`) : sans vide, chacune une fois. */
+const keyList = (value: string | null) => [...new Set((value ?? '').split(',').filter(Boolean))]
 
-/** L'adresse du Catalogue → ce qu'on y regarde (`CatalogView`) ; rien de mal écrit n'en sort. */
+/**
+ * L'adresse du Catalogue → ce qu'on y regarde (`CatalogView`) ; rien de mal écrit n'en sort : un
+ * type inconnu (`CARD_TYPES`) est oublié, une rareté que n'a pas l'extension l'est à l'affichage
+ * (`availableFilter` : les raretés sont celles de ses cartes).
+ */
 export function parseCatalogView(params: URLSearchParams): CatalogView {
   return {
     search: params.get('recherche') ?? '',
-    filter: { rarities: idList(params.get('raretes')), types: idList(params.get('types')) },
+    filter: {
+      rarities: keyList(params.get('raretes')),
+      types: keyList(params.get('types')).filter((type) => CARD_TYPES.has(type)),
+    },
     card: params.get('carte') || null,
   }
 }
@@ -271,7 +273,7 @@ export function changeCatalogView(view: CatalogView, patch: Partial<CatalogView>
 
 /**
  * L'adresse du Catalogue (`params` : sa langue et son extension, gardées) avec la vue `view` ; une
- * vue vide n'y ajoute rien (`?langue=fr&set=MEG&recherche=pika&raretes=1,8&carte=025`).
+ * vue vide n'y ajoute rien (`?langue=fr&set=sv03.5&recherche=pika&raretes=Commune&carte=025`).
  */
 export function catalogViewParams(params: URLSearchParams, view: CatalogView): URLSearchParams {
   const next = catalogParams(catalogLanguage(params), params.get('set') ?? undefined)
@@ -283,8 +285,8 @@ export function catalogViewParams(params: URLSearchParams, view: CatalogView): U
 }
 
 /**
- * La page de la collection d'une extension : `/collections/M6A`, `/collections/MEG?langue=fr` pour
- * une française (un même code existe dans les deux langues) ; avec `card` (son id), la fenêtre de
+ * La page de la collection d'une extension : `/collections/M6A`, `/collections/sv03.5?langue=fr`
+ * pour une française (un même id existe dans les deux langues) ; avec `card` (son id), la fenêtre de
  * cette carte ouverte d'emblée (`?carte=`, `seriesCard`).
  */
 export function seriesPath(set: string, language: CardLanguage, card?: string): string {

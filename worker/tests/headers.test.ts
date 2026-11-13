@@ -55,7 +55,7 @@ describe('les en-têtes du site', () => {
   })
 
   test('une image : pour les pages du site seulement', async () => {
-    const { headers } = await call('/images/cards/SVP/1-md.webp')
+    const { headers } = await call('/images/cards/ja/SVP/SVP-001-md.webp')
     expect(headers.get('cross-origin-resource-policy')).toBe('same-origin')
   })
 

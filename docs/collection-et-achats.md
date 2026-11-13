@@ -173,7 +173,10 @@ La collection (statuts, prix payés), la liste d'achats, les commandes et le bud
     sous la jauge du total, affiché comme lui dès que la prochaine commande a une carte) en fait
     des lignes pour la liste de
     souhaits de Cardmarket, que l'utilisateur colle lui-même : l'app n'envoie rien à Cardmarket
-    (format, version et extension : `/api/wants`, `docs/prix.md`). La fenêtre « Ajouter à ma liste
+    (format, version et extension : `/api/wants`, `docs/prix.md`). Depuis le passage à TCGdex
+    (novembre 2026), `/api/wants` ne rend aucune ligne (le nom exact des extensions chez
+    Cardmarket n'est dans aucune source) : la fenêtre le dit, puis liste chaque carte avec le lien
+    de sa page Cardmarket. La fenêtre « Ajouter à ma liste
     Cardmarket » attend les lignes (« Réessayer » si le serveur ne répond pas), puis les donne en
     deux blocs au plus, « Cartes japonaises » et « Cartes françaises » (un bloc seulement s'il a
     des cartes : une ligne ne porte pas la langue, et `cardLanguage` classe chaque carte). Chaque

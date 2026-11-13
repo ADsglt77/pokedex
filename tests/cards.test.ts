@@ -11,14 +11,13 @@
  * d'extensions ne modifient jamais ce qu'elles reçoivent : « Annuler » remet l'état d'avant,
  * qu'une règle qui le modifierait aurait déjà changé. La langue d'une carte (absente :
  * japonaise), qui la suit quand on la détache d'un Pokémon. Enfin, les chemins des images que la
- * collection garde, ceux que sert l'API des données (ses tests les figent de son côté), et le
- * numéro comparable d'une carte, sa règle aussi ; et une image de chez la source, que son accord
- * interdit d'afficher : refusée, ses domaines reconnus par leur empreinte, pas leurs voisins, et
- * jamais affichée, la petite comme la grande. Et ce qu'on regarde au Catalogue, gardé dans son
- * adresse (NAV-05) : relu tel qu'écrit, rien de mal écrit n'en sort, la langue et l'extension
- * restent, et une autre recherche ou d'autres filtres ferment la fiche ouverte ; ses filtres
- * ramenés à l'extension (une rareté synonyme, un id qu'elle n'a pas) et sa carte retrouvée par
- * son numéro (`25` est `025`).
+ * collection garde, ceux que sert l'API des données (ses tests les figent de son côté), la clé du
+ * logo d'une série encodée comme celles de l'importateur, et le numéro et la série comparables
+ * d'une carte (`SV2a` est `SV2A`), leur règle aussi. Et ce qu'on regarde au Catalogue, gardé dans
+ * son adresse (NAV-05) : relu tel qu'écrit, rien de mal écrit n'en sort (un type inconnu), la
+ * langue et l'extension restent, et une autre recherche ou d'autres filtres ferment la fiche
+ * ouverte ; ses filtres ramenés à l'extension (une rareté ou un type qu'elle n'a pas) et sa carte
+ * retrouvée par son numéro (`25` est `025`).
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test'
@@ -31,15 +30,8 @@ import {
   unobtainedSlot,
   type CatalogCard,
 } from '@/lib/card-catalog'
-import { numberKey } from '@/lib/card-code'
-import {
-  catalogImage,
-  isSourceImage,
-  rarityIcon,
-  setLogo,
-  showsImage,
-  typeIcon,
-} from '@/lib/card-images'
+import { numberKey, setKey } from '@/lib/card-code'
+import { catalogImage, setLogo, setLogoKey } from '@/lib/card-images'
 import {
   adopt,
   cardLanguage,
@@ -80,7 +72,7 @@ const withCard = (dexIds: number[]): CollectionData =>
 const tagTeam: CatalogCard = {
   key: 'SM9 031',
   number: '031',
-  set: { language: 'ja', id: 'SM9', name: 'Tag Bolt', year: '2019', logo: false },
+  set: { language: 'ja', id: 'SM9', name: 'Tag Bolt', year: '2019', logo: '' },
   dexIds: [25, 644],
   reference: 'Pikachu & Zekrom GX (SM9 031)',
   image: null,
@@ -101,7 +93,7 @@ function targetIn(cards: PokemonCard[], speciesId: number, listed: CatalogCard |
 const arceus = (number: string): CatalogCard => ({
   key: `fr AR ${number}`,
   number,
-  set: { language: 'fr', id: 'AR', name: 'Platine : Arceus', year: '2009', logo: false },
+  set: { language: 'fr', id: 'AR', name: 'Platine : Arceus', year: '2009', logo: '' },
   dexIds: [25],
   reference: `Arceus (AR ${number})`,
   image: null,
@@ -311,67 +303,49 @@ describe('les règles ne modifient pas ce qu’elles reçoivent (« Annuler »)'
 })
 
 describe('les images', () => {
-  test('les chemins que sert l’API des données, ceux du français sous fr/', () => {
-    expect(catalogImage('ja', 'SVP', 1)).toEqual({
-      small: '/images/cards/SVP/1-md.webp',
-      large: '/images/cards/SVP/1-hd.webp',
+  test('les chemins que sert l’API des données : une clé, deux tailles pour un scan', () => {
+    expect(catalogImage('ja/SV2a/SV2a-166')).toEqual({
+      small: '/images/cards/ja/SV2a/SV2a-166-md.webp',
+      large: '/images/cards/ja/SV2a/SV2a-166-hd.webp',
     })
-    expect(catalogImage('fr', 'SVP', 1)).toEqual({
-      small: '/images/cards/fr/SVP/1-md.webp',
-      large: '/images/cards/fr/SVP/1-hd.webp',
-    })
-    expect([setLogo('ja', 'SVP', 'md'), setLogo('fr', 'SVP', 'hd')]).toEqual([
-      '/images/sets/SVP-md.webp',
-      '/images/sets/fr/SVP-hd.webp',
-    ])
-    expect([typeIcon(3), rarityIcon(33), spriteUrl(25), artworkUrl(25)]).toEqual([
-      '/images/types/3.webp',
-      '/images/rarities/33.webp',
+    expect(setLogo('fr/sv03.5')).toBe('/images/sets/fr/sv03.5.webp')
+    expect([spriteUrl(25), artworkUrl(25)]).toEqual([
       '/images/species/25.png',
       '/images/species/artwork/25.webp',
     ])
+  })
+
+  test('la clé du logo d’une collection d’extension : encodée comme celles de l’importateur', () => {
+    expect(setLogoKey('fr', 'sv03.5')).toBe('fr/sv03.5')
+    // Seuls A-Z a-z 0-9 . - restent ; tout autre octet (UTF-8) devient _XX.
+    expect(setLogoKey('ja', 'exu-%?_é')).toBe('ja/exu-_25_3F_5F_C3_A9')
   })
 
   test('le numéro d’une carte : 017 et 17 sont la même carte, tg01 et TG01 aussi', () => {
     expect([numberKey('017'), numberKey('tg01')]).toEqual(['17', 'TG01'])
   })
 
-  test('une adresse de chez la source : refusée, son site comme ses serveurs d’images', () => {
-    const source = [
-      'https://pokecardex.com/carte.jpg',
-      'https://www.pokecardex.com/carte.jpg',
-      'https://pokecardex.b-cdn.net/logo.png',
-      'https://pokecardex-scans.b-cdn.net/scan.jpg',
-      'https://pokecardex.com./carte.jpg',
-    ]
-    expect(source.filter((url) => !isSourceImage(url))).toEqual([])
-    // Le serveur d'images partagé seul, un domaine voisin, un chemin du site : affichés.
-    const others = [
-      'https://b-cdn.net/carte.jpg',
-      'https://autre.b-cdn.net/carte.jpg',
-      '/images/cards/SVP/1-md.webp',
-    ]
-    expect(others.filter(isSourceImage)).toEqual([])
-    expect(showsImage(catalogImage('ja', 'SVP', 1))).toBe(true)
-    // Une carte retouchée, la petite image (celle de la grille) ou la grande (celle de la fiche)
-    // seule de chez la source.
-    expect(showsImage({ ...catalogImage('ja', 'SVP', 1), small: source[3]! })).toBe(false)
-    expect(showsImage({ ...catalogImage('ja', 'SVP', 1), large: source[3]! })).toBe(false)
-    expect(showsImage(null)).toBe(false)
+  test('la série d’une carte : sans casse ni tiret, SV2a est SV2A, SV-P est SVP', () => {
+    expect([setKey('SV2a'), setKey('SV2A'), setKey('SV-P'), setKey('sv03.5')]).toEqual([
+      'SV2A',
+      'SV2A',
+      'SVP',
+      'SV03.5',
+    ])
   })
 })
 
 describe('l’adresse du Catalogue : la recherche, les filtres et la fiche ouverte', () => {
   const view: CatalogView = {
     search: 'pika chu',
-    filter: { rarities: [1, 8], types: [4] },
+    filter: { rarities: ['Commune', 'Double rare'], types: ['lightning'] },
     card: '025',
   }
 
   test('écrite puis relue, la même vue ; la langue et l’extension restent', () => {
-    const params = catalogViewParams(new URLSearchParams('langue=fr&set=MEG'), view)
+    const params = catalogViewParams(new URLSearchParams('langue=fr&set=sv03.5'), view)
     expect(params.toString()).toBe(
-      'langue=fr&set=MEG&recherche=pika+chu&raretes=1%2C8&types=4&carte=025',
+      'langue=fr&set=sv03.5&recherche=pika+chu&raretes=Commune%2CDouble+rare&types=lightning&carte=025',
     )
     expect(parseCatalogView(params)).toEqual(view)
   })
@@ -379,16 +353,16 @@ describe('l’adresse du Catalogue : la recherche, les filtres et la fiche ouver
   test('une vue vide n’ajoute rien : l’adresse d’avant NAV-05', () => {
     const empty = { search: '', filter: { rarities: [], types: [] }, card: null }
     expect(
-      catalogViewParams(new URLSearchParams('set=SV2A&recherche=x&carte=1'), empty).toString(),
-    ).toBe('set=SV2A')
-    expect(parseCatalogView(new URLSearchParams('set=SV2A'))).toEqual(empty)
+      catalogViewParams(new URLSearchParams('set=SV2a&recherche=x&carte=1'), empty).toString(),
+    ).toBe('set=SV2a')
+    expect(parseCatalogView(new URLSearchParams('set=SV2a'))).toEqual(empty)
   })
 
-  test('des ids mal écrits ou répétés : seulement des nombres, chacun une fois', () => {
+  test('des clés vides ou répétées, un type inconnu : chacune une fois, seulement les types connus', () => {
     const parsed = parseCatalogView(
-      new URLSearchParams('raretes=1,,abc,8,1,-2,99999&types=4;5&carte='),
+      new URLSearchParams('raretes=Commune,,Rare,Commune&types=fire,feu,4,fire;water,&carte='),
     )
-    expect(parsed.filter).toEqual({ rarities: [1, 8], types: [] })
+    expect(parsed.filter).toEqual({ rarities: ['Commune', 'Rare'], types: ['fire'] })
     expect(parsed.card).toBeNull()
   })
 
@@ -408,46 +382,34 @@ describe('l’adresse du Catalogue : la recherche, les filtres et la fiche ouver
 
 describe('l’adresse du Catalogue ramenée à l’extension', () => {
   /** Une carte d'une extension : son numéro, sa rareté (son id) et son type. */
-  const listed = (number: string, rarity: number | null, type: number | null): CatalogCard => ({
+  const listed = (number: string, rarity: string | null, type: string | null): CatalogCard => ({
     ...tagTeam,
     key: `SM9 ${number}`,
     number,
-    rarity: rarity === null ? null : { id: rarity, name: String(rarity), rank: rarity },
+    rarity: rarity === null ? null : { id: rarity, name: rarity, rank: 1 },
     type,
   })
-  // Une extension ancienne (« Commune », 1 ; « Promo », 7) et une récente (« C », 8 ; « PR », 20).
-  const old = [listed('001', 1, 3), listed('002', 7, 4), listed('TG01', null, null)]
-  const recent = [listed('001', 8, 3), listed('002', 20, 4)]
-
-  test('une rareté synonyme devient celle que portent les cartes de l’extension', () => {
-    expect(availableFilter({ rarities: [8, 19], types: [] }, old)).toEqual({
-      rarities: [1, 7],
-      types: [],
-    })
-    expect(availableFilter({ rarities: [1, 7], types: [] }, recent)).toEqual({
-      rarities: [8, 20],
-      types: [],
-    })
-    // Le même id, gardé tel quel ; deux synonymes d'une même rareté, une fois.
-    expect(availableFilter({ rarities: [1, 8, 1], types: [] }, old)).toEqual({
-      rarities: [1],
-      types: [],
-    })
-  })
+  const cards = [
+    listed('001', 'Commune', 'fire'),
+    listed('002', 'Promo', 'lightning'),
+    listed('TG01', null, null),
+  ]
 
   test('une rareté ou un type qu’aucune carte n’a : oublié', () => {
-    expect(availableFilter({ rarities: [99, 1], types: [3, 11, 3] }, old)).toEqual({
-      rarities: [1],
-      types: [3],
+    expect(
+      availableFilter({ rarities: ['Double rare', 'Commune'], types: ['fire', 'fairy'] }, cards),
+    ).toEqual({ rarities: ['Commune'], types: ['fire'] })
+    expect(availableFilter({ rarities: ['Rare'], types: [] }, cards)).toEqual({
+      rarities: [],
+      types: [],
     })
-    expect(availableFilter({ rarities: [2], types: [] }, old)).toEqual({ rarities: [], types: [] })
   })
 
   test('la carte de l’adresse retrouvée par son numéro : `25` est `025`, `tg01` est `TG01`', () => {
-    expect(catalogCardIndex(old, '001')).toBe(0)
-    expect(catalogCardIndex(old, '1')).toBe(0)
-    expect(catalogCardIndex(old, 'tg01')).toBe(2)
-    expect(catalogCardIndex(old, '3')).toBe(-1)
-    expect(catalogCardIndex(old, null)).toBe(-1)
+    expect(catalogCardIndex(cards, '001')).toBe(0)
+    expect(catalogCardIndex(cards, '1')).toBe(0)
+    expect(catalogCardIndex(cards, 'tg01')).toBe(2)
+    expect(catalogCardIndex(cards, '3')).toBe(-1)
+    expect(catalogCardIndex(cards, null)).toBe(-1)
   })
 })

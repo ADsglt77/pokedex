@@ -1,80 +1,55 @@
 /**
  * Les images des cartes japonaises et françaises, copiées par l'API des données et servies par le
  * site (`/images/…`, gardées un an par les navigateurs) : des chemins neutres, sans le nom d'une
- * source, ceux du français sous `fr/` (les codes des séries se répètent d'une langue à l'autre :
- * SVP).
- * Celle d'une carte du catalogue : sa langue, le code de sa série et son rang (`catalogImage`) ;
- * une référence hors du catalogue n'a pas d'image retrouvée. La collection garde ces chemins ; une
- * adresse collée s'affiche telle quelle, sauf une de chez la source (`isSourceImage`, qui ne la
- * nomme pas). Les chemins suivent les gabarits du contrat (`CardScanPath`…) : même règle que
- * `../pokedex-data/src/lib/image-paths.ts`, qui copie les images à ces chemins.
+ * source. Chaque image a sa clé (`ImageKey`, que donne le catalogue : `ja/SV2a/SV2a-166`), la
+ * langue en tête (un même id de série existe dans les deux langues) : le scan d'une carte en deux
+ * tailles (`catalogImage`), le logo d'une série (`setLogo`). Une référence hors du catalogue n'a pas
+ * d'image retrouvée. La collection garde les chemins des scans ; une adresse collée s'affiche telle
+ * quelle. Les chemins suivent les gabarits du contrat (`CardScanPath`…).
  */
 
-import { parseLink } from '@/lib/format'
 import type {
   CardImage,
   CardLanguage,
   CardScanPath,
+  ImageKey,
   ImageSize,
-  RarityIconPath,
   SetLogoPath,
-  TypeIconPath,
 } from '@/types'
-
-/** Le dossier d'une langue dans les chemins : aucun pour le japonais (chemins d'avant), `fr/`. */
-const folder = (lang: CardLanguage) => (lang === 'fr' ? 'fr/' : '')
 
 /** Une image retrouvée (un chemin du site), et non une adresse collée. */
 export const isFoundImage = (image: CardImage) => image.small.startsWith('/images/cards/')
 
 /** Le scan d'une carte à une taille. */
-const cardScan = (lang: CardLanguage, set: string, rank: number, size: ImageSize): CardScanPath =>
-  `/images/cards/${folder(lang)}${set}/${rank}-${size}.webp`
+const cardScan = (key: ImageKey, size: ImageSize): CardScanPath =>
+  `/images/cards/${key}-${size}.webp`
+
+/** L'image d'une carte, d'après sa clé : `md` pour la grille, `hd` pour la fiche. */
+export const catalogImage = (key: ImageKey): CardImage => ({
+  small: cardScan(key, 'md'),
+  large: cardScan(key, 'hd'),
+})
+
+/** Le logo d'une série, d'après sa clé (une seule taille). */
+export const setLogo = (key: ImageKey): SetLogoPath => `/images/sets/${key}.webp`
 
 /**
- * L'image d'une carte : sa langue, le code de sa série et son rang ; `md` pour la grille, `hd`
- * pour la fiche.
+ * Une partie d'une clé, encodée comme les clés de l'importateur (`ImageKey`) : seuls
+ * `A-Z a-z 0-9 . -` restent tels quels, tout autre octet devient `_XX`.
  */
-export function catalogImage(lang: CardLanguage, set: string, rank: number): CardImage {
-  return { small: cardScan(lang, set, rank, 'md'), large: cardScan(lang, set, rank, 'hd') }
-}
-
-/** L'empreinte d'un nom de domaine : FNV-1a sur 32 bits. */
-function fingerprint(domain: string) {
-  let hash = 0x811c9dc5
-  for (let i = 0; i < domain.length; i++) hash = Math.imul(hash ^ domain.charCodeAt(i), 0x01000193)
-  return hash >>> 0
-}
+const keyPart = (part: string) =>
+  [...new TextEncoder().encode(part)]
+    .map((byte) => {
+      const char = String.fromCharCode(byte)
+      return /[A-Za-z0-9.-]/.test(char)
+        ? char
+        : `_${byte.toString(16).toUpperCase().padStart(2, '0')}`
+    })
+    .join('')
 
 /**
- * Les domaines de la source du catalogue (son site, ses serveurs d'images), par leur empreinte : le
- * code que reçoit le navigateur ne la nomme pas. Lesquels : `docs/cartes.md`.
+ * La clé du logo d'une série d'après sa langue et son id (`fr/sv03.5`) : pour une collection
+ * d'extension, qui ne garde pas celle du catalogue. Une série sans logo n'en a pas l'image (404 :
+ * son id à la place, `SetLogo`).
  */
-const SOURCE_DOMAINS = new Set([0xdef02a18, 0x6e583970, 0x82cad49f])
-
-/**
- * Une adresse chez la source du catalogue (son nom de domaine, ou un domaine parent, est l'un des
- * siens) : son accord interdit d'afficher ses images depuis chez elle (copiées et servies par le
- * site seulement). Refusée comme adresse collée, jamais affichée.
- */
-export function isSourceImage(url: string) {
-  const labels = parseLink(url)?.hostname.replace(/\.$/, '').split('.') ?? []
-  return labels.some((_, index) => SOURCE_DOMAINS.has(fingerprint(labels.slice(index).join('.'))))
-}
-
-/**
- * Une image qui s'affiche : ni la petite (grille) ni la grande (fiche) n'est une adresse de chez la
- * source (`isSourceImage`), jamais affichée.
- */
-export const showsImage = (image: CardImage | null | undefined): image is CardImage =>
-  !!image && !isSourceImage(image.small) && !isSourceImage(image.large)
-
-/** Le logo d'une série, en deux tailles : `md` pour la liste, `hd` en tête de page. */
-export const setLogo = (lang: CardLanguage, set: string, size: ImageSize): SetLogoPath =>
-  `/images/sets/${folder(lang)}${set}-${size}.webp`
-
-/** L'icône d'un type de carte (`CARD_TYPES`). */
-export const typeIcon = (type: number): TypeIconPath => `/images/types/${type}.webp`
-
-/** L'icône d'une rareté (« SAR », ●…). */
-export const rarityIcon = (rarity: number): RarityIconPath => `/images/rarities/${rarity}.webp`
+export const setLogoKey = (lang: CardLanguage, set: string): ImageKey => `${lang}/${keyPart(set)}`

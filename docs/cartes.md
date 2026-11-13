@@ -1,11 +1,15 @@
 # Cartes, catalogue et images
 
-Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises (Pokécardex, par l'API des données) et leurs images. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
+Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises (TCGdex, par l'API des données) et leurs images. Une partie de la documentation du projet, à lire avant de toucher à ce domaine (le sommaire et les règles : `CLAUDE.md`).
 
-- Source : **Pokécardex** seul. Son accord : lire son site, utiliser ses images **hébergées chez
-  nous** (`isSourceImage`), reprendre son historique des prix ; aucun crédit demandé, l'app n'en
-  cite aucune (le pied de page, `SiteDisclaimer`, ne dit que ce que le site n'est pas). Les images
-  de Cardmarket ne s'affichent que sur son site : refusées.
+- Source : **TCGdex** seul, depuis le 13 novembre 2026 (Pokécardex, abandonné, n'est plus lu) :
+  ses cartes japonaises et françaises (sans TCG Pocket), copiées avec leurs images par
+  l'importateur `pokecodex-importer` (images **hébergées chez nous**, dans R2), puis servies par
+  l'API des données. L'app ne cite aucune source (le pied de page, `SiteDisclaimer`, ne dit que ce
+  que le site n'est pas). TCGdex donne le nom d'une carte dans sa langue : une carte japonaise a
+  son nom japonais (« ピカチュウex »), montré tel quel (décision de l'utilisateur, novembre 2026).
+  TCGdex ne répertorie pas forcément toutes les cartes jamais parues. Les images de Cardmarket ne
+  s'affichent que sur son site : refusées.
 - Une carte (`PokemonCard`) : id `manual:<uuid>`, ses Pokémon (`dexIds`), une référence (vide à la
   saisie : le nom de la carte chez Cardmarket, sinon le nom du Pokémon), son image (`image` :
   celle du catalogue en deux tailles (un chemin du site), ou l'adresse
@@ -37,49 +41,53 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   dit « aussi celle de … ».
   Ajouter une carte à un Pokémon dit déjà qu'on la veut : tant qu'elle n'est ni commandée ni
   possédée, elle est dans la liste d'achats (`docs/collection-et-achats.md`).
-- Catalogue (de l'API des données : sa lecture de Pokécardex, ses gardes et ses tables sont dans
-  sa page `docs/donnees.md` ; côté site, `lib/card-catalog.ts`) : les cartes japonaises, Pokémon,
-  dresseurs et énergies, environ 450 séries de 1996 à aujourd'hui, decks, promos et anciennes
-  séries compris, sans les exclusivités d'autres pays d'Asie ; et les françaises, environ 250
-  séries et 25 600 cartes (octobre 2026). Trois réponses, que le Worker du site demande à l'API :
-  `/api/catalog/species/<n°>`, les cartes Pokémon d'un Pokémon (la fenêtre d'ajout,
-  `loadSpeciesCards` ; une réponse pour chacun des 1 025, même sans carte : la fenêtre le dit), des
-  plus récentes aux plus anciennes : `[série, numéro (sans numéro imprimé : son rang), id
-  Cardmarket (0 : aucun), nom français, numéro de son image (son rang, 0 : aucune), rareté (0 :
-  inconnue), type (0 : inconnu), Pokémon s'ils sont plusieurs]` ; chaque série : `[nom, sortie,
-  logo]` (0 : pas de logo) ; les raretés de ces cartes : `[nom, rang]`. Pour la page Catalogue :
-  `/api/catalog/sets`, les séries, des plus récentes aux plus anciennes, `[code, nom, sortie, logo,
-  nombre de cartes, rang de son bloc dans `blocks` (-1 : aucun), 1 pour un deck]`, et les blocs
-  dans l'ordre du menu ; `/api/catalog/sets/<code>`, toutes les cartes d'une série dans son ordre,
-  chacune `{ number, printed, name, en, de, dexIds, cardmarket, image, rarity, type, illustrator,
-  versions }`, et leurs raretés. Les cartes françaises ont les mêmes trois réponses, de même forme,
-  sous `/api/catalog/fr/…` (`species/<n°>`, `sets`, `sets/<code>`) : le site les charge par langue
+- Catalogue (de l'API des données : sa construction, ses gardes et ses tables sont dans sa page
+  `docs/donnees.md` ; côté site, `lib/card-catalog.ts`) : les cartes japonaises et françaises que
+  répertorie TCGdex, Pokémon, dresseurs et énergies, extension par extension (une extension : un
+  « set » de TCGdex ; un bloc : une « série » de TCGdex, « Écarlate et Violet »). Trois réponses,
+  que le Worker du site demande à l'API : `/api/catalog/species/<n°>`, les cartes Pokémon d'un
+  Pokémon (la fenêtre d'ajout, `loadSpeciesCards` ; une réponse pour chacun des 1 025, même sans
+  carte : la fenêtre le dit), des plus récentes aux plus anciennes : `[série, numéro (le `localId`
+  de TCGdex), id Cardmarket (0 : aucun), nom (dans la langue de la carte), image (sa clé, '' :
+  aucune), rareté (sa clé, '' : inconnue), type ('' : inconnu), Pokémon s'ils sont plusieurs]` ;
+  chaque série : `[nom, sortie, logo (sa clé, '' : aucun)]` ; les raretés de ces cartes : `[nom
+  français, rang]`. Pour la page Catalogue : `/api/catalog/sets`, les séries, des plus récentes aux
+  plus anciennes, `[id, nom, sortie, logo, nombre de cartes, rang de son bloc dans `blocks` (-1 :
+  aucun)]`, et les blocs, des plus récents aux plus anciens ; `/api/catalog/sets/<id>`, toutes les
+  cartes d'une série dans son ordre, chacune `{ number, printed, name, dexIds, cardmarket, image,
+  rarity, type, illustrator, versions }` (les versions en français : « Normale », « Reverse »,
+  « Holo »…), et leurs raretés. Les cartes françaises ont les mêmes trois réponses, de même forme,
+  sous `/api/catalog/fr/…` (`species/<n°>`, `sets`, `sets/<id>`) : le site les charge par langue
   (`CardLanguage`, `'ja'` ou `'fr'` : `loadSpeciesCards(n°, langue)`, `loadSets(langue)`, la
-  langue d'une série est `CatalogSet.language`), et la clé d'une carte du catalogue est « SV2A 166 »
-  en japonais, « fr MEG 001 » en français (un même code de série existe dans les deux langues ;
-  cette clé reste interne, on montre « MEG 001 » : `cardCode`) ; le Catalogue et la fenêtre
-  d'ajout montrent les deux langues (l'interrupteur, ci-dessous). Les types
-  sont numérotés sans être nommés par la source : leurs noms sont dans `CARD_TYPES`
-  (`src/config/catalog.ts` : 1 Plante, 2 Eau, 3 Feu, 4 Électrique, 5 Psy, 6 Obscurité, 7 Métal,
-  8 Combat, 9 Dragon, 10 Incolore, 11 Fée ; les catégories des dresseurs, 12 Stade, 13 Dresseur
-  (une carte d'avant les catégories), 14 Supporter, 15 Objet, 41 Outil (`TRAINER_TYPES`), et
-  16 Énergie (`ENERGY_TYPE`)). Les raretés gardent les noms de la source : « C », « SAR »… pour les
-  cartes récentes, « Commune », « Unco », « Rare », « Holographique » pour les anciennes, « Sans
-  rareté » pour celles qui n'en impriment pas. Celles que la source nomme deux fois sont réunies côté
-  site (décision D-08, novembre 2026 : `RARITY_SYNONYMS`, `lib/card-catalog.ts`, sans toucher au
-  contrat ni aux réponses) : « C » est « Commune », « U » « Unco », « R » « Rare », « PROMO » et
-  « PR » « Promo », quand la réponse a les deux (les raretés d'une réponse sont celles de ses
-  cartes). « Sans rareté » (`NO_RARITY`) n'est rien sous une tuile (sa barre oblique se lisait
-  comme « modifier ») ; elle reste un filtre. Chaque filtre en icône a son nom dans une bulle
-  (`Tooltip` de camply). Sans API des données, ou tant qu'aucune carte n'a
+  langue d'une série est `CatalogSet.language`), et la clé d'une carte du catalogue est « SV2a 166 »
+  en japonais, « fr sv03.5 001 » en français (un même id de série peut exister dans les deux
+  langues ; cette clé reste interne, on montre « sv03.5 001 » : `cardCode`) ; le Catalogue et la
+  fenêtre d'ajout montrent les deux langues (l'interrupteur, ci-dessous). Les ids des séries sont
+  ceux de TCGdex, tels quels (« SV2a », « sv03.5 ») : ceux des séries françaises ne sont plus les
+  codes d'avant (« MEG » de l'ancienne source). Les types (`CardType`) sont des mots, les mêmes dans les
+  deux langues ; leurs noms sont dans `CARD_TYPES` (`src/config/catalog.ts`) : l'énergie d'un
+  Pokémon (`grass` Plante, `fire` Feu, `water` Eau, `lightning` Électrique, `psychic` Psy,
+  `fighting` Combat, `darkness` Obscurité, `metal` Métal, `fairy` Fée, `dragon` Dragon,
+  `colorless` Incolore), les catégories des dresseurs (`TRAINER_TYPES` : `trainer` Dresseur, sans
+  précision, `item` Objet, `tool` Outil, `technical-machine` Machine technique, `supporter`,
+  `stadium` Stade) et des énergies (`ENERGY_TYPES` : `basic-energy` Énergie de base,
+  `special-energy` Énergie spéciale, `energy` Énergie) ; un type inconnu n'est pas montré. Les
+  raretés ont pour clé le mot de TCGdex (« Double rare ») ; chaque réponse donne leur nom français
+  et leur rang (de la plus commune à la plus rare), que le site reprend tels quels
+  (`readRarities`) : plus de table de raretés côté site (les synonymes de D-08, « C » et
+  « Commune », venaient de l'ancienne source). Ni icône de type ni icône de rareté (le catalogue
+  n'en a aucune image) : tout s'écrit en toutes lettres, la rareté sous la tuile d'une carte (une ligne, coupée si
+  elle ne tient pas), le type sur sa fiche et dans les filtres, l'énergie d'un Pokémon précédée
+  d'une pastille à sa couleur (`TypeLabel` : le jeton `--type-…` du type de Pokémon qui lui répond,
+  `ENERGY_COLORS`, comme `TypeChip`). Sans API des données, ou tant qu'aucune carte n'a
   été lue (404), la fenêtre d'ajout et la page Catalogue le disent (« pas disponible pour le
-  moment »). La référence d'une carte : « Dracaufeu ex (SV2A 006) », son nom puis le code de
+  moment »). La référence d'une carte : « Dracaufeu ex (SV2a 006) », son nom puis le code de
   sa série et son numéro. Un clic à côté de la fenêtre d'une carte (ajout ou modification) ne la
   ferme pas : la saisie ne se perd pas d'un appui (`closeOnBackdrop={false}`, comme la saisie d'une
   commande). « Ajouter une carte »
   (`pokemon/CardForm`) s'ouvre sur l'onglet « Catalogue », où l'interrupteur de langue
   (`LanguageSwitch`, le même que celui de la page Catalogue, japonais au départ) précède la grille
-  (`CatalogPicker` : image Pokécardex, code, rareté, prix du jour, tri par date ou par prix, filtres
+  (`CatalogPicker` : image, code, rareté, prix du jour, tri par date ou par prix, filtres
   de rareté et de type (`CardFilters`, retirés quand l'extension change) ; une seule langue à la fois,
   les textes (« cartes françaises »), l'extension et le lien « toute l'extension » (`catalogParams`,
   qui porte la langue) le suivent ; changer de langue remet l'extension et les filtres à zéro ; ses
@@ -156,23 +164,23 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   françaises ») vit dans l'adresse, `langue=fr`, le japonais sans elle (`catalogLanguage`,
   `catalogParams` de `lib/filters.ts` : une autre valeur vaut le japonais) ; en changer remplace
   `langue` et retire `set` (la plus récente extension de la langue), les textes suivent (« Toutes
-  les cartes françaises… », « Sortie en France »). En tête, l'extension (une série de Pokécardex)
-  avec son logo, celui de sa langue (`SetLogo`), son code, sa sortie, son nombre de cartes et son
-  bloc ; « Changer d'extension » ouvre la fenêtre pleine page des extensions (`SetPicker` : leurs
-  logos, une
-  recherche par code ou par nom, rangées par année ou par bloc, dans l'ordre du menu de Pokécardex,
-  leurs extensions puis leurs decks ; chacune avec son nombre de cartes) ; « Commencer la
+  les cartes françaises… », « Sortie en France »). En tête, l'extension (un « set » de TCGdex)
+  avec son logo (`SetLogo` ; seules certaines extensions françaises en ont un, les autres montrent
+  leur id), son id, sa sortie, son nombre de cartes et son bloc ; « Changer d'extension » ouvre la
+  fenêtre pleine page des extensions (`SetPicker` : leurs logos, une recherche par id ou par nom,
+  rangées par année ou par bloc, dans l'ordre des blocs que donne l'API ; chacune avec son nombre
+  de cartes) ; « Commencer la
   collection » commence celle de l'extension montrée, dans sa langue (toutes ses cartes, à
   débloquer : `docs/collection-et-achats.md`), puis l'ouvre, ou « Voir ma collection » si elle
-  l'est déjà (`docs/interface.md`). Puis une recherche (nom
-  français, anglais ou allemand, numéro, illustrateur), les filtres de rareté et de type (catégories
+  l'est déjà (`docs/interface.md`). Puis une recherche (nom, dans
+  la langue de la carte, numéro, illustrateur), les filtres de rareté et de type (catégories
   des dresseurs et énergies comprises), ce que compte l'extension (« 188 Pokémon, 21 dresseurs et 1
   énergie · 45 secrètes » ; une secrète est numérotée au-delà du nombre imprimé, « 201/165 ») et ses
   cartes en tuiles serrées (`CatalogTile` : le numéro et le prix, puis la rareté et le nom). Un clic
   ouvre la fiche de la carte (`CardDetails`, pleine page) : son image en grand, l'extension et son
-  bloc, le numéro imprimé (« Secrète »), la rareté, le type ou la catégorie (leur icône décorative :
-  le nom n'est lu qu'une fois), ses Pokémon (chacun vers sa fiche, `SpeciesLinks`),
-  l'illustrateur, ses versions, ses noms anglais et allemand, sa sortie (au Japon, ou en France), où
+  bloc, le numéro imprimé (« Secrète »), la rareté, le type ou la catégorie (en toutes lettres,
+  `TypeLabel`), ses Pokémon (chacun vers sa fiche, `SpeciesLinks`),
+  l'illustrateur, ses versions, sa sortie (au Japon, ou en France), où
   elle en est dans la collection, et son prix Cardmarket avec sa courbe (`PricePanel`, comme la
   fiche d'un Pokémon) ; des flèches passent aux cartes voisines de la grille, dans l'ordre affiché.
   Une carte Pokémon a un seul bouton, « Ajouter à la collection » : elle s'ajoute à tous ses
@@ -197,72 +205,74 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   une carte de Pikachu. » (le statut, « possédée », « commandée » ou « non possédée », est celui de
   `statusLabel`, le même que sur la grille et la fenêtre de la collection) ; « Ajouter à la
   collection » la reprend avec son statut (`adopt`), jamais une seconde carte : « Carte … ajoutée à Pikachu (déjà dans votre collection Méga Rêve ex). »
-  Les dresseurs, les énergies et les cartes dont Pokécardex ne donne pas
+  Les dresseurs, les énergies et les cartes dont le catalogue ne donne pas
   les Pokémon (« Togepi, Mélo et Toudoudou-GX ») n'ont pas de bouton. Filtres de rareté et de type
-  (`CardFilters`, demandés par l'utilisateur, octobre 2026) : des pastilles à icône, chacune avec le
+  (`CardFilters`, demandés par l'utilisateur, octobre 2026) : des pastilles en toutes lettres
+  (la rareté, le type avec sa pastille de couleur pour une énergie), chacune avec le
   nombre de cartes qu'elle montrerait parmi celles que gardent l'autre filtre et la recherche ;
   plusieurs choix d'un filtre s'ajoutent, les deux filtres se combinent (`passesFilter`) ; un filtre
   qui n'offrirait qu'un choix n'est pas montré ; changer d'extension ou de langue les retire, avec
   la recherche.
   Ce sont des filtres que l'utilisateur choisit : rien n'est trié ni écarté seul.
-- Images (`lib/card-images.ts`) : copiées et servies par l'API des données (sa page
-  `docs/donnees.md` : leurs sources, la tâche `images`), aux chemins neutres
-  que demande le navigateur : `/images/cards/<série>/<rang>-<md|hd>.webp` (`catalogImage` : `md`
-  pour la grille, `hd` pour la fiche), `/images/sets/<série>-<md|hd>.webp` (le logo d'une série,
-  `setLogo`) ; ceux des cartes françaises sous `fr/` (`/images/cards/fr/<série>/<rang>-…`,
-  `/images/sets/fr/<série>-…` : un même code de série existe dans les deux langues), ceux du japonais
-  inchangés ; `/images/types/<n>.webp` (`typeIcon`), `/images/rarities/<n>.webp`
-  (`rarityIcon` ; les noires, `DARK_RARITY_ICONS`, inversées sur le thème sombre,
-  `--dark-icon-filter` ; une rareté sans icône, « FUR », s'écrit en texte), les sprites et
-  illustrations des Pokémon (`spriteUrl` ; `artworkUrl`, en WebP sans perte depuis L19, novembre
-  2026 : `../pokedex-data/docs/donnees.md`). Le Worker du site les demande à l'API, qui
+- Images (`lib/card-images.ts`) : copiées de TCGdex par l'importateur, servies par l'API des
+  données (sa page `docs/donnees.md`), aux chemins neutres que demande le navigateur. Chaque image a
+  sa clé (`ImageKey`), que donne le catalogue : `<langue>/<série>/<carte>` pour le scan d'une carte
+  (`ja/SV2a/SV2a-166` : la langue d'abord, un même id de série existant dans les deux langues),
+  `<langue>/<série>` pour le logo d'une série ; ses parties encodées comme les clés de
+  l'importateur (seuls `A-Z a-z 0-9 . -` restent, tout autre octet devient `_XX`). Le scan d'une
+  carte, en deux tailles : `/images/cards/<clé>-md.webp` pour les grilles, `-hd.webp` pour la fiche
+  (`catalogImage`) ; le logo d'une série, une taille : `/images/sets/<clé>.webp` (`setLogo`). Une
+  carte sans image au catalogue (clé '') montre la carte de substitution (`CardArt`) ; une série
+  sans logo (la plupart : seules certaines séries françaises en ont un), son id (`SetLogo`). Une
+  collection d'extension ne garde pas la clé du logo : elle la recalcule d'après sa langue et son
+  id (`setLogoKey`, la règle d'encodage testée) et, sans logo à ce chemin (404), montre son id.
+  Ni icône de type ni icône de rareté (plus de `/images/types/…` ni `/images/rarities/…`). Les
+  sprites et illustrations des Pokémon (`spriteUrl` ; `artworkUrl`, en WebP sans perte depuis L19,
+  novembre 2026 : `../pokedex-data/docs/donnees.md`). Le Worker du site les demande à l'API, qui
   les lit dans R2 ; le navigateur les garde un an, sans redemande (`immutable`) ; seules les pages
   du site les affichent (`Cross-Origin-Resource-Policy`, `worker/headers.ts`), 1 300 par 10 s et
-  par visiteur (de quoi charger tout le Pokédex, `worker/limits.ts`). Le catalogue
-  donne le rang de l'image de chaque carte ; une référence hors du catalogue n'a pas d'image
-  retrouvée. La collection garde ces chemins (`isFoundImage` : une image retrouvée, qui suit
-  la référence) ; aucun ne nomme la source. L'API ne copie aucune image à la demande, la tâche
-  `images` les copie toutes d'avance : une image absente répond 404 (la carte de substitution). Une adresse collée de chez la
-  source (son site ou ses serveurs d'images) est refusée à la saisie, et jamais affichée (`isSourceImage` : son accord,
-  jamais une image affichée depuis chez elle ; une carte qui en garde une, en petite ou en grande
-  image, `showsImage`, montre la carte de substitution, jusqu'à ce qu'elle soit corrigée). Le code que reçoit le navigateur ne la nomme
-  pas : `isSourceImage` compare l'empreinte (FNV-1a sur 32 bits, `fingerprint`) du nom de domaine
-  de l'adresse, et de chacun de ses domaines parents, à celles des domaines de Pokécardex
-  (`SOURCE_DOMAINS`) : `0xdef02a18` pokecardex.com (son site, `www.` compris : un domaine parent),
-  `0x6e583970` pokecardex.b-cdn.net (ses logos et icônes), `0x82cad49f` pokecardex-scans.b-cdn.net
-  (ses scans ; les adresses que lit l'API des données, `worker/ingest/images.ts` de son dépôt) ;
-  testé avec les chemins des images (`tests/cards.test.ts`). Un nouveau domaine de la source s'y
-  ajoute par son empreinte, jamais par son nom ; après `bun run build`, le nom ne doit apparaître
-  nulle part dans `dist/`. Réglages › Sauvegarde › « Chercher les images » cherche d'un coup celles
-  des cartes sans image à montrer : aucune, ou une adresse de chez la source (gardée par une version
-  d'avant les images copiées chez nous), remplacée par l'image copiée. `findCardImage`
+  par visiteur (de quoi charger tout le Pokédex, `worker/limits.ts`). Une référence hors du
+  catalogue n'a pas d'image retrouvée. La collection garde les chemins des scans (`isFoundImage` :
+  une image retrouvée, qui suit la référence) ; aucun ne nomme la source. L'API ne copie aucune
+  image à la demande : une image pas encore copiée répond 404 (la carte de substitution). Une
+  adresse collée s'affiche telle quelle, d'où qu'elle vienne (sauf Cardmarket, refusée à la
+  saisie) : la seule image que le navigateur va chercher ailleurs. Réglages › Sauvegarde
+  › « Chercher les images » cherche d'un coup celles des cartes sans image. `findCardImage`
   (`lib/card-catalog.ts`) : l'image du catalogue pour cette référence, dans la langue donnée (celle
   de la carte, `cardLanguage` ; lue dans sa série : `/api/catalog/sets`, puis
-  `/api/catalog/sets/<code>`, sous `fr/` en français), **prise telle quelle**, sans la charger,
-  comme l'ajoute « Ajouter à la collection » de la page Catalogue : son chemin (la série et le rang
-  de la carte au catalogue) ne change pas d'ordinaire d'image, et une image pas encore copiée par
-  l'API des données (les françaises, les heures qui suivent leur arrivée) s'affiche dès qu'elle
-  l'est (d'ici là, la carte de substitution). Seule une renumérotation d'une série par la source
-  (jamais vue : aucun rang changé du 19 au 24 octobre 2026) change l'image d'un chemin : l'API
-  recopie alors le scan de chaque carte déplacée, dont le fichier est celui de la carte qui avait ce
-  rang. Une carte déjà enregistrée garde son chemin, le rang d'avant : celles à ce rang ou après le
-  point d'insertion montrent le scan de leur nouvelle occupante, jusqu'à ce que leur image soit
-  choisie de nouveau (le journal de la tâche `catalog` de l'API compte ces cartes, `docs/donnees.md`
-  de son dépôt, « Une série renumérotée ») ; un navigateur garde l'ancien scan de ce chemin jusqu'à
-  ce que son cache se vide (`immutable`) ; une carte que le catalogue dit sans image n'en a
-  pas ; un catalogue sans réponse en 15 s (`CATALOG_TIMEOUT`, ses séries puis celle de la carte) la
-  compte pour absente, pour ne pas bloquer l'enregistrement. Hors du catalogue, aucune image ; la
-  saisie le dit, sans nommer de source (aucun crédit dans l'app, à la demande de l'utilisateur,
-  octobre 2026 : CLAUDE.md). Un échec est redemandé à l'enregistrement (panne passagère), et une
-  image déjà enregistrée reste si elle n'est pas retrouvée. Une adresse collée s'affiche telle
-  quelle : la seule image que le navigateur va chercher ailleurs. Sans adresse collée, l'image suit
-  la référence (cherchée en quittant le champ). Le code d'une carte (`lib/card-code.ts`) : `codeKey`
-  en fait une clé (« SV2A 166 », « S8AG 1 » : série en majuscules sans tiret, numéro sans
-  zéro) : ce qui fait la même carte de la collection qu'une carte du catalogue (`catalogMatch`) ou
-  qu'une case (`cardCodeKey`, `startSeries`) ; ses deux moitiés, `setKey` puis `numberKey`,
-  retrouvent la carte du catalogue d'une référence (`findCardImage`).
-- Retirés à la demande de l'utilisateur, à ne pas réintroduire sans demande : TCGdex et TCGplayer
-  (Pokécardex est la seule source) ; le favori « Ajouter au Pokédex » (`/ajouter`, un lien
+  `/api/catalog/sets/<id>`, sous `fr/` en français), **prise telle quelle**, sans la charger,
+  comme l'ajoute « Ajouter à la collection » de la page Catalogue : son chemin (la clé de la carte
+  chez TCGdex) ne change pas d'image, et une image pas encore copiée s'affiche dès qu'elle l'est
+  (d'ici là, la carte de substitution) ; une carte que le catalogue dit sans image n'en a pas ; un
+  catalogue sans réponse en 15 s (`CATALOG_TIMEOUT`, ses séries puis celle de la carte) la compte
+  pour absente, pour ne pas bloquer l'enregistrement. Hors du catalogue, aucune image ; la saisie
+  le dit, sans nommer de source (aucun crédit dans l'app, à la demande de l'utilisateur, octobre
+  2026 : CLAUDE.md). Un échec est redemandé à l'enregistrement (panne passagère), et une image déjà
+  enregistrée reste si elle n'est pas retrouvée. Sans adresse collée, l'image suit la référence
+  (cherchée en quittant le champ). Le code d'une carte (`lib/card-code.ts`) : `codeKey` en fait une
+  clé (« SV2A 166 », « SV03.5 6 » : série en majuscules sans tiret, numéro sans zéro) : ce qui fait
+  la même carte de la collection qu'une carte du catalogue (`catalogMatch`) ou qu'une case
+  (`cardCodeKey`, `startSeries`) ; ses deux moitiés, `setKey` puis `numberKey`, retrouvent la carte
+  du catalogue d'une référence (`findCardImage`) : « SV2A », tapé à la main ou noté avant TCGdex,
+  est la série « SV2a ».
+- Migration vers TCGdex (une fois, novembre 2026) : `scripts/migrer-tcgdex.ts`, ses règles dans
+  `lib/tcgdex-migration.ts` (testées : `tests/tcgdex.test.ts`). Il lit le document `collection`
+  d'un compte (un fichier JSON, tel que le garde le serveur) et le catalogue de chaque langue chez
+  un site qui tourne, et écrit, sans toucher à aucune base, le document migré, de même forme, et
+  son bilan (cartes retrouvées avec ou sans image, introuvables, par série d'avant ; collections
+  d'extensions ; la liste des introuvables) :
+  `bun scripts/migrer-tcgdex.ts collection.json http://localhost:5173 [sortie.json]`. Une carte du
+  catalogue d'avant (image à un chemin du site, ou référence à code) est cherchée dans sa langue
+  par sa série (`setKey`) et son numéro (`numberKey`), sinon par son id Cardmarket s'il ne désigne
+  qu'une carte de la langue (les ids des séries françaises ont changé) ; retrouvée, sa référence
+  prend le code de TCGdex, son nom gardé (« Bulbizarre (SV2a 001) »), son image celle du catalogue
+  (`null` sans ; une adresse collée reste), son id Cardmarket reste ; introuvable, rien ne change.
+  Une collection d'extension prend l'id et le nom de sa série chez TCGdex (par son id, sinon celle
+  de toutes ses cartes retrouvées), jamais celle d'une autre collection. Une carte d'avant non
+  migrée garde son ancien chemin, que l'API ne sert plus : la carte de substitution.
+- Retirés à la demande de l'utilisateur, à ne pas réintroduire sans demande : TCGplayer (TCGdex
+  est la seule source ; Pokécardex, abandonné, retiré le 13 novembre 2026, avec la garde de ses
+  adresses d'images, `isSourceImage`, et ses icônes de types et de raretés) ; le favori « Ajouter au Pokédex » (`/ajouter`, un lien
   `javascript:` qui reprenait une page produit de Cardmarket : une carte hors du catalogue se saisit
   à la main) ; sur la page Catalogue, la progression par extension, « Seulement les Pokémon sans
   carte », « Ajouter comme » et les extensions « plus utiles » ou « plus avancées ».

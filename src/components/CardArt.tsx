@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react'
 import { spriteUrl } from '@/config/pokedex'
-import { showsImage } from '@/lib/card-images'
 import { cx } from '@/lib/cx'
 import type { PokemonCard } from '@/types'
 import styles from './CardArt.module.css'
@@ -40,9 +39,7 @@ export function CardArt({
   // substitution.
   const [failed, setFailed] = useState<string | null>(null)
   const image = card?.image
-  // Jamais une image affichée depuis le serveur de la source (son accord) : une adresse collée
-  // avant qu'elle ne soit refusée, un ancien export.
-  const src = showsImage(image) ? (large ? image.large : image.small) : null
+  const src = image ? (large ? image.large : image.small) : null
   const showScan = src !== null && src !== failed
 
   return (
