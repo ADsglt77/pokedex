@@ -808,10 +808,13 @@ une échelle entière ; F-DS-02, une icône par notion ; F-SIMP-01, `isFiltering
 - **A-01 (P1)** : Bun 1.4.4 sur le poste, puis `bun install --frozen-lockfile` dans les deux dépôts.
 - **A-02** : relancer `bun run dev` dans `pokedex-data`. Il migre la D1 locale (0002, 0003) et
   arrête le 301 en boucle.
-- **A-03 (après L13, son déploiement)** : supprimer de R2 les quatre fichiers des deux logos
-  (`images/sets/fr/SVP-md.webp`, `SVP-hd.webp`, `MEP-md.webp`, `MEP-hd.webp`), remettre
-  `sets.logo` à `NULL` pour (fr, SVP) et (fr, MEP), puis lancer `bun run ingest images` ; chacun
-  doit ensuite peser moins de 20 Ko.
+- **A-03 (après L13, son déploiement)** — *fait le 13 novembre 2026 (`procedure-A-03.md`, à côté
+  des dépôts ; sauvegarde gardée quelques jours)* : supprimer de R2 les quatre fichiers des deux
+  logos (`images/sets/fr/SVP-md.webp`, `SVP-hd.webp`, `MEP-md.webp`, `MEP-hd.webp`), remettre
+  `sets.logo` à `NULL` pour (fr, SVP) et (fr, MEP), puis lancer `bun run ingest images --remote`
+  (sans `--remote`, la commande vise le Worker local) ; chacun doit ensuite peser moins de 20 Ko.
+  Résultat servi : SVP-md 6 784 o, SVP-hd 16 966 o, MEP-md 5 384 o, MEP-hd 12 404 o (au lieu
+  d'environ 1,5 Mo chacun), en `image/webp`, sans XMP ni EXIF, pixels identiques aux anciens.
 - **A-04** : dans le tableau de bord, vérifier que la normalisation d'URL de la zone est active
   (D-SEC-08).
 - **A-05** : sur un iPhone réel :
