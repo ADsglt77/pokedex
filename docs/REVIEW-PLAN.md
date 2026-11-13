@@ -712,7 +712,9 @@ aucun refusé, les 11 décodés par Chrome identiques au pixel près (`MEP-hd` :
   texte : il touche à l'historique, qui est irremplaçable.
 - **Effort** : S chacun.
 
-**L19 — Illustrations en WebP (les deux dépôts)**
+**L19 — Illustrations en WebP (les deux dépôts)** — *préparé localement le 13 novembre 2026
+(WebP sans perte, 1 025 identiques au pixel près, −37,3 %, écrits dans le R2 local) ; pas encore
+en ligne : A-09 d'abord.*
 - **Constats** : D-PERF-02.
 - **Dépend de** : L09 (gabarits de chemins dans le contrat).
 - **Changement** : une conversion ponctuelle, hors du Worker, puis des chemins `.webp` des deux
@@ -830,6 +832,18 @@ une échelle entière ; F-DS-02, une icône par notion ; F-SIMP-01, `isFiltering
   `run_worker_first` ; les données dans `worker/index.ts`). Si un autre hôte de la zone en dépend :
   une Redirect Rule (`not ssl and http.host ne "api.pokecodex.fr"` vers https). Sans cela, la zone
   répond 301, et le token, déjà passé en clair, n'est signalé nulle part.
+
+- **A-09 (avant de déployer L19)**, dans cet ordre :
+  1. préparer les WebP du R2 de production : les 1 025 illustrations converties et vérifiées
+     comme en local (`../pokedex-data/docs/donnees.md`) ; le script ponctuel
+     (`conversion-illustrations-webp.mjs`, à côté des dépôts) ne travaille que sur le R2 local, la
+     procédure de production (copie des WebP vérifiés vers le R2 en ligne, contrôle des 1 025
+     fichiers et de leur type) reste à écrire et à valider avant d'agir ;
+  2. pousser `pokedex-data` et attendre sa mise en ligne (Workers Builds) : l'API sert alors le
+     WebP, et encore le PNG que demande le site d'avant ;
+  3. puis seulement pousser `pokedex` : le site demande `artwork/<n>.webp`.
+  Ensuite, une fois le site en ligne passé au WebP : retirer le chemin `.png` servi par l'API (les
+  PNG restent dans R2, la source du WebP).
 
 ## 7. Index par catégorie
 

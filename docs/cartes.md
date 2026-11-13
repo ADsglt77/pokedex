@@ -209,7 +209,8 @@ Les cartes de chaque Pokémon, le catalogue des cartes japonaises et françaises
   inchangés ; `/images/types/<n>.webp` (`typeIcon`), `/images/rarities/<n>.webp`
   (`rarityIcon` ; les noires, `DARK_RARITY_ICONS`, inversées sur le thème sombre,
   `--dark-icon-filter` ; une rareté sans icône, « FUR », s'écrit en texte), les sprites et
-  illustrations des Pokémon (`spriteUrl`, `artworkUrl`). Le Worker du site les demande à l'API, qui
+  illustrations des Pokémon (`spriteUrl` ; `artworkUrl`, en WebP sans perte depuis L19, novembre
+  2026 : `../pokedex-data/docs/donnees.md`). Le Worker du site les demande à l'API, qui
   les lit dans R2 ; le navigateur les garde un an, sans redemande (`immutable`) ; seules les pages
   du site les affichent (`Cross-Origin-Resource-Policy`, `worker/headers.ts`), 1 300 par 10 s et
   par visiteur (de quoi charger tout le Pokédex, `worker/limits.ts`). Le catalogue

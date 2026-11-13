@@ -82,8 +82,9 @@ export const POKEMON_TYPES: Record<PokemonTypeId, string> = {
 export const spriteUrl = (speciesId: number): SpritePath => `/images/species/${speciesId}.png`
 
 /**
- * Illustration officielle 475×475 : sur la fiche d'un Pokémon sans carte, et sur la tuile d'un
- * Pokédex sans carte à montrer (page Collections).
+ * Illustration officielle 475×475, en WebP sans perte (convertie une fois par l'API des données) :
+ * sur la fiche d'un Pokémon sans carte, et sur la tuile d'un Pokédex sans carte à montrer (page
+ * Collections).
  */
 export const artworkUrl = (speciesId: number): ArtworkPath =>
-  `/images/species/artwork/${speciesId}.png`
+  `/images/species/artwork/${speciesId}.webp`

@@ -345,7 +345,7 @@ export type TypeIconPath = `/images/types/${number}.webp`
 export type RarityIconPath = `/images/rarities/${number}.webp`
 /** Le sprite et l'illustration officielle d'un Pokémon. */
 export type SpritePath = `/images/species/${number}.png`
-export type ArtworkPath = `/images/species/artwork/${number}.png`
+export type ArtworkPath = `/images/species/artwork/${number}.webp`
 
 /* L'état des tâches d'ingestion de l'API des données : `/api/status` */
 

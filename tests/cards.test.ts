@@ -290,7 +290,7 @@ describe('les images', () => {
       '/images/types/3.webp',
       '/images/rarities/33.webp',
       '/images/species/25.png',
-      '/images/species/artwork/25.png',
+      '/images/species/artwork/25.webp',
     ])
   })
 
