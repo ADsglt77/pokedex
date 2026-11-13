@@ -730,8 +730,8 @@ R2 (la source du WebP) et l'API sert encore leur chemin `.png` : son retrait est
 #### UX
 
 **L17 — À décider avec vous (site)** — *appliqué le 13 novembre 2026 (`bd92a9f`, poussé),
-complété le même jour en local (`4f850c3`, `c83c83b`, commités, pas encore poussés) (décisions D-07, D-08, D-09 retenues). Appliqués : D-07, les tuiles
-seulement sur l'Accueil, ailleurs une ligne de résumé (Achats et son onglet Budget, Valeur, Pokédex
+complété le même jour (`4f850c3`, `c83c83b`, poussés, en ligne en version `e903f944`) (décisions
+D-07, D-08, D-09 retenues). Appliqués : D-07, les tuiles seulement sur l'Accueil, ailleurs une ligne de résumé (Achats et son onglet Budget, Valeur, Pokédex
 public) ; D-08 et F-UX-04, les synonymes des raretés côté site (`lib/card-catalog.ts`), rien sous
 une carte « Sans rareté », une bulle sur chaque filtre en icône ; D-09 et F-NAV-04, ← → et les
 voisins avec `replace` ; F-NAV-06, la règle notée en tête de `lib/filters.ts` ; F-UX-05, un seul
@@ -739,19 +739,18 @@ appel principal sur l'accueil vide ; F-UX-07, le seuil des deux panneaux à 46re
 sprite à une échelle entière ; F-DS-02, une icône par notion ; F-SIMP-01, `isFiltering` ;
 F-SIMP-02, `VitrineBinder`.*
 - **Les reports, clos** :
-  - F-NAV-05 (l'état du Catalogue dans l'adresse) : *fait, commit local `4f850c3`, pas encore
-    poussé* : `recherche`, `raretes`, `types`, `carte` dans l'adresse (`lib/filters.ts`,
+  - F-NAV-05 (l'état du Catalogue dans l'adresse) : *fait, `4f850c3`, en ligne (`e903f944`)* : `recherche`, `raretes`, `types`, `carte` dans l'adresse (`lib/filters.ts`,
     testés), vérifié dans un navigateur sur les serveurs locaux (frappe et curseur, filtres, fiche
     et ses flèches, focus de retour, lien direct loin dans la liste, « Précédent » et « Suivant »,
     changement de langue) ;
   - F-UX-07, le titre « Ma carte » : *décision finale, non retenu* : le titre garde la référence
     de la carte (il reçoit le focus quand la carte montrée change, et la nomme) ;
-  - F-UX-09, la pochette compacte d'un Pokémon sans carte : *fait, commit local `c83c83b`* :
+  - F-UX-09, la pochette compacte d'un Pokémon sans carte : *fait, `c83c83b`, en ligne* :
     carrée, le sprite à sa taille, le numéro et le nom au bas d'une rangée mêlée, environ quatre
     cinquièmes d'une pochette dans la hauteur estimée (`PokedexTile`, `PokedexGrid`). Un Pokédex
     sans cartes, à 1 036 px de large : 55 665 → 44 982 px (−19 %) ; pas davantage sans réduire le
     sprite (96 px) ;
-  - D-07, le réordre ciblé restant : *fait, commit local `c83c83b`*, sans refonte : Achats s'ouvre
+  - D-07, le réordre ciblé restant : *fait, `c83c83b`, en ligne*, sans refonte : Achats s'ouvre
     sur la liste (la ligne du mois en tête de l'onglet Budget) ; Valeur montre la courbe et « Ce
     qui bouge » avant sa ligne de résumé ; le Pokédex public montre ses favorites en éventail
     (`FavoritesFan`, tiré de la tuile du Pokédex des Collections, chargées d'emblée, dans une
@@ -915,30 +914,40 @@ Trouvés en faisant les lots, hors de leur périmètre : à placer dans un lot, 
 
 | Id | Constat | Où | Effet | Proposition |
 |---|---|---|---|---|
-| H-01 | Les mentions légales disent « Mise à jour le 29 octobre 2026 », alors que L03 a changé leur texte le 10 novembre (compteurs de tentatives, adresses IP, rétention). | `src/pages/LegalPage.tsx:32` | La date annonce une version plus ancienne que le texte. | *Fait en local le 13 novembre 2026* : la date est celle du dernier changement du texte, « 10 novembre 2026 » ; à tenir à chaque changement. |
-| H-02 | Une carte choisie au catalogue qui est déjà dans la collection (`existing` : celle d'un autre de ses Pokémon ; `slot` : une case pas encore obtenue d'une collection d'extension) est enregistrée telle quelle. Ce qu'on corrige sous « Modifier les détails » (image, id Cardmarket, page, langue) est ignoré sans le dire ; le résumé montre pourtant la saisie. Le défaut existait avant L06. | `src/pages/pokemon/CardForm.tsx` (`attach`, `slot.adopt`) | Une correction faite dans la fenêtre se perd sans message. | *Décidé et fait en local le 13 novembre 2026* : dans ces deux cas, plus de « Modifier les détails » (`kept` de `catalogTarget`, testé) ; l'alerte dit « telle qu'elle est », et le résumé montre la carte gardée (son image, sa référence, le prix de son id), pas celle du catalogue. Une fois reprise, la carte se corrige par « Modifier la carte », sur sa fiche. |
+| H-01 | Les mentions légales disent « Mise à jour le 29 octobre 2026 », alors que L03 a changé leur texte le 10 novembre (compteurs de tentatives, adresses IP, rétention). | `src/pages/LegalPage.tsx:32` | La date annonce une version plus ancienne que le texte. | *Fait le 13 novembre 2026, en ligne (`c83c83b`, version `e903f944`)* : la date est celle du dernier changement du texte, « 10 novembre 2026 » ; à tenir à chaque changement. |
+| H-02 | Une carte choisie au catalogue qui est déjà dans la collection (`existing` : celle d'un autre de ses Pokémon ; `slot` : une case pas encore obtenue d'une collection d'extension) est enregistrée telle quelle. Ce qu'on corrige sous « Modifier les détails » (image, id Cardmarket, page, langue) est ignoré sans le dire ; le résumé montre pourtant la saisie. Le défaut existait avant L06. | `src/pages/pokemon/CardForm.tsx` (`attach`, `slot.adopt`) | Une correction faite dans la fenêtre se perd sans message. | *Décidé et fait le 13 novembre 2026, en ligne (`c83c83b`, version `e903f944`)* : dans ces deux cas, plus de « Modifier les détails » (`kept` de `catalogTarget`, testé) ; l'alerte dit « telle qu'elle est », et le résumé montre la carte gardée (son image, sa référence, le prix de son id), pas celle du catalogue. Une fois reprise, la carte se corrige par « Modifier la carte », sur sa fiche. |
 
 ## 9. État de clôture (13 novembre 2026)
 
-Côté code, la revue est close : chaque lot est fait, ou son reste est décidé ou hors de ces dépôts.
+**La revue des deux dépôts est close.** Chaque constat est fait, ou exclu par une décision notée
+ci-dessous ; ces exclusions ne bloquent pas la clôture, et elles ne sont pas faites.
 
-- **Fait et poussé** (Workers Builds déploie `main`) : L01 à L16, L17 (`bd92a9f`) et L19 (L13,
-  L15, L16 et L19 aussi dans `pokedex-data`) ; les actions A-03 et A-09.
-- **Fait, commité en local, pas encore poussé** :
-  - la documentation d'A-09 (`1b3a623`) ;
-  - F-NAV-05 (`4f850c3`) ;
-  - H-02 (la carte reprise telle quelle), F-UX-09 (la pochette compacte), le réordre ciblé de D-07
-    (Achats, Valeur, Pokédex public), H-01 (la date des mentions légales) : `c83c83b` ;
-  - la partie locale de L18, le cas `Radio` dans le skill `camply-ui` (le commit qui suit
-    `c83c83b`).
-- **Décidé, rien à coder** : F-UX-07 (le titre garde la référence), F-PERF-01 (§ 5), A-08
-  (écartée), D-13 (attendre camply, sauf gêne réelle sur iPhone), les refontes évitées (§ 5).
-- **Reporté, par décision** : `runs.instance` et sa migration (D-12 : avec la prochaine migration
-  des données) ; le retrait du chemin `.png` servi par l'API (L19, un lot futur).
-- **Hors de ces dépôts, ou à l'utilisateur** :
-  - L18, dans camply (`../Camply-UI`, absent du poste) : une dépendance externe, non réalisable
-    dans ces deux dépôts ; sa partie locale est faite ;
-  - A-05, une vérification sur un iPhone réel, pas un défaut de clôture ;
-  - le contenu du R2 de production, retiré volontairement après A-09 : son rétablissement est
-    géré par l'utilisateur ;
-  - les actions A-01, A-02, A-04, A-06 et A-07, si elles ne sont pas encore faites (§ 6).
+**Fait et en ligne**
+- L01 à L17 et L19 (L13, L15, L16 et L19 aussi dans `pokedex-data`) ; les actions A-03 et A-09.
+- Les derniers commits du site, poussés le 13 novembre 2026 (`815ff92..b2c2180`) et déployés par
+  Workers Builds : version `e903f944-00f9-49dd-95c4-0fa00b995e4a` du Worker `pokedex`, créée à
+  15:45:06 UTC, `main` et `origin/main` sur `b2c2180` :
+  - `1b3a623` : la documentation d'A-09 ;
+  - `4f850c3` : F-NAV-05, l'état du Catalogue dans l'adresse ;
+  - `c83c83b` : H-01 (la date des mentions légales), H-02 (la carte reprise telle quelle), la fin
+    de L17 (F-UX-09, la pochette compacte ; le réordre ciblé de D-07 : Achats, Valeur, Pokédex
+    public) ;
+  - `b2c2180` : les dépendances externes documentées, dont la partie locale de L18 (le cas `Radio`
+    dans le skill `camply-ui`).
+- La CI complète du site (`bun run ci`) était verte sur `b2c2180` avant le push : format, 186 tests
+  `bun test`, ESLint et knip, 109 tests du Worker, construction.
+
+**Décidé, rien à coder** : F-UX-07 (le titre garde la référence), F-PERF-01 (§ 5), A-08
+(écartée), D-13 (attendre camply, sauf gêne réelle sur iPhone), les refontes évitées (§ 5).
+
+**Exclusions décidées, qui ne bloquent pas la clôture (non faites)**
+- `runs.instance` et sa migration (D-FIA-06, D-12) : avec la prochaine migration des données.
+- Le retrait du chemin `.png` des illustrations servi par l'API (L19) : un lot futur.
+- L18, dans camply (`../Camply-UI`, absent du poste) : une dépendance externe, non réalisable dans
+  ces deux dépôts ; seule sa partie locale est faite.
+- A-05 : une vérification sur un iPhone réel, matérielle ; une gêne réelle rouvrirait D-13.
+- La réparation des données de production (le R2, retiré volontairement après A-09, et la base) :
+  gérée par l'utilisateur, ou par une autre session ; hors de cette revue. Les 404 d'images qui
+  en découlent ne sont pas des défauts du site.
+- Les actions A-01, A-02, A-04, A-06 et A-07, à l'utilisateur, si elles ne sont pas encore faites
+  (§ 6).
