@@ -688,9 +688,10 @@ aucun refusé, les 11 décodés par Chrome identiques au pixel près (`MEP-hd` :
   - `redirect: 'manual'` ;
   - script seulement de l'origine de la source ;
   - types d'images limités ;
-  - `runs.instance`, avec sa migration ;
+  - `runs.instance`, avec sa migration : reporté selon D-12, avec la prochaine migration des
+    données (l'écart est décrit dans `../pokedex-data/docs/donnees.md`) ;
   - le relais limité à `GET` et `HEAD`.
-- **Comportement** : D-FIA-06 ajoute une migration (DEC-21, décision D-12).
+- **Comportement** : D-FIA-06 ajoute une migration (DEC-21, décision D-12 : reportée).
 - **Effort** : S à M.
 
 #### Optimisation

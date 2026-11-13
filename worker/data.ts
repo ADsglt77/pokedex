@@ -20,8 +20,16 @@ export function dataFetch(path: string, init?: RequestInit) {
 
 const DATA = /^\/(api\/(species|catalog|prices|histories|wants|status|health)|images)(\/|$)/
 
+/**
+ * Relayées seulement en lecture (`GET`, `HEAD`) : l'API des données n'a que des routes de lecture,
+ * et une route d'écriture qu'elle ajouterait ne serait pas ouverte d'office à tout visiteur. Une
+ * autre méthode : 405, sans corps.
+ */
 export const dataRoutes: MiddlewareHandler = async (c, next) => {
   if (!DATA.test(c.req.path)) return next()
+  if (c.req.method !== 'GET' && c.req.method !== 'HEAD') {
+    return c.body(null, 405, { Allow: 'GET, HEAD', 'Cache-Control': 'no-store' })
+  }
   const { pathname, search } = new URL(c.req.url)
   return dataFetch(`${pathname.replace(/^\/api/, '')}${search}`, c.req.raw)
 }

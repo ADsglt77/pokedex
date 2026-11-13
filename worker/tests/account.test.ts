@@ -11,7 +11,8 @@
  * bloqués le prolongent. D'un autre site, une modification est refusée partout (403, avant la
  * lecture de son corps), une lecture jamais. Un corps de plus de 16 Ko, refusé (413) avant Better Auth,
  * que sa taille soit annoncée ou non. Les données de référence partent au Worker des données, sous
- * `/v1`, jamais avec le cookie de la session (`worker/data.ts`). Le Worker entier, dans le
+ * `/v1`, jamais avec le cookie de la session, et seulement en lecture (`GET`, `HEAD` ; une autre
+ * méthode : 405, rien de relayé ; `worker/data.ts`). Le Worker entier, dans le
  * moteur de Cloudflare, sur une base D1 neuve pour le fichier : chaque test crée ses comptes, sous
  * des pseudos à lui.
  */
@@ -412,5 +413,24 @@ describe('les données de référence : au Worker des données', () => {
       'https://pokedex-data/v1/images/cards/SV2A/166-md.webp',
     ])
     for (const request of seen) expect(request.headers.get('cookie')).toBeNull()
+  })
+
+  test('seulement en lecture : une autre méthode, 405 sans rien relayer', async () => {
+    const fetch = vi.spyOn(env.DATA, 'fetch').mockResolvedValue(new Response('[]'))
+    try {
+      expect((await call('/api/prices?ids=1', { method: 'HEAD' })).status).toBe(200)
+      for (const method of ['POST', 'PUT', 'DELETE', 'PATCH']) {
+        for (const path of ['/api/prices?ids=1', '/images/cards/SV2A/166-md.webp']) {
+          // Du site lui-même : la garde des autres origines (403) ne s'en mêle pas.
+          const response = await call(path, { method, headers: { Origin: ORIGIN } })
+          expect([method, path, response.status]).toEqual([method, path, 405])
+          expect(response.headers.get('allow')).toBe('GET, HEAD')
+          expect(await response.text()).toBe('')
+        }
+      }
+      expect(fetch).toHaveBeenCalledTimes(1)
+    } finally {
+      fetch.mockRestore()
+    }
   })
 })

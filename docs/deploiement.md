@@ -17,7 +17,9 @@ chaque push sur `main`.
 | `pokedex` | `pokedex` | `pokecodex.fr` (et `www.`, qui y mène) | D1 `pokecodex` (comptes, collections : **dans l'Union européenne**), les fichiers de l'app (`ASSETS`), le Worker des données par sa liaison de service (`DATA`), ses limites par visiteur |
 
 Le site joint l'API par sa liaison de service, sans réseau ni token : **le Worker des données doit
-être en ligne avant celui du site**. Ni l'un ni l'autre n'a d'adresse `workers.dev` (les sessions
+être en ligne avant celui du site**. Il ne lui relaie que `GET` et `HEAD` (`worker/data.ts`, testé :
+une autre méthode, 405 sans corps) : une route d'écriture ajoutée à l'API ne serait pas ouverte
+d'office à tout visiteur. Ni l'un ni l'autre n'a d'adresse `workers.dev` (les sessions
 n'y marcheraient pas : Better Auth n'accepte que `BETTER_AUTH_URL`).
 
 Qui fait quoi (le détail est dans l'en-tête de chaque fichier) :
