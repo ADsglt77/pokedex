@@ -16,10 +16,13 @@
  * perdue est reconnu (200, la même version), un autre parti de la même version reste refusé (409).
  * Chaque compte ne touche qu'à sa collection, et la sienne part avec lui. Le journal : ce qu'un
  * compte peut répéter à volonté (un export signalé, un envoi refusé) n'y écrit qu'une ligne par
- * minute ; un signalement de plus de 1 Ko, refusé (413 ; sans session, 401). Et ce que montre le
- * Pokédex public d'un compte (`/api/vitrine/<pseudo>`, l'aperçu d'un lien partagé) : ce qu'il
- * laisserait passer serait public. Le Worker entier, sur une base D1 neuve pour le fichier, avec un
- * compte créé comme à l'inscription et un premier envoi ; chaque test part de la version du moment.
+ * minute, et le détail de ses envois enregistrés aussi (une ligne par envoi ensuite) ; un
+ * signalement de plus de 1 Ko, refusé (413 ; sans session, 401). Et ce que montre le Pokédex
+ * public d'un compte (`/api/vitrine/<pseudo>`, l'aperçu d'un lien partagé) : ce qu'il laisserait
+ * passer serait public ; revu le même jour, inchangé, un 304 sans rien demander à l'API des
+ * données, et jamais d'ETag sans prix. Le Worker entier, sur une base D1 neuve pour le fichier,
+ * avec un compte créé comme à l'inscription et un premier envoi ; chaque test part de la version du
+ * moment.
  */
 
 import { env } from 'cloudflare:workers'
@@ -553,6 +556,37 @@ describe('le journal : aucun compte ne le noie', () => {
     expect(lines('Envoi refusé')).toBe(1)
   })
 
+  test('deux documents très différents envoyés tour à tour : le détail une fois par minute, puis une ligne par envoi', async () => {
+    const brock = await createAccount('Brock')
+    const asBrock = { Cookie: brock.cookie }
+    // 30 cartes de plus, puis de moins : 21 lignes chacun, détaillé.
+    const many = Array.from({ length: 30 }, (_, index) => card(`m${index}`, [25]))
+    const documents = [
+      first,
+      {
+        ...first,
+        collection: withCards(
+          first.collection,
+          ...Object.values(first.collection.customCards),
+          ...many,
+        ),
+      },
+    ]
+    const lines = (message: string) =>
+      log.mock.calls.flat().filter((line) => String(line).includes(message)).length
+    log.mockClear()
+    for (let version = 0; version < 6; version++) {
+      const sent = { account: brock.user!.id, baseVersion: version, ...documents[version % 2]! }
+      expect((await collection('PUT', sent, asBrock)).status).toBe(200)
+    }
+    // Le premier envoi, en détail ; les cinq suivants de la minute, une ligne chacun.
+    expect(lines('Premier envoi')).toBe(1)
+    expect(lines('Changements')).toBe(5)
+    expect(lines('Carte ajoutée')).toBe(0)
+    expect(lines('Carte retirée')).toBe(0)
+    expect(log).toHaveBeenCalledTimes(6)
+  })
+
   test('un signalement de plus de 1 Ko : 413 avec la session, 401 sans, rien au journal', async () => {
     // Un export valable, suivi d'espaces jusqu'à 1 Mo : lu jusqu'au bout, il serait noté.
     const body = JSON.stringify({ event: 'export' }) + ' '.repeat(1_000_000)
@@ -602,12 +636,41 @@ describe('/api/vitrine/<pseudo> : ce que voit un visiteur', () => {
     expect(await previewTitle('/pokedex')).toBe('PokéCodex')
   })
 
-  test('inchangé depuis la dernière visite : 304, sans corps', async () => {
-    const response = await call('/api/vitrine/sacha')
-    const etag = response.headers.get('etag')!
-    const again = await call('/api/vitrine/sacha', { headers: { 'If-None-Match': `W/${etag}` } })
-    expect(again.status).toBe(304)
-    expect(await again.text()).toBe('')
+  test('inchangé depuis la dernière visite du jour : 304, sans corps ni appel à l’API des données', async () => {
+    let asked = 0
+    dataApi.mockImplementation(async () => {
+      asked++
+      return Response.json({ date: '2026-10-19', cards: { '719445': [6.87, 5, 7.2] } })
+    })
+    try {
+      const response = await call('/api/vitrine/sacha')
+      expect(asked).toBe(1)
+      const etag = response.headers.get('etag')!
+      const again = await call('/api/vitrine/sacha', { headers: { 'If-None-Match': `W/${etag}` } })
+      expect(again.status).toBe(304)
+      expect(again.headers.get('etag')).toBe(etag)
+      expect(await again.text()).toBe('')
+      expect(asked).toBe(1)
+      // Un autre ETag (le Pokédex a changé, ou un autre jour) : la page entière, ses prix redemandés.
+      const changed = await call('/api/vitrine/sacha', { headers: { 'If-None-Match': '"autre"' } })
+      expect(changed.status).toBe(200)
+      expect(asked).toBe(2)
+    } finally {
+      dataApi.mockReset()
+    }
+  })
+
+  test('sans prix (l’API muette, ou sans guide des prix) : pas d’ETag, la visite suivante les redemande', async () => {
+    dataApi.mockRejectedValue(new TypeError('API muette'))
+    try {
+      const response = await call('/api/vitrine/sacha')
+      expect(response.status).toBe(200)
+      expect(response.headers.get('etag')).toBeNull()
+    } finally {
+      dataApi.mockReset()
+    }
+    // Sans guide des prix (le 404 de `vitest.config.ts`) non plus.
+    expect((await call('/api/vitrine/sacha')).headers.get('etag')).toBeNull()
   })
 
   test('sans session : les cartes, jamais un prix payé, une commande ni un statut « commandée »', async () => {

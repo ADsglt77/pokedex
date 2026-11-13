@@ -5,15 +5,17 @@
  * (les lignes de l'un tairaient celles des autres), ou un seul en ferait des milliers (une adresse
  * IPv6 par requête : un afflux noierait le journal et passerait les limites). Et ce que dit le
  * journal d'un changement de collection (`documentChanges`) : commencer une collection
- * d'extension, ce sont des centaines de cartes ajoutées, une ligne seulement ; une erreur ici
+ * d'extension, ce sont des centaines de cartes ajoutées, une ligne seulement ; et ce détail, une
+ * fois par minute et par compte, sinon une ligne de synthèse (`savedChanges`). Une erreur ici
  * noierait le journal.
  */
 
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import { emptyCollection, saveCard, setCardStatus } from '@/lib/collection'
 import { emptyShopping } from '@/lib/orders'
 import { removeSeries, startSeries } from '@/lib/series'
-import { documentChanges, visitorOf } from '../journal'
+import { MINUTE } from '@/lib/time'
+import { documentChanges, savedChanges, visitorOf, type JournalEntry } from '../journal'
 import { card, collectionWith, NOW } from '../../tests/fixtures'
 
 describe('adresse du visiteur derrière Cloudflare', () => {
@@ -43,6 +45,34 @@ describe('adresse du visiteur derrière Cloudflare', () => {
 
   test('reste vide sans adresse', () => {
     expect(visitorOf(new Request('http://localhost'))).toBe('')
+  })
+})
+
+describe('le détail d’un envoi enregistré, une fois par minute et par compte', () => {
+  const changes: JournalEntry[] = Array.from({ length: 21 }, (_, index) => ({
+    topic: 'collection',
+    message: 'Carte ajoutée',
+    details: { carte: `Pikachu (SV8 ${index})` },
+  }))
+  const summary = [{ topic: 'collection', message: 'Changements', details: { nombre: 21 } }]
+
+  test('le détail, puis une ligne de synthèse dans la minute ; de nouveau le détail ensuite', () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(Date.parse(NOW))
+    try {
+      expect(savedChanges('compte-a', changes)).toBe(changes)
+      expect(savedChanges('compte-a', changes)).toEqual(summary)
+      // Un autre compte a son propre détail.
+      expect(savedChanges('compte-b', changes)).toBe(changes)
+      // Rien de changé : aucune ligne, et la minute n'est pas prise.
+      expect(savedChanges('compte-c', [])).toEqual([])
+      expect(savedChanges('compte-c', changes)).toBe(changes)
+      now.mockReturnValue(Date.parse(NOW) + MINUTE - 1)
+      expect(savedChanges('compte-a', changes)).toEqual(summary)
+      now.mockReturnValue(Date.parse(NOW) + MINUTE)
+      expect(savedChanges('compte-a', changes)).toBe(changes)
+    } finally {
+      now.mockRestore()
+    }
   })
 })
 

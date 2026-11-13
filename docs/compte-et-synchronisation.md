@@ -153,8 +153,13 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   aucune), `null` sans carte possédée, au-delà de 5 000 cartes possédées avec un id Cardmarket
   (rien n'est demandé), sans guide des prix ou l'API muette, pour l'un des paquets aussi (les
   suivants ne sont pas demandés : une valeur partielle serait fausse ; la valeur est alors « — »,
-  et une ligne au journal par minute au plus) ; un ETag tiré du compte,
-  de son contenu (`serveJson`) : un visiteur qui revient sur un Pokédex inchangé reçoit un 304.
+  et une ligne au journal par minute au plus) ; un ETag tiré du pseudo, de la collection montrée et
+  du jour à Paris, calculé avant de demander les prix (`etagOf`) : un visiteur qui revient le même
+  jour sur un Pokédex inchangé reçoit un 304, sans rien demander à l'API des données (testé).
+  Contrepartie acceptée (novembre 2026) : revenu le même jour après la mise à jour des prix, il
+  garde ceux qu'il avait jusqu'au lendemain à Paris (ou un changement du Pokédex). Sans prix
+  (l'API muette, sans guide des prix, ou rien à chiffrer), pas d'ETag : la visite suivante les
+  redemande, une panne ne reste pas toute la journée (testé).
   Réglages › Compte & partage › Pokédex public en donne l'adresse (`vitrinePath`). Un lien partagé (Discord,
   WhatsApp…) a son aperçu : le Worker répond lui-même aux robots d'aperçu, sur toute adresse d'un seul
   segment (`linkPreview`, `worker/vitrine.ts`), par une page faite pour eux (l'aperçu du site pour une page du site ou un pseudo à personne)
@@ -336,7 +341,10 @@ Les comptes, la collection de chaque compte (gardée par le serveur, la même su
   que des centaines de cartes soient ajoutées ou retirées avec elle (« Collection effacée » ne dit
   que la perte de vraies cartes : supprimer la dernière collection d'un compte dont rien n'est
   possédé ni commandé est « Collection supprimée ») ; une case obtenue est « Carte possédée », sans
-  « Carte modifiée » (testé, `worker/tests/journal.test.ts`). L'export et l'import, que le navigateur
+  « Carte modifiée » (testé, `worker/tests/journal.test.ts`). Ce détail (jusqu'à 21 lignes par
+  envoi) une fois par minute et par compte au plus ; dans la minute, une seule ligne par envoi,
+  « Changements » et leur nombre (`savedChanges` : un compte qui alternerait sans fin deux
+  documents très différents noierait le journal ; testé). L'export et l'import, que le navigateur
   signale (`POST /api/journal`) : une ligne par compte, par évènement et par minute au plus
   (`journalOnce` : un compte qui l'appellerait sans fin noierait le journal ; testé) ; plus de
   1 Ko, 413 (`maxBody`, après la session : sans elle, 401 ; testé).

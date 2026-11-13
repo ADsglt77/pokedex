@@ -34,7 +34,7 @@ import {
 } from '@/types'
 import { maxBody, signedIn, type SignedIn } from './auth'
 import { db } from './db'
-import { documentChanges, journal, journalOnce, type JournalEntry } from './journal'
+import { documentChanges, journal, journalOnce, savedChanges, type JournalEntry } from './journal'
 import { collections } from './schema'
 
 /** Le document enregistré d'un compte, tel qu'écrit (JSON). */
@@ -210,7 +210,7 @@ export const collectionRoutes = new Hono<SignedIn>()
             shopping: JSON.parse(row.shopping) as ShoppingData,
           }
         : null
-      for (const change of documentChanges(previous, document)) {
+      for (const change of savedChanges(user.id, documentChanges(previous, document))) {
         journal({ ...change, details: { compte, ...change.details } })
       }
       return c.json<CollectionSaved>({ version })

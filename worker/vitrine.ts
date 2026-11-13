@@ -172,22 +172,19 @@ async function dataPricesOf(ids: number[]): Promise<PriceFile | null> {
   }
 }
 
+/** Le jour à Paris (« 2026-11-13 ») : les prix du jour ne changent qu'une fois par jour. */
+const PARIS_DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' })
+
 /**
- * Une réponse JSON et son ETag, tiré de son contenu : un visiteur qui revient sur un Pokédex
- * inchangé reçoit un 304, sans corps (un relais peut affaiblir l'ETag en `W/"…"` : c'est le même).
- * L'ETag : même règle que `etagOf` de `../pokedex-data/worker/snapshots.ts` (une copie).
+ * L'ETag d'un contenu : même règle que `etagOf` de `../pokedex-data/worker/snapshots.ts` (une
+ * copie).
  */
-async function serveJson(request: Request, body: unknown) {
-  const text = JSON.stringify(body)
+async function etagOf(text: string) {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
   const hex = [...new Uint8Array(digest).slice(0, 12)]
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('')
-  const headers = { 'Cache-Control': 'no-cache', ETag: `"${hex}"` }
-  if (request.headers.get('if-none-match')?.replace(/^W\//, '') === headers.ETag) {
-    return new Response(null, { status: 304, headers })
-  }
-  return new Response(text, { headers: { ...headers, 'Content-Type': 'application/json' } })
+  return `"${hex}"`
 }
 
 /**
@@ -225,11 +222,28 @@ export const vitrineRoutes = new Hono().get('/vitrine/:pseudo', async (c) => {
     },
     c.req.raw,
   )
+  // L'ETag avant les prix : un visiteur qui revient le même jour sur un Pokédex inchangé reçoit un
+  // 304 sans corps, sans rien demander à l'API des données (un relais peut affaiblir l'ETag en
+  // `W/"…"` : c'est le même). Revenu après la mise à jour des prix, il garde ceux qu'il a, jusqu'au
+  // lendemain à Paris.
+  const etag = await etagOf(JSON.stringify([owner.name, collection, PARIS_DAY.format(Date.now())]))
+  const headers = { 'Cache-Control': 'no-cache', ETag: etag }
+  if (c.req.header('if-none-match')?.replace(/^W\//, '') === etag) {
+    return new Response(null, { status: 304, headers })
+  }
   const owned = Object.values(collection.customCards).flatMap(({ id, cardmarket }) =>
     cardmarket && collection.cards[id] ? [cardmarket] : [],
   )
   const vitrine: VitrineData = { owner: owner.name, collection, prices: await dataPrices(owned) }
-  return serveJson(c.req.raw, vitrine)
+  // Sans prix (l'API muette, sans guide des prix, ou rien à chiffrer) : pas d'ETag, la visite
+  // suivante les redemande ; une panne ne reste pas toute la journée chez le visiteur.
+  return new Response(JSON.stringify(vitrine), {
+    headers: {
+      'Cache-Control': 'no-cache',
+      ...(vitrine.prices && { ETag: etag }),
+      'Content-Type': 'application/json',
+    },
+  })
 })
 
 /**

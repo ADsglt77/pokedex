@@ -12,7 +12,8 @@
  * - `collection` et `achats` : ce qui change dans le document synchronisé d'un compte (`compte=`),
  *   comparé à la version d'avant (`documentChanges`, `collection.ts`) : cartes ajoutées, possédées,
  *   commandes, budget… ; une collection d'extension commencée ou supprimée, une ligne chacune, pas
- *   une par carte (des centaines de cases) ;
+ *   une par carte (des centaines de cases) ; ce détail une fois par minute et par compte au plus,
+ *   sinon une ligne par envoi, le nombre de changements (`savedChanges`) ;
  * - `données` : l'export et l'import, que le navigateur signale (`POST /api/journal`,
  *   `collection.ts`) : le Worker ne les voit pas autrement ;
  * - `vitrine` : une visite du Pokédex public d'un compte, un lien partagé lu par un robot
@@ -206,6 +207,25 @@ const noted = new Map<string, { at: number; silenced: number }>()
 const MAX_NOTED = 10_000
 
 /**
+ * Une fois par `key` et par `windowMs` : le nombre de fois tues depuis la dernière (0 s'il n'y en a
+ * pas) ; `null` dans la fenêtre, et cette fois est comptée comme tue. Chaque exemplaire du Worker
+ * compte de son côté.
+ */
+function onceIn(key: string, windowMs: number) {
+  const now = Date.now()
+  const known = noted.get(key)
+  if (known && now - known.at < windowMs) {
+    known.silenced++
+    return null
+  }
+  noted.delete(key)
+  noted.set(key, { at: now, silenced: 0 })
+  // Une clé de plus à chaque fois : la plus ancienne part au-delà de `MAX_NOTED`.
+  if (noted.size > MAX_NOTED) noted.delete(noted.keys().next().value!)
+  return known?.silenced ?? 0
+}
+
+/**
  * Écrit une ligne au plus par `key` (un visiteur et ce qu'il fait) et par `windowMs` (une minute
  * par défaut) : un afflux de requêtes (des connexions refusées, des visites) ne noie pas le
  * journal. Les lignes tues sont comptées, et dites par la suivante (`tues=…`). Chaque exemplaire
@@ -218,18 +238,9 @@ export function journalOnce(
   request?: Request,
   windowMs = MINUTE,
 ) {
-  const now = Date.now()
-  const known = noted.get(key)
-  if (known && now - known.at < windowMs) {
-    known.silenced++
-    return
-  }
-  noted.delete(key)
-  noted.set(key, { at: now, silenced: 0 })
-  // Une clé de plus à chaque fois : la plus ancienne part au-delà de `MAX_NOTED`.
-  if (noted.size > MAX_NOTED) noted.delete(noted.keys().next().value!)
-  const tues = known?.silenced || undefined
-  journal({ ...entry, details: { ...entry.details, tues } }, request)
+  const silenced = onceIn(key, windowMs)
+  if (silenced === null) return
+  journal({ ...entry, details: { ...entry.details, tues: silenced || undefined } }, request)
 }
 
 /* Ce qui change dans la collection et les achats */
@@ -264,6 +275,17 @@ export function documentChanges(
     ...changes.slice(0, MAX_LINES),
     { topic: 'collection', message: 'Autres changements', details: { nombre } },
   ]
+}
+
+/**
+ * Les lignes d'un envoi enregistré (`changes` : `documentChanges`) : le détail une fois par minute
+ * et par compte au plus, sinon une ligne de synthèse (« Changements », leur nombre). Un compte qui
+ * alternerait sans fin deux documents très différents écrirait sinon 21 lignes par envoi, plusieurs
+ * fois par seconde. Rien de changé : aucune ligne, et la minute n'est pas prise.
+ */
+export function savedChanges(account: string, changes: JournalEntry[]): JournalEntry[] {
+  if (!changes.length || onceIn(`${account} détail`, MINUTE) !== null) return changes
+  return [{ topic: 'collection', message: 'Changements', details: { nombre: changes.length } }]
 }
 
 /**

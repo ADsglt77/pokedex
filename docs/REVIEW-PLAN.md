@@ -672,8 +672,9 @@ aucun refusé, les 11 décodés par Chrome identiques au pixel près (`MEP-hd` :
   - le détail des changements une fois par minute et par compte (`journalOnce`), sinon une ligne
     de synthèse ;
   - l'ETag du Pokédex public calculé avant de demander les prix.
-- **Tests** : `worker/tests/journal.test.ts` (une ligne par minute) ; `vitrine.test.ts` (un 304
-  sans appel à `DATA`).
+- **Tests** : `worker/tests/journal.test.ts` (une ligne par minute) ;
+  `worker/tests/collection.test.ts`, où est le faux Worker des données (un 304 sans appel à
+  `DATA`).
 - **Effort** : S.
 
 **L16 — Durcissements à décider (données et site)**
