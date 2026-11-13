@@ -712,9 +712,11 @@ aucun refusé, les 11 décodés par Chrome identiques au pixel près (`MEP-hd` :
   texte : il touche à l'historique, qui est irremplaçable.
 - **Effort** : S chacun.
 
-**L19 — Illustrations en WebP (les deux dépôts)** — *préparé localement le 13 novembre 2026
-(WebP sans perte, 1 025 identiques au pixel près, −37,3 %, écrits dans le R2 local) ; pas encore
-en ligne : A-09 d'abord.*
+**L19 — Illustrations en WebP (les deux dépôts)** — *fait et en ligne le 13 novembre 2026
+(`pokedex-data` `317fff7`, `pokedex` `e8264f2`, mis en ligne par A-09) : les 1 025 illustrations
+en WebP sans perte, 132 662 089 → 83 193 706 octets (−37,3 %), chacune identique à son PNG au
+pixel près ; versions en ligne `8d3aa672` (données) et `d0b53a8d` (site). Les PNG restent dans
+R2 (la source du WebP) et l'API sert encore leur chemin `.png` : son retrait est un lot futur.*
 - **Constats** : D-PERF-02.
 - **Dépend de** : L09 (gabarits de chemins dans le contrat).
 - **Changement** : une conversion ponctuelle, hors du Worker, puis des chemins `.webp` des deux
@@ -836,17 +838,23 @@ une échelle entière ; F-DS-02, une icône par notion ; F-SIMP-01, `isFiltering
   une Redirect Rule (`not ssl and http.host ne "api.pokecodex.fr"` vers https). Sans cela, la zone
   répond 301, et le token, déjà passé en clair, n'est signalé nulle part.
 
-- **A-09 (avant de déployer L19)**, dans cet ordre :
-  1. préparer les WebP du R2 de production : les 1 025 illustrations converties et vérifiées
-     comme en local (`../pokedex-data/docs/donnees.md`) ; le script ponctuel
-     (`conversion-illustrations-webp.mjs`, à côté des dépôts) ne travaille que sur le R2 local, la
-     procédure de production (copie des WebP vérifiés vers le R2 en ligne, contrôle des 1 025
-     fichiers et de leur type) reste à écrire et à valider avant d'agir ;
-  2. pousser `pokedex-data` et attendre sa mise en ligne (Workers Builds) : l'API sert alors le
-     WebP, et encore le PNG que demande le site d'avant ;
-  3. puis seulement pousser `pokedex` : le site demande `artwork/<n>.webp`.
-  Ensuite, une fois le site en ligne passé au WebP : retirer le chemin `.png` servi par l'API (les
-  PNG restent dans R2, la source du WebP).
+- **A-09 (avant de déployer L19)** — *fait le 13 novembre 2026 (`procedure-A-09.md` et
+  `conversion-illustrations-webp.mjs`, à côté des dépôts ; son dossier de travail `a09`, gardé
+  jusqu'au retrait du `.png`)*, dans cet ordre :
+  1. les WebP du R2 de production : les 1 025 PNG servis téléchargés (132 662 089 octets),
+     convertis en WebP sans perte et vérifiés en local (1 025 identiques au pixel près, mêmes
+     dimensions, même profil de couleur ; 83 193 706 octets, −37,3 %, avec un manifeste SHA-256),
+     puis écrits dans le R2 en ligne (`wrangler r2 object put --remote`, reprenable) et relus par
+     échantillons (25, 100, et 10 numéros élevés : conformes) ;
+  2. `pokedex-data` poussé (`03232e2..e69a604`), en ligne en version `8d3aa672` : les 1 025 WebP
+     servis en `image/webp`, identiques au manifeste, et les 1 025 PNG encore servis ;
+  3. puis `pokedex` poussé (`9d8379b..815ff92`), en ligne en version `d0b53a8d` : le site demande
+     `artwork/<n>.webp` (plus aucun chemin `.png` d'illustration dans son code servi).
+  Aucun PNG supprimé. Reste, dans un lot futur : retirer le chemin `.png` servi par l'API (les PNG
+  restent dans R2, la source du WebP). À vérifier à l'œil, connecté : la fiche d'un Pokémon sans
+  carte et la page Collections.
+  Après A-09, le même jour, le contenu du R2 de production a été volontairement retiré, hors de
+  cette procédure ; son rétablissement est géré séparément par l'utilisateur.
 
 ## 7. Index par catégorie
 
